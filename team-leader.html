@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Natural Clinic CRM - Team Leader Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #080b11; }
+    h1,h2,h3 { font-family: 'Outfit', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1a1f2e; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    .stage-pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; white-space:nowrap; }
+    .stage-Won { background:#134E1B; color:#4ADE80; }
+    .stage-Cancelled { background:#450A0A; color:#F87171; }
+    .stage-Appointment { background:#1E3A5F; color:#60A5FA; }
+    .stage-Reservation { background:#451A03; color:#FB923C; }
+    .stage-Waiting { background:#1C2A1C; color:#86EFAC; }
+    .stage-default { background:#1e2536; color:#94A3B8; }
+    .filter-select { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:100%; }
+    .filter-select:focus { outline:none; border-color:#0D9488; }
+    .filter-select option { background:#111827; color:#E2E8F0; }
+    select option { background:#0f172a; color:#e2e8f0; }
+    input.filter-input, textarea.filter-input { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:100%; }
+    input.filter-input:focus, textarea.filter-input:focus { outline:none; border-color:#0D9488; }
+    .spinner-anim { border:3px solid rgba(20,184,166,0.2); border-top:3px solid #14B8A6; border-radius:50%; width:40px; height:40px; animation:spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .nav-btn { width:100%; text-align:left; padding:8px 12px; font-size:11px; font-weight:700; border-radius:10px; display:flex; align-items:center; gap:8px; transition:all 0.15s; cursor:pointer; overflow:hidden; white-space:nowrap; }
+    .nav-btn.active { background:#0D9488; color:#fff; }
+    .nav-btn:not(.active) { color:#94A3B8; }
+    .nav-btn:not(.active):hover { background:#1f2937; color:#e2e8f0; }
+    #sidebar.collapsed { width:60px; min-width:60px; }
+    #sidebar.collapsed .sidebar-text { display:none; }
+    #sidebar.collapsed .sidebar-pad { padding:14px 10px; }
+    #sidebar.collapsed .sidebar-kpis { display:none; }
+    #sidebar.collapsed .nav-btn { justify-content:center; padding:10px; }
+    #sidebar.collapsed #sidebarToggleIcon { transform:rotate(180deg); }
+    .deal-tbl { width:100%; border-collapse:collapse; }
+    .deal-tbl th { position:sticky; top:0; background:#111827; z-index:2; padding:8px 12px; font-size:10px; text-align:left; border-bottom:2px solid #1f2937; white-space:nowrap; color:#64748B; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; }
+    .deal-tbl td { padding:9px 12px; font-size:11.5px; border-bottom:1px solid #111827; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .deal-tbl tbody tr { cursor:pointer; transition:background 0.1s; }
+    .deal-tbl tbody tr:hover td { background:#12182b; }
+    .deal-tbl tbody tr.row-red td { background:rgba(127,29,29,0.15); }
+    .deal-tbl tbody tr.row-amber td { background:rgba(120,53,15,0.12); }
+    .tab-badge { display:inline-flex; align-items:center; justify-content:center; min-width:26px; padding:1px 6px; border-radius:9999px; font-size:10px; font-weight:700; line-height:1.6; }
+    #dealModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
+    #dealModal.open { display:flex; }
+    .modal-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.75); }
+    .modal-panel { position:relative; z-index:1; width:100%; max-width:660px; max-height:90vh; overflow-y:auto; background:#0d1526; border:1px solid #1e293b; border-radius:16px; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.6); }
+  </style>
+</head>
+<body style="min-height:100vh;display:flex;flex-direction:row;background:#020617;color:#f1f5f9;margin:0;padding:0">
+
+  <!-- SIDEBAR FULL -->
+  <aside id="sidebarFull" style="width:260px;min-width:260px;background:#0f172a;border-right:1px solid #1e293b;display:flex;flex-direction:column;height:100vh;position:sticky;top:0;overflow-y:auto;flex-shrink:0;transition:width 0.25s,min-width 0.25s">
+    <!-- Logo + toggle -->
+    <div style="padding:20px 16px 16px;border-bottom:1px solid #1e293b;display:flex;align-items:flex-end;justify-content:space-between;gap:8px">
+      <div style="flex:1;min-width:0">
+        <img src="naturallogobeyaz.png" alt="natural.clinic" style="width:100%;height:auto;max-height:44px;object-fit:contain;object-position:left;display:block">
+      </div>
+      <button onclick="toggleSidebar()" title="Menüyü gizle" style="width:26px;height:26px;border-radius:8px;background:#1e293b;border:1px solid #334155;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s;margin-bottom:2px" onmouseover="this.style.background='#0d9488';this.style.color='#fff';this.style.borderColor='#0d9488'" onmouseout="this.style.background='#1e293b';this.style.color='#64748b';this.style.borderColor='#334155'">
+        <svg style="width:12px;height:12px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+      </button>
+    </div>
+
+    <!-- User -->
+    <div style="padding:14px 16px;border-bottom:1px solid #1e293b">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div id="userAvatar" style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">TL</div>
+        <div style="min-width:0">
+          <div id="sidebarName" style="font-size:12px;font-weight:700;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+          <div id="sidebarTeam" style="font-size:10px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">—</div>
+          <div id="roleLabel" style="font-size:9px;font-weight:700;color:#0d9488;text-transform:uppercase;letter-spacing:0.8px;margin-top:1px">Team Leader</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Nav -->
+    <div style="padding:12px 10px;flex:1">
+      <div style="font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.8px;padding:0 6px;margin-bottom:6px">Navigation</div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <button onclick="switchView('portfolio')" class="nav-btn active" id="nav-portfolio">
+          <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+          <span>Team Portfolio</span>
+        </button>
+        <button onclick="switchView('summary')" class="nav-btn" id="nav-summary">
+          <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+          <span>Team Summary</span>
+        </button>
+        <button onclick="switchView('transfer')" class="nav-btn" id="nav-transfer">
+          <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+          <span>Transfer Leads</span>
+        </button>
+      </div>
+
+      <!-- KPIs -->
+      <div style="margin-top:16px;border-top:1px solid #1e293b;padding-top:14px">
+        <div style="font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Team KPIs</div>
+        <div style="display:flex;flex-direction:column;gap:5px">
+          <div style="background:#1e293b;border:1px solid #334155;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:10px;color:#64748b;font-weight:600">Total</span>
+            <span id="sideKpiTotal" style="font-size:15px;font-weight:800;color:#f1f5f9">0</span>
+          </div>
+          <div style="background:#042f2e;border:1px solid #0d9488;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span style="font-size:10px;color:#5eead4;font-weight:600;flex-shrink:0">Paid</span>
+            <span id="sideKpiPaid" style="font-size:12px;font-weight:800;color:#2dd4bf;text-align:right;word-break:break-all">€0</span>
+          </div>
+          <div style="background:#1c0a0a;border:1px solid #7f1d1d;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;gap:8px">
+            <span style="font-size:10px;color:#fca5a5;font-weight:600;flex-shrink:0">Unpaid</span>
+            <span id="sideKpiUnpaid" style="font-size:12px;font-weight:800;color:#f87171;text-align:right;word-break:break-all">€0</span>
+          </div>
+          <div style="background:#052e16;border:1px solid #166534;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between">
+            <span style="font-size:10px;color:#86efac;font-weight:600">Won</span>
+            <span id="sideKpiWon" style="font-size:15px;font-weight:800;color:#4ade80">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logout -->
+    <div style="padding:14px 10px">
+      <button onclick="doLogout()" style="width:100%;padding:10px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='#450a0a';this.style.borderColor='#7f1d1d';this.style.color='#fca5a5'" onmouseout="this.style.background='#1e293b';this.style.borderColor='#334155';this.style.color='#94a3b8'">
+        <svg style="width:14px;height:14px;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- SIDEBAR MINI (collapsed) -->
+  <aside id="sidebarMini" style="display:none;width:56px;min-width:56px;background:#0f172a;border-right:1px solid #1e293b;flex-direction:column;align-items:center;height:100vh;position:sticky;top:0;flex-shrink:0;padding:12px 0">
+    <button onclick="toggleSidebar()" title="Menüyü aç" style="width:36px;height:36px;border-radius:10px;background:#1e293b;border:1px solid #334155;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-bottom:16px;transition:all 0.15s" onmouseover="this.style.background='#0d9488';this.style.color='#fff';this.style.borderColor='#0d9488'" onmouseout="this.style.background='#1e293b';this.style.color='#64748b';this.style.borderColor='#334155'">
+      <svg style="width:14px;height:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+    </button>
+    <div id="miniAvatar" style="width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;font-weight:800;font-size:11px;display:flex;align-items:center;justify-content:center;margin-bottom:20px">TL</div>
+    <div style="display:flex;flex-direction:column;gap:4px;align-items:center;flex:1">
+      <button onclick="switchView('portfolio')" id="mini-nav-portfolio" title="Team Portfolio" style="width:36px;height:36px;border-radius:10px;background:#0d9488;border:none;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s">
+        <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+      </button>
+      <button onclick="switchView('summary')" id="mini-nav-summary" title="Team Summary" style="width:36px;height:36px;border-radius:10px;background:transparent;border:none;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s" onmouseover="this.style.background='#1e293b';this.style.color='#e2e8f0'" onmouseout="if(!this.dataset.active)this.style.background='transparent'">
+        <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+      </button>
+      <button onclick="switchView('transfer')" id="mini-nav-transfer" title="Transfer Leads" style="width:36px;height:36px;border-radius:10px;background:transparent;border:none;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s" onmouseover="this.style.background='#1e293b';this.style.color='#e2e8f0'" onmouseout="if(!this.dataset.active)this.style.background='transparent'">
+        <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+      </button>
+    </div>
+    <button onclick="doLogout()" title="Logout" style="width:36px;height:36px;border-radius:10px;background:#1e293b;border:1px solid #334155;color:#f87171;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s;margin-top:12px" onmouseover="this.style.background='#450a0a';this.style.borderColor='#7f1d1d'" onmouseout="this.style.background='#1e293b';this.style.borderColor='#334155'">
+      <svg style="width:15px;height:15px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+    </button>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-grow p-4 md:p-6 space-y-4 overflow-x-hidden" style="flex:1;min-width:0;transition:all 0.25s ease">
+
+    <!-- PORTFOLIO VIEW -->
+    <div id="view-portfolio">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h2 class="text-xl font-bold text-white">Team Portfolio</h2>
+          <p class="text-xs text-slate-400 mt-0.5" id="teamSubtitle">—</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <span class="text-xs text-slate-500" id="lastRefresh">—</span>
+          <button onclick="loadData(true)" class="px-3 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs rounded-lg font-semibold">↻ Refresh</button>
+        </div>
+      </div>
+
+      <!-- KPI Row -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4"><div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Total</div><div class="text-2xl font-bold text-white mt-1" id="k1">0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4"><div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Deal Amount</div><div class="text-xl font-bold text-blue-400 mt-1" id="k2">€0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4"><div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Paid</div><div class="text-xl font-bold text-emerald-400 mt-1" id="k3">€0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4"><div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Unpaid</div><div class="text-xl font-bold text-red-400 mt-1" id="k4">€0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4"><div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Won</div><div class="text-2xl font-bold text-emerald-300 mt-1" id="k5">0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4"><div class="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Past+Unvisited</div><div class="text-2xl font-bold text-red-400 mt-1" id="k6">0</div></div>
+      </div>
+
+      <!-- Filters -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Filters</span>
+          <button onclick="resetFilters()" class="text-[10px] text-teal-400 hover:text-teal-300 font-semibold">Clear All</button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Agent</label><select id="fAgent" class="filter-select" onchange="applyFilters()"><option value="">All Agents</option></select></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Stage</label><select id="fStage" class="filter-select" onchange="applyFilters()"><option value="">All Stages</option></select></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Payment</label><select id="fPayment" class="filter-select" onchange="applyFilters()"><option value="">All</option><option value="Paid">Paid</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option></select></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Language</label><select id="fLanguage" class="filter-select" onchange="applyFilters()"><option value="">All Languages</option></select></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Visit Status</label><select id="fVisit" class="filter-select" onchange="applyFilters()"><option value="">All</option><option value="Visited">Visited</option><option value="Not Visited">Not Visited</option></select></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Search</label><input id="fSearch" class="filter-input" placeholder="Name, ID..." oninput="applyFilters()"></div>
+        </div>
+        <div class="flex flex-wrap gap-2">
+          <button onclick="setPreset('pastNotVisited')" class="px-3 py-1 bg-red-900/40 hover:bg-red-800/50 border border-red-800/40 text-red-300 text-[10px] rounded-lg font-bold transition-all">Past + Not Visited</button>
+          <button onclick="setPreset('noPayment')" class="px-3 py-1 bg-amber-900/40 hover:bg-amber-800/50 border border-amber-800/40 text-amber-300 text-[10px] rounded-lg font-bold transition-all">No Payment</button>
+          <button onclick="setPreset('wonOnly')" class="px-3 py-1 bg-emerald-900/40 hover:bg-emerald-800/50 border border-emerald-800/40 text-emerald-300 text-[10px] rounded-lg font-bold transition-all">Won Only</button>
+          <button onclick="setPreset('unlockPending')" class="px-3 py-1 bg-amber-800/40 hover:bg-amber-700/50 border border-amber-700/40 text-amber-200 text-[10px] rounded-lg font-bold transition-all">⚠ Unlock Requests</button>
+        </div>
+      </div>
+
+      <!-- Data Summary Bar -->
+      <div class="flex flex-wrap gap-x-5 gap-y-1.5 px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-xs text-slate-400 mb-3">
+        <span>Full Data: <strong class="text-white font-bold" id="statFull">0</strong></span>
+        <span class="text-gray-700">|</span>
+        <span>Past Arrival: <strong class="text-amber-400 font-bold" id="statArrival">0</strong></span>
+        <span>Past Visit 1: <strong class="text-amber-400 font-bold" id="statV1">0</strong></span>
+        <span>Past Visit 2: <strong class="text-amber-400 font-bold" id="statV2">0</strong></span>
+        <span>Past Visit 3: <strong class="text-amber-400 font-bold" id="statV3">0</strong></span>
+        <span class="text-gray-700">|</span>
+        <span>Cancelled: <strong class="text-red-400 font-bold" id="statCancelled">0</strong></span>
+        <span class="text-gray-700">|</span>
+        <span>Unlock Req: <strong class="text-amber-300 font-bold" id="statUnlock">0</strong></span>
+      </div>
+
+      <!-- Tabs -->
+      <div class="border-b border-gray-800 flex flex-wrap gap-1.5 pb-2 mb-4" id="tabsHeader">
+        <button onclick="switchTab('all')" id="tab-all" class="px-3 py-2 text-xs font-semibold rounded-lg bg-teal-600 text-white flex items-center gap-1.5 transition-all">
+          All Data <span id="badge-all" class="tab-badge bg-teal-800 text-white">0</span>
+        </button>
+        <button onclick="switchTab('arrival')" id="tab-arrival" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
+          Arrival Date <span id="badge-arrival" class="tab-badge bg-gray-800 text-slate-400">0</span>
+        </button>
+        <button onclick="switchTab('visit1')" id="tab-visit1" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
+          Visit Date 1 <span id="badge-visit1" class="tab-badge bg-gray-800 text-slate-400">0</span>
+        </button>
+        <button onclick="switchTab('visit2')" id="tab-visit2" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
+          Visit Date 2 <span id="badge-visit2" class="tab-badge bg-gray-800 text-slate-400">0</span>
+        </button>
+        <button onclick="switchTab('visit3')" id="tab-visit3" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
+          Visit Date 3 <span id="badge-visit3" class="tab-badge bg-gray-800 text-slate-400">0</span>
+        </button>
+        <button onclick="switchTab('cancelled')" id="tab-cancelled" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
+          Cancelled Data <span id="badge-cancelled" class="tab-badge bg-gray-800 text-slate-400">0</span>
+        </button>
+      </div>
+
+      <!-- Loading/Error -->
+      <div id="loadingState" class="flex flex-col items-center justify-center py-20 gap-4">
+        <div class="spinner-anim"></div>
+        <p class="text-slate-400 text-sm">Loading team data from Supabase...</p>
+      </div>
+      <div id="errorState" class="hidden bg-red-900/20 border border-red-800/40 rounded-xl p-6 text-center">
+        <p class="text-red-400 font-semibold text-sm" id="errorMsg">Error</p>
+        <button onclick="loadData(true)" class="mt-3 px-4 py-2 bg-red-900/40 text-red-300 text-xs rounded-lg font-bold">Retry</button>
+      </div>
+
+      <!-- Deals Table -->
+      <div id="cardsContainer" class="hidden">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-slate-400" id="resultInfo">0 deals shown</span>
+        </div>
+        <div class="overflow-x-auto rounded-xl border border-gray-800 bg-gray-900">
+          <table class="deal-tbl">
+            <thead>
+              <tr>
+                <th style="width:36px">#</th>
+                <th data-sort="name"    onclick="sortBy('name')"    style="cursor:pointer;user-select:none">Deal Name<span class="sarrow" style="color:#475569"> ↕</span></th>
+                <th data-sort="id"      onclick="sortBy('id')"      style="cursor:pointer;user-select:none">Deal ID<span class="sarrow" style="color:#475569"> ↕</span></th>
+                <th data-sort="agent"   onclick="sortBy('agent')"   style="cursor:pointer;user-select:none">Agent<span class="sarrow" style="color:#475569"> ↕</span></th>
+                <th data-sort="stage"   onclick="sortBy('stage')"   style="cursor:pointer;user-select:none">Stage<span class="sarrow" style="color:#475569"> ↕</span></th>
+                <th data-sort="arrival" onclick="sortBy('arrival')" style="cursor:pointer;user-select:none">Arrival Date<span class="sarrow" style="color:#475569"> ↕</span></th>
+                <th data-sort="created" onclick="sortBy('created')" style="cursor:pointer;user-select:none">Created<span class="sarrow" style="color:#475569"> ↕</span></th>
+                <th data-sort="lang"    onclick="sortBy('lang')"    style="cursor:pointer;user-select:none">Language<span class="sarrow" style="color:#475569"> ↕</span></th>
+                <th data-sort="amount"  onclick="sortBy('amount')"  style="cursor:pointer;user-select:none">Deal Amount<span class="sarrow" style="color:#475569"> ↕</span></th>
+                <th data-sort="paid"    onclick="sortBy('paid')"    style="cursor:pointer;user-select:none">Paid<span class="sarrow" style="color:#475569"> ↕</span></th>
+                <th data-sort="visit"   onclick="sortBy('visit')"   style="cursor:pointer;user-select:none">Visit<span class="sarrow" style="color:#475569"> ↕</span></th>
+                <th data-sort="result"  onclick="sortBy('result')"  style="cursor:pointer;user-select:none">Result<span class="sarrow" style="color:#475569"> ↕</span></th>
+              </tr>
+            </thead>
+            <tbody id="cardsGrid"></tbody>
+          </table>
+          <div id="emptyState" class="hidden text-center py-16 text-slate-500 text-sm">No deals match your current filters.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SUMMARY VIEW -->
+    <div id="view-summary" class="hidden">
+      <h2 class="text-xl font-bold text-white mb-4">Team Summary</h2>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5" style="display:flex;flex-direction:column;max-height:75vh">
+          <h3 class="text-sm font-bold text-white mb-3" style="flex-shrink:0">Agent Performance</h3>
+          <div style="overflow-y:auto;flex:1">
+            <table class="w-full text-xs">
+              <thead style="position:sticky;top:0;z-index:1;background:#111827"><tr class="text-slate-400 border-b border-gray-800">
+                <th class="text-left py-2 font-semibold">Agent</th>
+                <th class="text-right py-2 font-semibold">Deals</th>
+                <th class="text-right py-2 font-semibold">Deal Amt</th>
+                <th class="text-right py-2 font-semibold">Paid</th>
+                <th class="text-right py-2 font-semibold">Won</th>
+              </tr></thead>
+              <tbody id="agentSummaryBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h3 class="text-sm font-bold text-white mb-3">Stage Distribution</h3>
+          <div id="stageBreakdown" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TRANSFER VIEW -->
+    <div id="view-transfer" class="hidden">
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px">
+        <div style="width:40px;height:40px;border-radius:12px;background:#1e1b4b;border:1px solid #3730a3;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <svg style="width:20px;height:20px;color:#818cf8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+        </div>
+        <div>
+          <h2 style="font-size:20px;font-weight:800;color:#f1f5f9;margin:0">Transfer Leads</h2>
+          <p style="font-size:11px;color:#64748b;margin:2px 0 0">Transfer leads from one agent to another</p>
+        </div>
+      </div>
+
+      <!-- 2 Kolon: Form + Lead Listesi -->
+      <div style="display:grid;grid-template-columns:340px 1fr;gap:20px;align-items:start">
+
+        <!-- SOL: Form -->
+        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:24px;display:flex;flex-direction:column;gap:18px">
+
+          <!-- Kimden -->
+          <div>
+            <label style="font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:8px">From <span style="color:#f87171">*</span></label>
+            <select id="trFromAgent" onchange="onTransferFromChange()" style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;color:#f1f5f9;font-size:13px;outline:none;cursor:pointer">
+              <option value="">— Select Agent —</option>
+            </select>
+            <div id="trFromInfo" style="display:none;margin-top:8px;padding:8px 12px;background:#1e1b4b;border:1px solid #3730a3;border-radius:8px;font-size:11px;color:#a5b4fc"></div>
+          </div>
+
+          <!-- Ok -->
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="flex:1;height:1px;background:#1e293b"></div>
+            <div style="width:32px;height:32px;border-radius:50%;background:#1e293b;border:1px solid #334155;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+              <svg style="width:14px;height:14px;color:#6366f1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
+            </div>
+            <div style="flex:1;height:1px;background:#1e293b"></div>
+          </div>
+
+          <!-- Kime -->
+          <div>
+            <label style="font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.8px;display:block;margin-bottom:8px">To <span style="color:#f87171">*</span></label>
+            <select id="trToAgent" onchange="updateTransferPreview()" style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;color:#f1f5f9;font-size:13px;outline:none;cursor:pointer">
+              <option value="">— Select Agent —</option>
+            </select>
+          </div>
+
+          <!-- Özet banner -->
+          <div id="trPreview" style="display:none;background:#1e1b4b;border:1px solid #4338ca;border-radius:10px;padding:12px 14px">
+            <div style="font-size:9px;font-weight:700;color:#818cf8;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Transfer Summary</div>
+            <div style="display:flex;align-items:center;gap:8px;font-size:12px;flex-wrap:wrap">
+              <span style="color:#f1f5f9;font-weight:700" id="trPreviewFrom">—</span>
+              <svg style="width:14px;height:14px;color:#6366f1;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+              <span style="color:#f1f5f9;font-weight:700" id="trPreviewTo">—</span>
+              <span style="margin-left:auto;background:#312e81;color:#a5b4fc;font-weight:800;font-size:13px;padding:2px 10px;border-radius:20px" id="trPreviewCount">0 lead</span>
+            </div>
+          </div>
+
+          <div id="trError" style="display:none;color:#f87171;font-size:12px;font-weight:600;padding:10px 14px;background:#450a0a;border:1px solid #7f1d1d;border-radius:8px"></div>
+
+          <button onclick="doTransfer()" style="width:100%;padding:12px;background:linear-gradient(135deg,#4f46e5,#7c3aed);border:none;border-radius:12px;color:#fff;font-size:13px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:opacity 0.15s" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+            <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
+            Transfer Leads
+          </button>
+        </div>
+
+        <!-- SAĞ: Lead Listesi -->
+        <div style="background:#0f172a;border:1px solid #1e293b;border-radius:16px;overflow:hidden;min-height:400px">
+          <div style="padding:16px 20px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:#f1f5f9" id="trLeadListTitle">Leads to Transfer</div>
+              <div style="font-size:10px;color:#64748b;margin-top:2px" id="trLeadListSub">Select an agent from the left</div>
+            </div>
+            <span id="trLeadListBadge" style="display:none;background:#1e1b4b;color:#818cf8;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;border:1px solid #3730a3"></span>
+          </div>
+          <div id="trLeadListEmpty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:#334155;text-align:center">
+            <svg style="width:40px;height:40px;margin-bottom:12px;opacity:0.4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+            <div style="font-size:12px;font-weight:600">No agent selected</div>
+            <div style="font-size:11px;margin-top:4px;opacity:0.6">Select an agent from the "From" dropdown to see their leads here</div>
+          </div>
+          <div id="trLeadListTable" style="display:none;max-height:calc(100vh - 280px);overflow-y:auto">
+            <table style="width:100%;border-collapse:collapse;font-size:11px">
+              <thead style="position:sticky;top:0;background:#0f172a;z-index:1">
+                <tr style="border-bottom:1px solid #1e293b">
+                  <th style="text-align:left;padding:10px 16px;color:#475569;font-size:9px;text-transform:uppercase;letter-spacing:0.6px;font-weight:700">#</th>
+                  <th style="text-align:left;padding:10px 16px;color:#475569;font-size:9px;text-transform:uppercase;letter-spacing:0.6px;font-weight:700">Deal Name</th>
+                  <th style="text-align:left;padding:10px 16px;color:#475569;font-size:9px;text-transform:uppercase;letter-spacing:0.6px;font-weight:700">Stage</th>
+                  <th style="text-align:right;padding:10px 16px;color:#475569;font-size:9px;text-transform:uppercase;letter-spacing:0.6px;font-weight:700">Amount</th>
+                  <th style="text-align:left;padding:10px 16px;color:#475569;font-size:9px;text-transform:uppercase;letter-spacing:0.6px;font-weight:700">Status</th>
+                </tr>
+              </thead>
+              <tbody id="trLeadListBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Deal Detail Modal -->
+  <div id="dealModal">
+    <div class="modal-backdrop" onclick="closeModal()"></div>
+    <div class="modal-panel">
+      <div class="flex items-start justify-between mb-5">
+        <div>
+          <h3 class="text-base font-bold text-white" id="modalDealName">—</h3>
+          <div class="text-[10px] text-slate-500 font-mono mt-1" id="modalDealId">—</div>
+          <div class="text-[10px] text-teal-400 font-semibold mt-0.5" id="modalAgent">—</div>
+        </div>
+        <button onclick="closeModal()" class="text-slate-500 hover:text-white ml-4 shrink-0 transition-colors">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 mb-5 text-xs">
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Stage</div><div id="modalStage">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Arrival Date</div><div class="text-slate-200 font-medium" id="modalArrival">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Language</div><div class="text-slate-200" id="modalLanguage">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Region</div><div class="text-slate-200" id="modalRegion">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Deal Amount</div><div class="text-blue-400 font-bold" id="modalDealAmt">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Paid / Unpaid</div><div><span class="text-emerald-400 font-bold" id="modalPaid">—</span> / <span class="text-red-400 font-bold" id="modalUnpaid">—</span></div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Visit Status</div><div class="text-slate-200" id="modalVisit">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Payment</div><div class="text-slate-200" id="modalPayment">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">1st Visit</div><div class="text-slate-200" id="modalV1">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">2nd Visit</div><div class="text-slate-200" id="modalV2">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">3rd Visit</div><div class="text-slate-200" id="modalV3">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Pay/Ticket</div><div class="text-slate-200" id="modalTicket">—</div></div>
+      </div>
+
+      <div id="modalResultSection" class="border-t border-gray-800 pt-4"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://aztxfncqanrodbttywrb.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_IkbCNelsIjBPW6Tqkq4Egw_djjzvTXL";
+
+    const CONTINUING_SUBCODES = new Set([
+      'No Response 1','No Response 2','No Response 3',
+      'New Arrival Date Added','Waiting Arrival Date',
+      'New Visit Date Added','Waiting Visit Date',
+      'Follow-up Date Added','Waiting Decision',
+      'Waiting Payment',
+      'New Travel Date Added','Waiting Travel Date'
+    ]);
+    function isContinuing(sub) { return CONTINUING_SUBCODES.has(sub || ''); }
+
+    let currentUser = null;
+    let allDeals = [];
+    let filteredDeals = [];
+    let activeTab = 'all';
+    let sortCol = '';
+    let _activeCacheKey = null;
+    let sortDir = 1;
+    let currentModalDeal = null;
+    let currentModalIndex = null;
+
+    async function safeJson(response) {
+      const text = await response.text();
+      const fixed = text.replace(/"db\.Deal Id"\s*:\s*(\d+)/g, '"db.Deal Id":"$1"');
+      return JSON.parse(fixed);
+    }
+
+    function parseDateString(str) {
+      if (!str) return null;
+      const s = String(str).trim().split(' ')[0];
+      if (s.includes('.')) { const p=s.split('.'); if(p.length===3) return new Date(+p[2],+p[1]-1,+p[0]); }
+      if (s.includes('/')) { const p=s.split('/'); if(p.length===3){
+        if(p[0].length===4) return new Date(+p[0],+p[1]-1,+p[2]);
+        return new Date(+p[2],+p[1]-1,+p[0]);
+      }}
+      if (s.includes('-')) { const p=s.split('-'); if(p.length===3){
+        if(p[0].length===4) return new Date(+p[0],+p[1]-1,+p[2]);
+        return new Date(+p[2],+p[1]-1,+p[0]);
+      }}
+      if (/^\d{8}$/.test(s)) return new Date(+s.slice(4),+s.slice(2,4)-1,+s.slice(0,2));
+      return null;
+    }
+
+    function isBeforeCutoff(dateStr) {
+      const d = parseDateString(dateStr);
+      return d && d < new Date(2026, 5, 15);
+    }
+
+    function formatDate(str) {
+      const d = parseDateString(str);
+      if (!d || isNaN(d)) return str ? String(str) : '—';
+      return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
+    }
+
+    function isUnpaid(d) { const s=(d['Payment Status']||'').toLowerCase(); return s==='unpaid'||s==='partial'||s===''; }
+
+    function getSortVal(d, col) {
+      if (col === 'name')    return (d['Deal Name'] || '').toLowerCase();
+      if (col === 'id')      return (d['DealID'] || '').toLowerCase();
+      if (col === 'agent')   return (d['Deal Owner Name'] || '').toLowerCase();
+      if (col === 'stage')   return (d['Stage'] || '').toLowerCase();
+      if (col === 'arrival') { const dt = parseDateString(d['Arrival Date']); return dt ? dt.getTime() : 0; }
+      if (col === 'created') { const dt = parseDateString(d['Created Time']); return dt ? dt.getTime() : 0; }
+      if (col === 'lang')    return (d['Language'] || '').toLowerCase();
+      if (col === 'amount')  return Number(d['Deal Amount']) || 0;
+      if (col === 'paid')    return Number(d['Paid Amount']) || 0;
+      if (col === 'visit')   return (d['Visit Status'] || '').toLowerCase();
+      if (col === 'result')  return (d.result_code || '').toLowerCase();
+      return '';
+    }
+    function sortBy(col) {
+      if (sortCol === col) sortDir = -sortDir; else { sortCol = col; sortDir = 1; }
+      applySortAndRender();
+    }
+    function applySortAndRender() {
+      if (sortCol) filteredDeals.sort((a, b) => {
+        const av = getSortVal(a, sortCol), bv = getSortVal(b, sortCol);
+        return av < bv ? -sortDir : av > bv ? sortDir : 0;
+      });
+      renderCards(filteredDeals);
+      document.querySelectorAll('th[data-sort]').forEach(th => {
+        const arrow = th.querySelector('.sarrow');
+        if (!arrow) return;
+        arrow.textContent = th.dataset.sort === sortCol ? (sortDir === 1 ? ' ↑' : ' ↓') : ' ↕';
+        arrow.style.color = th.dataset.sort === sortCol ? '#2dd4bf' : '#475569';
+      });
+    }
+    function doLogout() { localStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
+    function fixTR(s) {
+      if (!s || typeof s !== 'string') return s;
+      return s
+        .replace(/Ã¼/g,'ü').replace(/Ã–/g,'Ö').replace(/Ã¶/g,'ö').replace(/Ãœ/g,'Ü')
+        .replace(/Ã§/g,'ç').replace(/Ã‡/g,'Ç').replace(/Ä°/g,'İ').replace(/Ä±/g,'ı')
+        .replace(/ÄŸ/g,'ğ').replace(/Äž/g,'Ğ').replace(/ÅŸ/g,'ş').replace(/Åž/g,'Ş')
+        .replace(/Ã¢/g,'â').replace(/Ã‚/g,'Â').replace(/Ã¡/g,'á').replace(/Ã©/g,'é');
+    }
+    function fmt(v) { return (v===null||v===undefined||v==='')?'—':fixTR(String(v)); }
+    function fmtMoney(v) {
+      if (!v && v!==0) return '€0';
+      return '€'+Number(v).toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:2});
+    }
+    function fmtCompact(v) {
+      const n = Number(v) || 0;
+      if (Math.abs(n) >= 1e6) return '€' + (n/1e6).toFixed(1) + 'M';
+      if (Math.abs(n) >= 1e3) return '€' + (n/1e3).toFixed(1) + 'K';
+      return '€' + Math.round(n);
+    }
+
+    function stagePill(stage) {
+      if (!stage) return '<span class="stage-pill stage-default">—</span>';
+      const s = stage.toLowerCase();
+      let cls='stage-default';
+      if(s.includes('won')) cls='stage-Won';
+      else if(s.includes('cancel')) cls='stage-Cancelled';
+      else if(s.includes('appointment')) cls='stage-Appointment';
+      else if(s.includes('reservation')) cls='stage-Reservation';
+      else if(s.includes('waiting')) cls='stage-Waiting';
+      return `<span class="stage-pill ${cls}">${stage}</span>`;
+    }
+
+    function toggleSidebar() {
+      const full = document.getElementById('sidebarFull');
+      const mini = document.getElementById('sidebarMini');
+      const isOpen = full.style.display !== 'none';
+      if (isOpen) {
+        full.style.display = 'none';
+        mini.style.display = 'flex';
+      } else {
+        full.style.display = 'flex';
+        mini.style.display = 'none';
+      }
+    }
+
+    function switchView(v) {
+      ['portfolio','summary','transfer'].forEach(name => {
+        const el=document.getElementById('view-'+name);
+        if(el) el.classList.toggle('hidden', name!==v);
+        const btn=document.getElementById('nav-'+name);
+        if(btn) btn.classList.toggle('active', name===v);
+        const mini=document.getElementById('mini-nav-'+name);
+        if(mini){
+          if(name===v){ mini.style.background='#0d9488'; mini.style.color='#fff'; mini.dataset.active='1'; }
+          else { mini.style.background='transparent'; mini.style.color='#64748b'; delete mini.dataset.active; }
+        }
+      });
+      if(v==='summary') renderSummary();
+      if(v==='transfer') initTransferView();
+    }
+
+    function updateKPIs(data) {
+      const total=data.length;
+      const deal=data.reduce((s,d)=>s+(Number(d['Deal Amount'])||0),0);
+      const paid=data.reduce((s,d)=>s+(Number(d['Paid Amount'])||0),0);
+      const unpaid=data.reduce((s,d)=>s+(Number(d['Unpaid Amount'])||0),0);
+      const won=data.filter(d=>(d['Stage']||'').toLowerCase().includes('won')).length;
+      const pastUnvisited=data.filter(d=>d['Arrival Past']==='Evet'&&d['Visit Status']==='Not Visited').length;
+      const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+      set('k1',total); set('k2',fmtCompact(deal)); set('k3',fmtCompact(paid)); set('k4',fmtCompact(unpaid));
+      set('k5',won); set('k6',pastUnvisited);
+      set('sideKpiTotal',total); set('sideKpiPaid',fmtCompact(paid));
+      set('sideKpiUnpaid',fmtCompact(unpaid)); set('sideKpiWon',won);
+    }
+
+    function switchTab(tabId) {
+      activeTab = tabId;
+      ['all','arrival','visit1','visit2','visit3','cancelled'].forEach(t => {
+        const btn=document.getElementById('tab-'+t);
+        const badge=document.getElementById('badge-'+t);
+        if(!btn) return;
+        if(t===tabId) {
+          btn.className="px-3 py-2 text-xs font-semibold rounded-lg bg-teal-600 text-white flex items-center gap-1.5 transition-all";
+          if(badge) badge.className="tab-badge bg-teal-800 text-white";
+        } else {
+          btn.className="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all";
+          if(badge) badge.className="tab-badge bg-gray-800 text-slate-400";
+        }
+      });
+      applyFilters();
+    }
+
+    function updateTabBadges() {
+      const nw=allDeals.filter(d=>!(d['Stage']||'').toLowerCase().includes('won'));
+      const nc=d=>!(d['Stage']||'').toLowerCase().includes('cancel');
+      const allC=nw.length;
+      const a =nw.filter(d=>nc(d)&&isBeforeCutoff(d['Arrival Date'])).length;
+      const v1=nw.filter(d=>nc(d)&&isBeforeCutoff(d['1. Visit Date'])).length;
+      const v2=nw.filter(d=>nc(d)&&isBeforeCutoff(d['2. Visit Date'])).length;
+      const v3=nw.filter(d=>nc(d)&&isBeforeCutoff(d['3. Visit Date'])).length;
+      const ca=nw.filter(d=>(d['Stage']||'').toLowerCase().includes('cancel')&&
+        (isBeforeCutoff(d['Arrival Date'])||isBeforeCutoff(d['1. Visit Date'])||isBeforeCutoff(d['2. Visit Date'])||isBeforeCutoff(d['3. Visit Date'])||isBeforeCutoff(d['Created Time']))).length;
+      const unlockReqs=allDeals.filter(d=>d.lock_approval_requested).length;
+      const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+      set('badge-all',allC); set('badge-arrival',a); set('badge-visit1',v1); set('badge-visit2',v2); set('badge-visit3',v3); set('badge-cancelled',ca);
+      set('statFull',allC); set('statArrival',a); set('statV1',v1); set('statV2',v2); set('statV3',v3);
+      set('statCancelled',ca); set('statUnlock',unlockReqs);
+    }
+
+    function renderCards(data) {
+      const tbody=document.getElementById('cardsGrid');
+      const empty=document.getElementById('emptyState');
+      document.getElementById('resultInfo').textContent=data.length+' deals shown';
+      if(!data.length){tbody.innerHTML='';empty.classList.remove('hidden');return;}
+      empty.classList.add('hidden');
+
+      tbody.innerHTML=data.map((d,i)=>{
+        const isPast=d['Arrival Past']==='Evet'&&d['Visit Status']==='Not Visited';
+        const isNoPay=d['Payment Status']==='Unpaid';
+        const rowCls=isPast?'row-red':isNoPay?'row-amber':'';
+        const isLocked=d.status==='locked';
+        let resultBadge;
+        if(isLocked && d.lock_approval_requested) {
+          resultBadge=`<span class="inline-flex items-center gap-1 text-[9px] bg-amber-900/50 text-amber-300 px-2 py-0.5 rounded-full font-bold whitespace-nowrap">⚠ Unlock Req.</span>`;
+        } else if(isLocked) {
+          const cont=isContinuing(d.sub_code);
+          const lbl=d.sub_code||d.result_code||'Locked';
+          resultBadge=cont
+            ?`<span class="text-[9px] bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded-full font-bold max-w-[120px] overflow-hidden text-ellipsis inline-block" title="${lbl}">&#9654; ${lbl}</span>`
+            :`<span class="text-[9px] bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded-full font-bold max-w-[120px] overflow-hidden text-ellipsis inline-block" title="${lbl}">&#10003; ${lbl}</span>`;
+        } else {
+          resultBadge=`<span class="text-[9px] text-slate-600 italic">Pending</span>`;
+        }
+        return `<tr class="${rowCls}" onclick="openModal(${i})">
+          <td class="text-slate-600 text-[10px]">${i+1}</td>
+          <td class="text-white font-medium" title="${(d['Deal Name']||'').replace(/"/g,'&quot;')}">${fmt(d['Deal Name'])}</td>
+          <td class="text-slate-500 font-mono text-[10px]"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d['Deal Id']}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:underline;text-decoration-style:dotted" class="hover:text-teal-400">${fmt(d['DealID'])||fmt(d['Deal Id'])}</a></td>
+          <td class="text-teal-400 font-semibold text-[11px]">${fmt(d['Deal Owner Name'])}</td>
+          <td>${stagePill(d['Stage'])}</td>
+          <td class="text-slate-300">${formatDate(d['Arrival Date'])}</td>
+          <td class="text-slate-500 text-[10px]">${formatDate(d['Created Time'])}</td>
+          <td class="text-slate-400">${fmt(d['Language'])}</td>
+          <td class="text-blue-400 font-bold">${fmtMoney(d['Deal Amount'])}</td>
+          <td class="${d['Paid Amount']>0?'text-emerald-400':'text-red-400'} font-bold">${fmtMoney(d['Paid Amount'])}</td>
+          <td class="text-slate-400 text-[10px]">${fmt(d['Visit Status'])}</td>
+          <td>${resultBadge}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function openModal(index) {
+      const d = filteredDeals[index];
+      if (!d) return;
+      currentModalDeal = d;
+      currentModalIndex = index;
+      const set=(id,v)=>{const el=document.getElementById(id);if(el)el.textContent=v;};
+      document.getElementById('modalDealName').textContent = d['Deal Name']||'—';
+      const zohoId = d['Deal Id'] || '';
+      document.getElementById('modalDealId').innerHTML = `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${zohoId}" target="_blank" rel="noopener" style="text-decoration:underline;text-decoration-style:dotted;color:inherit" onmouseover="this.style.color='#2dd4bf'" onmouseout="this.style.color=''">${d['DealID'] || zohoId}${zohoId ? ' ↗' : ''}</a>`;
+      document.getElementById('modalAgent').textContent = 'Agent: '+(d['Deal Owner Name']||'—');
+      document.getElementById('modalStage').innerHTML = stagePill(d['Stage']);
+      set('modalArrival',formatDate(d['Arrival Date'])); set('modalLanguage',fmt(d['Language']));
+      set('modalRegion',fmt(d['Region']||d['Region Derived'])); set('modalDealAmt',fmtMoney(d['Deal Amount']));
+      set('modalPaid',fmtMoney(d['Paid Amount'])); set('modalUnpaid',fmtMoney(d['Unpaid Amount']));
+      set('modalVisit',fmt(d['Visit Status'])); set('modalPayment',fmt(d['Payment Status']));
+      set('modalV1',formatDate(d['1. Visit Date'])); set('modalV2',formatDate(d['2. Visit Date']));
+      set('modalV3',formatDate(d['3. Visit Date'])); set('modalTicket',fmt(d['Payment Or Flight Ticket']));
+      renderModalResult(d);
+      document.getElementById('dealModal').classList.add('open');
+      document.body.style.overflow='hidden';
+    }
+
+    function renderModalResult(d) {
+      const section=document.getElementById('modalResultSection');
+      const isLocked=d.status==='locked';
+      if (isLocked) {
+        let approveSection = '';
+        if (d.lock_approval_requested) {
+          approveSection=`
+            <div class="mt-3 p-3 bg-amber-950/40 border border-amber-800/40 rounded-lg space-y-2">
+              <div class="text-[10px] text-amber-300 font-bold flex items-center gap-1.5">
+                <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+                Agent Requested Unlock
+              </div>
+              <div class="flex gap-2">
+                <button onclick="approveUnlock('${d['Deal Id']}')" class="flex-1 py-2 bg-emerald-700 hover:bg-emerald-600 text-white text-xs rounded-lg font-bold transition-all">Approve Unlock</button>
+                <button onclick="rejectUnlock('${d['Deal Id']}')" class="flex-1 py-2 bg-rose-700 hover:bg-rose-600 text-white text-xs rounded-lg font-bold transition-all">Reject</button>
+              </div>
+            </div>`;
+        }
+        section.innerHTML=`
+          <div class="flex items-center gap-2 text-sm text-emerald-400 font-bold mb-3">
+            <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            Result Recorded
+          </div>
+          <div class="bg-gray-900/80 rounded-lg p-3 text-xs space-y-1.5">
+            <div><span class="text-slate-500 font-medium">Result Code:</span> <strong class="text-white">${d.result_code||'—'}</strong></div>
+            <div><span class="text-slate-500 font-medium">Sub Code:</span> <strong class="text-slate-200">${d.sub_code||'—'}</strong></div>
+            ${d.agent_note?`<div><span class="text-slate-500 font-medium">Note:</span> <span class="text-slate-300">${d.agent_note}</span></div>`:''}
+          </div>
+          ${approveSection}`;
+      } else {
+        section.innerHTML=`
+          <div class="flex items-center gap-2 text-sm text-slate-500 font-semibold">
+            <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+            No result entered yet by agent.
+          </div>`;
+      }
+    }
+
+    function closeModal() {
+      document.getElementById('dealModal').classList.remove('open');
+      document.body.style.overflow='';
+      currentModalDeal=null;
+      currentModalIndex=null;
+    }
+
+    async function approveUnlock(dealId) {
+      const d=currentModalDeal;
+      if(!d) return;
+      const btns=document.querySelectorAll('#modalResultSection button');
+      btns.forEach(b=>{b.disabled=true;});
+      try {
+        const resp=await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?%22db.Deal%20Id%22=eq.${encodeURIComponent(String(dealId))}`,{method:'PATCH',
+          headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json; charset=utf-8','Prefer':'return=minimal'},
+          body:JSON.stringify({deal_status:'pending',lock_approval_requested:false})});
+        if(!resp.ok) throw new Error(await resp.text());
+        addLog('UNLOCK_APPROVE', `Unlock onaylandı: ${d['Deal Name']}`, String(dealId), d['Deal Name']);
+        d.status='pending'; d.lock_approval_requested=false;
+        const main=allDeals.find(x=>x['Deal Id']===dealId);
+        if(main){main.status='pending';main.lock_approval_requested=false;}
+        renderModalResult(d); applyFilters();
+      } catch(err){
+        showSiteNotice('Approve error: '+err.message, 'error');
+        btns.forEach(b=>{b.disabled=false;});
+      }
+    }
+
+    async function rejectUnlock(dealId) {
+      const d=currentModalDeal;
+      if(!d) return;
+      const btns=document.querySelectorAll('#modalResultSection button');
+      btns.forEach(b=>{b.disabled=true;});
+      try {
+        const resp=await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?%22db.Deal%20Id%22=eq.${encodeURIComponent(String(dealId))}`,{method:'PATCH',
+          headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json; charset=utf-8','Prefer':'return=minimal'},
+          body:JSON.stringify({lock_approval_requested:false})});
+        if(!resp.ok) throw new Error(await resp.text());
+        addLog('UNLOCK_REJECT', `Unlock reddedildi: ${d['Deal Name']}`, String(dealId), d['Deal Name']);
+        d.lock_approval_requested=false;
+        const main=allDeals.find(x=>x['Deal Id']===dealId);
+        if(main) main.lock_approval_requested=false;
+        renderModalResult(d); applyFilters();
+      } catch(err){
+        showSiteNotice('Reject error: '+err.message, 'error');
+        btns.forEach(b=>{b.disabled=false;});
+      }
+    }
+
+    function populateFilters(data) {
+      const agents=[...new Set(data.map(d=>d['Deal Owner Name']).filter(Boolean))].sort();
+      const stages=[...new Set(data.map(d=>d['Stage']).filter(Boolean))].sort();
+      const langs=[...new Set(data.map(d=>d['Language']).filter(Boolean))].sort();
+      const refresh=(id,items)=>{
+        const sel=document.getElementById(id);if(!sel)return;
+        const existing=Array.from(sel.options).slice(1).map(o=>o.value);
+        if(existing.join('|')===items.join('|'))return;
+        if(document.activeElement===sel)return;
+        const cur=sel.value;
+        sel.innerHTML=`<option value="">${sel.options[0]?sel.options[0].text:''}</option>`;
+        items.forEach(v=>{const o=document.createElement('option');o.value=v;o.text=v;o.style.background='#111827';o.style.color='#E2E8F0';sel.appendChild(o);});
+        if(cur)sel.value=cur;
+      };
+      refresh('fAgent',agents); refresh('fStage',stages); refresh('fLanguage',langs);
+    }
+
+    function applyFilters() {
+      const agent=document.getElementById('fAgent').value;
+      const stage=document.getElementById('fStage').value;
+      const payment=document.getElementById('fPayment').value;
+      const lang=document.getElementById('fLanguage').value;
+      const visit=document.getElementById('fVisit').value;
+      const search=document.getElementById('fSearch').value.toLowerCase();
+      updateTabBadges();
+
+      filteredDeals=allDeals.filter(d=>{
+        if(activeTab==='arrival'){
+          if((d['Stage']||'').toLowerCase().includes('won')) return false;
+          if((d['Stage']||'').toLowerCase().includes('cancel')) return false;
+          if(!isBeforeCutoff(d['Arrival Date'])) return false;
+        } else if(activeTab==='visit1'){
+          if((d['Stage']||'').toLowerCase().includes('won')) return false;
+          if((d['Stage']||'').toLowerCase().includes('cancel')) return false;
+          if(!isBeforeCutoff(d['1. Visit Date'])) return false;
+        } else if(activeTab==='visit2'){
+          if((d['Stage']||'').toLowerCase().includes('won')) return false;
+          if((d['Stage']||'').toLowerCase().includes('cancel')) return false;
+          if(!isBeforeCutoff(d['2. Visit Date'])) return false;
+        } else if(activeTab==='visit3'){
+          if((d['Stage']||'').toLowerCase().includes('won')) return false;
+          if((d['Stage']||'').toLowerCase().includes('cancel')) return false;
+          if(!isBeforeCutoff(d['3. Visit Date'])) return false;
+        } else if(activeTab==='cancelled'){
+          if(!(d['Stage']||'').toLowerCase().includes('cancel')) return false;
+          if(!isBeforeCutoff(d['Arrival Date'])&&!isBeforeCutoff(d['1. Visit Date'])&&!isBeforeCutoff(d['2. Visit Date'])&&!isBeforeCutoff(d['3. Visit Date'])&&!isBeforeCutoff(d['Created Time'])) return false;
+        }
+        // 'all' tab: show all non-WON
+        if(activeTab==='all' && (d['Stage']||'').toLowerCase().includes('won')) return false;
+        if(agent&&d['Deal Owner Name']!==agent) return false;
+        if(stage&&d['Stage']!==stage) return false;
+        if(payment&&d['Payment Status']!==payment) return false;
+        if(lang&&d['Language']!==lang) return false;
+        if(visit&&d['Visit Status']!==visit) return false;
+        if(search){
+          const text=[d['Deal Name'],d['DealID'],d['Deal Owner Name'],d['Stage'],d.result_code,d.sub_code,d.agent_note].join(' ').toLowerCase();
+          if(!text.includes(search)) return false;
+        }
+        return true;
+      });
+      updateKPIs(filteredDeals);
+      applySortAndRender();
+    }
+
+    function resetFilters() {
+      ['fAgent','fStage','fPayment','fLanguage','fVisit'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+      document.getElementById('fSearch').value='';
+      applyFilters();
+    }
+
+    function setPreset(type) {
+      resetFilters();
+      if(type==='wonOnly'){
+        filteredDeals=allDeals.filter(d=>(d['Stage']||'').toLowerCase().includes('won'));
+        updateKPIs(filteredDeals); applySortAndRender();
+      } else if(type==='unlockPending'){
+        filteredDeals=allDeals.filter(d=>d.lock_approval_requested===true);
+        updateKPIs(filteredDeals); applySortAndRender();
+      }
+    }
+
+    function renderSummary() {
+      const agentMap={};
+      allDeals.forEach(d=>{
+        const name=d['Deal Owner Name']||'Unknown';
+        if(!agentMap[name]) agentMap[name]={deals:0,deal:0,paid:0,won:0};
+        agentMap[name].deals++;
+        agentMap[name].deal+=(Number(d['Deal Amount'])||0);
+        agentMap[name].paid+=(Number(d['Paid Amount'])||0);
+        if((d['Stage']||'').toLowerCase().includes('won')) agentMap[name].won++;
+      });
+      const tbody=document.getElementById('agentSummaryBody');
+      if(tbody) tbody.innerHTML=Object.entries(agentMap).sort((a,b)=>b[1].deals-a[1].deals).map(([name,v])=>`
+        <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+          <td class="py-2 text-slate-200 font-medium">${name}</td>
+          <td class="py-2 text-right text-slate-300">${v.deals}</td>
+          <td class="py-2 text-right text-blue-400">${fmtMoney(v.deal)}</td>
+          <td class="py-2 text-right text-emerald-400">${fmtMoney(v.paid)}</td>
+          <td class="py-2 text-right text-emerald-300">${v.won}</td>
+        </tr>`).join('');
+
+      const stageMap={};
+      allDeals.forEach(d=>{const s=d['Stage']||'Unknown';stageMap[s]=(stageMap[s]||0)+1;});
+      const maxStage=Math.max(...Object.values(stageMap),1);
+      const stageDiv=document.getElementById('stageBreakdown');
+      if(stageDiv) stageDiv.innerHTML=Object.entries(stageMap).sort((a,b)=>b[1]-a[1]).map(([s,c])=>`
+        <div>
+          <div class="flex justify-between text-xs mb-1"><span class="text-slate-300 font-medium">${s}</span><span class="text-slate-400">${c}</span></div>
+          <div class="h-2 bg-gray-800 rounded-full overflow-hidden"><div class="h-2 bg-teal-500 rounded-full" style="width:${(c/maxStage*100).toFixed(1)}%"></div></div>
+        </div>`).join('');
+    }
+
+    function mapDeals(rawData) {
+      return rawData.map(row=>{
+        function parseAmount(val){
+          if(val===null||val===undefined) return 0;
+          if(typeof val==='number') return val;
+          let s=String(val).replace(/[^0-9,.\-]/g,'');
+          if(s.includes(',')&&s.includes('.')) s=s.replace(/\./g,'').replace(/,/g,'.');
+          else if(s.includes(',')) s=s.replace(/,/g,'.');
+          const n=parseFloat(s); return isNaN(n)?0:n;
+        }
+        function checkArrivalPast(str){
+          if(!str) return 'Hayır';
+          const p=String(str).split(' ');
+          const dp=p[0].split('.');
+          if(dp.length===3){
+            const h=p[1]?parseInt(p[1].split(':')[0])||0:0;
+            const m=p[1]?parseInt(p[1].split(':')[1])||0:0;
+            return new Date(+dp[2],+dp[1]-1,+dp[0],h,m)<new Date()?'Evet':'Hayır';
+          }
+          return 'Hayır';
+        }
+        const dealAmount=parseAmount(row['db.Deal Amount']);
+        const paidAmount=parseAmount(row['db.Paid Amount']);
+        const unpaidAmount=parseAmount(row['db.Unpaid Amount'])||Math.max(0,dealAmount-paidAmount);
+        const arrivalDate=row['db.Arrival Date'];
+        const arrivalPast=checkArrivalPast(arrivalDate);
+        const visitStatus=row['db.Visit Status']||'Not Visited';
+        const paymentStatus=row['db.Payment Status']||'Unpaid';
+        const roleName=row['db.Role Name']||'';
+        return {
+          'Deal Id':row['db.Deal Id']||row['id'],
+          'DealID':row['db.DealID']||'',
+          'Deal Name':row['db.Deal Name']||'',
+          'Created Time':row['db.Created Time']||'',
+          'Arrival Date':arrivalDate||'',
+          '1. Visit Date':row['db.1. Visit Date']||'',
+          '2. Visit Date':row['db.2. Visit Date']||'',
+          '3. Visit Date':row['db.3. Visit Date']||'',
+          'Region':row['db.Region']||'',
+          'Deal Owner Id':row['db.Deal Owner Id']||'',
+          'Raw Role Name':roleName,
+          'Deal Owner Name':row['db.Deal Owner Name']||'',
+          'Stage':row['db.Stage']||'',
+          'Language':row['db.Language']||'',
+          'Payment Or Flight Ticket':row['db.Payment Or Flight Ticket']||'',
+          'Deal Amount':dealAmount,'Paid Amount':paidAmount,'Paid Payment Count':Number(row['db.Paid Payment Count']||0),
+          'Payment Status':paymentStatus,'Unpaid Amount':unpaidAmount,'Visit Status':visitStatus,
+          'Team Group':roleName.split(' - ')[0].trim(),
+          'Region Derived':row['db.Region']||(roleName.includes(' - ')?roleName.split(' - ')[1].trim():''),
+          'Arrival Past':arrivalPast,'No Payment':paymentStatus==='Unpaid'?'Evet':'Hayır'
+        };
+      });
+    }
+
+    // ── Perf helpers ─────────────────────────────────────────────
+    const _TL_CACHE_KEY = 'nc_tl_deals_v1';
+    const _TL_CACHE_TTL = 5 * 60 * 1000;
+
+    function _tlGetCached(key) {
+      try {
+        const c = JSON.parse(sessionStorage.getItem(key) || 'null');
+        if (c && Date.now() - c.ts < _TL_CACHE_TTL) return c.deals;
+      } catch(e) {}
+      return null;
+    }
+    function _tlSetCache(key, deals) {
+      try { sessionStorage.setItem(key, JSON.stringify({ ts: Date.now(), deals })); }
+      catch(e) { try { sessionStorage.removeItem(key); } catch(e2) {} }
+    }
+
+    async function _fetchRawParallel() {
+      const h = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+      // Toplam sayıyı tek sorguda al
+      const cr = await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?select=*&limit=1`, {
+        headers: { ...h, Prefer: 'count=exact' }
+      });
+      if (!cr.ok) throw new Error('HTTP ' + cr.status);
+      const total = parseInt((cr.headers.get('content-range') || '').split('/')[1] || '0') || 0;
+      if (!total) return await cr.json();
+      const SIZE = 1000;
+      const pages = Math.ceil(total / SIZE);
+      const chunks = await Promise.all(
+        Array.from({ length: pages }, (_, i) =>
+          fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?select=*&limit=${SIZE}&offset=${i * SIZE}`, { headers: h })
+            .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        )
+      );
+      return chunks.flat();
+    }
+
+    function _filterForUser(mappedData, isRM, nameLower, team) {
+      if (!isRM) {
+        const teamLower = team.toLowerCase();
+        return mappedData.filter(d => {
+          const rr = (d['Raw Role Name'] || '').toLowerCase().trim();
+          const tg = (d['Team Group'] || '').toLowerCase().trim();
+          return rr === teamLower || tg === teamLower;
+        });
+      }
+      if (nameLower.includes('abderrahim') || nameLower.includes('benmamar')) {
+        const allowed = ['ali omer','ali ömer','arij','ghazal','touma','ahmed anwar','joel','askif','aamir ali','connor','mert','mihoubi'];
+        return mappedData.filter(d => {
+          const tg = (d['Team Group'] || '').toLowerCase().trim();
+          const rr = (d['Raw Role Name'] || '').toLowerCase().trim();
+          return allowed.some(a => tg.includes(a) || rr.includes(a));
+        });
+      }
+      if (nameLower.includes('manuel') || nameLower.includes('gazzini')) {
+        return mappedData.filter(d => {
+          const tg = (d['Team Group'] || '').toLowerCase();
+          const rr = (d['Raw Role Name'] || '').toLowerCase();
+          return tg.includes('morocco') || tg.includes('morrocco') || rr.includes('morocco');
+        });
+      }
+      return mappedData;
+    }
+
+    async function loadData(forceRefresh) {
+      const team      = (currentUser.team || '').trim();
+      const fullName  = (currentUser.fullName || '').trim();
+      const isRM      = currentUser.role === 'regional-manager';
+      const nameLower = fullName.toLowerCase();
+      const cacheKey  = isRM ? _TL_CACHE_KEY + '_rm' : _TL_CACHE_KEY + '_' + team;
+      _activeCacheKey = cacheKey;
+
+      const spinEl = document.getElementById('loadingState');
+      const cardEl = document.getElementById('cardsContainer');
+      const errEl  = document.getElementById('errorState');
+
+      function applyDeals(deals) {
+        allDeals = deals;
+        filteredDeals = [...allDeals];
+        document.getElementById('teamSubtitle').textContent = isRM
+          ? (nameLower.includes('gazzini') ? 'Morocco Teams only' : 'All Teams')
+          : `Team: ${team}`;
+        populateFilters(allDeals);
+        updateTabBadges();
+        updateKPIs(filteredDeals);
+        applySortAndRender();
+      }
+
+      async function doFetch() {
+        let rawData;
+        if (isRM) {
+          rawData = await _fetchRawParallel();
+        } else {
+          const resp = await fetch(
+            `${SUPABASE_URL}/rest/v1/Raw-Data?select=*&%22db.Role%20Name%22=eq.${encodeURIComponent(team)}`,
+            { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }
+          );
+          if (!resp.ok) throw new Error('HTTP ' + resp.status + ': ' + await resp.text());
+          rawData = await safeJson(resp);
+        }
+        return _filterForUser(mapDeals(rawData), isRM, nameLower, team);
+      }
+
+      // Cache hit — anında göster
+      if (!forceRefresh) {
+        const cached = _tlGetCached(cacheKey);
+        if (cached) {
+          applyDeals(cached);
+          document.getElementById('lastRefresh').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+          spinEl.classList.add('hidden');
+          cardEl.classList.remove('hidden');
+          // Arka planda güncelle
+          doFetch().then(deals => {
+            _tlSetCache(cacheKey, deals);
+            applyDeals(deals);
+            document.getElementById('lastRefresh').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+          }).catch(() => {});
+          return;
+        }
+      }
+
+      spinEl.classList.remove('hidden');
+      cardEl.classList.add('hidden');
+      errEl.classList.add('hidden');
+      try {
+        const deals = await doFetch();
+        _tlSetCache(cacheKey, deals);
+        applyDeals(deals);
+        document.getElementById('lastRefresh').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        spinEl.classList.add('hidden');
+        cardEl.classList.remove('hidden');
+      } catch(err) {
+        spinEl.classList.add('hidden');
+        errEl.classList.remove('hidden');
+        document.getElementById('errorMsg').textContent = 'Error: ' + err.message;
+      }
+    }
+
+    (function init(){
+      try{
+        const session=JSON.parse(localStorage.getItem('nc_current_user')||'null');
+        if(!session){window.location.href='index.html';return;}
+        if(session.role==='agent'){window.location.href='agent.html';return;}
+        if(session.role==='admin'){window.location.href='admin.html';return;}
+        currentUser=session;
+        const isRM = session.role === 'regional-manager';
+        document.getElementById('sidebarName').textContent = fixTR(session.fullName||session.username||'');
+        document.getElementById('sidebarTeam').textContent = isRM ? 'Tüm Takımlar' : fixTR(session.team||session.role||'');
+        const avatarLetter = (session.fullName||'T')[0].toUpperCase();
+        document.getElementById('userAvatar').textContent = avatarLetter;
+        document.getElementById('miniAvatar').textContent = avatarLetter;
+        document.getElementById('roleLabel').textContent = isRM ? 'Regional Manager' : 'Team Leader';
+        document.title = `CRM - ${isRM ? 'Regional Manager' : 'Team Leader'} Dashboard`;
+        loadData();
+      }catch(e){localStorage.removeItem('nc_current_user');window.location.href='index.html';}
+    })();
+  </script>
+
+  <div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:0.85rem;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);white-space:nowrap"></div>
+  <div id="siteConfirm" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center">
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;max-width:420px;width:90%;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
+      <div style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:8px" id="scTitle">Onayla</div>
+      <div style="font-size:0.82rem;color:#94a3b8;line-height:1.5;margin-bottom:20px" id="scMsg"></div>
+      <div style="display:flex;gap:10px">
+        <button id="scCancel" onclick="closeSiteConfirm()" style="flex:1;padding:10px;background:#0f172a;color:#94a3b8;border-radius:8px;font-weight:600;font-size:0.82rem;border:1px solid #334155;cursor:pointer">İptal</button>
+        <button id="scOk" style="flex:1;padding:10px;border-radius:8px;font-weight:700;font-size:0.82rem;border:none;cursor:pointer;color:#fff;background:#dc2626">Onayla</button>
+      </div>
+    </div>
+  </div>
+  <script>
+    async function addLog(actionType, details, dealId, dealName) {
+      try {
+        const u = currentUser || JSON.parse(localStorage.getItem('nc_current_user') || '{}');
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/Logs`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ username: u.username||'', full_name: u.fullName||u.username||'', role: u.role||'', team: u.team||'', page: 'team-leader', action_type: actionType, details: String(details||''), deal_id: dealId ? String(dealId) : null, deal_name: dealName ? String(dealName) : null })
+        });
+        if (!r.ok) showSiteNotice('Log hatası: ' + await r.text(), 'error');
+      } catch(e) {
+        showSiteNotice('Log bağlantı hatası: ' + e.message, 'error');
+      }
+    }
+
+    function showSiteNotice(msg, type, duration) {
+      const el = document.getElementById('siteNotice');
+      el.innerHTML = msg;
+      el.style.background = type === 'error' ? '#7f1d1d' : type === 'warn' ? '#78350f' : '#14532d';
+      el.style.color = '#fff';
+      el.style.border = `1px solid ${type === 'error' ? '#ef4444' : type === 'warn' ? '#f59e0b' : '#22c55e'}`;
+      el.style.display = 'block';
+      clearTimeout(el._t);
+      el._t = setTimeout(() => { el.style.display = 'none'; }, duration || 3500);
+    }
+
+    let _scCb = null;
+    function showSiteConfirm(title, msg, okLabel, okColor, onConfirm) {
+      document.getElementById('scTitle').textContent = title;
+      document.getElementById('scMsg').innerHTML = msg;
+      const ok = document.getElementById('scOk');
+      ok.textContent = okLabel || 'Onayla'; ok.style.background = okColor || '#4f46e5';
+      document.getElementById('siteConfirm').style.display = 'flex';
+      _scCb = onConfirm;
+      ok.onclick = () => { const cb = _scCb; closeSiteConfirm(); if (cb) cb(); };
+    }
+    function closeSiteConfirm() {
+      document.getElementById('siteConfirm').style.display = 'none';
+      _scCb = null;
+    }
+
+    // ── LEAD TRANSFER ─────────────────────────────────────────────
+    function getTransferAgents() {
+      // TL: sadece kendi takımındaki agentlar | RM & Admin: hepsi
+      const isRM    = currentUser.role === 'regional-manager';
+      const isAdmin = currentUser.role === 'admin';
+      const myTeam  = (currentUser.team || '').toLowerCase().trim();
+      const agents  = [...new Set(allDeals.map(d => d['Deal Owner Name']).filter(Boolean))].sort();
+      if (isRM || isAdmin) return agents;
+      // TL: sadece kendi takım datasında gözüken agentlar
+      return [...new Set(
+        allDeals
+          .filter(d => {
+            const tg = (d['Team Group']||'').toLowerCase().trim();
+            const rr = (d['Raw Role Name']||'').toLowerCase().trim();
+            return tg === myTeam || rr === myTeam;
+          })
+          .map(d => d['Deal Owner Name']).filter(Boolean)
+      )].sort();
+    }
+
+    async function initTransferView() {
+      const fromAgents = getTransferAgents();
+      const fromOpts   = fromAgents.map(a => `<option value="${a}">${a}</option>`).join('');
+      document.getElementById('trFromAgent').innerHTML = '<option value="">— Select Agent —</option>' + fromOpts;
+      document.getElementById('trFromInfo').style.display = 'none';
+      document.getElementById('trPreview').style.display  = 'none';
+      document.getElementById('trError').style.display    = 'none';
+      renderTransferLeadList([]);
+
+      // "Kime" dropdown'unu Users tablosundan yükle — 0 dealli yeni kullanıcılar da görünsün
+      let toAgents = fromAgents; // varsayılan: deal sahibi olanlar
+      const isRM    = currentUser.role === 'regional-manager';
+      const isAdmin = (currentUser.role || '').includes('admin');
+      if (!isRM && !isAdmin) {
+        try {
+          const myTeam = (currentUser.team || '').trim();
+          if (myTeam) {
+            const resp = await fetch(
+              `${SUPABASE_URL}/rest/v1/Users?select=*&%22Takim%20Adi%22=eq.${encodeURIComponent(myTeam)}&order=id.asc`,
+              { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } }
+            );
+            if (resp.ok) {
+              const users = await resp.json();
+              const names = users.map(u => u['Deal Owner Name']).filter(Boolean).sort();
+              if (names.length > 0) toAgents = names;
+            }
+          }
+        } catch(e) { /* Users fetch başarısız → deals-based liste kullan */ }
+      }
+
+      const toOpts = toAgents.map(a => `<option value="${a}">${a}</option>`).join('');
+      document.getElementById('trToAgent').innerHTML = '<option value="">— Select Agent —</option>' + toOpts;
+    }
+
+    function onTransferFromChange() {
+      const from   = document.getElementById('trFromAgent').value;
+      const infoEl = document.getElementById('trFromInfo');
+      document.getElementById('trPreview').style.display = 'none';
+      if (!from) {
+        infoEl.style.display = 'none';
+        renderTransferLeadList([]);
+        return;
+      }
+      const deals = allDeals.filter(d => d['Deal Owner Name'] === from);
+      infoEl.textContent = `${deals.length} leads from this agent will be transferred`;
+      infoEl.style.display = 'block';
+      renderTransferLeadList(deals, from);
+      updateTransferPreview();
+    }
+
+    function updateTransferPreview() {
+      const from = document.getElementById('trFromAgent').value;
+      const to   = document.getElementById('trToAgent').value;
+      const preview = document.getElementById('trPreview');
+      if (!from || !to || from === to) { preview.style.display = 'none'; return; }
+      const count = allDeals.filter(d => d['Deal Owner Name'] === from).length;
+      document.getElementById('trPreviewFrom').textContent  = from.split(' ')[0];
+      document.getElementById('trPreviewTo').textContent    = to.split(' ')[0];
+      document.getElementById('trPreviewCount').textContent = count + ' lead';
+      preview.style.display = 'block';
+    }
+
+    function renderTransferLeadList(deals, agentName) {
+      const empty = document.getElementById('trLeadListEmpty');
+      const table = document.getElementById('trLeadListTable');
+      const title = document.getElementById('trLeadListTitle');
+      const sub   = document.getElementById('trLeadListSub');
+      const badge = document.getElementById('trLeadListBadge');
+      if (!deals || deals.length === 0) {
+        empty.style.display = 'flex'; table.style.display = 'none'; badge.style.display = 'none';
+        title.textContent = 'Leads to Transfer';
+        sub.textContent   = 'Select an agent from the left';
+        return;
+      }
+      title.textContent = agentName + ' — Leads';
+      sub.textContent   = deals.length + ' leads to transfer';
+      badge.textContent = deals.length + ' lead';
+      badge.style.display = 'inline-block';
+      empty.style.display = 'none'; table.style.display = 'block';
+      const stageColor = s => {
+        s = (s||'').toLowerCase();
+        if (s.includes('won')) return '#4ade80';
+        if (s.includes('cancel')) return '#f87171';
+        if (s.includes('pending')) return '#fb923c';
+        if (s.includes('confirm')) return '#34d399';
+        return '#94a3b8';
+      };
+      document.getElementById('trLeadListBody').innerHTML = deals.map((d, i) => `
+        <tr style="border-bottom:1px solid #1e293b;transition:background 0.1s" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">
+          <td style="padding:9px 16px;color:#475569;font-size:10px">${i+1}</td>
+          <td style="padding:9px 16px;color:#f1f5f9;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmt(d['Deal Name'])}</td>
+          <td style="padding:9px 16px"><span style="font-size:10px;font-weight:600;color:${stageColor(d['Stage'])}">${fmt(d['Stage'])}</span></td>
+          <td style="padding:9px 16px;text-align:right;color:#60a5fa;font-weight:600">€${Number(d['Deal Amount']||0).toLocaleString()}</td>
+          <td style="padding:9px 16px"><span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;background:${d.status==='locked'?'#1e1b4b':d.status==='not_reached'?'#1c1917':'#1e293b'};color:${d.status==='locked'?'#818cf8':d.status==='not_reached'?'#a8a29e':'#64748b'}">${d.status==='locked'?'Locked':d.status==='not_reached'?'Not Reached':'Pending'}</span></td>
+        </tr>`).join('');
+    }
+
+    async function doTransfer() {
+      const from   = document.getElementById('trFromAgent').value;
+      const to     = document.getElementById('trToAgent').value;
+      const errEl  = document.getElementById('trError');
+      errEl.style.display = 'none';
+      if (!from) { errEl.textContent = 'Please select the source agent.'; errEl.style.display = 'block'; return; }
+      if (!to)   { errEl.textContent = 'Please select the target agent.';  errEl.style.display = 'block'; return; }
+      if (from === to) { errEl.textContent = 'Source and target agent cannot be the same.'; errEl.style.display = 'block'; return; }
+
+      const deals = allDeals.filter(d => d['Deal Owner Name'] === from);
+      if (deals.length === 0) { errEl.textContent = `Agent "${from}" has no leads to transfer.`; errEl.style.display = 'block'; return; }
+
+      showSiteConfirm(
+        'Confirm Lead Transfer',
+        `<strong style="color:#fca5a5">${from}</strong>'s <strong style="color:#a5f3fc">${deals.length} leads</strong> will be transferred to <strong style="color:#86efac">${to}</strong>.<br><br>This action can be undone.`,
+        'Transfer', '#4f46e5',
+        async () => {
+          try {
+            // Supabase: "db.Deal Owner Name" = from olan tüm kayıtları to'ya güncelle
+            const patchBody = { 'db.Deal Owner Name': to };
+            const resp = await fetch(
+              `${SUPABASE_URL}/rest/v1/Raw-Data?%22db.Deal%20Owner%20Name%22=eq.${encodeURIComponent(from)}`,
+              {
+                method: 'PATCH',
+                headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', 'Prefer': 'return=minimal' },
+                body: JSON.stringify(patchBody)
+              }
+            );
+            if (!resp.ok) throw new Error(await resp.text());
+
+            await addLog('LEAD_TRANSFER', `${deals.length} leads transferred: ${from} → ${to}`);
+            // Local state güncelle
+            allDeals.forEach(d => { if (d['Deal Owner Name'] === from) d['Deal Owner Name'] = to; });
+            // TL cache'ini güncelle — transfer sonrası sayfa yenilemesinde stale data görünmesin
+            if (_activeCacheKey) _tlSetCache(_activeCacheKey, allDeals);
+            updateKPIs(filteredDeals.length ? filteredDeals : allDeals);
+            showSiteNotice(`✓ ${deals.length} leads transferred successfully.`, 'success', 5000);
+            document.getElementById('trFromAgent').value = '';
+            document.getElementById('trToAgent').value   = '';
+            document.getElementById('trFromInfo').style.display = 'none';
+            document.getElementById('trPreview').style.display  = 'none';
+            renderTransferLeadList([]);
+            // "Kimden" listesini güncelle (from artık 0 leade sahip — listeden kaldır)
+            initTransferView();
+          } catch(e) {
+            showSiteNotice('Transfer failed: ' + e.message, 'error');
+          }
+        }
+      );
+    }
+    // ──────────────────────────────────────────────────────────────
+  </script>
+
+</body>
+</html>

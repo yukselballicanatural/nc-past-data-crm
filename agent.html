@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Natural Clinic CRM - Agent Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background-color: #080b11; }
+    h1,h2,h3 { font-family: 'Outfit', sans-serif; }
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1a1f2e; }
+    ::-webkit-scrollbar-thumb { background: #374151; border-radius: 3px; }
+    .stage-pill { display:inline-block; padding:2px 8px; border-radius:999px; font-size:10px; font-weight:700; white-space:nowrap; }
+    .stage-Won { background:#134E1B; color:#4ADE80; }
+    .stage-Cancelled { background:#450A0A; color:#F87171; }
+    .stage-Appointment { background:#1E3A5F; color:#60A5FA; }
+    .stage-Reservation { background:#451A03; color:#FB923C; }
+    .stage-Waiting { background:#1C2A1C; color:#86EFAC; }
+    .stage-default { background:#1e2536; color:#94A3B8; }
+    .filter-select { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:100%; }
+    .filter-select:focus { outline:none; border-color:#6366F1; }
+    .filter-select option { background:#111827; color:#E2E8F0; }
+    select option { background:#0f172a; color:#e2e8f0; }
+    input.filter-input, textarea.filter-input { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:100%; }
+    input.filter-input:focus, textarea.filter-input:focus { outline:none; border-color:#6366F1; }
+    .spinner-anim { border:3px solid rgba(99,102,241,0.2); border-top:3px solid #6366F1; border-radius:50%; width:40px; height:40px; animation:spin 0.8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .deal-tbl { width:100%; border-collapse:collapse; }
+    .deal-tbl th { position:sticky; top:0; background:#111827; z-index:2; padding:8px 12px; font-size:10px; text-align:left; border-bottom:2px solid #1f2937; white-space:nowrap; color:#64748B; font-weight:700; text-transform:uppercase; letter-spacing:0.05em; }
+    .deal-tbl td { padding:9px 12px; font-size:11.5px; border-bottom:1px solid #111827; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+    .deal-tbl tbody tr { cursor:pointer; transition:background 0.1s; }
+    .deal-tbl tbody tr:hover td { background:#12182b; }
+    .deal-tbl tbody tr.row-red td { background:rgba(127,29,29,0.15); }
+    .deal-tbl tbody tr.row-amber td { background:rgba(120,53,15,0.12); }
+    .tab-badge { display:inline-flex; align-items:center; justify-content:center; min-width:26px; padding:1px 6px; border-radius:9999px; font-size:10px; font-weight:700; line-height:1.6; }
+    #dealModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
+    #dealModal.open { display:flex; }
+    .modal-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.75); }
+    .modal-panel { position:relative; z-index:1; width:100%; max-width:680px; max-height:90vh; overflow-y:auto; background:#0d1526; border:1px solid #1e293b; border-radius:16px; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.6); }
+  </style>
+</head>
+<body class="min-h-screen text-slate-100 flex flex-col lg:flex-row">
+
+  <!-- Sidebar -->
+  <aside class="w-full lg:w-64 lg:min-h-screen bg-gray-900 border-b lg:border-b-0 lg:border-r border-gray-800 p-5 flex flex-col justify-between sticky top-0 z-50 shrink-0" style="max-height:100vh;overflow-y:auto;">
+    <div class="space-y-5">
+      <div class="flex items-center gap-2 pb-4 border-b border-gray-800">
+        <div style="flex:1;min-width:0">
+          <img src="naturallogobeyaz.png" alt="natural.clinic" style="width:100%;height:auto;max-height:44px;object-fit:contain;object-position:left;display:block">
+        </div>
+      </div>
+      <div class="bg-gray-800/60 border border-gray-700/50 rounded-xl p-3 flex items-center gap-3">
+        <div class="w-9 h-9 rounded-full bg-indigo-500 text-white font-bold flex items-center justify-center text-sm" id="userAvatar">A</div>
+        <div>
+          <div class="text-xs font-bold text-white" id="sidebarName">—</div>
+          <div class="text-[10px] text-slate-400" id="sidebarTeam">—</div>
+        </div>
+      </div>
+      <div class="flex flex-col gap-1">
+        <span class="text-[9px] font-bold text-slate-500 uppercase tracking-wider pl-1">Navigation</span>
+        <button class="w-full text-left px-3 py-2 text-xs font-bold rounded-lg bg-indigo-600 text-white flex items-center gap-2">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+          My Portfolio
+        </button>
+      </div>
+      <div class="space-y-2 pt-2 border-t border-gray-800">
+        <div class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Portfolio Stats</div>
+        <div class="grid grid-cols-2 gap-2">
+          <div class="bg-gray-800/60 rounded-lg p-2 text-center">
+            <div class="text-lg font-bold text-white" id="kpiTotal">0</div>
+            <div class="text-[9px] text-slate-400">Total</div>
+          </div>
+          <div class="bg-rose-900/20 rounded-lg p-2 text-center border border-rose-800/20">
+            <div class="text-lg font-bold text-rose-400" id="kpiPending">0</div>
+            <div class="text-[9px] text-slate-400">No Result</div>
+          </div>
+          <div class="bg-emerald-900/30 rounded-lg p-2 text-center border border-emerald-800/30">
+            <div class="text-sm font-bold text-emerald-400" id="kpiPaid">€0</div>
+            <div class="text-[9px] text-slate-400">Paid</div>
+          </div>
+          <div class="bg-red-900/20 rounded-lg p-2 text-center border border-red-800/20">
+            <div class="text-sm font-bold text-red-400" id="kpiUnpaid">€0</div>
+            <div class="text-[9px] text-slate-400">Unpaid</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="mt-6 pt-4 border-t border-gray-800">
+      <button onclick="doLogout()" class="w-full py-2 bg-slate-800 hover:bg-rose-900/40 border border-slate-700 hover:border-rose-700 text-slate-300 hover:text-rose-300 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2">
+        <svg class="h-4 w-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Logout
+      </button>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="flex-grow p-4 md:p-6 space-y-4 overflow-x-hidden">
+
+    <div class="flex items-center justify-between">
+      <div>
+        <h2 class="text-xl font-bold text-white">My Deals Portfolio</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Assigned patients — WON deals excluded</p>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="text-xs text-slate-500" id="lastRefresh">—</span>
+        <button onclick="loadData(true)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-lg font-semibold transition-all">↻ Refresh</button>
+      </div>
+    </div>
+
+    <!-- KPI row 1 -->
+    <div class="grid grid-cols-3 sm:grid-cols-6 gap-2">
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Total</div><div class="text-xl font-bold text-white mt-1" id="kpi1Total">0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Deal Amt</div><div class="text-sm font-bold text-blue-400 mt-1" id="kpi1Deal">€0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Paid</div><div class="text-sm font-bold text-emerald-400 mt-1" id="kpi1Paid">€0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Unpaid</div><div class="text-sm font-bold text-red-400 mt-1" id="kpi1Unpaid">€0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">Past Arr.</div><div class="text-xl font-bold text-amber-400 mt-1" id="kpi1Past">0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">No Result</div><div class="text-xl font-bold text-rose-400 mt-1" id="kpi1NoRes">0</div></div>
+    </div>
+
+    <!-- KPI row 2: financial breakdown by date type -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div class="bg-gray-900/70 border border-amber-900/30 rounded-xl p-2.5">
+        <div class="text-[9px] text-amber-500 font-semibold uppercase">Past Arrival — Paid</div>
+        <div class="text-sm font-bold text-emerald-400 mt-1" id="kpiArrPaid">€0</div>
+      </div>
+      <div class="bg-gray-900/70 border border-amber-900/30 rounded-xl p-2.5">
+        <div class="text-[9px] text-amber-500 font-semibold uppercase">Past Arrival — Unpaid</div>
+        <div class="text-sm font-bold text-red-400 mt-1" id="kpiArrUnpaid">€0</div>
+      </div>
+      <div class="bg-gray-900/70 border border-blue-900/30 rounded-xl p-2.5">
+        <div class="text-[9px] text-blue-500 font-semibold uppercase">Past Visit — Paid</div>
+        <div class="text-sm font-bold text-emerald-400 mt-1" id="kpiVisPaid">€0</div>
+      </div>
+      <div class="bg-gray-900/70 border border-blue-900/30 rounded-xl p-2.5">
+        <div class="text-[9px] text-blue-500 font-semibold uppercase">Past Visit — Unpaid</div>
+        <div class="text-sm font-bold text-red-400 mt-1" id="kpiVisUnpaid">€0</div>
+      </div>
+    </div>
+
+    <!-- Filters -->
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 space-y-3">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Filters</span>
+        <button onclick="resetFilters()" class="text-[10px] text-indigo-400 hover:text-indigo-300 font-semibold">Clear All</button>
+      </div>
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <div><label class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">Stage</label><select id="fStage" class="filter-select" onchange="applyFilters()"><option value="">All Stages</option></select></div>
+        <div><label class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">Payment</label><select id="fPayment" class="filter-select" onchange="applyFilters()"><option value="">All</option><option value="Paid">Paid</option><option value="Unpaid">Unpaid</option><option value="Partial">Partial</option></select></div>
+        <div><label class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">Language</label><select id="fLanguage" class="filter-select" onchange="applyFilters()"><option value="">All Languages</option></select></div>
+        <div><label class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">Result Status</label><select id="fResult" class="filter-select" onchange="applyFilters()"><option value="">All</option><option value="pending">No Result</option><option value="locked">Has Result</option></select></div>
+        <div><label class="text-[10px] text-slate-500 font-semibold uppercase block mb-1">Search</label><input id="fSearch" class="filter-input" placeholder="Name, Deal ID..." oninput="applyFilters()"></div>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button onclick="setPreset('noResult')" class="px-3 py-1 bg-rose-900/40 hover:bg-rose-800/50 border border-rose-800/40 text-rose-300 text-[10px] rounded-lg font-bold transition-all">No Result Entered</button>
+        <button onclick="setPreset('unpaid')" class="px-3 py-1 bg-amber-900/40 hover:bg-amber-800/50 border border-amber-800/40 text-amber-300 text-[10px] rounded-lg font-bold transition-all">No Payment</button>
+      </div>
+    </div>
+
+    <!-- Summary Stats Bar -->
+    <div class="flex flex-wrap gap-x-5 gap-y-1.5 px-4 py-2.5 bg-gray-900 border border-gray-800 rounded-xl text-xs text-slate-400">
+      <span>All Data: <strong class="text-white font-bold" id="statFull">0</strong></span>
+      <span class="text-gray-700">|</span>
+      <span>Past Arrival: <strong class="text-amber-400 font-bold" id="statArrival">0</strong></span>
+      <span>Past Visit 1: <strong class="text-amber-400 font-bold" id="statV1">0</strong></span>
+      <span>Past Visit 2: <strong class="text-amber-400 font-bold" id="statV2">0</strong></span>
+      <span>Past Visit 3: <strong class="text-amber-400 font-bold" id="statV3">0</strong></span>
+      <span class="text-gray-700">|</span>
+      <span>Cancelled: <strong class="text-red-400 font-bold" id="statCancelled">0</strong></span>
+    </div>
+
+    <!-- Tabs -->
+    <div class="border-b border-gray-800 flex flex-wrap gap-1.5 pb-2">
+      <button onclick="switchTab('all')" id="tab-all" class="px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white flex items-center gap-1.5 transition-all">
+        All Data <span id="badge-all" class="tab-badge bg-indigo-800 text-white">0</span>
+      </button>
+      <button onclick="switchTab('arrival')" id="tab-arrival" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
+        Arrival Date <span id="badge-arrival" class="tab-badge bg-gray-800 text-slate-400">0</span>
+      </button>
+      <button onclick="switchTab('visit1')" id="tab-visit1" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
+        Visit Date 1 <span id="badge-visit1" class="tab-badge bg-gray-800 text-slate-400">0</span>
+      </button>
+      <button onclick="switchTab('visit2')" id="tab-visit2" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
+        Visit Date 2 <span id="badge-visit2" class="tab-badge bg-gray-800 text-slate-400">0</span>
+      </button>
+      <button onclick="switchTab('visit3')" id="tab-visit3" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
+        Visit Date 3 <span id="badge-visit3" class="tab-badge bg-gray-800 text-slate-400">0</span>
+      </button>
+      <button onclick="switchTab('cancelled')" id="tab-cancelled" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
+        Cancelled <span id="badge-cancelled" class="tab-badge bg-gray-800 text-slate-400">0</span>
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div id="loadingState" class="flex flex-col items-center justify-center py-20 gap-4">
+      <div class="spinner-anim"></div>
+      <p class="text-slate-400 text-sm">Loading your deals from Supabase...</p>
+    </div>
+
+    <!-- Error -->
+    <div id="errorState" class="hidden bg-red-900/20 border border-red-800/40 rounded-xl p-6 text-center">
+      <p class="text-red-400 font-semibold text-sm" id="errorMsg">An error occurred.</p>
+      <button onclick="loadData(true)" class="mt-3 px-4 py-2 bg-red-900/40 text-red-300 text-xs rounded-lg font-bold">Retry</button>
+    </div>
+
+    <!-- Deals Table -->
+    <div id="cardsContainer" class="hidden">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs text-slate-400" id="resultInfo">0 deals shown</span>
+      </div>
+      <div class="overflow-x-auto rounded-xl border border-gray-800 bg-gray-900">
+        <table class="deal-tbl">
+          <thead>
+            <tr>
+              <th style="width:36px">#</th>
+              <th data-sort="name"    onclick="sortBy('name')"    style="cursor:pointer;user-select:none">Deal Name<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="id"      onclick="sortBy('id')"      style="cursor:pointer;user-select:none">Deal ID<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="stage"   onclick="sortBy('stage')"   style="cursor:pointer;user-select:none">Stage<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="arrival" onclick="sortBy('arrival')" style="cursor:pointer;user-select:none">Arrival Date<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="created" onclick="sortBy('created')" style="cursor:pointer;user-select:none">Created<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="lang"    onclick="sortBy('lang')"    style="cursor:pointer;user-select:none">Language<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="amount"  onclick="sortBy('amount')"  style="cursor:pointer;user-select:none">Deal Amount<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="paid"    onclick="sortBy('paid')"    style="cursor:pointer;user-select:none">Paid<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="payment" onclick="sortBy('payment')" style="cursor:pointer;user-select:none">Pay Status<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="result"  onclick="sortBy('result')"  style="cursor:pointer;user-select:none">Result<span class="sarrow" style="color:#475569"> ↕</span></th>
+            </tr>
+          </thead>
+          <tbody id="cardsGrid"></tbody>
+        </table>
+        <div id="emptyState" class="hidden text-center py-16 text-slate-500 text-sm">No deals match your current filters.</div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Deal Detail Modal -->
+  <div id="dealModal">
+    <div class="modal-backdrop" onclick="closeModal()"></div>
+    <div class="modal-panel">
+      <div class="flex items-start justify-between mb-5">
+        <div>
+          <h3 class="text-base font-bold text-white" id="modalDealName">—</h3>
+          <div class="text-[10px] text-slate-500 font-mono mt-1" id="modalDealId">—</div>
+        </div>
+        <button onclick="closeModal()" class="text-slate-500 hover:text-white ml-4 shrink-0 transition-colors">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 mb-5 text-xs">
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Stage</div><div id="modalStage">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Arrival Date</div><div class="text-slate-200 font-medium" id="modalArrival">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Language</div><div class="text-slate-200" id="modalLanguage">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Region</div><div class="text-slate-200" id="modalRegion">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Deal Amount</div><div class="text-blue-400 font-bold" id="modalDealAmt">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Paid / Unpaid</div><div><span class="text-emerald-400 font-bold" id="modalPaid">—</span> / <span class="text-red-400 font-bold" id="modalUnpaid">—</span></div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Visit Status</div><div class="text-slate-200" id="modalVisit">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Payment Status</div><div class="text-slate-200" id="modalPayment">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">1st Visit</div><div class="text-slate-200" id="modalV1">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">2nd Visit</div><div class="text-slate-200" id="modalV2">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">3rd Visit</div><div class="text-slate-200" id="modalV3">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Pay/Ticket</div><div class="text-slate-200" id="modalTicket">—</div></div>
+      </div>
+
+      <div id="modalResultSection" class="border-t border-gray-800 pt-4"></div>
+    </div>
+  </div>
+
+  <script>
+    const SUPABASE_URL = "https://aztxfncqanrodbttywrb.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_IkbCNelsIjBPW6Tqkq4Egw_djjzvTXL";
+
+    const RESULT_CODES = [
+      { code:'1', label:'Not Reached',               subcodes:['No Response 1','No Response 2','No Response 3'] },
+      { code:'2', label:'Arrival Postponed',          subcodes:['New Arrival Date Added','Waiting Arrival Date'] },
+      { code:'3', label:'Visit Postponed',            subcodes:['New Visit Date Added','Waiting Visit Date'] },
+      { code:'4', label:'Still Interested / Follow-up', subcodes:['Follow-up Date Added','Waiting Decision'] },
+      { code:'5', label:'Payment / Financial Issue',  subcodes:['Payment Completed','Partial Payment Received','Waiting Payment','Cancelled Due to Payment'] },
+      { code:'6', label:'Travel / Personal Issue',    subcodes:['New Travel Date Added','Waiting Travel Date','Cancelled Due to Travel'] },
+      { code:'7', label:'Lost to Competitor',         subcodes:['Lost to Competitor'] },
+      { code:'8', label:'Cancelled',                  subcodes:['Cancelled by Patient','Cancelled by Clinic'] },
+      { code:'9', label:'Invalid / Duplicate Data',   subcodes:['Invalid Data','Duplicate Data','Merged Data'] }
+    ];
+
+    const SON_STATULAR = [
+      'Reservation Pending',
+      'Waiting next visit',
+      'Waiting hotel confirmation',
+      'Approval',
+      'Waiting appointment',
+      'Appointment confirmed',
+      'On Hold',
+      'Check in completed',
+      'Old Stages',
+      'Won',
+      'Cancelled'
+    ];
+
+    // These subcodes mean the process is still ongoing — agent can request unlock
+    const CONTINUING_SUBCODES = new Set([
+      'No Response 1','No Response 2','No Response 3',
+      'New Arrival Date Added','Waiting Arrival Date',
+      'New Visit Date Added','Waiting Visit Date',
+      'Follow-up Date Added','Waiting Decision',
+      'Waiting Payment',
+      'New Travel Date Added','Waiting Travel Date'
+    ]);
+
+    function isContinuing(sub) { return CONTINUING_SUBCODES.has(sub || ''); }
+
+    let currentUser = null;
+    let allDeals = [];
+    let filteredDeals = [];
+    let activeTab = 'all';
+    let sortCol = '';
+    let sortDir = 1;
+    let currentModalDeal = null;
+
+    async function safeJson(response) {
+      const text = await response.text();
+      // Prevent JS float64 precision loss on large Zoho IDs stored as integers
+      const fixed = text.replace(/"db\.Deal Id"\s*:\s*(\d+)/g, '"db.Deal Id":"$1"');
+      return JSON.parse(fixed);
+    }
+
+    function parseDateString(str) {
+      if (!str) return null;
+      const s = String(str).trim().split(' ')[0];
+      // DD.MM.YYYY
+      if (s.includes('.')) { const p=s.split('.'); if(p.length===3) return new Date(+p[2],+p[1]-1,+p[0]); }
+      // DD/MM/YYYY  or  YYYY/MM/DD
+      if (s.includes('/')) { const p=s.split('/'); if(p.length===3){
+        if(p[0].length===4) return new Date(+p[0],+p[1]-1,+p[2]);
+        return new Date(+p[2],+p[1]-1,+p[0]);
+      }}
+      // YYYY-MM-DD  or  DD-MM-YYYY
+      if (s.includes('-')) { const p=s.split('-'); if(p.length===3){
+        if(p[0].length===4) return new Date(+p[0],+p[1]-1,+p[2]);
+        return new Date(+p[2],+p[1]-1,+p[0]);
+      }}
+      // DDMMYYYY (8 digits, no separator)
+      if (/^\d{8}$/.test(s)) return new Date(+s.slice(4),+s.slice(2,4)-1,+s.slice(0,2));
+      return null;
+    }
+
+    function isBeforeCutoff(dateStr) {
+      const d = parseDateString(dateStr);
+      return d && d < new Date(2026, 5, 15);
+    }
+
+    function formatDate(str) {
+      const d = parseDateString(str);
+      if (!d || isNaN(d)) return str ? String(str) : '—';
+      return String(d.getDate()).padStart(2,'0') + '.' + String(d.getMonth()+1).padStart(2,'0') + '.' + d.getFullYear();
+    }
+
+    function isUnpaid(d) {
+      const s = (d['Payment Status'] || '').toLowerCase();
+      return s === 'unpaid' || s === 'partial' || s === '';
+    }
+
+    function getSortVal(d, col) {
+      if (col === 'name')    return (d['Deal Name'] || '').toLowerCase();
+      if (col === 'id')      return (d['DealID'] || '').toLowerCase();
+      if (col === 'stage')   return (d['Stage'] || '').toLowerCase();
+      if (col === 'arrival') { const dt = parseDateString(d['Arrival Date']); return dt ? dt.getTime() : 0; }
+      if (col === 'created') { const dt = parseDateString(d['Created Time']); return dt ? dt.getTime() : 0; }
+      if (col === 'lang')    return (d['Language'] || '').toLowerCase();
+      if (col === 'amount')  return Number(d['Deal Amount']) || 0;
+      if (col === 'paid')    return Number(d['Paid Amount']) || 0;
+      if (col === 'payment') return (d['Payment Status'] || '').toLowerCase();
+      if (col === 'result')  return (d.result_code || '').toLowerCase();
+      return '';
+    }
+    function sortBy(col) {
+      if (sortCol === col) sortDir = -sortDir; else { sortCol = col; sortDir = 1; }
+      applySortAndRender();
+    }
+    function applySortAndRender() {
+      if (sortCol) filteredDeals.sort((a, b) => {
+        const av = getSortVal(a, sortCol), bv = getSortVal(b, sortCol);
+        return av < bv ? -sortDir : av > bv ? sortDir : 0;
+      });
+      renderCards(filteredDeals);
+      document.querySelectorAll('th[data-sort]').forEach(th => {
+        const arrow = th.querySelector('.sarrow');
+        if (!arrow) return;
+        arrow.textContent = th.dataset.sort === sortCol ? (sortDir === 1 ? ' ↑' : ' ↓') : ' ↕';
+        arrow.style.color = th.dataset.sort === sortCol ? '#38bdf8' : '#475569';
+      });
+    }
+
+    function doLogout() { localStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
+    function fixTR(s) {
+      if (!s || typeof s !== 'string') return s;
+      return s
+        .replace(/Ã¼/g,'ü').replace(/Ã–/g,'Ö').replace(/Ã¶/g,'ö').replace(/Ãœ/g,'Ü')
+        .replace(/Ã§/g,'ç').replace(/Ã‡/g,'Ç').replace(/Ä°/g,'İ').replace(/Ä±/g,'ı')
+        .replace(/ÄŸ/g,'ğ').replace(/Äž/g,'Ğ').replace(/ÅŸ/g,'ş').replace(/Åž/g,'Ş')
+        .replace(/Ã¢/g,'â').replace(/Ã‚/g,'Â').replace(/Ã¡/g,'á').replace(/Ã©/g,'é');
+    }
+    function fmt(v) { return (v === null || v === undefined || v === '') ? '—' : fixTR(String(v)); }
+    function fmtMoney(v) {
+      if (!v && v !== 0) return '€0';
+      return '€' + Number(v).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2});
+    }
+    function fmtCompact(v) {
+      const n = Number(v) || 0;
+      if (Math.abs(n) >= 1e6) return '€' + (n/1e6).toFixed(1) + 'M';
+      if (Math.abs(n) >= 1e3) return '€' + (n/1e3).toFixed(1) + 'K';
+      return '€' + Math.round(n);
+    }
+
+    function stagePill(stage) {
+      if (!stage) return '<span class="stage-pill stage-default">—</span>';
+      const s = stage.toLowerCase();
+      let cls = 'stage-default';
+      if (s.includes('won')) cls = 'stage-Won';
+      else if (s.includes('cancel')) cls = 'stage-Cancelled';
+      else if (s.includes('appointment')) cls = 'stage-Appointment';
+      else if (s.includes('reservation')) cls = 'stage-Reservation';
+      else if (s.includes('waiting')) cls = 'stage-Waiting';
+      return `<span class="stage-pill ${cls}">${stage}</span>`;
+    }
+
+    function updateKPIs() {
+      const base = allDeals.filter(d => !(d['Stage'] || '').toLowerCase().includes('won'));
+      const total = base.length;
+      const deal  = base.reduce((s,d) => s + (Number(d['Deal Amount']) || 0), 0);
+      const paid  = base.reduce((s,d) => s + (Number(d['Paid Amount'])  || 0), 0);
+      const unpaid= base.reduce((s,d) => s + (Number(d['Unpaid Amount'])|| 0), 0);
+      const past  = base.filter(d => isBeforeCutoff(d['Arrival Date'])).length;
+      const noRes = base.filter(d => !d.result_code).length;
+
+      const pastArr = base.filter(d => isBeforeCutoff(d['Arrival Date']));
+      const arrPaid   = pastArr.reduce((s,d) => s + (Number(d['Paid Amount'])  || 0), 0);
+      const arrUnpaid = pastArr.reduce((s,d) => s + (Number(d['Unpaid Amount'])|| 0), 0);
+
+      const pastVis = base.filter(d =>
+        isBeforeCutoff(d['1. Visit Date']) || isBeforeCutoff(d['2. Visit Date']) || isBeforeCutoff(d['3. Visit Date'])
+      );
+      const visPaid   = pastVis.reduce((s,d) => s + (Number(d['Paid Amount'])  || 0), 0);
+      const visUnpaid = pastVis.reduce((s,d) => s + (Number(d['Unpaid Amount'])|| 0), 0);
+
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('kpiTotal', total); set('kpiPending', noRes);
+      set('kpiPaid', fmtCompact(paid)); set('kpiUnpaid', fmtCompact(unpaid));
+      set('kpi1Total', total); set('kpi1Deal', fmtCompact(deal));
+      set('kpi1Paid', fmtCompact(paid)); set('kpi1Unpaid', fmtCompact(unpaid));
+      set('kpi1Past', past); set('kpi1NoRes', noRes);
+      set('kpiArrPaid', fmtMoney(arrPaid)); set('kpiArrUnpaid', fmtMoney(arrUnpaid));
+      set('kpiVisPaid', fmtMoney(visPaid)); set('kpiVisUnpaid', fmtMoney(visUnpaid));
+    }
+
+    function switchTab(tabId) {
+      activeTab = tabId;
+      ['all','arrival','visit1','visit2','visit3','cancelled'].forEach(t => {
+        const btn = document.getElementById('tab-' + t);
+        const badge = document.getElementById('badge-' + t);
+        if (!btn) return;
+        if (t === tabId) {
+          btn.className = "px-3 py-2 text-xs font-semibold rounded-lg bg-indigo-600 text-white flex items-center gap-1.5 transition-all";
+          if (badge) badge.className = "tab-badge bg-indigo-800 text-white";
+        } else {
+          btn.className = "px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all";
+          if (badge) badge.className = "tab-badge bg-gray-800 text-slate-400";
+        }
+      });
+      applyFilters();
+    }
+
+    function updateTabBadges() {
+      const nw = allDeals.filter(d => !(d['Stage'] || '').toLowerCase().includes('won'));
+      const nc = d => !(d['Stage'] || '').toLowerCase().includes('cancel');
+      const allC = nw.length;
+      const a  = nw.filter(d => nc(d) && isBeforeCutoff(d['Arrival Date'])).length;
+      const v1 = nw.filter(d => nc(d) && isBeforeCutoff(d['1. Visit Date'])).length;
+      const v2 = nw.filter(d => nc(d) && isBeforeCutoff(d['2. Visit Date'])).length;
+      const v3 = nw.filter(d => nc(d) && isBeforeCutoff(d['3. Visit Date'])).length;
+      const ca = nw.filter(d => (d['Stage'] || '').toLowerCase().includes('cancel') &&
+        (isBeforeCutoff(d['Arrival Date']) || isBeforeCutoff(d['1. Visit Date']) ||
+         isBeforeCutoff(d['2. Visit Date']) || isBeforeCutoff(d['3. Visit Date']) ||
+         isBeforeCutoff(d['Created Time']))).length;
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('badge-all', allC); set('badge-arrival', a); set('badge-visit1', v1);
+      set('badge-visit2', v2); set('badge-visit3', v3); set('badge-cancelled', ca);
+      set('statFull', allC); set('statArrival', a); set('statV1', v1);
+      set('statV2', v2); set('statV3', v3); set('statCancelled', ca);
+    }
+
+    function renderCards(data) {
+      const tbody = document.getElementById('cardsGrid');
+      const empty = document.getElementById('emptyState');
+      document.getElementById('resultInfo').textContent = data.length + ' deals shown';
+      if (!data.length) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+
+      tbody.innerHTML = data.map((d, i) => {
+        const unpaid = isUnpaid(d);
+        const pastArr = isBeforeCutoff(d['Arrival Date']);
+        const rowCls = (pastArr && unpaid) ? 'row-red' : unpaid ? 'row-amber' : '';
+        const isLocked = d.status === 'locked';
+        let resultBadge;
+        if (isLocked) {
+          const cont = isContinuing(d.sub_code);
+          const label = d.sub_code || d.result_code || 'Locked';
+          resultBadge = cont
+            ? `<span class="inline-flex items-center text-[9px] bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded-full font-bold whitespace-nowrap max-w-[120px] overflow-hidden text-ellipsis" title="${label}">&#9654; ${label}</span>`
+            : `<span class="inline-flex items-center text-[9px] bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded-full font-bold whitespace-nowrap max-w-[120px] overflow-hidden text-ellipsis" title="${label}">&#10003; ${label}</span>`;
+        } else if (d.status === 'not_reached') {
+          const label = d.sub_code || 'Not Reached';
+          resultBadge = `<span class="inline-flex items-center text-[9px] bg-slate-700/60 text-slate-400 px-2 py-0.5 rounded-full font-bold whitespace-nowrap max-w-[120px] overflow-hidden text-ellipsis" title="${label}">&#8211; ${label}</span>`;
+        } else if (d.lock_approval_requested) {
+          resultBadge = `<span class="text-[9px] bg-amber-900/40 text-amber-400 px-2 py-0.5 rounded-full font-bold">Unlock Pending</span>`;
+        } else {
+          resultBadge = `<span class="text-[9px] text-slate-600 italic">Pending</span>`;
+        }
+        return `<tr class="${rowCls}" onclick="openModal(${i})">
+          <td class="text-slate-600 text-[10px]">${i+1}</td>
+          <td class="text-white font-medium" title="${(d['Deal Name']||'').replace(/"/g,'&quot;')}">${fmt(d['Deal Name'])}</td>
+          <td class="text-slate-500 font-mono text-[10px]"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d['Deal Id']}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:underline;text-decoration-style:dotted" class="hover:text-indigo-400">${fmt(d['DealID'])||fmt(d['Deal Id'])}</a></td>
+          <td>${stagePill(d['Stage'])}</td>
+          <td class="text-slate-300 text-[11px]">${formatDate(d['Arrival Date'])}</td>
+          <td class="text-slate-500 text-[10px]">${formatDate(d['Created Time'])}</td>
+          <td class="text-slate-400 text-[11px]">${fmt(d['Language'])}</td>
+          <td class="text-blue-400 font-bold">${fmtMoney(d['Deal Amount'])}</td>
+          <td class="${(d['Paid Amount']||0)>0?'text-emerald-400':'text-red-400'} font-bold">${fmtMoney(d['Paid Amount'])}</td>
+          <td class="text-[10px] ${unpaid?'text-amber-400':'text-slate-400'}">${fmt(d['Payment Status'])}</td>
+          <td>${resultBadge}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    const SUB_CODE_CODES = new Set(['1','8']); // Not Reached, Cancelled
+
+    function buildResultForm(d) {
+      const opts = RESULT_CODES.map(rc =>
+        `<option value="${rc.code}">${rc.code}. ${rc.label}</option>`
+      ).join('');
+      const noteVal = '';
+      return `
+        <div class="flex items-center gap-2 text-xs text-rose-400 font-bold mb-4 uppercase tracking-wider">
+          <svg class="h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+          No Result Entered — fill the form below
+        </div>
+        <div id="resultFormError" style="display:none;color:#f87171;font-size:0.75rem;font-weight:600;margin-bottom:10px;padding:8px 12px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px"></div>
+        <div class="space-y-3">
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Result Code <span class="text-rose-500">*</span></label>
+            <select id="modalResCode" class="filter-select" onchange="updateSubcodes()">
+              <option value="">— Select Result Code —</option>
+              ${opts}
+            </select>
+          </div>
+          <div id="subCodeRow" style="display:none">
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Sub Code <span class="text-rose-500">*</span></label>
+            <select id="modalSubCode" class="filter-select" disabled>
+              <option value="">— Select Sub Code —</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Notes / Description <span style="color:#ef4444;font-weight:700">*</span> <span class="text-slate-600 font-normal normal-case">(required · max. 500 characters)</span></label>
+            <textarea id="modalResNote" class="filter-input h-16" placeholder="Enter your call notes here..." style="resize:none;" maxlength="500" oninput="updateNoteCounter(this)">${noteVal}</textarea>
+            <div style="text-align:right;font-size:10px;color:#64748b;margin-top:2px"><span id="noteCharCount">${noteVal.length}</span>/500</div>
+          </div>
+          <button id="saveResultBtn" onclick="confirmSaveResult()" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-sm rounded-lg font-bold transition-all">Save & Lock</button>
+        </div>`;
+    }
+
+    function updateNoteCounter(el) {
+      const count = document.getElementById('noteCharCount');
+      if (count) count.textContent = el.value.length;
+    }
+
+    function updateSubcodes() {
+      const code = document.getElementById('modalResCode').value;
+      const sub  = document.getElementById('modalSubCode');
+      const row  = document.getElementById('subCodeRow');
+      const needsSub = SUB_CODE_CODES.has(code);
+      if (row) row.style.display = needsSub ? 'block' : 'none';
+      if (!needsSub) { if (sub) { sub.innerHTML = '<option value="">—</option>'; sub.disabled = true; } return; }
+      const rc = RESULT_CODES.find(r => r.code === code);
+      if (!rc) { sub.innerHTML = '<option value="">— Select Sub Code —</option>'; sub.disabled = true; return; }
+      sub.innerHTML = '<option value="">— Select Sub Code —</option>' +
+        rc.subcodes.map(s => `<option value="${s}">${s}</option>`).join('');
+      sub.disabled = false;
+    }
+
+    function buildLockedSection(d) {
+      const cont = isContinuing(d.sub_code);
+      const label = cont ? 'Result Saved — Process Continuing' : 'Result Saved — Process Closed';
+      const color = cont ? 'text-blue-400' : 'text-emerald-400';
+      let unlockHtml;
+      if (d.lock_approval_requested) {
+        unlockHtml = `<div class="mt-3 p-2.5 bg-amber-950/40 border border-amber-800/40 rounded-lg text-[11px] text-amber-400 font-bold text-center flex items-center justify-center gap-2">
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Unlock request sent — waiting for Admin/TL approval</div>`;
+      } else {
+        const btnLabel = cont ? 'Request Unlock to Update Result' : 'Request Unlock from Admin / TL / RM';
+        const btnColor = cont ? 'background:#1e293b;color:#94a3b8;border:1px solid #334155' : 'background:#1c1917;color:#d97706;border:1px solid #78350f';
+        unlockHtml = `<button onclick="requestUnlock('${d['Deal Id']}')" style="${btnColor};width:100%;padding:9px;border-radius:8px;font-size:0.76rem;font-weight:700;cursor:pointer;margin-top:12px;transition:opacity .15s" onmouseover="this.style.opacity='.8'" onmouseout="this.style.opacity='1'">${btnLabel}</button>`;
+      }
+      return `
+        <div class="flex items-center gap-2 text-sm ${color} font-bold mb-3">
+          <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+          ${label}
+        </div>
+        <div class="bg-gray-900/80 rounded-lg p-3 text-xs space-y-1.5 mb-1">
+          <div><span class="text-slate-500 font-medium">Result Code:</span> <strong class="text-white">${d.result_code||'—'}</strong></div>
+          <div><span class="text-slate-500 font-medium">Sub Code:</span> <strong class="text-slate-200">${d.sub_code||'—'}</strong></div>
+          ${d.agent_note ? `<div><span class="text-slate-500 font-medium">Note:</span> <span class="text-slate-300">${d.agent_note}</span></div>` : ''}
+        </div>
+        ${unlockHtml}`;
+    }
+
+    function openModal(index) {
+      const d = filteredDeals[index];
+      if (!d) return;
+      currentModalDeal = d;
+      addLog('VIEW_DEAL', `Deal görüntülendi: ${d['Deal Name']}`, String(d['Deal Id']), d['Deal Name']);
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      document.getElementById('modalDealName').textContent = d['Deal Name'] || '—';
+      const zohoId = d['Deal Id'] || '';
+      document.getElementById('modalDealId').innerHTML = `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${zohoId}" target="_blank" rel="noopener" style="text-decoration:underline;text-decoration-style:dotted;color:inherit" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${d['DealID'] || zohoId}${zohoId ? ' ↗' : ''}</a>`;
+      document.getElementById('modalStage').innerHTML = stagePill(d['Stage']);
+      set('modalArrival', formatDate(d['Arrival Date']));
+      set('modalLanguage', fmt(d['Language']));
+      set('modalRegion', fmt(d['Region'] || d['Region Derived']));
+      set('modalDealAmt', fmtMoney(d['Deal Amount']));
+      set('modalPaid', fmtMoney(d['Paid Amount']));
+      set('modalUnpaid', fmtMoney(d['Unpaid Amount']));
+      set('modalVisit', fmt(d['Visit Status']));
+      set('modalPayment', fmt(d['Payment Status']));
+      set('modalV1', formatDate(d['1. Visit Date']));
+      set('modalV2', formatDate(d['2. Visit Date']));
+      set('modalV3', formatDate(d['3. Visit Date']));
+      set('modalTicket', fmt(d['Payment Or Flight Ticket']));
+
+      document.getElementById('modalResultSection').innerHTML =
+        d.status === 'locked' ? buildLockedSection(d) : buildResultForm(d);
+      // Not Reached: form göster ama daha önceki değerleri doldur
+      if (d.status === 'not_reached') {
+        const rc = RESULT_CODES.find(r => r.result_code === d.result_code || (d.result_code||'').startsWith(r.code + '.'));
+        if (rc) { const el = document.getElementById('modalResCode'); if(el){el.value=rc.code; updateSubcodes();} }
+        setTimeout(() => {
+          const sub = document.getElementById('modalSubCode'); if(sub && d.sub_code) sub.value = d.sub_code;
+        }, 50);
+      }
+      document.getElementById('dealModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeModal() {
+      document.getElementById('dealModal').classList.remove('open');
+      document.body.style.overflow = '';
+      currentModalDeal = null;
+    }
+
+    let _scCb = null;
+    function showSiteConfirm(title, msg, okLabel, okColor, onConfirm, extraHtml) {
+      document.getElementById('scTitle').textContent  = title;
+      document.getElementById('scMsg').textContent    = msg;
+      document.getElementById('scOk').textContent     = okLabel;
+      document.getElementById('scOk').style.background = okColor || '#4f46e5';
+      document.getElementById('scExtra').innerHTML    = extraHtml || '';
+      document.getElementById('siteConfirm').style.display = 'flex';
+      _scCb = onConfirm;
+      document.getElementById('scOk').onclick = () => { const cb = _scCb; closeSiteConfirm(); if (cb) cb(); };
+    }
+    function closeSiteConfirm() {
+      document.getElementById('siteConfirm').style.display = 'none';
+      _scCb = null;
+    }
+    async function addLog(actionType, details, dealId, dealName, oldValues) {
+      try {
+        const u = currentUser || JSON.parse(localStorage.getItem('nc_current_user') || '{}');
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/Logs`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ username: u.username||'', full_name: u.fullName||u.username||'', role: u.role||'', team: u.team||'', page: 'agent', action_type: actionType, details: String(details||''), deal_id: dealId ? String(dealId) : null, deal_name: dealName ? String(dealName) : null, old_values: oldValues ? String(oldValues) : null })
+        });
+        if (!r.ok) showSiteNotice('Log hatası: ' + await r.text(), 'error');
+      } catch(e) {
+        showSiteNotice('Log bağlantı hatası: ' + e.message, 'error');
+      }
+    }
+
+    function showSiteNotice(msg, type) {
+      const el = document.getElementById('siteNotice');
+      el.textContent = msg;
+      el.style.background = type === 'error' ? '#7f1d1d' : type === 'warn' ? '#78350f' : '#14532d';
+      el.style.color = '#fff';
+      el.style.border = `1px solid ${type === 'error' ? '#ef4444' : type === 'warn' ? '#f59e0b' : '#22c55e'}`;
+      el.style.display = 'block';
+      clearTimeout(el._t);
+      el._t = setTimeout(() => { el.style.display = 'none'; }, 3500);
+    }
+
+    function confirmSaveResult() {
+      const code  = document.getElementById('modalResCode')?.value;
+      const needsSub = SUB_CODE_CODES.has(code);
+      const sub   = needsSub ? (document.getElementById('modalSubCode')?.value || '') : '';
+      const errEl = document.getElementById('resultFormError');
+      if (!code) {
+        if (errEl) { errEl.textContent = 'Please select a Result Code.'; errEl.style.display = 'block'; }
+        return;
+      }
+      if (needsSub && !sub) {
+        if (errEl) { errEl.textContent = 'Please select a Sub Code.'; errEl.style.display = 'block'; }
+        return;
+      }
+      if (errEl) errEl.style.display = 'none';
+      if (code === '1') { saveResult(code, sub); return; }
+      const isFinal = !isContinuing(sub);
+      const msg = isFinal
+        ? `"${document.getElementById('modalResCode').options[document.getElementById('modalResCode').selectedIndex].text}" closes this process permanently. Admin/TL approval required to unlock later.`
+        : `Result will be saved and locked. You can request unlock anytime to update.`;
+      showSiteConfirm('Confirm Save & Lock', msg, 'Save & Lock', '#4f46e5', () => saveResult(code, sub));
+    }
+
+    async function saveResult(code, sub) {
+      const d = currentModalDeal;
+      if (!d) return;
+      if (!code) code = document.getElementById('modalResCode')?.value;
+      if (sub === undefined) sub = SUB_CODE_CODES.has(code) ? (document.getElementById('modalSubCode')?.value || '') : '';
+      const note = (document.getElementById('modalResNote')?.value || '').trim();
+      if (!note) {
+        const ta = document.getElementById('modalResNote');
+        if (ta) { ta.style.borderColor = '#ef4444'; ta.style.boxShadow = '0 0 0 2px rgba(239,68,68,0.3)'; ta.focus(); setTimeout(() => { ta.style.borderColor = ''; ta.style.boxShadow = ''; }, 3000); }
+        showSiteNotice('Please enter a note — the Notes field is required.', 'error');
+        return;
+      }
+      const saveBtn = document.getElementById('saveResultBtn');
+      if (saveBtn) { saveBtn.textContent = 'Saving...'; saveBtn.disabled = true; }
+      try {
+        const rc = RESULT_CODES.find(r => r.code === code);
+        const fullCode = rc ? `${code}. ${rc.label}` : code;
+        const isNotReached = code === '1';
+        const newStatus = isNotReached ? 'not_reached' : 'locked';
+        // Mevcut değerleri geri alma için sakla
+        let oldValues = null;
+        try {
+          const oldResp = await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?select=result_code,sub_code,agent_note,son_statu,son_status,deal_status,lock_approval_requested&%22db.Deal%20Id%22=eq.${encodeURIComponent(String(d['Deal Id']))}`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
+          });
+          if (oldResp.ok) { const od = await oldResp.json(); if (od[0]) oldValues = JSON.stringify(od[0]); }
+        } catch(e) {}
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?%22db.Deal%20Id%22=eq.${encodeURIComponent(String(d['Deal Id']))}`, {
+          method: 'PATCH',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ result_code: fullCode, sub_code: sub, agent_note: note, deal_status: newStatus, lock_approval_requested: false })
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        addLog('SAVE_RESULT', `Result: ${fullCode}${sub ? ' / '+sub : ''}`, String(d['Deal Id']), d['Deal Name'], oldValues);
+        d.result_code = fullCode; d.sub_code = sub; d.agent_note = note; d.status = newStatus; d.lock_approval_requested = false;
+        const main = allDeals.find(x => x['Deal Id'] === d['Deal Id']);
+        if (main) { main.result_code = fullCode; main.sub_code = sub; main.agent_note = note; main.status = newStatus; main.lock_approval_requested = false; }
+        closeModal(); applyFilters();
+        showSiteNotice(isNotReached ? 'Kaydedildi. (Not Reached — tekrar düzenlenebilir)' : 'Result saved and locked successfully.', 'success');
+      } catch(err) {
+        showSiteNotice('Save failed: ' + err.message, 'error');
+        if (saveBtn) { saveBtn.textContent = 'Save & Lock'; saveBtn.disabled = false; }
+      }
+    }
+
+    function requestUnlock(dealId) {
+      const d = currentModalDeal;
+      if (!d) return;
+      const isFinal = !isContinuing(d.sub_code);
+      const title = isFinal ? 'Request Unlock — Closed Process' : 'Request Unlock to Update Result';
+      const msg   = isFinal
+        ? 'This result marked the process as closed. Admin / TL / RM must approve your unlock request.'
+        : 'Send an unlock request to your Team Leader or Admin so you can update the result.';
+      const extra = `<textarea id="scReasonInput" placeholder="Reason for unlock request (optional)..." style="width:100%;background:#0f172a;border:1px solid #334155;color:#e2e8f0;border-radius:8px;padding:8px 10px;font-size:0.8rem;resize:none;height:72px;box-sizing:border-box;outline:none"></textarea>`;
+      showSiteConfirm(title, msg, 'Send Request', isFinal ? '#b45309' : '#4f46e5', () => _doRequestUnlock(dealId), extra);
+    }
+
+    async function _doRequestUnlock(dealId) {
+      const d = currentModalDeal || allDeals.find(x => x['Deal Id'] === dealId);
+      const reason = document.getElementById('scReasonInput')?.value?.trim() || '';
+      try {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?%22db.Deal%20Id%22=eq.${encodeURIComponent(String(dealId))}`, {
+          method: 'PATCH',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', 'Prefer': 'return=minimal' },
+          body: JSON.stringify({ lock_approval_requested: true })
+        });
+        if (!resp.ok) throw new Error(await resp.text());
+        addLog('UNLOCK_REQUEST', `Unlock talebi: ${d?.['Deal Name']||dealId}${reason?' — Sebep: '+reason:''}`, String(dealId), d?.['Deal Name']||'');
+        if (d) { d.lock_approval_requested = true; }
+        const main = allDeals.find(x => x['Deal Id'] === dealId);
+        if (main) main.lock_approval_requested = true;
+        if (currentModalDeal) {
+          document.getElementById('modalResultSection').innerHTML = buildLockedSection(currentModalDeal);
+        }
+        applyFilters();
+        showSiteNotice('Unlock request sent — Admin/TL will be notified.', 'warn');
+      } catch(err) {
+        showSiteNotice('Request failed: ' + err.message, 'error');
+      }
+    }
+
+    function populateFilters(data) {
+      const stages = [...new Set(data.map(d => d['Stage']).filter(Boolean))].sort();
+      const langs  = [...new Set(data.map(d => d['Language']).filter(Boolean))].sort();
+      const fill = (id, arr) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const existing = Array.from(sel.options).slice(1).map(o => o.value);
+        if (existing.join('|') === arr.join('|')) return;
+        if (document.activeElement === sel) return;
+        const cur = sel.value;
+        sel.innerHTML = `<option value="">${sel.options[0] ? sel.options[0].text : ''}</option>`;
+        arr.forEach(v => { const o = document.createElement('option'); o.value = v; o.text = v; o.style.background = '#111827'; o.style.color = '#E2E8F0'; sel.appendChild(o); });
+        if (cur) sel.value = cur;
+      };
+      fill('fStage', stages); fill('fLanguage', langs);
+    }
+
+    function applyFilters() {
+      const stage   = document.getElementById('fStage').value;
+      const payment = document.getElementById('fPayment').value;
+      const lang    = document.getElementById('fLanguage').value;
+      const result  = document.getElementById('fResult').value;
+      const search  = document.getElementById('fSearch').value.toLowerCase();
+      updateTabBadges();
+
+      filteredDeals = allDeals.filter(d => {
+        if ((d['Stage'] || '').toLowerCase().includes('won')) return false;
+
+        if (activeTab === 'arrival') {
+          if ((d['Stage'] || '').toLowerCase().includes('cancel')) return false;
+          if (!isBeforeCutoff(d['Arrival Date'])) return false;
+        } else if (activeTab === 'visit1') {
+          if ((d['Stage'] || '').toLowerCase().includes('cancel')) return false;
+          if (!isBeforeCutoff(d['1. Visit Date'])) return false;
+        } else if (activeTab === 'visit2') {
+          if ((d['Stage'] || '').toLowerCase().includes('cancel')) return false;
+          if (!isBeforeCutoff(d['2. Visit Date'])) return false;
+        } else if (activeTab === 'visit3') {
+          if ((d['Stage'] || '').toLowerCase().includes('cancel')) return false;
+          if (!isBeforeCutoff(d['3. Visit Date'])) return false;
+        } else if (activeTab === 'cancelled') {
+          if (!(d['Stage'] || '').toLowerCase().includes('cancel')) return false;
+          if (!isBeforeCutoff(d['Arrival Date']) && !isBeforeCutoff(d['1. Visit Date']) &&
+              !isBeforeCutoff(d['2. Visit Date']) && !isBeforeCutoff(d['3. Visit Date']) &&
+              !isBeforeCutoff(d['Created Time'])) return false;
+        }
+        // 'all' tab: show everything non-WON
+
+        if (stage   && d['Stage']          !== stage)   return false;
+        if (payment && d['Payment Status'] !== payment) return false;
+        if (lang    && d['Language']       !== lang)    return false;
+        if (result === 'pending' && d.status === 'locked') return false;
+        if (result === 'locked'  && d.status !== 'locked') return false;
+        if (search) {
+          const text = [d['Deal Name'], d['DealID'], d['Deal Id'], d['Language'], d['Stage'], d.result_code, d.sub_code, d.agent_note].join(' ').toLowerCase();
+          if (!text.includes(search)) return false;
+        }
+        return true;
+      });
+      applySortAndRender();
+    }
+
+    function resetFilters() {
+      ['fStage','fPayment','fLanguage','fResult'].forEach(id => document.getElementById(id).value = '');
+      document.getElementById('fSearch').value = '';
+      applyFilters();
+    }
+
+    function setPreset(type) {
+      resetFilters();
+      if (type === 'noResult') { document.getElementById('fResult').value = 'pending'; applyFilters(); }
+      else if (type === 'unpaid') { document.getElementById('fPayment').value = 'Unpaid'; applyFilters(); }
+    }
+
+    function mapDeals(rawData) {
+      return rawData.map(row => {
+        function parseAmount(val) {
+          if (val === null || val === undefined) return 0;
+          if (typeof val === 'number') return val;
+          let s = String(val).replace(/[^0-9,.\-]/g, '');
+          if (s.includes(',') && s.includes('.')) s = s.replace(/\./g, '').replace(/,/g, '.');
+          else if (s.includes(',')) s = s.replace(/,/g, '.');
+          const n = parseFloat(s); return isNaN(n) ? 0 : n;
+        }
+        function checkArrivalPast(str) {
+          if (!str) return 'Hayır';
+          const p = String(str).split(' ');
+          const dp = p[0].split('.');
+          if (dp.length === 3) {
+            const h = p[1] ? parseInt(p[1].split(':')[0])||0 : 0;
+            const m = p[1] ? parseInt(p[1].split(':')[1])||0 : 0;
+            return new Date(+dp[2], +dp[1]-1, +dp[0], h, m) < new Date() ? 'Evet' : 'Hayır';
+          }
+          return 'Hayır';
+        }
+        const dealAmount   = parseAmount(row['db.Deal Amount']);
+        const paidAmount   = parseAmount(row['db.Paid Amount']);
+        const unpaidAmount = parseAmount(row['db.Unpaid Amount']) || Math.max(0, dealAmount - paidAmount);
+        const arrivalDate  = row['db.Arrival Date'];
+        const paymentStatus = row['db.Payment Status'] || 'Unpaid';
+        const visitStatus   = row['db.Visit Status']   || 'Not Visited';
+        const roleName      = row['db.Role Name'] || '';
+        return {
+          'Deal Id':   row['db.Deal Id'] || '',
+          'DealID':    row['db.DealID']  || '',
+          'Deal Name': row['db.Deal Name'] || '',
+          'Created Time': row['db.Created Time'] || '',
+          'Arrival Date':  arrivalDate || '',
+          '1. Visit Date': row['db.1. Visit Date'] || '',
+          '2. Visit Date': row['db.2. Visit Date'] || '',
+          '3. Visit Date': row['db.3. Visit Date'] || '',
+          'Region':   row['db.Region'] || '',
+          'Deal Owner Id':   row['db.Deal Owner Id']   || '',
+          'Deal Owner Name': row['db.Deal Owner Name'] || '',
+          'Raw Role Name': roleName,
+          'Stage':    row['db.Stage']    || '',
+          'Language': row['db.Language'] || '',
+          'Payment Or Flight Ticket': row['db.Payment Or Flight Ticket'] || '',
+          'Deal Amount':  dealAmount,
+          'Paid Amount':  paidAmount,
+          'Unpaid Amount': unpaidAmount,
+          'Paid Payment Count': Number(row['db.Paid Payment Count'] || 0),
+          'Payment Status': paymentStatus,
+          'Visit Status':   visitStatus,
+          'Team Group':     roleName.split(' - ')[0].trim(),
+          'Region Derived': row['db.Region'] || (roleName.includes(' - ') ? roleName.split(' - ')[1].trim() : ''),
+          'Arrival Past': checkArrivalPast(arrivalDate),
+          result_code: row['result_code'] || '',
+          sub_code:    row['sub_code']    || '',
+          agent_note:  row['agent_note']  || '',
+          son_statu:   row['son_statu']   || '',
+          status:      row['deal_status'] || 'pending',
+          lock_approval_requested: row['lock_approval_requested'] || false
+        };
+      });
+    }
+
+    const _AGENT_CACHE_KEY = 'nc_agent_deals_v1';
+    const _AGENT_CACHE_TTL = 5 * 60 * 1000;
+
+    async function loadData(forceRefresh) {
+      const spinEl = document.getElementById('loadingState');
+      const cardEl = document.getElementById('cardsContainer');
+      const errEl  = document.getElementById('errorState');
+
+      const dealOwnerName = (currentUser.fullName || '').trim();
+      const h = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+
+      async function doFetch() {
+        // Önce name filtreli tek istek dene (en hızlı yol)
+        const resp = await fetch(
+          `${SUPABASE_URL}/rest/v1/Raw-Data?select=*,%22db.Deal%20Id%22&%22db.Deal%20Owner%20Name%22=eq.${encodeURIComponent(dealOwnerName)}`,
+          { headers: h }
+        );
+        if (resp.ok) {
+          const data = mapDeals(await safeJson(resp));
+          if (data.length > 0) return data;
+        }
+        // Fallback: parallel full fetch + client filter
+        const cr = await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?select=*,%22db.Deal%20Id%22&limit=1`, {
+          headers: { ...h, Prefer: 'count=exact' }
+        });
+        const total = parseInt((cr.headers.get('content-range') || '').split('/')[1] || '0') || 0;
+        if (!total) return [];
+        const SIZE = 1000;
+        const chunks = await Promise.all(
+          Array.from({ length: Math.ceil(total / SIZE) }, (_, i) =>
+            fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?select=*,%22db.Deal%20Id%22&limit=${SIZE}&offset=${i * SIZE}`, { headers: h })
+              .then(r => safeJson(r))
+          )
+        );
+        const sn = dealOwnerName.toLowerCase();
+        const di = String(currentUser.id || currentUser.zoho_id || '').trim();
+        return mapDeals(chunks.flat()).filter(d => {
+          const ro = (d['Deal Owner Name'] || '').trim().toLowerCase();
+          return ro === sn || (di && String(d['Deal Owner Id'] || '').trim() === di);
+        });
+      }
+
+      // Tüm yollar için ortak render fonksiyonu
+      function applyDeals(deals) {
+        allDeals = deals;
+        populateFilters(allDeals);
+        updateTabBadges();
+        updateKPIs();
+        applyFilters();
+      }
+
+      // Cache hit — anında göster
+      if (!forceRefresh) {
+        try {
+          const c = JSON.parse(sessionStorage.getItem(_AGENT_CACHE_KEY) || 'null');
+          if (c && Date.now() - c.ts < _AGENT_CACHE_TTL && c.owner === dealOwnerName) {
+            if (c.deals && c.deals.length > 0) {
+              applyDeals(c.deals);
+              spinEl.classList.add('hidden'); cardEl.classList.remove('hidden');
+              // Arka planda güncelle
+              doFetch().then(deals => {
+                // deals===[] geçerli: başka sayfaya transfer edildi; cache'i ve UI'ı güncelle
+                try { sessionStorage.setItem(_AGENT_CACHE_KEY, JSON.stringify({ ts: Date.now(), owner: dealOwnerName, deals })); } catch(e) {}
+                applyDeals(deals);
+              }).catch(e => console.warn('bg refresh:', e));
+              return;
+            }
+          }
+        } catch(e) {}
+      }
+
+      spinEl.classList.remove('hidden'); cardEl.classList.add('hidden'); errEl.classList.add('hidden');
+      try {
+        const deals = await doFetch();
+        addLog('LOGIN', `Giriş yapıldı — ${deals.length} deal yüklendi`);
+
+        if (deals.length === 0) {
+          const sr = await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?select=%22db.Deal%20Owner%20Name%22&limit=50`,
+            { headers: h });
+          let sampleNames = [];
+          if (sr.ok) {
+            const sd = await sr.json();
+            sampleNames = [...new Set(sd.map(d => d['db.Deal Owner Name']).filter(Boolean))].slice(0, 8);
+          }
+          spinEl.classList.add('hidden');
+          errEl.classList.remove('hidden');
+          document.getElementById('errorMsg').innerHTML = `No deals found for <strong>"${dealOwnerName}"</strong>.<br><span style="font-size:10px;opacity:0.7">Sample names in DB: ${sampleNames.join(', ')}</span>`;
+          return;
+        }
+
+        try { sessionStorage.setItem(_AGENT_CACHE_KEY, JSON.stringify({ ts: Date.now(), owner: dealOwnerName, deals })); } catch(e) {}
+        applyDeals(deals);
+        document.getElementById('lastRefresh').textContent = 'Updated: ' + new Date().toLocaleTimeString();
+        spinEl.classList.add('hidden');
+        cardEl.classList.remove('hidden');
+      } catch(err) {
+        spinEl.classList.add('hidden');
+        errEl.classList.remove('hidden');
+        document.getElementById('errorMsg').textContent = 'Error: ' + err.message;
+      }
+    }
+
+    (function init() {
+      try {
+        const session = JSON.parse(localStorage.getItem('nc_current_user') || 'null');
+        if (!session) { window.location.href = 'index.html'; return; }
+        if (session.role !== 'agent') {
+          if (session.role === 'team-leader' || session.role === 'regional-manager') window.location.href = 'team-leader.html';
+          else if (session.role === 'admin') window.location.href = 'admin.html';
+          return;
+        }
+        currentUser = session;
+        document.getElementById('sidebarName').textContent = fixTR(session.fullName || session.username || '');
+        document.getElementById('sidebarTeam').textContent = fixTR(session.team || 'Agent');
+        document.getElementById('userAvatar').textContent = (session.fullName || 'A')[0].toUpperCase();
+        loadData();
+      } catch(e) { localStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
+    })();
+  </script>
+
+  <!-- ── In-site Confirmation Overlay (NO browser dialogs) ── -->
+  <div id="siteConfirm" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.82);align-items:center;justify-content:center;padding:16px">
+    <div style="background:#0f172a;border:1px solid #334155;border-radius:14px;padding:28px 24px;max-width:380px;width:100%;box-shadow:0 25px 60px rgba(0,0,0,0.9)">
+      <div id="scIcon" style="text-align:center;font-size:2rem;margin-bottom:10px"></div>
+      <h3 id="scTitle" style="color:#f1f5f9;font-weight:700;font-size:1rem;text-align:center;margin:0 0 8px"></h3>
+      <p id="scMsg" style="color:#94a3b8;font-size:0.8rem;text-align:center;line-height:1.6;margin:0 0 16px"></p>
+      <div id="scExtra" style="margin-bottom:14px"></div>
+      <div style="display:flex;gap:10px">
+        <button id="scCancel" onclick="closeSiteConfirm()" style="flex:1;padding:10px;background:#1e293b;color:#94a3b8;border-radius:8px;font-weight:600;font-size:0.82rem;border:1px solid #334155;cursor:pointer">Cancel</button>
+        <button id="scOk" style="flex:1;padding:10px;border-radius:8px;font-weight:700;font-size:0.82rem;border:none;cursor:pointer;color:#fff;background:#4f46e5">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── In-site Notice (success / error) ── -->
+  <div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:0.85rem;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);white-space:nowrap"></div>
+
+</body>
+</html>
