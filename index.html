@@ -577,8 +577,9 @@
           return;
         }
 
-        const SUPABASE_URL = "https://aztxfncqanrodbttywrb.supabase.co";
-        const SUPABASE_KEY = "sb_publishable_IkbCNelsIjBPW6Tqkq4Egw_djjzvTXL";
+        const _c = await fetch('/api/config').then(r => r.json());
+        const SUPABASE_URL = _c.url;
+        const SUPABASE_KEY = _c.key;
 
         const resp = await fetch(
           `${SUPABASE_URL}/rest/v1/Users?Username=eq.${encodeURIComponent(username)}&select=*`,

@@ -267,8 +267,9 @@
   </div>
 
   <script>
-    const SUPABASE_URL = "https://aztxfncqanrodbttywrb.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_IkbCNelsIjBPW6Tqkq4Egw_djjzvTXL";
+    let SUPABASE_URL = '';
+    let SUPABASE_KEY = '';
+    const _cfg = fetch('/api/config').then(r => r.json()).then(c => { SUPABASE_URL = c.url; SUPABASE_KEY = c.key; });
 
     const RESULT_CODES = [
       { code:'1', label:'Not Reached',               subcodes:['No Response 1','No Response 2','No Response 3'] },
@@ -1038,8 +1039,9 @@
       }
     }
 
-    (function init() {
+    (async function init() {
       try {
+        await _cfg;
         const session = JSON.parse(localStorage.getItem('nc_current_user') || 'null');
         if (!session) { window.location.href = 'index.html'; return; }
         if (session.role !== 'agent') {
