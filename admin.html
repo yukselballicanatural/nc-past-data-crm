@@ -6,6 +6,7 @@
   <title>Natural Clinic CRM - Admin Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="alarm-engine.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #080b11; }
@@ -91,6 +92,11 @@
         <button onclick="switchView('transfer')" class="nav-btn" id="nav-transfer">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
           Transfer Leads
+        </button>
+        <button onclick="switchView('alarms-monitor')" class="nav-btn" id="nav-alarms-monitor">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+          Alarm Monitoring
+          <span id="adminAlarmBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:800;padding:1px 6px;min-width:20px;text-align:center">0</span>
         </button>
       </div>
 
@@ -588,6 +594,118 @@
     </div>
   </div>
 
+  <!-- ════════════════ ALARM MONITORING VIEW ════════════════ -->
+  <div id="view-alarms-monitor" class="hidden">
+    <!-- Header -->
+    <div class="flex items-start justify-between mb-6 flex-wrap gap-3">
+      <div>
+        <h2 class="text-xl font-bold text-white">Alarm Monitoring</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Tüm bölgeler — sistem geneli alarm durumu</p>
+      </div>
+      <div class="flex items-center gap-2 flex-wrap">
+        <span id="adminEngineStatus" class="text-xs text-slate-500"></span>
+        <button onclick="adminRunEngine()" id="adminBtnEngine" class="px-3 py-1.5 bg-teal-700 hover:bg-teal-600 text-white text-xs rounded-lg font-semibold flex items-center gap-1.5">
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+          Tüm Sistemi Güncelle
+        </button>
+        <button onclick="exportAdminAlarms()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Export CSV</button>
+      </div>
+    </div>
+
+    <!-- KPI Cards — 8 kart -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Açık Alarm</div><div class="text-xl font-bold text-amber-400" id="mk1">0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Bugün Gelecek</div><div class="text-xl font-bold text-green-400" id="mk2">0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Gecikmiş</div><div class="text-xl font-bold text-red-400" id="mk3">0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Eksik Tarih</div><div class="text-xl font-bold text-slate-400" id="mk4">0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">No-show</div><div class="text-xl font-bold text-rose-400" id="mk5">0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Payment Takip</div><div class="text-xl font-bold text-purple-400" id="mk6">0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Yaklaşan</div><div class="text-xl font-bold text-orange-400" id="mk7">0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Toplam Alarm</div><div class="text-xl font-bold text-white" id="mk8">0</div></div>
+    </div>
+
+    <!-- İki Bölge Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+      <!-- Istanbul -->
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-2 h-2 rounded-full bg-blue-400"></div>
+          <h3 class="text-sm font-bold text-white">Istanbul Bölgesi</h3>
+        </div>
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">Açık</div><div class="text-base font-bold text-amber-400" id="istOpen">0</div></div>
+          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">Gecikmiş</div><div class="text-base font-bold text-red-400" id="istOverdue">0</div></div>
+          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">No-show</div><div class="text-base font-bold text-rose-400" id="istNoshow">0</div></div>
+        </div>
+        <div id="istTeamList" class="space-y-1.5"></div>
+      </div>
+      <!-- Morocco -->
+      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+        <div class="flex items-center gap-2 mb-4">
+          <div class="w-2 h-2 rounded-full bg-orange-400"></div>
+          <h3 class="text-sm font-bold text-white">Morocco Bölgesi</h3>
+        </div>
+        <div class="grid grid-cols-3 gap-2 mb-4">
+          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">Açık</div><div class="text-base font-bold text-amber-400" id="morOpen">0</div></div>
+          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">Gecikmiş</div><div class="text-base font-bold text-red-400" id="morOverdue">0</div></div>
+          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">No-show</div><div class="text-base font-bold text-rose-400" id="morNoshow">0</div></div>
+        </div>
+        <div id="morTeamList" class="space-y-1.5"></div>
+      </div>
+    </div>
+
+    <!-- Tüm Alarmlar Listesi -->
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <h3 class="text-sm font-bold text-white">Alarm Listesi</h3>
+        <div class="flex gap-2 flex-wrap">
+          <select id="amFilterRegion" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
+            <option value="">Tüm Bölgeler</option>
+            <option value="Istanbul">Istanbul</option>
+            <option value="Morocco">Morocco</option>
+          </select>
+          <select id="amFilterType" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
+            <option value="">Tüm Tipler</option>
+            <option value="arrival_approaching">Arrival Yaklaşıyor</option>
+            <option value="visit_approaching">Vizit Yaklaşıyor</option>
+            <option value="arrival_missing">Tarih Eksik</option>
+            <option value="today_patient">Bugün Gelecek</option>
+            <option value="payment_tracking">Payment Takip</option>
+            <option value="no_show">No-show</option>
+          </select>
+          <select id="amFilterStatus" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
+            <option value="active">Aktif (kapalı hariç)</option>
+            <option value="all">Tümü</option>
+            <option value="open">Açık</option>
+            <option value="overdue">Gecikmiş</option>
+            <option value="no_show">No-show</option>
+            <option value="closed">Kapatıldı</option>
+          </select>
+          <input id="amSearch" placeholder="Hasta, danışman..." oninput="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;width:160px">
+        </div>
+      </div>
+      <div style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b">
+        <table style="width:100%;border-collapse:collapse">
+          <thead>
+            <tr style="background:#0f172a">
+              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">#</th>
+              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Hasta</th>
+              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Bölge / Takım</th>
+              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Alarm Tipi</th>
+              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Tarih</th>
+              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Kalan</th>
+              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Durum</th>
+              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">TL Notu</th>
+            </tr>
+          </thead>
+          <tbody id="adminAlarmTbody"></tbody>
+        </table>
+        <div id="adminAlarmEmpty" style="display:none;text-align:center;padding:40px 16px;color:#475569;font-size:13px">Alarm bulunamadı.</div>
+      </div>
+      <div class="mt-2 text-xs text-slate-500" id="adminAlarmCount"></div>
+    </div>
+  </div>
+
   <!-- Deal Modal -->
   <div id="dealModal">
     <div class="modal-backdrop" onclick="closeModal()"></div>
@@ -714,6 +832,222 @@
       window.location.href = 'index.html';
     }
 
+    // ════════════════ ALARM MONITORING ════════════════
+    let adminAllAlarms = [];
+
+    function _amDaysUntil(dateStr) {
+      if (!dateStr) return null;
+      const d = new Date(String(dateStr).split('T')[0] + 'T00:00:00');
+      if (isNaN(d.getTime())) return null;
+      const t = new Date(); t.setHours(0,0,0,0); d.setHours(0,0,0,0);
+      return Math.round((d - t) / 86400000);
+    }
+
+    function _amIsOverdue(a) {
+      if (['closed','cancelled','no_show','arrived','examined','processing'].includes(a.status)) return false;
+      return (a.reference_date && _amDaysUntil(a.reference_date) < 0);
+    }
+
+    function _amTypeMeta(type) {
+      const m = {
+        'arrival_approaching':{ label:'Arrival Yaklaşıyor', color:'#fb923c' },
+        'visit_approaching':  { label:'Vizit Yaklaşıyor',   color:'#60a5fa' },
+        'arrival_missing':    { label:'Tarih Eksik',         color:'#f87171' },
+        'today_patient':      { label:'Bugün Gelecek',       color:'#4ade80' },
+        'payment_tracking':   { label:'Payment Takip',       color:'#c084fc' },
+        'no_show':            { label:'Gelemedi',            color:'#f87171' },
+      };
+      return m[type] || { label: type, color:'#94a3b8' };
+    }
+
+    function _amStatusMeta(s) {
+      const m = {
+        'open':'#fbbf24','seen':'#60a5fa','in_progress':'#2dd4bf',
+        'arrived':'#4ade80','examined':'#86efac','processing':'#67e8f9',
+        'no_show':'#f87171','closed':'#64748b','escalated':'#fb923c','cancelled':'#475569',
+      };
+      const labels = {
+        'open':'Açık','seen':'Görüldü','in_progress':'Takipte','arrived':'Hasta Geldi',
+        'examined':'Muayene','processing':'İşlemlerde','no_show':'Gelemedi',
+        'closed':'Kapatıldı','escalated':'Eskale','cancelled':'İptal',
+      };
+      return { color: m[s] || '#94a3b8', label: labels[s] || s };
+    }
+
+    function _amFmtDate(str) {
+      if (!str) return '—';
+      const p = String(str).split('T')[0].split('-');
+      return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : str;
+    }
+
+    async function loadAdminAlarms() {
+      document.getElementById('adminEngineStatus').textContent = 'Alarmlar yükleniyor...';
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        let all = [], offset = 0;
+        while (true) {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc&limit=1000&offset=${offset}`, { headers: H });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const batch = await r.json();
+          if (!Array.isArray(batch) || !batch.length) break;
+          all.push(...batch);
+          if (batch.length < 1000) break;
+          offset += 1000;
+        }
+        adminAllAlarms = all;
+        updateAdminAlarmKPIs();
+        renderAdminAlarmTable();
+        renderRegionPanels();
+        document.getElementById('adminEngineStatus').textContent = `${all.length} alarm yüklendi`;
+        const badge = document.getElementById('adminAlarmBadge');
+        const overdue = all.filter(a => _amIsOverdue(a)).length;
+        if (overdue > 0) { badge.textContent = overdue; badge.style.display = 'inline-block'; }
+      } catch(e) {
+        document.getElementById('adminEngineStatus').textContent = 'Yükleme hatası: ' + e.message;
+      }
+    }
+
+    function updateAdminAlarmKPIs() {
+      const a = adminAllAlarms;
+      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+      document.getElementById('mk1').textContent = a.filter(x => x.status === 'open' || x.status === 'seen').length;
+      document.getElementById('mk2').textContent = a.filter(x => x.alarm_type === 'today_patient' && active.has(x.status)).length;
+      document.getElementById('mk3').textContent = a.filter(x => _amIsOverdue(x)).length;
+      document.getElementById('mk4').textContent = a.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
+      document.getElementById('mk5').textContent = a.filter(x => x.status === 'no_show').length;
+      document.getElementById('mk6').textContent = a.filter(x => x.alarm_type === 'payment_tracking' && active.has(x.status)).length;
+      document.getElementById('mk7').textContent = a.filter(x => ['arrival_approaching','visit_approaching'].includes(x.alarm_type) && active.has(x.status)).length;
+      document.getElementById('mk8').textContent = a.length;
+    }
+
+    function renderRegionPanels() {
+      ['Istanbul','Morocco'].forEach(region => {
+        const prefix = region === 'Istanbul' ? 'ist' : 'mor';
+        const ra = adminAllAlarms.filter(a => a.region === region);
+        const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+        document.getElementById(prefix + 'Open').textContent    = ra.filter(a => active.has(a.status) && a.status !== 'arrived' && a.status !== 'examined').length;
+        document.getElementById(prefix + 'Overdue').textContent  = ra.filter(a => _amIsOverdue(a)).length;
+        document.getElementById(prefix + 'Noshow').textContent   = ra.filter(a => a.status === 'no_show').length;
+        // Team breakdown
+        const teams = {};
+        ra.filter(a => active.has(a.status)).forEach(a => {
+          const t = a.team || '—';
+          if (!teams[t]) teams[t] = { open:0, overdue:0 };
+          if (a.status === 'open') teams[t].open++;
+          if (_amIsOverdue(a)) teams[t].overdue++;
+        });
+        document.getElementById(prefix + 'TeamList').innerHTML = Object.entries(teams)
+          .sort((a,b) => (b[1].open + b[1].overdue) - (a[1].open + a[1].overdue))
+          .map(([team, v]) => `
+            <div class="flex items-center justify-between py-1.5 border-b border-gray-800/50 last:border-0">
+              <span class="text-xs text-slate-300 truncate max-w-[140px]">${team}</span>
+              <div class="flex gap-2 text-[10px] font-bold shrink-0">
+                <span class="text-amber-400">${v.open} açık</span>
+                ${v.overdue ? `<span class="text-red-400">${v.overdue} gec.</span>` : ''}
+              </div>
+            </div>`).join('') || '<p class="text-xs text-slate-600">Aktif alarm yok.</p>';
+      });
+    }
+
+    function renderAdminAlarmTable() {
+      const region = document.getElementById('amFilterRegion').value;
+      const type   = document.getElementById('amFilterType').value;
+      const status = document.getElementById('amFilterStatus').value;
+      const search = (document.getElementById('amSearch').value || '').toLowerCase();
+      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+
+      const data = adminAllAlarms.filter(a => {
+        if (region && a.region !== region) return false;
+        if (type   && a.alarm_type !== type) return false;
+        if (status === 'active'  && !active.has(a.status)) return false;
+        if (status === 'open'    && a.status !== 'open') return false;
+        if (status === 'overdue' && !_amIsOverdue(a)) return false;
+        if (status === 'no_show' && a.status !== 'no_show') return false;
+        if (status === 'closed'  && a.status !== 'closed') return false;
+        if (search) {
+          const txt = [a.deal_name,a.deal_owner,a.team,a.region].join(' ').toLowerCase();
+          if (!txt.includes(search)) return false;
+        }
+        return true;
+      });
+
+      const tbody = document.getElementById('adminAlarmTbody');
+      const empty = document.getElementById('adminAlarmEmpty');
+      document.getElementById('adminAlarmCount').textContent = `${data.length} alarm gösteriliyor`;
+      if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+
+      tbody.innerHTML = data.map((a, i) => {
+        const tm  = _amTypeMeta(a.alarm_type);
+        const sm  = _amStatusMeta(a.status);
+        const days = a.days_remaining !== null ? a.days_remaining : _amDaysUntil(a.reference_date);
+        const overdue = _amIsOverdue(a);
+        const daysTxt = days === null ? '—' : days < 0 ? `<span style="color:#f87171;font-weight:700">${Math.abs(days)}g GEÇ</span>` : days === 0 ? `<span style="color:#4ade80;font-weight:800">BUGÜN</span>` : days <= 3 ? `<span style="color:#f87171">${days}g</span>` : days <= 7 ? `<span style="color:#fb923c">${days}g</span>` : `<span style="color:#60a5fa">${days}g</span>`;
+        const rowBg = overdue ? 'rgba(127,29,29,0.12)' : '';
+        return `<tr style="${rowBg?'background:'+rowBg:''}">
+          <td style="padding:8px 10px;font-size:10px;color:#475569;border-bottom:1px solid #0f172a">${i+1}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a">
+            <div style="font-size:11px;font-weight:600;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${a.deal_name||'—'}</div>
+            <div style="font-size:9px;color:#64748b">${a.deal_owner||'—'}</div>
+          </td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a">
+            <div style="font-size:10px;font-weight:600;color:#94a3b8;white-space:nowrap">${a.region||'—'}</div>
+            <div style="font-size:9px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${a.team||'—'}</div>
+          </td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a"><span style="font-size:9px;font-weight:700;color:${tm.color};white-space:nowrap">${tm.label}</span></td>
+          <td style="padding:8px 10px;font-size:10px;color:#cbd5e1;border-bottom:1px solid #0f172a;white-space:nowrap">${_amFmtDate(a.reference_date)}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">${daysTxt}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a"><span style="font-size:9px;font-weight:700;color:${sm.color};white-space:nowrap">${sm.label}</span></td>
+          <td style="padding:8px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b;border-bottom:1px solid #0f172a">${a.note||'—'}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    async function adminRunEngine() {
+      const btn = document.getElementById('adminBtnEngine');
+      const statusEl = document.getElementById('adminEngineStatus');
+      btn.disabled = true; btn.style.opacity = '0.6';
+      try {
+        if (typeof AlarmEngine === 'undefined') throw new Error('alarm-engine.js yüklenmemiş');
+        const result = await AlarmEngine.run(SUPABASE_URL, SUPABASE_KEY, {
+          onProgress: (msg) => { statusEl.textContent = msg; },
+        });
+        statusEl.textContent = `Tamamlandı: ${result.deals} deal, ${result.generated} alarm`;
+        await loadAdminAlarms();
+      } catch(e) {
+        statusEl.textContent = 'Hata: ' + e.message;
+      } finally {
+        btn.disabled = false; btn.style.opacity = '1';
+      }
+    }
+
+    function exportAdminAlarms() {
+      const region = document.getElementById('amFilterRegion').value;
+      const type   = document.getElementById('amFilterType').value;
+      const status = document.getElementById('amFilterStatus').value;
+      const search = (document.getElementById('amSearch').value || '').toLowerCase();
+      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+      const data = adminAllAlarms.filter(a => {
+        if (region && a.region !== region) return false;
+        if (type   && a.alarm_type !== type) return false;
+        if (status === 'active'  && !active.has(a.status)) return false;
+        if (status === 'open'    && a.status !== 'open') return false;
+        if (status === 'overdue' && !_amIsOverdue(a)) return false;
+        if (status === 'no_show' && a.status !== 'no_show') return false;
+        if (status === 'closed'  && a.status !== 'closed') return false;
+        if (search) { const txt = [a.deal_name,a.deal_owner,a.team,a.region].join(' ').toLowerCase(); if (!txt.includes(search)) return false; }
+        return true;
+      });
+      const row = cols => cols.map(c => `"${String(c??'').replace(/"/g,'""')}"`).join(',');
+      const headers = row(['Hasta','Danışman','Takım','Bölge','Alarm Tipi','Alan','Tarih','Kalan','Durum','Not','Oluşturma']);
+      const rows = [headers, ...data.map(a => row([a.deal_name,a.deal_owner,a.team,a.region,a.alarm_type,a.reference_field,a.reference_date,a.days_remaining,a.status,a.note,a.created_at]))];
+      const blob = new Blob([rows.join('\n')], { type:'text/csv;charset=utf-8;' });
+      const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
+      link.download = `alarmlar_admin_${new Date().toISOString().slice(0,10)}.csv`;
+      document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+    // ════════════════ ALARM MONITORING END ════════════════
+
     function fixTR(s) {
       if (!s || typeof s !== 'string') return s;
       return s
@@ -747,7 +1081,7 @@
     }
 
     function switchView(v) {
-      ['deals','summary','users','logs','transfer'].forEach(name => {
+      ['deals','summary','users','logs','transfer','alarms-monitor'].forEach(name => {
         document.getElementById('view-' + name).classList.toggle('hidden', name !== v);
         document.getElementById('nav-' + name).classList.toggle('active', name === v);
       });
@@ -755,6 +1089,7 @@
       else if (v === 'users') loadUsers();
       else if (v === 'logs') loadLogs();
       else if (v === 'transfer') initTransferView();
+      else if (v === 'alarms-monitor') loadAdminAlarms();
     }
 
     function updateKPIs(data) {
