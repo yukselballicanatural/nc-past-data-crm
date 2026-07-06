@@ -992,17 +992,44 @@
     document.getElementById('alarmTableWrap').style.display = 'none';
     try {
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
-      const isRM = currentUser.role === 'regional-manager';
-      let url = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc&limit=1000`;
-      if (!isRM) {
-        url += `&team=eq.${encodeURIComponent(currentUser.team || '')}`;
-      } else {
-        const region = getRegion(currentUser);
-        url += `&region=eq.${encodeURIComponent(region)}`;
+      const isRM    = currentUser.role === 'regional-manager';
+      const teamVal = currentUser.team || '';
+
+      // Team adı boşsa uyar — login'den gelen Takim Adi alanı eksik demek
+      if (!isRM && !teamVal) {
+        showNotice('Uyarı: Kullanıcı kayıtında Takim Adi alanı boş. Tüm alarmlar gösterilecek.', 'error');
       }
-      const r = await fetch(url, { headers: H });
-      if (!r.ok) throw new Error('HTTP ' + r.status);
-      allAlarms = await r.json();
+
+      let all = [], offset = 0;
+      while (true) {
+        let url = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc&limit=500&offset=${offset}`;
+        if (!isRM && teamVal) {
+          url += `&team=eq.${encodeURIComponent(teamVal)}`;
+        } else if (isRM) {
+          const region = getRegion(currentUser);
+          url += `&region=eq.${encodeURIComponent(region)}`;
+        }
+        const r = await fetch(url, { headers: H });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const batch = await r.json();
+        if (!Array.isArray(batch) || !batch.length) break;
+        all.push(...batch);
+        if (batch.length < 500) break;
+        offset += 500;
+      }
+
+      allAlarms = all;
+
+      // Subtitle: hangi takımın alarmları gösterildiğini açıkça yaz
+      const subtitle = document.getElementById('alarmSubtitle');
+      if (subtitle) {
+        if (isRM) {
+          subtitle.textContent = `${getRegion(currentUser)} bölgesi alarmları — ${all.length} kayıt`;
+        } else {
+          subtitle.textContent = `${teamVal || '?'} takımı alarmları — ${all.length} kayıt`;
+        }
+      }
+
       updateTabCounts();
       renderAlarms();
       renderConsultantStrip();
