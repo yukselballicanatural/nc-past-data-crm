@@ -543,6 +543,10 @@
         <div class="info-val" id="modalDaysLeft">—</div>
       </div>
       <div class="info-card">
+        <div class="info-label">Alarm Eşiği</div>
+        <div class="info-val" id="modalThreshold">—</div>
+      </div>
+      <div class="info-card">
         <div class="info-label">Alarm Tarihi</div>
         <div class="info-val" id="modalCreatedAt">—</div>
       </div>
@@ -821,13 +825,23 @@
         : a.payment_or_flight_ticket === 'Flight Ticket'
           ? '<span style="color:#60a5fa;font-weight:800">FT</span>'
           : '<span style="color:#334155">—</span>';
+
+      // Threshold badge: 45G / 30G / 15G / 7G / 3G
+      const tColors = { 45:['#1e3a5f','#60a5fa'], 30:['#1e1b4b','#818cf8'], 15:['#422006','#f59e0b'], 7:['#431407','#f97316'], 3:['#450a0a','#ef4444'] };
+      const tc = a.threshold_days ? (tColors[a.threshold_days] || ['#1e293b','#64748b']) : null;
+      const threshBadge = tc
+        ? `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:800;background:${tc[0]};color:${tc[1]};border:1px solid ${tc[1]}55;margin-left:4px;letter-spacing:0.03em">${a.threshold_days}G</span>`
+        : '';
+
       return `<tr class="${urgCls}" onclick="openAlarmById('${a.id}')" style="${rowBg ? 'background:' + rowBg : ''}">
         <td style="color:#475569;font-size:10px;font-variant-numeric:tabular-nums">${i+1}</td>
         <td>
           <div style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">${fmt(a.deal_name)}</div>
           <div style="font-size:9px;color:#64748b;margin-top:1px">${fmt(a.deal_owner)}</div>
         </td>
-        <td><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color};white-space:nowrap">${tm.label}</span></td>
+        <td style="white-space:nowrap">
+          <span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span>${threshBadge}
+        </td>
         <td style="color:#94a3b8;font-size:11px">${fieldLabel(a.reference_field)}</td>
         <td style="color:#cbd5e1;font-size:11px;white-space:nowrap">${formatDate(a.reference_date)}</td>
         <td style="white-space:nowrap">${daysDisplay(a.days_remaining, a.reference_date)}</td>
@@ -1054,6 +1068,22 @@
     document.getElementById('modalCreatedAt').textContent = formatDateTime(a.created_at);
     const days = a.days_remaining !== null ? a.days_remaining : daysUntil(a.reference_date);
     document.getElementById('modalDaysLeft').innerHTML    = daysDisplay(days, a.reference_date);
+
+    // Threshold badge
+    const tColors = { 45:['#1e3a5f','#60a5fa'], 30:['#1e1b4b','#818cf8'], 15:['#422006','#f59e0b'], 7:['#431407','#f97316'], 3:['#450a0a','#ef4444'] };
+    const tc2 = a.threshold_days ? (tColors[a.threshold_days] || ['#1e293b','#94a3b8']) : null;
+    const threshEl = document.getElementById('modalThreshold');
+    if (threshEl) {
+      if (tc2) {
+        const isPayment = a.payment_or_flight_ticket === 'Payment';
+        const desc = isPayment
+          ? `Son aktiviteden ${a.threshold_days} gün sonra tetiklendi`
+          : `${a.threshold_days} gün kala alarm üretildi`;
+        threshEl.innerHTML = `<span style="padding:2px 10px;border-radius:6px;font-size:11px;font-weight:800;background:${tc2[0]};color:${tc2[1]};border:1px solid ${tc2[1]}44">${a.threshold_days} gün eşiği</span><div style="font-size:9px;color:#64748b;margin-top:3px">${desc}</div>`;
+      } else {
+        threshEl.textContent = '—';
+      }
+    }
 
     // Aksiyon geçmişi timeline
     const tlItems = [

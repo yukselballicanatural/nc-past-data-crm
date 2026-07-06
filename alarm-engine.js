@@ -167,7 +167,7 @@ window.AlarmEngine = (function () {
     let all = [], offset = 0;
     while (true) {
       let url = `${BASE}/rest/v1/deals?stage=in.(${stageParts})` +
-        `&select=id,deal_name,deal_owner,stage,team,visit_date_1,visit_date_2,visit_date_3,raw` +
+        `&select=id,deal_name,deal_owner,stage,team,arrival_date,last_activity_time,payment_or_flight_ticket,visit_date_1,visit_date_2,visit_date_3,raw` +
         `&limit=500&offset=${offset}`;
       if (teamFilter) url += `&team=eq.${encodeURIComponent(teamFilter)}`;
       const r = await fetch(url, { headers: H });
