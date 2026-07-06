@@ -162,18 +162,23 @@ window.AlarmEngine = (function () {
     return alarms;
   }
 
-  // Supabase'den aktif dealleri çek — stage=in.("X","Y",...) server-side filtresi
+  // Supabase'den aktif dealleri çek
   async function fetchActiveDeals(BASE, KEY, teamFilter) {
     const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
-    const stageParts = ACTIVE_STAGES.map(s => `"${s}"`).join(',');
+    // encodeURIComponent ile tüm filtre değerini encode et — Supabase JS client da böyle yapar
+    const stageParam = encodeURIComponent('in.(' + ACTIVE_STAGES.map(s => '"' + s + '"').join(',') + ')');
     let all = [], offset = 0;
     while (true) {
-      let url = `${BASE}/rest/v1/deals?stage=in.(${stageParts})` +
+      let url = `${BASE}/rest/v1/deals?stage=${stageParam}` +
         `&select=id,deal_name,deal_owner,stage,team,arrival_date,visit_date_1,visit_date_2,visit_date_3,raw` +
         `&limit=500&offset=${offset}`;
       if (teamFilter) url += `&team=eq.${encodeURIComponent(teamFilter)}`;
       const r = await fetch(url, { headers: H });
-      if (!r.ok) throw new Error('Deals alınamadı: HTTP ' + r.status);
+      if (!r.ok) {
+        let detail = '';
+        try { const j = await r.json(); detail = j.message || j.hint || ''; } catch(e) {}
+        throw new Error(`Deals alınamadı: HTTP ${r.status}${detail ? ' — ' + detail : ''}`);
+      }
       const batch = await r.json();
       if (!Array.isArray(batch) || !batch.length) break;
       all.push(...batch);
