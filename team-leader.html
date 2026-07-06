@@ -46,6 +46,38 @@
     .info-val { font-size:12px; color:#e2e8f0; font-weight:500; }
     textarea.modal-note { background:#111827; border:1px solid #374151; color:#e2e8f0; border-radius:10px; padding:10px 12px; font-size:12px; width:100%; resize:vertical; min-height:80px; }
     textarea.modal-note:focus { outline:none; border-color:#0d9488; }
+
+    /* Urgency left-border on alarm rows */
+    .alarm-row-overdue td:first-child { border-left:3px solid #ef4444; }
+    .alarm-row-today td:first-child { border-left:3px solid #22c55e; }
+    .alarm-row-urgent td:first-child { border-left:3px solid #f97316; }
+    .alarm-row-warn td:first-child { border-left:3px solid #f59e0b; }
+    .alarm-row-info td:first-child { border-left:3px solid #3b82f6; }
+    .alarm-row-approaching td:first-child { border-left:3px solid #a78bfa; }
+
+    /* Clickable metric pills */
+    .metric-pill { display:inline-flex;align-items:center;gap:5px;padding:5px 13px;border-radius:9999px;font-size:10px;font-weight:700;white-space:nowrap;cursor:pointer;border:none;transition:filter 0.15s,transform 0.1s; }
+    .metric-pill:hover { filter:brightness(1.2);transform:translateY(-1px); }
+    .metric-pill:active { transform:translateY(0); }
+
+    /* Today card hover */
+    .today-card { transition:border-color 0.2s,box-shadow 0.2s,transform 0.2s; }
+    .today-card:hover { border-color:#0d9488 !important;box-shadow:0 4px 24px rgba(13,148,136,0.15);transform:translateY(-2px); }
+
+    /* Deal total bar */
+    .deal-total-bar { display:flex;gap:20px;flex-wrap:wrap;padding:10px 16px;background:#0d1526;border:1px solid #1e293b;border-radius:10px;margin-top:10px;align-items:center; }
+    .deal-total-item { display:flex;flex-direction:column;gap:2px; }
+    .deal-total-label { font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em; }
+    .deal-total-value { font-size:14px;font-weight:800;font-variant-numeric:tabular-nums; }
+
+    /* Consultants breakdown */
+    .consultant-chip { display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:#111827;border:1px solid #1e293b;border-radius:8px;font-size:10px;cursor:pointer;transition:border-color 0.15s; }
+    .consultant-chip:hover { border-color:#0d9488; }
+    .consultant-chip .chip-name { color:#e2e8f0;font-weight:600; }
+    .consultant-chip .chip-cnt { color:#fbbf24;font-weight:800; }
+
+    /* Smooth row hover */
+    .alarm-tbl tbody tr { transition:background 0.12s; }
   </style>
 </head>
 <body class="flex flex-row min-h-screen text-slate-100" style="background:#020617">
@@ -104,21 +136,33 @@
     <div style="margin-top:16px;border-top:1px solid #1e293b;padding-top:14px">
       <div style="font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Alarm Özeti</div>
       <div style="display:flex;flex-direction:column;gap:5px">
-        <div style="background:#1e293b;border:1px solid #334155;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:10px;color:#fbbf24;font-weight:600">Açık Alarm</span>
-          <span id="kpiOpen" style="font-size:16px;font-weight:800;color:#fbbf24">0</span>
+        <div onclick="switchView('alarms');switchAlarmTab('open')" style="background:#1e293b;border:1px solid #334155;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color 0.15s" onmouseover="this.style.borderColor='#92400e'" onmouseout="this.style.borderColor='#334155'">
+          <div>
+            <div style="font-size:9px;color:#78716c;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Açık Alarm</div>
+            <span id="kpiOpen" style="font-size:20px;font-weight:800;color:#fbbf24;font-variant-numeric:tabular-nums">0</span>
+          </div>
+          <svg style="width:16px;height:16px;color:#fbbf24;opacity:0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
         </div>
-        <div style="background:#052e16;border:1px solid #166534;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:10px;color:#4ade80;font-weight:600">Bugün Gelecek</span>
-          <span id="kpiToday" style="font-size:16px;font-weight:800;color:#4ade80">0</span>
+        <div onclick="switchView('today')" style="background:#052e16;border:1px solid #166534;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color 0.15s" onmouseover="this.style.borderColor='#22c55e'" onmouseout="this.style.borderColor='#166534'">
+          <div>
+            <div style="font-size:9px;color:#4ade8099;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Bugün Gelecek</div>
+            <span id="kpiToday" style="font-size:20px;font-weight:800;color:#4ade80;font-variant-numeric:tabular-nums">0</span>
+          </div>
+          <svg style="width:16px;height:16px;color:#4ade80;opacity:0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         </div>
-        <div style="background:#450a0a;border:1px solid #7f1d1d;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:10px;color:#fca5a5;font-weight:600">Gecikmiş</span>
-          <span id="kpiOverdue" style="font-size:16px;font-weight:800;color:#f87171">0</span>
+        <div onclick="switchView('alarms');switchAlarmTab('overdue')" style="background:#450a0a;border:1px solid #7f1d1d;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color 0.15s" onmouseover="this.style.borderColor='#ef4444'" onmouseout="this.style.borderColor='#7f1d1d'">
+          <div>
+            <div style="font-size:9px;color:#fca5a599;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Gecikmiş</div>
+            <span id="kpiOverdue" style="font-size:20px;font-weight:800;color:#f87171;font-variant-numeric:tabular-nums">0</span>
+          </div>
+          <svg style="width:16px;height:16px;color:#f87171;opacity:0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         </div>
-        <div style="background:#1e293b;border:1px solid #334155;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between">
-          <span style="font-size:10px;color:#94a3b8;font-weight:600">Eksik Tarih</span>
-          <span id="kpiMissing" style="font-size:16px;font-weight:800;color:#94a3b8">0</span>
+        <div onclick="switchView('alarms');switchAlarmTab('missing')" style="background:#1e293b;border:1px solid #334155;border-radius:9px;padding:9px 12px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:border-color 0.15s" onmouseover="this.style.borderColor='#475569'" onmouseout="this.style.borderColor='#334155'">
+          <div>
+            <div style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:2px">Eksik Tarih</div>
+            <span id="kpiMissing" style="font-size:20px;font-weight:800;color:#94a3b8;font-variant-numeric:tabular-nums">0</span>
+          </div>
+          <svg style="width:16px;height:16px;color:#94a3b8;opacity:0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
         </div>
       </div>
     </div>
@@ -182,6 +226,20 @@
       </div>
     </div>
 
+    <!-- Metrics Strip (rendered by JS) -->
+    <div id="metricsStrip" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
+
+    <!-- Search + Sort bar -->
+    <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+      <input id="alarmSearch" class="filter-inp" placeholder="Hasta, danışman ara..." oninput="renderAlarms()" style="flex:1;min-width:160px;max-width:280px">
+      <select id="alarmSortSel" class="filter-sel" onchange="renderAlarms()" style="width:180px">
+        <option value="created_desc">En Yeni Önce</option>
+        <option value="days_asc">Kalan Gün (Acil Önce)</option>
+        <option value="overdue_first">Gecikmiş Önce</option>
+        <option value="name_asc">İsme Göre A-Z</option>
+      </select>
+    </div>
+
     <!-- Sub-tabs -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
       <button class="tab-pill active" id="atab-all" onclick="switchAlarmTab('all')">Tümü <span id="cnt-all" class="badge-cnt" style="background:rgba(255,255,255,0.15);color:#fff">0</span></button>
@@ -198,6 +256,12 @@
     <div id="alarmLoading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;gap:12px">
       <div class="spinner"></div>
       <p style="color:#64748b;font-size:13px">Alarmlar yükleniyor...</p>
+    </div>
+
+    <!-- Danışman özeti (alarm sayısına göre) -->
+    <div id="consultantStrip" style="display:none;margin-bottom:12px">
+      <div style="font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Danışman Bazlı Alarmlar</div>
+      <div id="consultantChips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
     </div>
 
     <!-- Alarm table -->
@@ -316,6 +380,7 @@
       <div id="dealEmpty" style="display:none;text-align:center;padding:48px 16px;color:#475569;font-size:13px">Deal bulunamadı.</div>
     </div>
     <div style="margin-top:8px;font-size:11px;color:#475569" id="dealCount"></div>
+    <div id="dealTotalBar" class="deal-total-bar" style="display:none"></div>
   </div>
 
   <!-- ── VIEW: YÖNETİM ÖZETİ (Regional Manager only) ── -->
@@ -695,9 +760,44 @@
     });
   }
 
+  // ── Row urgency class ────────────────────────────────────────────
+  function getRowUrgencyClass(a) {
+    if (isOverdue(a)) return 'alarm-row-overdue';
+    if (a.alarm_type === 'today_patient') return 'alarm-row-today';
+    const days = a.days_remaining !== null ? a.days_remaining : daysUntil(a.reference_date);
+    if (days !== null && days >= 0) {
+      if (days <= 3)  return 'alarm-row-urgent';
+      if (days <= 7)  return 'alarm-row-warn';
+      if (days <= 15) return 'alarm-row-info';
+      return 'alarm-row-approaching';
+    }
+    return '';
+  }
+
   // ── Alarm tablo render ───────────────────────────────────────────
   function renderAlarms() {
-    const data = filterAlarms(activeAlarmTab);
+    let data = filterAlarms(activeAlarmTab);
+
+    // Arama filtresi
+    const searchQ = (document.getElementById('alarmSearch')?.value || '').toLowerCase().trim();
+    if (searchQ) {
+      data = data.filter(a => [a.deal_name, a.deal_owner, a.team].join(' ').toLowerCase().includes(searchQ));
+    }
+
+    // Sıralama
+    const sortVal = document.getElementById('alarmSortSel')?.value || 'created_desc';
+    if (sortVal === 'days_asc') {
+      data = [...data].sort((a, b) => {
+        const da = a.days_remaining !== null ? a.days_remaining : (daysUntil(a.reference_date) ?? 9999);
+        const db = b.days_remaining !== null ? b.days_remaining : (daysUntil(b.reference_date) ?? 9999);
+        return da - db;
+      });
+    } else if (sortVal === 'overdue_first') {
+      data = [...data].sort((a, b) => (isOverdue(b) ? 1 : 0) - (isOverdue(a) ? 1 : 0));
+    } else if (sortVal === 'name_asc') {
+      data = [...data].sort((a, b) => (a.deal_name || '').localeCompare(b.deal_name || ''));
+    }
+
     const tbody = document.getElementById('alarmTbody');
     const empty = document.getElementById('alarmEmpty');
     const cnt   = document.getElementById('alarmCount');
@@ -711,13 +811,18 @@
     cnt.textContent = `${data.length} alarm gösteriliyor`;
 
     tbody.innerHTML = data.map((a, i) => {
-      const tm  = alarmTypeMeta(a.alarm_type);
-      const sm  = statusMeta(a.status);
-      const days = daysUntil(a.reference_date);
+      const tm     = alarmTypeMeta(a.alarm_type);
+      const sm     = statusMeta(a.status);
       const overdue = isOverdue(a);
-      const rowBg = overdue ? 'rgba(127,29,29,0.12)' : a.alarm_type === 'today_patient' ? 'rgba(5,46,22,0.2)' : '';
-      return `<tr onclick="openAlarmById('${a.id}')" style="${rowBg ? 'background:' + rowBg : ''}">
-        <td style="color:#475569;font-size:10px">${i+1}</td>
+      const rowBg   = overdue ? 'rgba(127,29,29,0.12)' : a.alarm_type === 'today_patient' ? 'rgba(5,46,22,0.2)' : '';
+      const urgCls  = getRowUrgencyClass(a);
+      const pftBadge = a.payment_or_flight_ticket === 'Payment'
+        ? '<span style="color:#c084fc;font-weight:800">P</span>'
+        : a.payment_or_flight_ticket === 'Flight Ticket'
+          ? '<span style="color:#60a5fa;font-weight:800">FT</span>'
+          : '<span style="color:#334155">—</span>';
+      return `<tr class="${urgCls}" onclick="openAlarmById('${a.id}')" style="${rowBg ? 'background:' + rowBg : ''}">
+        <td style="color:#475569;font-size:10px;font-variant-numeric:tabular-nums">${i+1}</td>
         <td>
           <div style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">${fmt(a.deal_name)}</div>
           <div style="font-size:9px;color:#64748b;margin-top:1px">${fmt(a.deal_owner)}</div>
@@ -727,13 +832,36 @@
         <td style="color:#cbd5e1;font-size:11px;white-space:nowrap">${formatDate(a.reference_date)}</td>
         <td style="white-space:nowrap">${daysDisplay(a.days_remaining, a.reference_date)}</td>
         <td><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color};white-space:nowrap">${sm.label}</span></td>
-        <td style="font-size:10px;white-space:nowrap">${a.payment_or_flight_ticket === 'Payment' ? '<span style="color:#c084fc;font-weight:700">P</span>' : a.payment_or_flight_ticket === 'Flight Ticket' ? '<span style="color:#60a5fa;font-weight:700">FT</span>' : '<span style="color:#334155">—</span>'}</td>
+        <td style="font-size:10px;white-space:nowrap">${pftBadge}</td>
         <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b" title="${a.note ? a.note.replace(/"/g,'&quot;') : ''}">${a.note ? fmt(a.note).substring(0,50) : '—'}</td>
         <td>
           <button onclick="event.stopPropagation();openAlarmById('${a.id}')" style="padding:4px 10px;background:#0d9488;border:none;border-radius:7px;color:#fff;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Güncelle</button>
         </td>
       </tr>`;
     }).join('');
+  }
+
+  // ── Metrics strip (tıklanabilir hızlı filtreler) ────────────────
+  function renderMetricsStrip() {
+    const el = document.getElementById('metricsStrip');
+    if (!el) return;
+    const total     = filterAlarms('all').length;
+    const todayCnt  = filterAlarms('today').length;
+    const overdue   = filterAlarms('overdue').length;
+    const approachCnt = filterAlarms('approaching').length;
+    const missing   = filterAlarms('missing').length;
+    const noshow    = filterAlarms('noshow').length;
+    const pills = [
+      { label:`${total} Toplam Aktif`,   bg:'#1e293b', color:'#94a3b8', tab:'all'         },
+      { label:`${todayCnt} Bugün`,        bg:'#052e16', color:'#4ade80', tab:'today'        },
+      { label:`${overdue} Gecikmiş`,      bg:'#450a0a', color:'#f87171', tab:'overdue'      },
+      { label:`${approachCnt} Yaklaşan`,  bg:'#422006', color:'#fb923c', tab:'approaching'  },
+      { label:`${missing} Eksik Tarih`,   bg:'#1e293b', color:'#6b7280', tab:'missing'      },
+      ...(noshow > 0 ? [{ label:`${noshow} No-show`, bg:'#1e293b', color:'#f87171', tab:'noshow' }] : []),
+    ];
+    el.innerHTML = pills.map(p =>
+      `<button class="metric-pill" onclick="switchAlarmTab('${p.tab}')" style="background:${p.bg};color:${p.color};border:1px solid ${p.color}33">${p.label}</button>`
+    ).join('');
   }
 
   // ── Tab badge sayaçları güncelle ─────────────────────────────────
@@ -772,6 +900,47 @@
     else nbA.style.display = 'none';
     if (todayCnt > 0) { nbT.textContent = todayCnt; nbT.style.display = 'inline-flex'; }
     else nbT.style.display = 'none';
+
+    // Metrics strip güncelle
+    renderMetricsStrip();
+  }
+
+  // ── Danışman bazlı alarm özeti ───────────────────────────────────
+  function renderConsultantStrip() {
+    const activeAlms = filterAlarms('all');
+    if (!activeAlms.length) { document.getElementById('consultantStrip').style.display = 'none'; return; }
+    const byOwner = {};
+    activeAlms.forEach(a => {
+      const o = a.deal_owner || '?';
+      if (!byOwner[o]) byOwner[o] = { total:0, overdue:0 };
+      byOwner[o].total++;
+      if (isOverdue(a)) byOwner[o].overdue++;
+    });
+    const sorted = Object.entries(byOwner).sort((a,b) => b[1].total - a[1].total);
+    const chips = document.getElementById('consultantChips');
+    chips.innerHTML = sorted.map(([name, s]) => {
+      const hasOverdue = s.overdue > 0;
+      return `<div class="consultant-chip" onclick="filterByConsultant('${name.replace(/'/g,"\\'")}')">
+        <span class="chip-name">${name}</span>
+        <span class="chip-cnt">${s.total}</span>
+        ${hasOverdue ? `<span style="font-size:9px;color:#f87171;font-weight:800">+${s.overdue}⚠</span>` : ''}
+      </div>`;
+    }).join('') + `<div class="consultant-chip" onclick="clearConsultantFilter()" style="border-color:#334155"><span style="color:#64748b;font-size:10px">Tümü</span></div>`;
+    document.getElementById('consultantStrip').style.display = 'block';
+  }
+
+  let consultantFilter = '';
+  function filterByConsultant(name) {
+    consultantFilter = name;
+    const inp = document.getElementById('alarmSearch');
+    if (inp) inp.value = name;
+    renderAlarms();
+  }
+  function clearConsultantFilter() {
+    consultantFilter = '';
+    const inp = document.getElementById('alarmSearch');
+    if (inp) inp.value = '';
+    renderAlarms();
   }
 
   // ── Alarm subtab değiştir ────────────────────────────────────────
@@ -815,6 +984,7 @@
       allAlarms = await r.json();
       updateTabCounts();
       renderAlarms();
+      renderConsultantStrip();
       document.getElementById('alarmLoading').style.display = 'none';
       document.getElementById('alarmTableWrap').style.display = 'block';
     } catch(e) {
@@ -998,16 +1168,27 @@
           <button onclick="quickAction('${a.id}','processing')" style="flex:1;padding:6px;background:#042f2e;border:1px solid #0d9488;border-radius:8px;color:#2dd4bf;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">İşlemlerde</button>
           <button onclick="quickAction('${a.id}','no_show')" style="flex:1;padding:6px;background:#450a0a;border:1px solid #7f1d1d;border-radius:8px;color:#f87171;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Gelemedi</button>
         </div>`;
-      return `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px">
-          <div>
-            <div style="font-size:13px;font-weight:700;color:#f1f5f9">${fmt(a.deal_name)}</div>
-            <div style="font-size:10px;color:#64748b;margin-top:2px">${fmt(a.deal_owner)}</div>
+      const pftDisplay = a.payment_or_flight_ticket === 'Payment'
+        ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#2e1065;color:#c084fc;border:1px solid #4c1d95">Payment</span>'
+        : a.payment_or_flight_ticket === 'Flight Ticket'
+          ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#1e3a5f;color:#60a5fa;border:1px solid #1e40af">Flight Ticket</span>'
+          : '';
+      return `<div class="today-card" style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px">
+          <div style="min-width:0;flex:1">
+            <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmt(a.deal_name)}</div>
+            <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600">${fmt(a.deal_owner)}</div>
           </div>
-          <span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color};flex-shrink:0;margin-left:8px">${sm.label}</span>
+          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+            ${pftDisplay}
+            <span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color}">${sm.label}</span>
+          </div>
         </div>
-        <div style="font-size:11px;color:#94a3b8">📍 ${field} — <strong style="color:#4ade80">BUGÜN</strong></div>
-        ${a.note ? `<div style="font-size:10px;color:#64748b;margin-top:6px;background:#1e293b;padding:6px 8px;border-radius:6px">${fmt(a.note)}</div>` : ''}
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#4ade80;font-weight:600;margin-bottom:${a.note ? '8px' : '0'}">
+          <svg style="width:12px;height:12px;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          ${field} — <strong>BUGÜN</strong>
+        </div>
+        ${a.note ? `<div style="font-size:10px;color:#64748b;background:#1e293b;padding:7px 10px;border-radius:8px;border:1px solid #334155;margin-bottom:10px">${fmt(a.note)}</div>` : ''}
         ${actionBtns}
       </div>`;
     }).join('');
@@ -1080,8 +1261,25 @@
     const empty = document.getElementById('dealEmpty');
     document.getElementById('dealCount').textContent = `${data.length} deal gösteriliyor`;
 
-    if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+    if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; document.getElementById('dealTotalBar').style.display = 'none'; return; }
     empty.style.display = 'none';
+
+    // Toplam tutar hesapla
+    const totalAmt   = data.reduce((s, d) => s + (Number(d.amount) || 0), 0);
+    const totalPaid  = data.reduce((s, d) => s + (Number(d.total_paid_amount) || 0), 0);
+    const ftCount    = data.filter(d => { const r = typeof d.raw==='string'?(()=>{try{return JSON.parse(d.raw);}catch(e){return {};}})():(d.raw||{}); return r.Payment_Or_Flight_Ticket==='Flight Ticket'; }).length;
+    const payCount   = data.filter(d => { const r = typeof d.raw==='string'?(()=>{try{return JSON.parse(d.raw);}catch(e){return {};}})():(d.raw||{}); return r.Payment_Or_Flight_Ticket==='Payment'; }).length;
+    const totalBar   = document.getElementById('dealTotalBar');
+    totalBar.style.display = 'flex';
+    totalBar.innerHTML = `
+      <div class="deal-total-item"><div class="deal-total-label">Toplam Deal</div><div class="deal-total-value" style="color:#f1f5f9">${data.length}</div></div>
+      <div style="width:1px;background:#1e293b;align-self:stretch"></div>
+      <div class="deal-total-item"><div class="deal-total-label">Toplam Tutar</div><div class="deal-total-value" style="color:#60a5fa">€${totalAmt.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+      <div style="width:1px;background:#1e293b;align-self:stretch"></div>
+      <div class="deal-total-item"><div class="deal-total-label">Ödenen</div><div class="deal-total-value" style="color:#4ade80">€${totalPaid.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+      <div style="width:1px;background:#1e293b;align-self:stretch"></div>
+      <div class="deal-total-item"><div class="deal-total-label">Flight Ticket</div><div class="deal-total-value" style="color:#60a5fa">${ftCount}</div></div>
+      <div class="deal-total-item"><div class="deal-total-label">Payment</div><div class="deal-total-value" style="color:#c084fc">${payCount}</div></div>`;
 
     tbody.innerHTML = data.map((d, i) => {
       const raw  = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw || {});
