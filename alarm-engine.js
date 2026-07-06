@@ -49,9 +49,11 @@ window.AlarmEngine = (function () {
     return r;
   }
 
+  const ACTIVE_SET_LOWER = new Set(ACTIVE_STAGES.map(s => s.toLowerCase().trim()));
+
   // Bir deal için üretilmesi gereken alarm listesini hesapla
   function computeAlarms(deal) {
-    if (!ACTIVE_SET.has(deal.stage)) return [];
+    if (!ACTIVE_SET_LOWER.has((deal.stage || '').toLowerCase().trim())) return [];
 
     const raw = getRaw(deal);
 
@@ -160,21 +162,23 @@ window.AlarmEngine = (function () {
     return alarms;
   }
 
-  // Supabase'den aktif dealleri çek (sayfalı)
+  // Supabase'den TÜM dealleri çek, sonra stage filtresi JS'de yapılır
+  // (URL'de stage=in.(…) kullanmak büyük/küçük harf veya boşluk farkından kayıt kaçırır)
   async function fetchActiveDeals(BASE, KEY, teamFilter) {
     const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
-    const stageParts = ACTIVE_STAGES.map(s => `"${s}"`).join(',');
+    const ACTIVE_STAGES_LOWER = new Set(ACTIVE_STAGES.map(s => s.toLowerCase().trim()));
     let all = [], offset = 0;
     while (true) {
-      let url = `${BASE}/rest/v1/deals?stage=in.(${stageParts})` +
-        `&select=id,deal_name,deal_owner,stage,team,arrival_date,last_activity_time,payment_or_flight_ticket,visit_date_1,visit_date_2,visit_date_3,raw` +
+      let url = `${BASE}/rest/v1/deals?` +
+        `select=id,deal_name,deal_owner,stage,team,arrival_date,last_activity_time,payment_or_flight_ticket,visit_date_1,visit_date_2,visit_date_3,raw` +
         `&limit=500&offset=${offset}`;
       if (teamFilter) url += `&team=eq.${encodeURIComponent(teamFilter)}`;
       const r = await fetch(url, { headers: H });
       if (!r.ok) throw new Error('Deals alınamadı: HTTP ' + r.status);
       const batch = await r.json();
       if (!Array.isArray(batch) || !batch.length) break;
-      all.push(...batch);
+      // Sadece aktif stage'deki dealları al (büyük/küçük harf farkı yok)
+      all.push(...batch.filter(d => ACTIVE_STAGES_LOWER.has((d.stage || '').toLowerCase().trim())));
       if (batch.length < 500) break;
       offset += 500;
     }
