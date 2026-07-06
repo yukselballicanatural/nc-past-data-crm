@@ -57,13 +57,13 @@ window.AlarmEngine = (function () {
 
     const raw = getRaw(deal);
 
-    // 3 yeni kolon henüz eklenmemişse raw'dan oku, eklenince otomatik gelecek
-    const pft          = deal.payment_or_flight_ticket || raw.Payment_Or_Flight_Ticket || null;
-    const arrivalDate  = deal.arrival_date  || raw.Arrival_Date  || null;
-    const lastActivity = deal.last_activity_time || raw.Last_Activity_Time || null;
-    const v1 = deal.visit_date_1 || null;
-    const v2 = deal.visit_date_2 || null;
-    const v3 = deal.visit_date_3 || null;
+    // Tüm tarih/ödeme alanları raw JSONB'den okunuyor (tablo kolonları yok)
+    const pft          = raw.Payment_Or_Flight_Ticket || raw.payment_or_flight_ticket || null;
+    const arrivalDate  = raw.Arrival_Date  || raw.arrival_date  || null;
+    const lastActivity = raw.Last_Activity_Time || raw.last_activity_time || null;
+    const v1 = raw.Visit_Date_1 || raw.visit_date_1 || null;
+    const v2 = raw.Visit_Date_2 || raw.visit_date_2 || null;
+    const v3 = raw.Visit_Date_3 || raw.visit_date_3 || null;
 
     const region = getRegion(deal.team);
     const base = {
@@ -170,7 +170,7 @@ window.AlarmEngine = (function () {
     let all = [], offset = 0;
     while (true) {
       let url = `${BASE}/rest/v1/deals?stage=${stageParam}` +
-        `&select=id,deal_name,deal_owner,stage,team,arrival_date,visit_date_1,visit_date_2,visit_date_3,raw` +
+        `&select=id,deal_name,deal_owner,stage,team,raw` +
         `&limit=500&offset=${offset}`;
       if (teamFilter) url += `&team=eq.${encodeURIComponent(teamFilter)}`;
       const r = await fetch(url, { headers: H });
@@ -214,7 +214,7 @@ window.AlarmEngine = (function () {
     const filledIds = [];
     for (const d of deals) {
       const raw = getRaw(d);
-      const arrivalDate = d.arrival_date || raw.Arrival_Date || null;
+      const arrivalDate = raw.Arrival_Date || raw.arrival_date || null;
       if (arrivalDate) filledIds.push(String(d.id));
     }
     if (!filledIds.length) return 0;

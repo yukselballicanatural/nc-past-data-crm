@@ -1314,7 +1314,7 @@
       const stage  = document.getElementById('dealStageFilter')?.value || '';
       const offset = dealCurrentPage * DEAL_PAGE_SIZE;
 
-      let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date,visit_date_1,visit_date_2,visit_date_3,raw&order=id.asc&limit=${DEAL_PAGE_SIZE}&offset=${offset}`;
+      let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,raw&order=id.asc&limit=${DEAL_PAGE_SIZE}&offset=${offset}`;
       if (!isRM)  url += `&team=eq.${encodeURIComponent(currentUser.team || '')}`;
       if (stage)  url += `&stage=eq.${encodeURIComponent(stage)}`;
       if (search) url += `&deal_name=ilike.*${encodeURIComponent(search)}*`;
@@ -1446,9 +1446,9 @@
       ['Stage',           d.stage],
       ['Payment / Ticket',raw.Payment_Or_Flight_Ticket || '—'],
       ['Arrival Date',    formatDate(raw.Arrival_Date)],
-      ['1. Vizit',        formatDate(d.visit_date_1)],
-      ['2. Vizit',        formatDate(d.visit_date_2)],
-      ['3. Vizit',        formatDate(d.visit_date_3)],
+      ['1. Vizit',        formatDate(raw.Visit_Date_1 || raw.visit_date_1)],
+      ['2. Vizit',        formatDate(raw.Visit_Date_2 || raw.visit_date_2)],
+      ['3. Vizit',        formatDate(raw.Visit_Date_3 || raw.visit_date_3)],
       ['Tutar',           fmtMoney(d.amount)],
       ['Ödenen',          fmtMoney(d.total_paid_amount)],
       ['Bölge',           AlarmEngine.getRegion(d.team)],
