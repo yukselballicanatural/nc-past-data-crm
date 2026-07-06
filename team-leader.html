@@ -350,10 +350,11 @@
         <p style="font-size:11px;color:#64748b;margin:3px 0 0" id="dealSubtitle">Takımın aktif dealleri</p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input id="dealSearch" class="filter-inp" placeholder="Hasta adı ara..." oninput="debounceDealSearch()" style="width:200px">
+        <input id="dealSearch" class="filter-inp" placeholder="Hasta veya danışman ara..." oninput="debounceDealSearch()" style="width:220px">
         <select id="dealStageFilter" class="filter-sel" onchange="loadDeals(true)" style="width:160px">
           <option value="">Tüm Stageler</option>
         </select>
+        <input id="dealOwnerFilter" class="filter-inp" placeholder="Danışman filtrele..." oninput="debounceDealSearch()" style="width:160px">
         <button onclick="loadDeals(true)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">↻ Yenile</button>
       </div>
     </div>
@@ -1309,15 +1310,15 @@
         Authorization: 'Bearer ' + SUPABASE_KEY,
         Prefer: 'count=exact',
       };
-      const isRM   = currentUser.role === 'regional-manager';
       const search = (document.getElementById('dealSearch')?.value || '').trim();
       const stage  = document.getElementById('dealStageFilter')?.value || '';
+      const owner  = (document.getElementById('dealOwnerFilter')?.value || '').trim();
       const offset = dealCurrentPage * DEAL_PAGE_SIZE;
 
       let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,raw&order=id.asc&limit=${DEAL_PAGE_SIZE}&offset=${offset}`;
-      if (!isRM)  url += `&team=eq.${encodeURIComponent(currentUser.team || '')}`;
       if (stage)  url += `&stage=eq.${encodeURIComponent(stage)}`;
       if (search) url += `&deal_name=ilike.*${encodeURIComponent(search)}*`;
+      if (owner)  url += `&deal_owner=ilike.*${encodeURIComponent(owner)}*`;
 
       const r = await fetch(url, { headers: H });
       if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1365,7 +1366,6 @@
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
       const isRM = currentUser.role === 'regional-manager';
       let url = `${SUPABASE_URL}/rest/v1/deals?select=stage&limit=1000`;
-      if (!isRM) url += `&team=eq.${encodeURIComponent(currentUser.team || '')}`;
       const r = await fetch(url, { headers: H });
       if (!r.ok) return;
       const rows = await r.json();
