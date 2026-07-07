@@ -791,7 +791,7 @@
       switch(tab) {
         case 'all':         return activeStatuses.has(a.status);
         case 'open':        return a.status === 'open' || a.status === 'seen';
-        case 'today':       return a.alarm_type === 'today_patient' && activeStatuses.has(a.status);
+        case 'today':       return a.alarm_type === 'today_patient' && (activeStatuses.has(a.status) || a.status === 'no_show');
         case 'approaching': return ['arrival_approaching','visit_approaching','payment_tracking'].includes(a.alarm_type) && activeStatuses.has(a.status) && (a.days_remaining || 0) > 0;
         case 'missing':     return a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status);
         case 'overdue':     return isOverdue(a);
