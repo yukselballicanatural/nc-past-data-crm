@@ -93,12 +93,13 @@ window.AlarmEngine = (function () {
     const raw = getRaw(deal);
 
     // Tüm tarih/ödeme alanları raw JSONB'den okunuyor (tablo kolonları yok)
+    // Zoho alan adları: Visit_Date = 1. vizit, Visit_Date1 = 2. vizit, Visit_Date2 = 3. vizit
     const pft          = raw.Payment_Or_Flight_Ticket || raw.payment_or_flight_ticket || null;
     const arrivalDate  = raw.Arrival_Date  || raw.arrival_date  || null;
     const lastActivity = raw.Last_Activity_Time || raw.last_activity_time || null;
-    const v1 = raw.Visit_Date_1 || raw.visit_date_1 || null;
-    const v2 = raw.Visit_Date_2 || raw.visit_date_2 || null;
-    const v3 = raw.Visit_Date_3 || raw.visit_date_3 || null;
+    const v1 = raw.Visit_Date  || raw.Visit_Date_1 || null;
+    const v2 = raw.Visit_Date1 || raw.Visit_Date_2 || null;
+    const v3 = raw.Visit_Date2 || raw.Visit_Date_3 || null;
 
     const team   = canonicalTeam(deal.team);
     const region = getRegion(deal.team);

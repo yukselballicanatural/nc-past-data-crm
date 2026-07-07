@@ -375,6 +375,7 @@
       <div class="spinner"></div>
       <p style="color:#64748b;font-size:13px">Deallar yükleniyor...</p>
     </div>
+    <div id="dealTotalBar" class="deal-total-bar" style="display:none;margin:0 0 10px"></div>
     <div id="dealTableWrap" style="overflow-x:auto;border-radius:14px;border:1px solid #1e293b;background:#0f172a">
       <table class="alarm-tbl">
         <thead>
@@ -401,7 +402,6 @@
         <button id="btnDealNext" onclick="dealChangePage(1)" style="padding:4px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Sonraki →</button>
       </div>
     </div>
-    <div id="dealTotalBar" class="deal-total-bar" style="display:none"></div>
   </div>
 
   <!-- ── VIEW: YÖNETİM ÖZETİ (Regional Manager only) ── -->
@@ -1475,6 +1475,74 @@
     if (cur) sel.value = cur;
   }
 
+  // ── Toplam bar: TÜM filtrelenmiş deallerin toplamları (server-side tarama) ──
+  let dealTotalsKey = null; // filtre imzası — değişmediyse tekrar hesaplama
+
+  function dealFilterSignature() {
+    return [
+      document.getElementById('dealSearch')?.value || '',
+      document.getElementById('dealStageFilter')?.value || '',
+      document.getElementById('dealOwnerFilter')?.value || '',
+    ].join('|');
+  }
+
+  async function loadDealTotals() {
+    const sig = dealFilterSignature();
+    if (sig === dealTotalsKey) return; // aynı filtre — mevcut toplamlar geçerli
+    dealTotalsKey = sig;
+
+    const bar = document.getElementById('dealTotalBar');
+    bar.style.display = 'flex';
+    bar.innerHTML = '<span style="font-size:11px;color:#64748b">Toplamlar hesaplanıyor...</span>';
+
+    try {
+      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+      const isRM   = currentUser.role === 'regional-manager';
+      const search = (document.getElementById('dealSearch')?.value || '').trim();
+      const stage  = document.getElementById('dealStageFilter')?.value || '';
+      const owner  = (document.getElementById('dealOwnerFilter')?.value || '').trim();
+
+      // Sadece küçük alanları çek — raw'ın tamamı değil, JSON içinden seçilen değerler
+      let base = `${SUPABASE_URL}/rest/v1/deals?select=amount,total_paid_amount,ramt:raw->>Amount,rpaid:raw->>Total_Paid_Amount,pft:raw->>Payment_Or_Flight_Ticket`;
+      if (!isRM && currentUser.team) base += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+      else if (isRM) base += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
+      if (stage)  base += `&stage=eq.${encodeURIComponent(stage)}`;
+      if (search) base += `&deal_name=ilike.*${encodeURIComponent(search)}*`;
+      if (owner)  base += `&deal_owner=ilike.*${encodeURIComponent(owner)}*`;
+
+      let totalAmt = 0, totalPaid = 0, ftCount = 0, payCount = 0, count = 0, offset = 0;
+      while (true) {
+        const r = await fetch(`${base}&limit=1000&offset=${offset}`, { headers: H });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const batch = await r.json();
+        if (!Array.isArray(batch) || !batch.length) break;
+        for (const d of batch) {
+          count++;
+          totalAmt  += Number(d.amount ?? d.ramt) || 0;
+          totalPaid += Number(d.total_paid_amount ?? d.rpaid) || 0;
+          if (d.pft === 'Flight Ticket') ftCount++;
+          else if (d.pft === 'Payment') payCount++;
+        }
+        if (batch.length < 1000) break;
+        offset += 1000;
+        if (offset >= 60000) break; // güvenlik sınırı
+      }
+
+      bar.innerHTML = `
+        <div class="deal-total-item"><div class="deal-total-label">Toplam Deal</div><div class="deal-total-value" style="color:#f1f5f9">${count.toLocaleString('tr-TR')}</div></div>
+        <div style="width:1px;background:#1e293b;align-self:stretch"></div>
+        <div class="deal-total-item"><div class="deal-total-label">Toplam Tutar</div><div class="deal-total-value" style="color:#60a5fa">€${totalAmt.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+        <div style="width:1px;background:#1e293b;align-self:stretch"></div>
+        <div class="deal-total-item"><div class="deal-total-label">Ödenen</div><div class="deal-total-value" style="color:#4ade80">€${totalPaid.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+        <div style="width:1px;background:#1e293b;align-self:stretch"></div>
+        <div class="deal-total-item"><div class="deal-total-label">Flight Ticket</div><div class="deal-total-value" style="color:#60a5fa">${ftCount.toLocaleString('tr-TR')}</div></div>
+        <div class="deal-total-item"><div class="deal-total-label">Payment</div><div class="deal-total-value" style="color:#c084fc">${payCount.toLocaleString('tr-TR')}</div></div>`;
+    } catch(e) {
+      bar.innerHTML = `<span style="font-size:11px;color:#f87171">Toplamlar yüklenemedi: ${e.message}</span>`;
+      dealTotalsKey = null; // tekrar denesin
+    }
+  }
+
   function renderDeals() {
     // Filtreleme artık server-side — allDeals zaten filtrelenmiş sayfa verisi
     const data = allDeals;
@@ -1483,30 +1551,17 @@
     const empty = document.getElementById('dealEmpty');
     document.getElementById('dealCount').textContent = `${data.length} deal gösteriliyor`;
 
-    if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; document.getElementById('dealTotalBar').style.display = 'none'; return; }
-    empty.style.display = 'none';
+    // Toplam bar — tüm filtrelenmiş set üzerinden (async, cache'li)
+    loadDealTotals();
 
-    // Toplam tutar hesapla
-    const totalAmt   = data.reduce((s, d) => s + (Number(d.amount) || 0), 0);
-    const totalPaid  = data.reduce((s, d) => s + (Number(d.total_paid_amount) || 0), 0);
-    const ftCount    = data.filter(d => { const r = typeof d.raw==='string'?(()=>{try{return JSON.parse(d.raw);}catch(e){return {};}})():(d.raw||{}); return r.Payment_Or_Flight_Ticket==='Flight Ticket'; }).length;
-    const payCount   = data.filter(d => { const r = typeof d.raw==='string'?(()=>{try{return JSON.parse(d.raw);}catch(e){return {};}})():(d.raw||{}); return r.Payment_Or_Flight_Ticket==='Payment'; }).length;
-    const totalBar   = document.getElementById('dealTotalBar');
-    totalBar.style.display = 'flex';
-    totalBar.innerHTML = `
-      <div class="deal-total-item"><div class="deal-total-label">Toplam Deal</div><div class="deal-total-value" style="color:#f1f5f9">${data.length}</div></div>
-      <div style="width:1px;background:#1e293b;align-self:stretch"></div>
-      <div class="deal-total-item"><div class="deal-total-label">Toplam Tutar</div><div class="deal-total-value" style="color:#60a5fa">€${totalAmt.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
-      <div style="width:1px;background:#1e293b;align-self:stretch"></div>
-      <div class="deal-total-item"><div class="deal-total-label">Ödenen</div><div class="deal-total-value" style="color:#4ade80">€${totalPaid.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
-      <div style="width:1px;background:#1e293b;align-self:stretch"></div>
-      <div class="deal-total-item"><div class="deal-total-label">Flight Ticket</div><div class="deal-total-value" style="color:#60a5fa">${ftCount}</div></div>
-      <div class="deal-total-item"><div class="deal-total-label">Payment</div><div class="deal-total-value" style="color:#c084fc">${payCount}</div></div>`;
+    if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
 
     tbody.innerHTML = data.map((d, i) => {
       const raw  = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw || {});
       const arrival = raw.Arrival_Date || '—';
       const pft  = raw.Payment_Or_Flight_Ticket || '—';
+      const amount = d.amount ?? raw.Amount ?? raw.Grand_Total_2 ?? null;
       const stageColor = d.stage && d.stage.toLowerCase().includes('cancel') ? '#f87171' : d.stage && d.stage.toLowerCase().includes('won') ? '#4ade80' : '#94a3b8';
       const dealAlarms = allAlarms.filter(a => a.deal_id === String(d.id) && !['closed','cancelled'].includes(a.status));
       const alarmBadge = dealAlarms.length ? `<span style="padding:2px 7px;border-radius:9999px;font-size:9px;font-weight:700;background:#422006;color:#fbbf24">${dealAlarms.length}</span>` : '<span style="color:#475569;font-size:10px">—</span>';
@@ -1520,7 +1575,7 @@
         <td style="color:#cbd5e1;font-size:11px;white-space:nowrap">${formatDate(arrival)}</td>
         <td style="font-size:10px;color:#94a3b8;white-space:nowrap">${fmt(pft)}</td>
         <td>${alarmBadge}</td>
-        <td style="color:#60a5fa;font-size:11px;white-space:nowrap">${fmtMoney(d.amount)}</td>
+        <td style="color:#60a5fa;font-size:11px;white-space:nowrap">${amount === null ? '<span style="color:#475569">—</span>' : fmtMoney(amount)}</td>
       </tr>`;
     }).join('');
   }
@@ -1536,11 +1591,11 @@
       ['Stage',           d.stage],
       ['Payment / Ticket',raw.Payment_Or_Flight_Ticket || '—'],
       ['Arrival Date',    formatDate(raw.Arrival_Date)],
-      ['1. Vizit',        formatDate(raw.Visit_Date_1 || raw.visit_date_1)],
-      ['2. Vizit',        formatDate(raw.Visit_Date_2 || raw.visit_date_2)],
-      ['3. Vizit',        formatDate(raw.Visit_Date_3 || raw.visit_date_3)],
-      ['Tutar',           fmtMoney(d.amount)],
-      ['Ödenen',          fmtMoney(d.total_paid_amount)],
+      ['1. Vizit',        formatDate(raw.Visit_Date  || raw.Visit_Date_1)],
+      ['2. Vizit',        formatDate(raw.Visit_Date1 || raw.Visit_Date_2)],
+      ['3. Vizit',        formatDate(raw.Visit_Date2 || raw.Visit_Date_3)],
+      ['Tutar',           fmtMoney(d.amount ?? raw.Amount ?? raw.Grand_Total_2)],
+      ['Ödenen',          fmtMoney(d.total_paid_amount ?? raw.Total_Paid_Amount)],
       ['Bölge',           AlarmEngine.getRegion(d.team)],
       ['Son Aktivite',    formatDate(raw.Last_Activity_Time)],
       ['Danışman Notu',   raw.Description || '—'],
