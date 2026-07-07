@@ -124,6 +124,7 @@
     'Takımın aktif dealleri': "Team's active deals",
     'Takımın açık alarm kayıtları': "Team's open alarm records",
     'Tarih Eklendi': 'Date Added',
+    'Danışman: Tümü': 'Consultant: All',
     '1. Vizit': '1st Visit',
     '2. Vizit': '2nd Visit',
     '3. Vizit': '3rd Visit',

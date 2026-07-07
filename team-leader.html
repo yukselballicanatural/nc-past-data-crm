@@ -72,12 +72,6 @@
     .deal-total-label { font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em; }
     .deal-total-value { font-size:14px;font-weight:800;font-variant-numeric:tabular-nums; }
 
-    /* Consultants breakdown */
-    .consultant-chip { display:inline-flex;align-items:center;gap:6px;padding:5px 10px;background:#111827;border:1px solid #1e293b;border-radius:8px;font-size:10px;cursor:pointer;transition:border-color 0.15s; }
-    .consultant-chip:hover { border-color:#0d9488; }
-    .consultant-chip .chip-name { color:#e2e8f0;font-weight:600; }
-    .consultant-chip .chip-cnt { color:#fbbf24;font-weight:800; }
-
     /* Smooth row hover */
     .alarm-tbl tbody tr { transition:background 0.12s; }
   </style>
@@ -239,6 +233,9 @@
     <!-- Search + Sort bar -->
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <input id="alarmSearch" class="filter-inp" placeholder="Hasta, danışman ara..." oninput="renderAlarms()" style="flex:1;min-width:160px;max-width:280px">
+      <select id="alarmConsultantFilter" class="filter-sel" onchange="renderAlarms()" style="width:170px">
+        <option value="">Danışman: Tümü</option>
+      </select>
       <select id="alarmSortSel" class="filter-sel" onchange="renderAlarms()" style="width:180px">
         <option value="created_desc">En Yeni Önce</option>
         <option value="days_asc">Kalan Gün (Acil Önce)</option>
@@ -276,12 +273,6 @@
     <div id="alarmLoading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;gap:12px">
       <div class="spinner"></div>
       <p style="color:#64748b;font-size:13px">Alarmlar yükleniyor...</p>
-    </div>
-
-    <!-- Danışman özeti (alarm sayısına göre) -->
-    <div id="consultantStrip" style="display:none;margin-bottom:12px">
-      <div style="font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Danışman Bazlı Alarmlar</div>
-      <div id="consultantChips" style="display:flex;gap:6px;flex-wrap:wrap"></div>
     </div>
 
     <!-- Alarm table -->
@@ -911,6 +902,10 @@
       data = data.filter(a => [a.deal_name, a.deal_owner, a.team].join(' ').toLowerCase().includes(searchQ));
     }
 
+    // Danışman filtresi
+    const consultantF = document.getElementById('alarmConsultantFilter')?.value || '';
+    if (consultantF) data = data.filter(a => (a.deal_owner || '') === consultantF);
+
     // Payment / Flight Ticket filtresi
     const pftF = document.getElementById('alarmPftFilter')?.value || '';
     if (pftF) data = data.filter(a => a.payment_or_flight_ticket === pftF);
@@ -1056,7 +1051,6 @@
   // ── Danışman bazlı alarm özeti ───────────────────────────────────
   function renderConsultantStrip() {
     const activeAlms = filterAlarms('all');
-    if (!activeAlms.length) { document.getElementById('consultantStrip').style.display = 'none'; return; }
     const byOwner = {};
     activeAlms.forEach(a => {
       const o = a.deal_owner || '?';
@@ -1065,31 +1059,12 @@
       if (isOverdue(a)) byOwner[o].overdue++;
     });
     const sorted = Object.entries(byOwner).sort((a,b) => b[1].total - a[1].total);
-    const chips = document.getElementById('consultantChips');
-    chips.innerHTML = sorted.map(([name, s]) => {
-      const hasOverdue = s.overdue > 0;
-      return `<div class="consultant-chip" onclick="filterByConsultant('${name.replace(/'/g,"\\'")}')">
-        <span class="chip-name">${name}</span>
-        <span class="chip-cnt">${s.total}</span>
-        ${hasOverdue ? `<span style="font-size:9px;color:#f87171;font-weight:800">+${s.overdue}⚠</span>` : ''}
-      </div>`;
-    }).join('') + `<div class="consultant-chip" onclick="clearConsultantFilter()" style="border-color:#334155"><span style="color:#64748b;font-size:10px">Tümü</span></div>`;
-    I18N.translateDOM(chips);
-    document.getElementById('consultantStrip').style.display = 'block';
-  }
-
-  let consultantFilter = '';
-  function filterByConsultant(name) {
-    consultantFilter = name;
-    const inp = document.getElementById('alarmSearch');
-    if (inp) inp.value = name;
-    renderAlarms();
-  }
-  function clearConsultantFilter() {
-    consultantFilter = '';
-    const inp = document.getElementById('alarmSearch');
-    if (inp) inp.value = '';
-    renderAlarms();
+    const sel = document.getElementById('alarmConsultantFilter');
+    if (!sel) return;
+    const cur = sel.value;
+    sel.innerHTML = `<option value="">${I18N.t('Danışman: Tümü')}</option>` +
+      sorted.map(([name, s]) => `<option value="${name.replace(/"/g,'&quot;')}">${name} (${s.total}${s.overdue > 0 ? ' ⚠' + s.overdue : ''})</option>`).join('');
+    if (cur && byOwner[cur]) sel.value = cur;
   }
 
   // ── Alarm subtab değiştir ────────────────────────────────────────
