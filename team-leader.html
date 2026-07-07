@@ -293,6 +293,7 @@
               <th>Kalan Gün</th>
               <th>Durum</th>
               <th>P/FT</th>
+              <th>Ödeme</th>
               <th>Not</th>
               <th style="width:90px">Aksiyon</th>
             </tr>
@@ -396,6 +397,8 @@
             <th>P/F</th>
             <th>Alarm</th>
             <th onclick="dealSortBy('amount')" style="cursor:pointer;user-select:none">Tutar<span id="dsort-amount" class="sarrow"></span></th>
+            <th>Ödenen</th>
+            <th>Kalan</th>
           </tr>
         </thead>
         <tbody id="dealTbody"></tbody>
@@ -526,6 +529,7 @@
             <th>Ref Alan</th>
             <th>Planlanan Tarih</th>
             <th>Gelemedi Tarihi</th>
+            <th>Ödeme</th>
             <th>Not</th>
           </tr>
         </thead>
@@ -681,10 +685,83 @@
   let activeAlarmTab = 'all';
   let currentAlarm   = null;
   let currentDeal    = null;
+  let dealFinanceMap = {}; // deal_id -> {total, paid, remaining, pct, stage, isWon}
 
   // ── Helpers ─────────────────────────────────────────────────────
   function fmt(v) { return (v === null || v === undefined || v === '') ? '—' : String(v); }
   function fmtMoney(v) { return v ? '€' + Number(v).toLocaleString('en-US', {maximumFractionDigits: 0}) : '€0'; }
+
+  // ── Deal finans bilgisi (Ödenen / Toplam / Kalan / Won durumu) ────
+  // alarms tablosunda amount/paid/stage kolonu yok, bu yüzden deal_id
+  // üzerinden deals tablosundan ayrıca çekilip dealFinanceMap'e yazılır.
+  async function loadDealFinance(dealIds) {
+    const ids = [...new Set(dealIds.filter(Boolean))];
+    if (!ids.length) return;
+    const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+    const CHUNK = 150;
+    for (let i = 0; i < ids.length; i += CHUNK) {
+      const chunk = ids.slice(i, i + CHUNK);
+      try {
+        const url = `${SUPABASE_URL}/rest/v1/deals?select=id,amount,total_paid_amount,stage,raw&id=in.(${chunk.join(',')})`;
+        const r = await fetch(url, { headers: H });
+        if (!r.ok) continue;
+        const rows = await r.json();
+        rows.forEach(d => {
+          const raw = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw || {});
+          const total = d.amount ?? raw.Amount ?? raw.Grand_Total_2 ?? null;
+          const paid  = d.total_paid_amount ?? raw.Total_Paid_Amount ?? null;
+          const remaining = (total !== null && paid !== null) ? (total - paid) : null;
+          const pct = (total && total > 0 && paid !== null) ? (paid / total * 100) : null;
+          const isWon = !!(d.stage && d.stage.toLowerCase().includes('won'));
+          dealFinanceMap[d.id] = { total, paid, remaining, pct, stage: d.stage, isWon };
+        });
+      } catch(e) { /* finans bilgisi opsiyonel, sessiz geç */ }
+    }
+  }
+
+  function paymentCellHtml(dealId) {
+    const fin = dealFinanceMap[dealId];
+    if (!fin || fin.total === null) return '<span style="font-size:10px;color:#475569">—</span>';
+    const pct = fin.pct === null ? null : Math.round(fin.pct);
+    const color = pct === null ? '#64748b' : pct >= 100 ? '#4ade80' : pct >= 50 ? '#fbbf24' : '#f87171';
+    return `<div style="font-size:10px;white-space:nowrap;line-height:1.5">
+      <div><span style="color:#94a3b8">${fmtMoney(fin.paid)}</span> / <span style="color:#64748b">${fmtMoney(fin.total)}</span></div>
+      <div style="color:${color};font-weight:700">${pct === null ? '—' : pct + '%'} · Kalan ${fmtMoney(fin.remaining)}</div>
+    </div>`;
+  }
+
+  function paymentMismatchBadge(a) {
+    if (!a._paymentMismatch) return '';
+    return `<div style="margin-top:4px;font-size:9px;font-weight:700;color:#fbbf24;background:#422006;border:1px solid #78350f;border-radius:6px;padding:2px 6px;display:inline-block" title="${a._paymentMismatch.replace(/"/g,'&quot;')}">⚠ ${a._paymentMismatch}</div>`;
+  }
+
+  // payment_tracking alarmlarını Won + %100 ödeme durumuna göre otomatik kapat,
+  // uyuşmazlık varsa (biri tamam biri değil) uyarı rozeti için işaretle
+  async function applyPaymentAutoRules() {
+    const activeStatuses = new Set(['open','seen','in_progress','escalated']);
+    const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+    for (const a of allAlarms) {
+      a._paymentMismatch = null;
+      if (a.alarm_type !== 'payment_tracking' || !activeStatuses.has(a.status)) continue;
+      const fin = dealFinanceMap[a.deal_id];
+      if (!fin || fin.pct === null) continue;
+      const fullyPaid = fin.pct >= 100;
+      if (fin.isWon && fullyPaid) {
+        const updates = { status: 'closed', closed_at: new Date().toISOString(), close_reason: 'Ödeme %100 ve deal Won — otomatik kapatıldı' };
+        try {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${a.id}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
+          if (r.ok) {
+            logAlarmAction(a, 'auto_closed', a.status, 'closed', updates.close_reason);
+            Object.assign(a, updates);
+          }
+        } catch(e) { /* bir sonraki yüklemede tekrar denenir */ }
+      } else if (fin.isWon !== fullyPaid) {
+        a._paymentMismatch = fin.isWon
+          ? `Won ama ödeme %${Math.round(fin.pct)} — tamamlanmadı`
+          : `Ödeme %100 ama stage Won değil (${fin.stage || '—'})`;
+      }
+    }
+  }
 
   function daysUntil(dateStr) {
     if (!dateStr) return null;
@@ -896,6 +973,7 @@
         <td style="white-space:nowrap">${daysDisplay(a.days_remaining, a.reference_date)}</td>
         <td><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color};white-space:nowrap">${sm.label}</span></td>
         <td style="font-size:10px;white-space:nowrap">${pftBadge}</td>
+        <td>${paymentCellHtml(a.deal_id)}${paymentMismatchBadge(a)}</td>
         <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b" title="${a.note ? a.note.replace(/"/g,'&quot;') : ''}">${a.note ? fmt(a.note).substring(0,50) : '—'}</td>
         <td>
           <button onclick="event.stopPropagation();openAlarmById('${a.id}')" style="padding:4px 10px;background:#0d9488;border:none;border-radius:7px;color:#fff;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Güncelle</button>
@@ -1066,6 +1144,8 @@
       }
 
       allAlarms = all;
+      await loadDealFinance(all.map(a => a.deal_id));
+      await applyPaymentAutoRules();
 
       // Subtitle: hangi takımın alarmları gösterildiğini açıkça yaz
       const subtitle = document.getElementById('alarmSubtitle');
@@ -1368,6 +1448,7 @@
           <svg style="width:12px;height:12px;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           ${field} — <strong>BUGÜN</strong>
         </div>
+        ${dealFinanceMap[a.deal_id] ? `<div style="font-size:10px;color:#94a3b8;background:#111827;padding:7px 10px;border-radius:8px;border:1px solid #1e293b;margin-bottom:10px">${paymentCellHtml(a.deal_id)}${paymentMismatchBadge(a)}</div>` : ''}
         ${a.note ? `<div style="font-size:10px;color:#64748b;background:#1e293b;padding:7px 10px;border-radius:8px;border:1px solid #334155;margin-bottom:10px">${fmt(a.note)}</div>` : ''}
         ${actionBtns}
       </div>`;
@@ -1654,6 +1735,8 @@
       const arrival = d.arrival_date || raw.Arrival_Date || '—';
       const pft  = d.payment_or_flight_ticket || raw.Payment_Or_Flight_Ticket || '—';
       const amount = d.amount ?? raw.Amount ?? raw.Grand_Total_2 ?? null;
+      const paidAmount = d.total_paid_amount ?? raw.Total_Paid_Amount ?? null;
+      const remainingAmount = (amount !== null && paidAmount !== null) ? (amount - paidAmount) : null;
       const stageColor = d.stage && d.stage.toLowerCase().includes('cancel') ? '#f87171' : d.stage && d.stage.toLowerCase().includes('won') ? '#4ade80' : '#94a3b8';
       const dealAlarms = allAlarms.filter(a => a.deal_id === String(d.id) && !['closed','cancelled'].includes(a.status));
       const alarmBadge = dealAlarms.length ? `<span style="padding:2px 7px;border-radius:9999px;font-size:9px;font-weight:700;background:#422006;color:#fbbf24">${dealAlarms.length}</span>` : '<span style="color:#475569;font-size:10px">—</span>';
@@ -1669,6 +1752,8 @@
         <td style="font-size:10px;color:#94a3b8;white-space:nowrap">${fmt(pft)}</td>
         <td>${alarmBadge}</td>
         <td style="color:#60a5fa;font-size:11px;white-space:nowrap">${amount === null ? '<span style="color:#475569">—</span>' : fmtMoney(amount)}</td>
+        <td style="color:#4ade80;font-size:11px;white-space:nowrap">${paidAmount === null ? '<span style="color:#475569">—</span>' : fmtMoney(paidAmount)}</td>
+        <td style="font-size:11px;white-space:nowrap;color:${remainingAmount === null ? '#475569' : remainingAmount <= 0 ? '#4ade80' : '#f87171'};font-weight:700">${remainingAmount === null ? '—' : fmtMoney(remainingAmount)}</td>
       </tr>`;
     }).join('');
   }
@@ -1689,6 +1774,7 @@
       ['3. Vizit',        formatDate(raw.Visit_Date2 || raw.Visit_Date_3)],
       ['Tutar',           fmtMoney(d.amount ?? raw.Amount ?? raw.Grand_Total_2)],
       ['Ödenen',          fmtMoney(d.total_paid_amount ?? raw.Total_Paid_Amount)],
+      ['Kalan',           fmtMoney((d.amount ?? raw.Amount ?? raw.Grand_Total_2 ?? 0) - (d.total_paid_amount ?? raw.Total_Paid_Amount ?? 0))],
       ['Bölge',           AlarmEngine.getRegion(d.team)],
       ['Son Aktivite',    formatDate(raw.Last_Activity_Time)],
       ['Danışman Notu',   raw.Description || '—'],
@@ -1744,6 +1830,7 @@
       <td style="color:#94a3b8;font-size:11px">${fieldLabel(a.reference_field)}</td>
       <td style="color:#f87171;font-size:11px;white-space:nowrap">${formatDate(a.reference_date)}</td>
       <td style="color:#64748b;font-size:11px;white-space:nowrap">${formatDateTime(a.closed_at)}</td>
+      <td>${paymentCellHtml(a.deal_id)}</td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b">${a.note ? fmt(a.note) : '—'}</td>
     </tr>`).join('');
   }
