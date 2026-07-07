@@ -767,20 +767,21 @@
   }
 
   function daysDisplay(days, refDate) {
+    const base = 'font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap';
     if (days === null || days === undefined) {
       // Gecikmiş mi kontrol et
       if (refDate) {
         const d = daysUntil(refDate);
-        if (d !== null && d < 0) return `<span style="color:#f87171;font-weight:700">+${Math.abs(d)} gün GECİKMİŞ</span>`;
+        if (d !== null && d < 0) return `<span style="${base};color:#f87171;font-weight:700">+${Math.abs(d)} gün GECİKMİŞ</span>`;
       }
-      return '<span style="color:#475569">—</span>';
+      return `<span style="${base};color:#475569">—</span>`;
     }
-    if (days < 0)  return `<span style="color:#f87171;font-weight:700">${Math.abs(days)} gün GECİKMİŞ</span>`;
-    if (days === 0)return `<span style="color:#4ade80;font-weight:800">BUGÜN</span>`;
-    if (days <= 3) return `<span style="color:#f87171;font-weight:700">${days} gün</span>`;
-    if (days <= 7) return `<span style="color:#fb923c;font-weight:700">${days} gün</span>`;
-    if (days <= 15)return `<span style="color:#fbbf24;font-weight:600">${days} gün</span>`;
-    return `<span style="color:#60a5fa">${days} gün</span>`;
+    if (days < 0)  return `<span style="${base};color:#f87171;font-weight:700">${Math.abs(days)} gün GECİKMİŞ</span>`;
+    if (days === 0)return `<span style="${base};color:#4ade80;font-weight:800">BUGÜN</span>`;
+    if (days <= 3) return `<span style="${base};color:#f87171;font-weight:700">${days} gün</span>`;
+    if (days <= 7) return `<span style="${base};color:#fb923c;font-weight:700">${days} gün</span>`;
+    if (days <= 15)return `<span style="${base};color:#fbbf24;font-weight:600">${days} gün</span>`;
+    return `<span style="${base};color:#60a5fa">${days} gün</span>`;
   }
 
   // ── Alarm tablosunu filtrele ─────────────────────────────────────
