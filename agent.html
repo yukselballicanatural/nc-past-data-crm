@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Natural Clinic CRM - Agent Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="i18n.js"></script>
   <script src="team-map.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
@@ -89,6 +90,7 @@
       </div>
     </div>
     <div class="mt-6 pt-4 border-t border-gray-800">
+      <div id="langToggleMount" class="mb-2"></div>
       <button onclick="doLogout()" class="w-full py-2 bg-slate-800 hover:bg-rose-900/40 border border-slate-700 hover:border-rose-700 text-slate-300 hover:text-rose-300 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-2">
         <svg class="h-4 w-4 text-rose-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
         Logout
@@ -751,7 +753,7 @@
         const main = allDeals.find(x => x['Deal Id'] === d['Deal Id']);
         if (main) { main.result_code = fullCode; main.sub_code = sub; main.agent_note = note; main.status = newStatus; main.lock_approval_requested = false; }
         closeModal(); applyFilters();
-        showSiteNotice(isNotReached ? 'Kaydedildi. (Not Reached — tekrar düzenlenebilir)' : 'Result saved and locked successfully.', 'success');
+        showSiteNotice(isNotReached ? I18N.t('Kaydedildi. (Not Reached — tekrar düzenlenebilir)') : 'Result saved and locked successfully.', 'success');
       } catch(err) {
         showSiteNotice('Save failed: ' + err.message, 'error');
         if (saveBtn) { saveBtn.textContent = 'Save & Lock'; saveBtn.disabled = false; }
@@ -1027,6 +1029,7 @@
         document.getElementById('sidebarName').textContent = fixTR(session.fullName || session.username || '');
         document.getElementById('sidebarTeam').textContent = fixTR(session.team || 'Agent');
         document.getElementById('userAvatar').textContent = (session.fullName || 'A')[0].toUpperCase();
+        document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
         loadData();
       } catch(e) { localStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
     })();

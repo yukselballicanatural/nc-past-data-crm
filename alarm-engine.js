@@ -283,19 +283,20 @@ window.AlarmEngine = (function () {
   }
 
   // ── Ana çalıştırma — her zaman TÜM takımlar için üretir ─────────
+  const _t = (s) => (typeof I18N !== 'undefined' ? I18N.t(s) : s);
   async function run(BASE, KEY, opts = {}) {
     const { onProgress } = opts;
-    if (onProgress) onProgress('Parametreler yükleniyor...');
+    if (onProgress) onProgress(_t('Parametreler yükleniyor...'));
     await loadSettings(BASE, KEY);
-    if (onProgress) onProgress('Aktif deallar alınıyor...');
+    if (onProgress) onProgress(_t('Aktif deallar alınıyor...'));
     const deals = await fetchActiveDeals(BASE, KEY);
-    if (onProgress) onProgress(`${deals.length} deal için alarm hesaplanıyor...`);
+    if (onProgress) onProgress(`${deals.length} ${_t('deal için alarm hesaplanıyor...')}`);
     const newAlarms = [];
     for (const deal of deals) newAlarms.push(...computeAlarms(deal));
-    if (onProgress) onProgress(`${newAlarms.length} alarm kaydediliyor (dedup aktif)...`);
+    if (onProgress) onProgress(`${newAlarms.length} ${_t('alarm kaydediliyor (dedup aktif)...')}`);
     const result = await insertAlarms(BASE, KEY, newAlarms);
     // Arrival Date artık dolu olan deallerin eksik tarih alarmlarını kapat
-    if (onProgress) onProgress('Tarih girilen alarmlar kapatılıyor...');
+    if (onProgress) onProgress(_t('Tarih girilen alarmlar kapatılıyor...'));
     const closedCount = await closeStaleArrivalMissing(BASE, KEY, deals);
     return { deals: deals.length, generated: newAlarms.length, closed: closedCount, ...result };
   }

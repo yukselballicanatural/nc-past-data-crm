@@ -169,8 +169,10 @@
       </div>
     </div>
   </div>
+  <!-- Dil seçimi -->
+  <div id="langToggleMount" style="padding:0 10px 10px"></div>
   <!-- Logout -->
-  <div style="padding:14px 10px">
+  <div style="padding:0 10px 14px">
     <button onclick="doLogout()" style="width:100%;padding:10px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;transition:all 0.15s" onmouseover="this.style.background='#450a0a';this.style.borderColor='#7f1d1d';this.style.color='#fca5a5'" onmouseout="this.style.background='#1e293b';this.style.borderColor='#334155';this.style.color='#94a3b8'">
       <svg style="width:14px;height:14px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
       Logout
@@ -201,7 +203,10 @@
       <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
     </button>
   </div>
-  <button onclick="doLogout()" title="Logout" style="width:36px;height:36px;border-radius:10px;background:#1e293b;border:1px solid #334155;color:#f87171;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:12px;transition:all 0.15s">
+  <button onclick="I18N.toggle()" title="TR / EN" style="width:36px;height:26px;border-radius:9999px;background:#1e293b;border:1px solid #334155;color:#94a3b8;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:12px;font-size:8px;font-weight:800;transition:all 0.15s">
+    <span id="miniLangLabel">TR</span>
+  </button>
+  <button onclick="doLogout()" title="Logout" style="width:36px;height:36px;border-radius:10px;background:#1e293b;border:1px solid #334155;color:#f87171;cursor:pointer;display:flex;align-items:center;justify-content:center;margin-top:8px;transition:all 0.15s">
     <svg style="width:15px;height:15px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
   </button>
 </aside>
@@ -671,6 +676,7 @@
 <!-- Bildirim -->
 <div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);white-space:nowrap"></div>
 
+<script src="i18n.js"></script>
 <script src="team-map.js"></script>
 <script src="alarm-engine.js"></script>
 <script>
@@ -796,7 +802,7 @@
 
   function showNotice(msg, type) {
     const el = document.getElementById('siteNotice');
-    el.textContent = msg;
+    el.textContent = I18N.t(msg);
     el.style.background = type === 'error' ? '#450a0a' : type === 'success' ? '#052e16' : '#1e293b';
     el.style.color       = type === 'error' ? '#f87171' : type === 'success' ? '#4ade80'  : '#f1f5f9';
     el.style.border      = `1px solid ${type === 'error' ? '#7f1d1d' : type === 'success' ? '#166534' : '#334155'}`;
@@ -807,28 +813,28 @@
   // ── Alarm tipi meta ──────────────────────────────────────────────
   function alarmTypeMeta(type) {
     const m = {
-      'arrival_approaching': { label:'Arrival Yaklaşıyor', bg:'#431407', color:'#fb923c' },
-      'visit_approaching':   { label:'Vizit Yaklaşıyor',   bg:'#1e3a5f', color:'#60a5fa' },
-      'arrival_missing':     { label:'Tarih Eksik',         bg:'#450a0a', color:'#f87171' },
-      'today_patient':       { label:'Bugün Gelecek',       bg:'#052e16', color:'#4ade80' },
-      'payment_tracking':    { label:'Payment Takip',       bg:'#2e1065', color:'#c084fc' },
-      'no_show':             { label:'Gelemedi',            bg:'#450a0a', color:'#f87171' },
+      'arrival_approaching': { label:I18N.t('Arrival Yaklaşıyor'), bg:'#431407', color:'#fb923c' },
+      'visit_approaching':   { label:I18N.t('Vizit Yaklaşıyor'),   bg:'#1e3a5f', color:'#60a5fa' },
+      'arrival_missing':     { label:I18N.t('Tarih Eksik'),         bg:'#450a0a', color:'#f87171' },
+      'today_patient':       { label:I18N.t('Bugün Gelecek'),       bg:'#052e16', color:'#4ade80' },
+      'payment_tracking':    { label:I18N.t('Payment Takip'),       bg:'#2e1065', color:'#c084fc' },
+      'no_show':             { label:I18N.t('Gelemedi'),            bg:'#450a0a', color:'#f87171' },
     };
     return m[type] || { label: type, bg:'#1e293b', color:'#94a3b8' };
   }
 
   function statusMeta(s) {
     const m = {
-      'open':        { label:'Açık',            bg:'#422006', color:'#fbbf24' },
-      'seen':        { label:'Görüldü',          bg:'#1e3a5f', color:'#60a5fa' },
-      'in_progress': { label:'Takipte',          bg:'#042f2e', color:'#2dd4bf' },
-      'arrived':     { label:'Hasta Geldi',      bg:'#052e16', color:'#4ade80' },
-      'examined':    { label:'Muayene Oldu',     bg:'#052e16', color:'#86efac' },
-      'processing':  { label:'İşlemlerde',       bg:'#083344', color:'#67e8f9' },
-      'no_show':     { label:'Gelemedi',         bg:'#450a0a', color:'#f87171' },
-      'closed':      { label:'Kapatıldı',        bg:'#1e293b', color:'#64748b' },
-      'escalated':   { label:'Eskale',           bg:'#431407', color:'#fb923c' },
-      'cancelled':   { label:'İptal',            bg:'#1e293b', color:'#475569' },
+      'open':        { label:I18N.t('Açık'),            bg:'#422006', color:'#fbbf24' },
+      'seen':        { label:I18N.t('Görüldü'),          bg:'#1e3a5f', color:'#60a5fa' },
+      'in_progress': { label:I18N.t('Takipte'),          bg:'#042f2e', color:'#2dd4bf' },
+      'arrived':     { label:I18N.t('Hasta Geldi'),      bg:'#052e16', color:'#4ade80' },
+      'examined':    { label:I18N.t('Muayene Oldu'),     bg:'#052e16', color:'#86efac' },
+      'processing':  { label:I18N.t('İşlemlerde'),       bg:'#083344', color:'#67e8f9' },
+      'no_show':     { label:I18N.t('Gelemedi'),         bg:'#450a0a', color:'#f87171' },
+      'closed':      { label:I18N.t('Kapatıldı'),        bg:'#1e293b', color:'#64748b' },
+      'escalated':   { label:I18N.t('Eskale'),           bg:'#431407', color:'#fb923c' },
+      'cancelled':   { label:I18N.t('İptal'),            bg:'#1e293b', color:'#475569' },
     };
     return m[s] || { label: s, bg:'#1e293b', color:'#94a3b8' };
   }
@@ -836,30 +842,31 @@
   function fieldLabel(f) {
     const m = {
       'arrival_date':      'Arrival Date',
-      'visit_date_1':      '1. Vizit',
-      'visit_date_2':      '2. Vizit',
-      'visit_date_3':      '3. Vizit',
-      'last_activity_time':'Son Aktivite',
+      'visit_date_1':      I18N.t('1. Vizit'),
+      'visit_date_2':      I18N.t('2. Vizit'),
+      'visit_date_3':      I18N.t('3. Vizit'),
+      'last_activity_time':I18N.t('Son Aktivite'),
     };
     return m[f] || f || '—';
   }
 
   function daysDisplay(days, refDate) {
     const base = 'font-size:11px;font-variant-numeric:tabular-nums;white-space:nowrap';
+    const gun = I18N.t('gün'), gecikmis = I18N.t('GECİKMİŞ'), bugun = I18N.t('BUGÜN');
     if (days === null || days === undefined) {
       // Gecikmiş mi kontrol et
       if (refDate) {
         const d = daysUntil(refDate);
-        if (d !== null && d < 0) return `<span style="${base};color:#f87171;font-weight:700">+${Math.abs(d)} gün GECİKMİŞ</span>`;
+        if (d !== null && d < 0) return `<span style="${base};color:#f87171;font-weight:700">+${Math.abs(d)} ${gun} ${gecikmis}</span>`;
       }
       return `<span style="${base};color:#475569">—</span>`;
     }
-    if (days < 0)  return `<span style="${base};color:#f87171;font-weight:700">${Math.abs(days)} gün GECİKMİŞ</span>`;
-    if (days === 0)return `<span style="${base};color:#4ade80;font-weight:800">BUGÜN</span>`;
-    if (days <= 3) return `<span style="${base};color:#f87171;font-weight:700">${days} gün</span>`;
-    if (days <= 7) return `<span style="${base};color:#fb923c;font-weight:700">${days} gün</span>`;
-    if (days <= 15)return `<span style="${base};color:#fbbf24;font-weight:600">${days} gün</span>`;
-    return `<span style="${base};color:#60a5fa">${days} gün</span>`;
+    if (days < 0)  return `<span style="${base};color:#f87171;font-weight:700">${Math.abs(days)} ${gun} ${gecikmis}</span>`;
+    if (days === 0)return `<span style="${base};color:#4ade80;font-weight:800">${bugun}</span>`;
+    if (days <= 3) return `<span style="${base};color:#f87171;font-weight:700">${days} ${gun}</span>`;
+    if (days <= 7) return `<span style="${base};color:#fb923c;font-weight:700">${days} ${gun}</span>`;
+    if (days <= 15)return `<span style="${base};color:#fbbf24;font-weight:600">${days} ${gun}</span>`;
+    return `<span style="${base};color:#60a5fa">${days} ${gun}</span>`;
   }
 
   // ── Alarm tablosunu filtrele ─────────────────────────────────────
@@ -936,7 +943,7 @@
       return;
     }
     empty.style.display = 'none';
-    cnt.textContent = `${data.length} alarm gösteriliyor`;
+    cnt.textContent = `${data.length} ${I18N.t('alarm gösteriliyor')}`;
 
     tbody.innerHTML = data.map((a, i) => {
       const tm     = alarmTypeMeta(a.alarm_type);
@@ -980,6 +987,7 @@
         </td>
       </tr>`;
     }).join('');
+    I18N.translateDOM(tbody);
   }
 
   // ── Metrics strip (tıklanabilir hızlı filtreler) ────────────────
@@ -993,11 +1001,11 @@
     const missing   = filterAlarms('missing').length;
     const noshow    = filterAlarms('noshow').length;
     const pills = [
-      { label:`${total} Toplam Aktif`,   bg:'#1e293b', color:'#94a3b8', tab:'all'         },
-      { label:`${todayCnt} Bugün`,        bg:'#052e16', color:'#4ade80', tab:'today'        },
-      { label:`${overdue} Gecikmiş`,      bg:'#450a0a', color:'#f87171', tab:'overdue'      },
-      { label:`${approachCnt} Yaklaşan`,  bg:'#422006', color:'#fb923c', tab:'approaching'  },
-      { label:`${missing} Eksik Tarih`,   bg:'#1e293b', color:'#6b7280', tab:'missing'      },
+      { label:`${total} ${I18N.t('Toplam Aktif')}`,   bg:'#1e293b', color:'#94a3b8', tab:'all'         },
+      { label:`${todayCnt} ${I18N.t('Bugün')}`,        bg:'#052e16', color:'#4ade80', tab:'today'        },
+      { label:`${overdue} ${I18N.t('Gecikmiş')}`,      bg:'#450a0a', color:'#f87171', tab:'overdue'      },
+      { label:`${approachCnt} ${I18N.t('Yaklaşan')}`,  bg:'#422006', color:'#fb923c', tab:'approaching'  },
+      { label:`${missing} ${I18N.t('Eksik Tarih')}`,   bg:'#1e293b', color:'#6b7280', tab:'missing'      },
       ...(noshow > 0 ? [{ label:`${noshow} No-show`, bg:'#1e293b', color:'#f87171', tab:'noshow' }] : []),
     ];
     el.innerHTML = pills.map(p =>
@@ -1066,6 +1074,7 @@
         ${hasOverdue ? `<span style="font-size:9px;color:#f87171;font-weight:800">+${s.overdue}⚠</span>` : ''}
       </div>`;
     }).join('') + `<div class="consultant-chip" onclick="clearConsultantFilter()" style="border-color:#334155"><span style="color:#64748b;font-size:10px">Tümü</span></div>`;
+    I18N.translateDOM(chips);
     document.getElementById('consultantStrip').style.display = 'block';
   }
 
@@ -1151,9 +1160,9 @@
       const subtitle = document.getElementById('alarmSubtitle');
       if (subtitle) {
         if (isRM) {
-          subtitle.textContent = `${getRegion(currentUser)} bölgesi alarmları — ${all.length} kayıt`;
+          subtitle.textContent = `${getRegion(currentUser)} ${I18N.t('bölgesi alarmları')} — ${all.length} ${I18N.t('kayıt')}`;
         } else {
-          subtitle.textContent = `${teamVal.trim() || '?'} takımı alarmları — ${all.length} kayıt`;
+          subtitle.textContent = `${teamVal.trim() || '?'} ${I18N.t('takımı alarmları')} — ${all.length} ${I18N.t('kayıt')}`;
         }
       }
 
@@ -1182,7 +1191,7 @@
       if (lastSeen && a.created_at > lastSeen) newCount++;
     }
     if (lastSeen && newCount > 0) {
-      showNotice(`${newCount} yeni alarm oluştu`, 'success');
+      showNotice(`${newCount} ${I18N.t('yeni alarm oluştu')}`, 'success');
     }
     if (maxCreated) localStorage.setItem(key, maxCreated);
   }
@@ -1212,11 +1221,11 @@
         onProgress: (msg) => { if (statusEl) statusEl.textContent = msg; },
       });
       localStorage.setItem(cacheKey, String(Date.now()));
-      if (statusEl) statusEl.textContent = `Son çalıştırma: ${new Date().toLocaleTimeString('tr-TR')} — ${result.deals} deal, ${result.generated} alarm`;
-      if (manual) showNotice(`Motor tamamlandı: ${result.deals} deal, ${result.generated} alarm kontrol edildi`, 'success');
+      if (statusEl) statusEl.textContent = `${I18N.t('Son çalıştırma:')} ${new Date().toLocaleTimeString(I18N.getLang() === 'en' ? 'en-US' : 'tr-TR')} — ${result.deals} ${I18N.t('deal,')} ${result.generated} alarm`;
+      if (manual) showNotice(`${I18N.t('Motor tamamlandı:')} ${result.deals} ${I18N.t('deal,')} ${result.generated} ${I18N.t('alarm kontrol edildi')}`, 'success');
       await loadAlarms();
     } catch(e) {
-      if (statusEl) statusEl.textContent = 'Motor hatası: ' + e.message;
+      if (statusEl) statusEl.textContent = I18N.t('Motor hatası: ') + e.message;
       showNotice('Alarm motoru hatası: ' + e.message, 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
@@ -1253,9 +1262,9 @@
       if (tc2) {
         const isPayment = a.payment_or_flight_ticket === 'Payment';
         const desc = isPayment
-          ? `Son aktiviteden ${a.threshold_days} gün sonra tetiklendi`
-          : `${a.threshold_days} gün kala alarm üretildi`;
-        threshEl.innerHTML = `<span style="padding:2px 10px;border-radius:6px;font-size:11px;font-weight:800;background:${tc2[0]};color:${tc2[1]};border:1px solid ${tc2[1]}44">${a.threshold_days} gün eşiği</span><div style="font-size:9px;color:#64748b;margin-top:3px">${desc}</div>`;
+          ? `${I18N.t('Son aktiviteden')} ${a.threshold_days} ${I18N.t('gün sonra tetiklendi')}`
+          : `${a.threshold_days} ${I18N.t('gün kala alarm üretildi')}`;
+        threshEl.innerHTML = `<span style="padding:2px 10px;border-radius:6px;font-size:11px;font-weight:800;background:${tc2[0]};color:${tc2[1]};border:1px solid ${tc2[1]}44">${a.threshold_days} ${I18N.t('gün eşiği')}</span><div style="font-size:9px;color:#64748b;margin-top:3px">${desc}</div>`;
       } else {
         threshEl.textContent = '—';
       }
@@ -1263,10 +1272,10 @@
 
     // Aksiyon geçmişi timeline
     const tlItems = [
-      { time: a.created_at,  label: 'Oluşturuldu',    color: '#475569' },
-      { time: a.seen_at,     label: 'Görüldü',         color: '#60a5fa' },
-      { time: a.actioned_at, label: 'Aksiyon Alındı',  color: '#2dd4bf' },
-      { time: a.closed_at,   label: 'Kapatıldı' + (a.close_reason ? ' — ' + a.close_reason : ''), color: '#94a3b8' },
+      { time: a.created_at,  label: I18N.t('Oluşturuldu'),    color: '#475569' },
+      { time: a.seen_at,     label: I18N.t('Görüldü'),         color: '#60a5fa' },
+      { time: a.actioned_at, label: I18N.t('Aksiyon Alındı'),  color: '#2dd4bf' },
+      { time: a.closed_at,   label: I18N.t('Kapatıldı') + (a.close_reason ? ' — ' + a.close_reason : ''), color: '#94a3b8' },
     ].filter(t => !!t.time);
     document.getElementById('modalTimelineBody').innerHTML = tlItems.length ?
       tlItems.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #0f172a">
@@ -1274,7 +1283,7 @@
         <span style="font-size:11px;color:${t.color};font-weight:600;flex:1">${t.label}</span>
         <span style="font-size:10px;color:#475569">${formatDateTime(t.time)}</span>
       </div>`).join('') :
-      '<span style="font-size:11px;color:#475569">Henüz aksiyon yok.</span>';
+      `<span style="font-size:11px;color:#475569">${I18N.t('Henüz aksiyon yok.')}</span>`;
 
     if (a.note) {
       document.getElementById('modalExistingNoteWrap').style.display = 'block';
@@ -1304,7 +1313,7 @@
       if (!r.ok) return;
       const logs = await r.json();
       if (!Array.isArray(logs) || !logs.length) return;
-      const actionLabels = { status_change:'Durum Değişti', note:'Not Eklendi', closed:'Kapatıldı', reopened:'Yeniden Açıldı', created:'Oluşturuldu' };
+      const actionLabels = { status_change:I18N.t('Durum Değişti'), note:I18N.t('Not Eklendi'), closed:I18N.t('Kapatıldı'), reopened:I18N.t('Yeniden Açıldı'), created:I18N.t('Oluşturuldu'), auto_closed:I18N.t('Otomatik Kapatıldı') };
       list.innerHTML = logs.map(l => `
         <div style="padding:6px 0;border-bottom:1px solid #0f172a">
           <div style="display:flex;justify-content:space-between;gap:8px">
@@ -1354,7 +1363,7 @@
     const closeReason= document.getElementById('closeReason').value;
     if (!newStatus && !note) { showNotice('Durum seçin veya not girin.', 'error'); return; }
     const btn = document.getElementById('btnSaveAction');
-    btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+    btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
 
     const now = new Date().toISOString();
     const updates = {};
@@ -1390,7 +1399,7 @@
     } catch(e) {
       showNotice('Kayıt hatası: ' + e.message, 'error');
     } finally {
-      btn.disabled = false; btn.textContent = 'Kaydet';
+      btn.disabled = false; btn.textContent = I18N.t('Kaydet');
     }
   }
 
@@ -1446,13 +1455,14 @@
         </div>
         <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#4ade80;font-weight:600;margin-bottom:${a.note ? '8px' : '0'}">
           <svg style="width:12px;height:12px;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-          ${field} — <strong>BUGÜN</strong>
+          ${field} — <strong>${I18N.t('BUGÜN')}</strong>
         </div>
         ${dealFinanceMap[a.deal_id] ? `<div style="font-size:10px;color:#94a3b8;background:#111827;padding:7px 10px;border-radius:8px;border:1px solid #1e293b;margin-bottom:10px">${paymentCellHtml(a.deal_id)}${paymentMismatchBadge(a)}</div>` : ''}
         ${a.note ? `<div style="font-size:10px;color:#64748b;background:#1e293b;padding:7px 10px;border-radius:8px;border:1px solid #334155;margin-bottom:10px">${fmt(a.note)}</div>` : ''}
         ${actionBtns}
       </div>`;
     }).join('');
+    I18N.translateDOM(grid);
   }
 
   async function quickAction(alarmId, status) {
@@ -1722,7 +1732,7 @@
 
     const tbody = document.getElementById('dealTbody');
     const empty = document.getElementById('dealEmpty');
-    document.getElementById('dealCount').textContent = `${data.length} deal gösteriliyor`;
+    document.getElementById('dealCount').textContent = `${data.length} ${I18N.t('deal gösteriliyor')}`;
 
     // Toplam bar — tüm filtrelenmiş set üzerinden (async, cache'li)
     loadDealTotals();
@@ -1756,6 +1766,7 @@
         <td style="font-size:11px;white-space:nowrap;color:${remainingAmount === null ? '#475569' : remainingAmount <= 0 ? '#4ade80' : '#f87171'};font-weight:700">${remainingAmount === null ? '—' : fmtMoney(remainingAmount)}</td>
       </tr>`;
     }).join('');
+    I18N.translateDOM(tbody);
   }
 
   // ── Deal Detail Modal ─────────────────────────────────────────────
@@ -1790,7 +1801,7 @@
     const dealAlarms = allAlarms.filter(a => a.deal_id === String(d.id) && !['closed','cancelled'].includes(a.status));
     const dmAl = document.getElementById('dmAlarms');
     if (!dealAlarms.length) {
-      dmAl.innerHTML = '<p style="color:#475569;font-size:12px">Bu deal için aktif alarm yok.</p>';
+      dmAl.innerHTML = `<p style="color:#475569;font-size:12px">${I18N.t('Bu deal için aktif alarm yok.')}</p>`;
     } else {
       dmAl.innerHTML = dealAlarms.map(a => {
         const tm = alarmTypeMeta(a.alarm_type);
@@ -1803,6 +1814,7 @@
           <button onclick="closeDealModal();openAlarmById('${a.id}')" style="margin-left:auto;padding:3px 10px;background:#0d9488;border:none;border-radius:6px;color:#fff;font-size:9px;font-weight:700;cursor:pointer">Güncelle</button>
         </div>`;
       }).join('');
+      I18N.translateDOM(dmAl);
     }
     document.getElementById('dealModal').classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -1833,6 +1845,7 @@
       <td>${paymentCellHtml(a.deal_id)}</td>
       <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b">${a.note ? fmt(a.note) : '—'}</td>
     </tr>`).join('');
+    I18N.translateDOM(tbody);
   }
 
   // ── View geçişi ──────────────────────────────────────────────────
@@ -1887,7 +1900,7 @@
     const data = noActivityDeals;
     const cnt = document.getElementById('cnt-noactivity');
     if (cnt) cnt.textContent = data.length;
-    document.getElementById('noActivityCount').textContent = `${data.length} kayıt gösteriliyor`;
+    document.getElementById('noActivityCount').textContent = `${data.length} ${I18N.t('kayıt gösteriliyor')}`;
 
     if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
@@ -1903,6 +1916,7 @@
         <td><span style="color:#f87171;font-size:11px;font-weight:600">Son aktivite girilmemiş</span></td>
         <td style="color:#60a5fa;font-size:11px">${fmtMoney(d.amount)}</td>
       </tr>`).join('');
+    I18N.translateDOM(tbody);
   }
 
   // ── Regional Manager Overview ────────────────────────────────────
@@ -1910,8 +1924,8 @@
 
   function loadRmOverview() {
     const region = getRegion(currentUser);
-    document.getElementById('rmRegionLabel').textContent = region + ' Bölgesi — Tüm Alarm Özeti';
-    document.getElementById('rmLastRefresh').textContent = 'Güncellendi: ' + new Date().toLocaleTimeString('tr-TR');
+    document.getElementById('rmRegionLabel').textContent = `${region} ${I18N.t('Bölgesi — Tüm Alarm Özeti')}`;
+    document.getElementById('rmLastRefresh').textContent = I18N.t('Güncellendi:') + ' ' + new Date().toLocaleTimeString(I18N.getLang() === 'en' ? 'en-US' : 'tr-TR');
     renderRmKpis();
     renderRmTeamCards();
     renderRmAlarmTable();
@@ -1937,16 +1951,16 @@
     const flight  = allAlarms.filter(a => a.payment_or_flight_ticket === 'Flight Ticket' && ['arrival_approaching','visit_approaching','arrival_missing','today_patient'].includes(a.alarm_type) && activeStatuses.has(a.status)).length;
 
     const kpis = [
-      { label:'Toplam Aktif',  value:total,      bg:'#1e293b', bc:'#334155', vc:'#f1f5f9'  },
-      { label:'Açık',          value:open,       bg:'#422006', bc:'#92400e', vc:'#fbbf24'  },
-      { label:'Bugün Gelecek', value:today,      bg:'#052e16', bc:'#166534', vc:'#4ade80'  },
-      { label:'Gecikmiş',      value:overdue,    bg:'#450a0a', bc:'#7f1d1d', vc:'#f87171'  },
-      { label:'Eksik Tarih',   value:missing,    bg:'#1e293b', bc:'#334155', vc:'#94a3b8'  },
+      { label:I18N.t('Toplam Aktif'),  value:total,      bg:'#1e293b', bc:'#334155', vc:'#f1f5f9'  },
+      { label:I18N.t('Açık'),          value:open,       bg:'#422006', bc:'#92400e', vc:'#fbbf24'  },
+      { label:I18N.t('Bugün Gelecek'), value:today,      bg:'#052e16', bc:'#166534', vc:'#4ade80'  },
+      { label:I18N.t('Gecikmiş'),      value:overdue,    bg:'#450a0a', bc:'#7f1d1d', vc:'#f87171'  },
+      { label:I18N.t('Eksik Tarih'),   value:missing,    bg:'#1e293b', bc:'#334155', vc:'#94a3b8'  },
       { label:'No-show',       value:noshow,     bg:'#1e293b', bc:'#334155', vc:'#f87171'  },
-      { label:'Payment Takip', value:payment,    bg:'#2e1065', bc:'#4c1d95', vc:'#c084fc'  },
-      { label:'FT Takip',      value:flight,     bg:'#1e3a5f', bc:'#1e40af', vc:'#60a5fa'  },
-      { label:'Eskale',        value:escalated,  bg:'#431407', bc:'#9a3412', vc:'#fb923c'  },
-      { label:'Takipte',       value:inprogress, bg:'#042f2e', bc:'#0d9488', vc:'#2dd4bf'  },
+      { label:I18N.t('Payment Takip'), value:payment,    bg:'#2e1065', bc:'#4c1d95', vc:'#c084fc'  },
+      { label:I18N.t('FT Takip'),      value:flight,     bg:'#1e3a5f', bc:'#1e40af', vc:'#60a5fa'  },
+      { label:I18N.t('Eskale'),        value:escalated,  bg:'#431407', bc:'#9a3412', vc:'#fb923c'  },
+      { label:I18N.t('Takipte'),       value:inprogress, bg:'#042f2e', bc:'#0d9488', vc:'#2dd4bf'  },
     ];
     document.getElementById('rmKpiStrip').innerHTML = kpis.map(k => `
       <div style="background:${k.bg};border:1px solid ${k.bc};border-radius:12px;padding:12px 14px">
@@ -1984,7 +1998,7 @@
     // Takım filtre dropdown'unu güncelle
     const sel = document.getElementById('rmTeamFilter');
     const cur = sel.value;
-    sel.innerHTML = '<option value="">Tüm Takımlar</option>' +
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Takımlar')}</option>` +
       Object.keys(teams).sort().map(t => `<option value="${t}">${teams[t].label || t}</option>`).join('');
     if (cur) sel.value = cur;
 
@@ -1992,7 +2006,7 @@
     const container = document.getElementById('rmTeamCards');
 
     if (!sorted.length) {
-      container.innerHTML = '<div style="color:#475569;font-size:13px;padding:24px 0">Bölgede takım bulunamadı.</div>';
+      container.innerHTML = `<div style="color:#475569;font-size:13px;padding:24px 0">${I18N.t('Bölgede takım bulunamadı.')}</div>`;
       return;
     }
 
@@ -2001,34 +2015,34 @@
       const urgBg  = s.overdue > 0 ? '#2d0a0a' : s.open > 5 ? '#2d1a00' : '#0f172a';
       const urgBc  = isSelected ? '#0d9488' : s.overdue > 0 ? '#dc2626' : s.open > 5 ? '#f59e0b' : '#1e293b';
       const badges = [
-        s.escalated > 0 ? `<span style="padding:2px 7px;border-radius:9999px;font-size:9px;font-weight:800;background:#431407;color:#fb923c">↑ ${s.escalated} ESKALE</span>` : '',
-        s.overdue > 0   ? `<span style="padding:2px 7px;border-radius:9999px;font-size:9px;font-weight:800;background:#450a0a;color:#f87171">⚠ ${s.overdue} GECİKMİŞ</span>` : '',
+        s.escalated > 0 ? `<span style="padding:2px 7px;border-radius:9999px;font-size:9px;font-weight:800;background:#431407;color:#fb923c">↑ ${s.escalated} ${I18N.t('ESKALE')}</span>` : '',
+        s.overdue > 0   ? `<span style="padding:2px 7px;border-radius:9999px;font-size:9px;font-weight:800;background:#450a0a;color:#f87171">⚠ ${s.overdue} ${I18N.t('GECİKMİŞ')}</span>` : '',
       ].filter(Boolean).join('');
       const safeTeam = teamName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
       return `<div onclick="selectRmTeam('${safeTeam}')" style="background:${urgBg};border:2px solid ${urgBc};border-radius:14px;padding:16px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='#0d9488'" onmouseout="this.style.borderColor='${urgBc}'">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:10px;flex-wrap:wrap">
           <div>
             <div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:2px">${s.label || teamName}</div>
-            <div style="font-size:10px;color:#64748b">${s.leader ? 'TL: ' + s.leader + ' · ' : ''}${s.total} aktif alarm</div>
-            <div style="font-size:9px;color:#475569;margin-top:1px">Kapatılan: ${s.closed || 0}${s.grand ? ' · Kapatma oranı %' + Math.round((s.closed || 0) / s.grand * 100) : ''}</div>
+            <div style="font-size:10px;color:#64748b">${s.leader ? 'TL: ' + s.leader + ' · ' : ''}${s.total} ${I18N.t('aktif alarm')}</div>
+            <div style="font-size:9px;color:#475569;margin-top:1px">${I18N.t('Kapatılan:')} ${s.closed || 0}${s.grand ? ' · ' + I18N.t('Kapatma oranı %') + Math.round((s.closed || 0) / s.grand * 100) : ''}</div>
           </div>
           <div style="display:flex;gap:4px;flex-wrap:wrap">${badges}</div>
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
           <div style="background:rgba(0,0,0,0.25);border-radius:8px;padding:7px;text-align:center">
-            <div style="font-size:8px;color:#fbbf24;font-weight:700;margin-bottom:2px">AÇIK</div>
+            <div style="font-size:8px;color:#fbbf24;font-weight:700;margin-bottom:2px">${I18N.t('AÇIK')}</div>
             <div style="font-size:17px;font-weight:800;color:#fbbf24">${s.open}</div>
           </div>
           <div style="background:rgba(0,0,0,0.25);border-radius:8px;padding:7px;text-align:center">
-            <div style="font-size:8px;color:#4ade80;font-weight:700;margin-bottom:2px">BUGÜN</div>
+            <div style="font-size:8px;color:#4ade80;font-weight:700;margin-bottom:2px">${I18N.t('BUGÜN')}</div>
             <div style="font-size:17px;font-weight:800;color:#4ade80">${s.today}</div>
           </div>
           <div style="background:rgba(0,0,0,0.25);border-radius:8px;padding:7px;text-align:center">
-            <div style="font-size:8px;color:#94a3b8;font-weight:700;margin-bottom:2px">EKSİK</div>
+            <div style="font-size:8px;color:#94a3b8;font-weight:700;margin-bottom:2px">${I18N.t('EKSİK')}</div>
             <div style="font-size:17px;font-weight:800;color:#94a3b8">${s.missing}</div>
           </div>
           <div style="background:rgba(0,0,0,0.25);border-radius:8px;padding:7px;text-align:center">
-            <div style="font-size:8px;color:#2dd4bf;font-weight:700;margin-bottom:2px">TAKİP</div>
+            <div style="font-size:8px;color:#2dd4bf;font-weight:700;margin-bottom:2px">${I18N.t('TAKİP')}</div>
             <div style="font-size:17px;font-weight:800;color:#2dd4bf">${s.inprogress}</div>
           </div>
         </div>
@@ -2040,7 +2054,7 @@
     rmSelectedTeam = teamName;
     renderRmTeamCards();
     const sec = document.getElementById('rmTeamAlarmSection');
-    document.getElementById('rmTeamAlarmTitle').textContent = teamName + ' — Alarmlar';
+    document.getElementById('rmTeamAlarmTitle').textContent = teamName + ' — ' + I18N.t('Alarmlar');
     sec.style.display = 'block';
     renderRmTeamAlarmTable(teamName);
     sec.scrollIntoView({ behavior:'smooth', block:'start' });
@@ -2078,6 +2092,7 @@
         </td>
       </tr>`;
     }).join('');
+    I18N.translateDOM(tbody);
   }
 
   function renderRmAlarmTable() {
@@ -2100,7 +2115,7 @@
 
     const tbody = document.getElementById('rmAlarmTbody');
     const empty = document.getElementById('rmAlarmEmpty');
-    document.getElementById('rmAlarmCount').textContent = `${data.length} alarm gösteriliyor`;
+    document.getElementById('rmAlarmCount').textContent = `${data.length} ${I18N.t('alarm gösteriliyor')}`;
     if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
 
@@ -2127,6 +2142,7 @@
         </td>
       </tr>`;
     }).join('');
+    I18N.translateDOM(tbody);
   }
 
   async function escalateAlarm(alarmId) {
@@ -2203,12 +2219,15 @@
 
       document.getElementById('sidebarName').textContent = session.fullName || session.username || '';
       document.getElementById('sidebarTeam').textContent = isRM ? 'Regional Manager' : (session.team || '');
-      document.getElementById('roleLabel').textContent   = isRM ? 'Regional Manager' : 'Team Leader';
+      document.getElementById('roleLabel').textContent   = isRM ? 'Regional Manager' : I18N.t('Team Leader');
       document.getElementById('userAvatar').textContent  = (session.fullName || 'T')[0].toUpperCase();
       document.getElementById('miniAvatar').textContent  = (session.fullName || 'T')[0].toUpperCase();
-      document.getElementById('alarmSubtitle').textContent = isRM ? `${getRegion(session)} bölgesi alarmları` : `${session.team || ''} alarmları`;
-      document.getElementById('todayDateLabel').textContent = new Date().toLocaleDateString('tr-TR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+      document.getElementById('alarmSubtitle').textContent = isRM ? `${getRegion(session)} ${I18N.t('bölgesi alarmları')}` : `${session.team || ''} ${I18N.t('alarmları')}`;
+      document.getElementById('todayDateLabel').textContent = new Date().toLocaleDateString(I18N.getLang() === 'en' ? 'en-US' : 'tr-TR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
       document.title = `CRM — ${isRM ? 'Regional Manager' : 'Team Leader'} · ${session.fullName || ''}`;
+      document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
+      const miniLangLabel = document.getElementById('miniLangLabel');
+      if (miniLangLabel) miniLangLabel.textContent = I18N.getLang().toUpperCase();
 
       // Alarmları yükle
       await loadAlarms();
