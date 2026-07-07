@@ -122,6 +122,10 @@
         <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
         <span>No-show Raporu</span>
       </button>
+      <button onclick="switchView('cancelled')" class="nav-btn" id="nav-cancelled">
+        <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        <span>İptal Edilenler</span>
+      </button>
       <button onclick="switchView('rm-overview')" class="nav-btn" id="nav-rm-overview" style="display:none">
         <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         <span>Yönetim Özeti</span>
@@ -192,6 +196,9 @@
     </button>
     <button onclick="switchView('noshow')" id="mini-nav-noshow" title="No-show" style="width:36px;height:36px;border-radius:10px;background:transparent;border:none;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s">
       <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+    </button>
+    <button onclick="switchView('cancelled')" id="mini-nav-cancelled" title="İptal Edilenler" style="width:36px;height:36px;border-radius:10px;background:transparent;border:none;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.15s">
+      <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
     </button>
     <button onclick="switchView('rm-overview')" id="mini-nav-rm-overview" title="Yönetim Özeti" style="width:36px;height:36px;border-radius:10px;background:transparent;border:none;color:#64748b;cursor:pointer;display:none;align-items:center;justify-content:center;transition:all 0.15s">
       <svg style="width:16px;height:16px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
@@ -534,6 +541,22 @@
         <tbody id="noshowTbody"></tbody>
       </table>
       <div id="noshowEmpty" style="display:none;text-align:center;padding:48px 16px;color:#475569;font-size:13px">No-show kaydı bulunamadı.</div>
+    </div>
+  </div>
+
+  <!-- ── VIEW: İPTAL EDİLENLER ── -->
+  <div id="view-cancelled" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">İptal Edilenler</h2>
+        <p style="font-size:11px;color:#64748b;margin:3px 0 0">İptal edilmiş alarm kayıtları</p>
+      </div>
+      <button onclick="exportCancelled()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Export CSV</button>
+    </div>
+    <div id="cancelledGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px"></div>
+    <div id="cancelledEmpty" style="display:none;text-align:center;padding:60px 16px">
+      <div style="font-size:36px;margin-bottom:12px">🚫</div>
+      <p style="color:#475569;font-size:14px">İptal edilmiş kayıt bulunamadı.</p>
     </div>
   </div>
 
@@ -1545,7 +1568,8 @@
       if (idx >= 0) allAlarms[idx] = { ...allAlarms[idx], ...updates };
       updateTabCounts();
       renderAlarms();
-      if (activeView === 'today') renderToday();
+      if (activeView === 'today')     renderToday();
+      if (activeView === 'cancelled') renderCancelledReport();
       closeAlarmModal();
       showNotice('Alarm güncellendi.', 'success');
     } catch(e) {
@@ -1656,6 +1680,7 @@
       updateTabCounts();
       renderToday();
       renderAlarms();
+      if (activeView === 'cancelled') renderCancelledReport();
       showNotice('Aksiyon geri alındı.', 'success');
     } catch(e) { showNotice('Hata: ' + e.message, 'error'); }
   }
@@ -1982,10 +2007,55 @@
     I18N.translateDOM(tbody);
   }
 
+  // ── İptal edilenler — Bugün Gelecekler ile aynı kart görünümü ─────
+  function renderCancelledReport() {
+    const data = allAlarms.filter(a => a.status === 'cancelled').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+    const grid  = document.getElementById('cancelledGrid');
+    const empty = document.getElementById('cancelledEmpty');
+    if (!data.length) { grid.innerHTML = ''; grid.style.display = 'none'; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    grid.style.display = 'grid';
+    grid.innerHTML = data.map(a => {
+      const sm = statusMeta(a.status);
+      const field = fieldLabel(a.reference_field);
+      const pftDisplay = a.payment_or_flight_ticket === 'Payment'
+        ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#2e1065;color:#c084fc;border:1px solid #4c1d95">Payment</span>'
+        : a.payment_or_flight_ticket === 'Flight Ticket'
+          ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#1e3a5f;color:#60a5fa;border:1px solid #1e40af">Flight Ticket</span>'
+          : '';
+      return `<div class="today-card" style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px">
+        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px">
+          <div style="min-width:0;flex:1">
+            <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(a.deal_name)}</a></div>
+            <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600">${fmt(a.deal_owner)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+            ${pftDisplay}
+            <span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color}">${sm.label}</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:8px">
+          <svg style="width:12px;height:12px;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          ${field} · ${I18N.t('İptal Tarihi')}: ${formatDateTime(a.closed_at)}
+        </div>
+        ${a.close_reason ? `<div style="font-size:10px;color:#64748b;margin-bottom:8px">${I18N.t('Sebep')}: ${fmt(a.close_reason)}</div>` : ''}
+        ${dealFinanceMap[a.deal_id] ? `<div style="font-size:10px;color:#94a3b8;background:#111827;padding:7px 10px;border-radius:8px;border:1px solid #1e293b;margin-bottom:10px">${paymentCellHtml(a.deal_id)}${paymentMismatchBadge(a)}</div>` : ''}
+        ${a.note ? `<div style="font-size:10px;color:#64748b;background:#1e293b;padding:7px 10px;border-radius:8px;border:1px solid #334155;margin-bottom:10px">${fmt(a.note)}</div>` : ''}
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button onclick="undoQuickAction('${a.id}')" style="flex:1;padding:6px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#cbd5e1;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:5px">
+            <svg style="width:11px;height:11px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L4 10m0 0l5-5m-5 5h11a4 4 0 010 8h-1"/></svg>
+            ${I18N.t('Geri Al')}
+          </button>
+        </div>
+      </div>`;
+    }).join('');
+    I18N.translateDOM(grid);
+  }
+
   // ── View geçişi ──────────────────────────────────────────────────
   function switchView(v) {
     activeView = v;
-    const views = ['alarms','today','deals','noshow','rm-overview'];
+    const views = ['alarms','today','deals','noshow','cancelled','rm-overview'];
     views.forEach(id => {
       document.getElementById('view-' + id).style.display  = id === v ? '' : 'none';
       const nb = document.getElementById('nav-' + id);
@@ -1996,6 +2066,7 @@
     if (v === 'today')       renderToday();
     if (v === 'deals' && !allDeals.length) loadDeals();
     if (v === 'noshow')      renderNoshow();
+    if (v === 'cancelled')   renderCancelledReport();
     if (v === 'rm-overview') loadRmOverview();
   }
 
@@ -2338,6 +2409,13 @@
     const headers = csvRow(['Hasta','Danışman','Takım','Bölge','Ref Alan','Planlanan Tarih','Gelemedi Tarihi','Not']);
     const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),a.region,a.reference_field,a.reference_date,a.closed_at,a.note]))];
     downloadCsv(rows, `noshow_raporu_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  function exportCancelled() {
+    const data = allAlarms.filter(a => a.status === 'cancelled');
+    const headers = csvRow(['Hasta','Danışman','Takım','Bölge','Ref Alan','Planlanan Tarih','İptal Tarihi','Sebep','Not']);
+    const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),a.region,a.reference_field,a.reference_date,a.closed_at,a.close_reason,a.note]))];
+    downloadCsv(rows, `iptal_edilenler_${new Date().toISOString().slice(0,10)}.csv`);
   }
 
   // ── Init ─────────────────────────────────────────────────────────

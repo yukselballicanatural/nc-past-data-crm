@@ -185,6 +185,11 @@
 
     // ── team-leader.html dinamik etiket/rozet/bildirimler ──────────
     'Geri Al': 'Undo',
+    'İptal Edilenler': 'Cancelled',
+    'İptal edilmiş alarm kayıtları': 'Cancelled alarm records',
+    'İptal edilmiş kayıt bulunamadı.': 'No cancelled records found.',
+    'İptal Tarihi': 'Cancellation Date',
+    'Sebep': 'Reason',
     'Güncelle': 'Update',
     'Eksik Tarih:': 'Missing Date:',
     'Vizit Yaklaşıyor': 'Visit Approaching',
