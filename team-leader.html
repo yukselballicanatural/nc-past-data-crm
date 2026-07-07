@@ -18,6 +18,8 @@
     .nav-btn:not(.active):hover { background:#1f2937; color:#e2e8f0; }
     .alarm-tbl { width:100%; border-collapse:collapse; }
     .alarm-tbl th { position:sticky; top:0; background:#0f172a; z-index:2; padding:9px 12px; font-size:9px; text-align:left; border-bottom:2px solid #1e293b; white-space:nowrap; color:#475569; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; }
+    .sarrow { margin-left:3px; color:#475569; }
+    .sarrow.active { color:#2dd4bf; }
     .alarm-tbl td { padding:9px 12px; font-size:11.5px; border-bottom:1px solid #0f172a; vertical-align:middle; }
     .alarm-tbl tbody tr { cursor:pointer; transition:background 0.1s; }
     .alarm-tbl tbody tr:hover td { background:#0d1a2b; }
@@ -368,6 +370,11 @@
           <option value="">Tüm Stageler</option>
         </select>
         <input id="dealOwnerFilter" class="filter-inp" placeholder="Danışman filtrele..." oninput="debounceDealSearch()" style="width:160px">
+        <select id="dealPageSizeSel" class="filter-sel" onchange="dealChangePageSize()" style="width:110px">
+          <option value="100">100 / sayfa</option>
+          <option value="500">500 / sayfa</option>
+          <option value="1000">1000 / sayfa</option>
+        </select>
         <button onclick="loadDeals(true)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">↻ Yenile</button>
       </div>
     </div>
@@ -381,13 +388,13 @@
         <thead>
           <tr>
             <th style="width:34px">#</th>
-            <th>Hasta Adı</th>
-            <th>Stage</th>
-            <th>Danışman</th>
-            <th>Arrival</th>
+            <th onclick="dealSortBy('deal_name')" style="cursor:pointer;user-select:none">Hasta Adı<span id="dsort-deal_name" class="sarrow"></span></th>
+            <th onclick="dealSortBy('stage')" style="cursor:pointer;user-select:none">Stage<span id="dsort-stage" class="sarrow"></span></th>
+            <th onclick="dealSortBy('deal_owner')" style="cursor:pointer;user-select:none">Danışman<span id="dsort-deal_owner" class="sarrow"></span></th>
+            <th onclick="dealSortBy('arrival_date')" style="cursor:pointer;user-select:none">Arrival<span id="dsort-arrival_date" class="sarrow"></span></th>
             <th>P/F</th>
             <th>Alarm</th>
-            <th>Tutar</th>
+            <th onclick="dealSortBy('amount')" style="cursor:pointer;user-select:none">Tutar<span id="dsort-amount" class="sarrow"></span></th>
           </tr>
         </thead>
         <tbody id="dealTbody"></tbody>
@@ -1382,10 +1389,12 @@
   }
 
   // ── Deal listesi (server-side search + sayfalama) ─────────────────
-  const DEAL_PAGE_SIZE = 100;
+  let DEAL_PAGE_SIZE = 100;
   let dealCurrentPage = 0;
   let dealTotalCount  = 0;
   let dealSearchTimer = null;
+  let dealSortCol = 'id';
+  let dealSortDir = 'asc';
 
   function debounceDealSearch() {
     clearTimeout(dealSearchTimer);
@@ -1396,6 +1405,36 @@
     const maxPage = Math.ceil(dealTotalCount / DEAL_PAGE_SIZE) - 1;
     dealCurrentPage = Math.max(0, Math.min(maxPage, dealCurrentPage + dir));
     loadDeals(false);
+  }
+
+  function dealChangePageSize() {
+    DEAL_PAGE_SIZE = parseInt(document.getElementById('dealPageSizeSel').value) || 100;
+    loadDeals(true);
+  }
+
+  // Sunucu taraflı sıralama — sadece görünen sayfa değil, tüm filtrelenmiş set sıralanır
+  function dealSortBy(col) {
+    if (dealSortCol === col) {
+      dealSortDir = dealSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      dealSortCol = col;
+      dealSortDir = 'asc';
+    }
+    loadDeals(true);
+  }
+
+  function updateDealSortArrows() {
+    ['deal_name','stage','deal_owner','arrival_date','amount'].forEach(col => {
+      const el = document.getElementById('dsort-' + col);
+      if (!el) return;
+      if (col === dealSortCol) {
+        el.textContent = dealSortDir === 'asc' ? ' ▲' : ' ▼';
+        el.classList.add('active');
+      } else {
+        el.textContent = '';
+        el.classList.remove('active');
+      }
+    });
   }
 
   async function loadDeals(resetPage = false) {
@@ -1417,7 +1456,10 @@
       const owner  = (document.getElementById('dealOwnerFilter')?.value || '').trim();
       const offset = dealCurrentPage * DEAL_PAGE_SIZE;
 
-      let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,raw&order=id.asc&limit=${DEAL_PAGE_SIZE}&offset=${offset}`;
+      // Postgres varsayılanı DESC'te null'ları öne koyar — nullslast ile boş değerleri sona at
+      const nullsMod = dealSortDir === 'desc' ? '.nullslast' : '';
+      const orderParam = `${dealSortCol}.${dealSortDir}${nullsMod}${dealSortCol !== 'id' ? ',id.asc' : ''}`;
+      let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date,payment_or_flight_ticket,raw&order=${orderParam}&limit=${DEAL_PAGE_SIZE}&offset=${offset}`;
       // Rol bazlı kapsam: TL kendi takımı (tüm yazım varyantları), RM kendi bölgesindeki tüm takımlar
       if (!isRM && currentUser.team) {
         url += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
@@ -1459,6 +1501,7 @@
         populateDealStageFilterFromServer();
       }
 
+      updateDealSortArrows();
       renderDeals();
     } catch(e) {
       showNotice('Deallar yüklenemedi: ' + e.message, 'error');
@@ -1579,8 +1622,8 @@
 
     tbody.innerHTML = data.map((d, i) => {
       const raw  = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw || {});
-      const arrival = raw.Arrival_Date || '—';
-      const pft  = raw.Payment_Or_Flight_Ticket || '—';
+      const arrival = d.arrival_date || raw.Arrival_Date || '—';
+      const pft  = d.payment_or_flight_ticket || raw.Payment_Or_Flight_Ticket || '—';
       const amount = d.amount ?? raw.Amount ?? raw.Grand_Total_2 ?? null;
       const stageColor = d.stage && d.stage.toLowerCase().includes('cancel') ? '#f87171' : d.stage && d.stage.toLowerCase().includes('won') ? '#4ade80' : '#94a3b8';
       const dealAlarms = allAlarms.filter(a => a.deal_id === String(d.id) && !['closed','cancelled'].includes(a.status));
