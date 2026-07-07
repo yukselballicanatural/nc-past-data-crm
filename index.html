@@ -567,7 +567,7 @@
 
       try {
         if (username.toLowerCase() === 'admin' && password === 'admin123') {
-          localStorage.setItem('nc_current_user', JSON.stringify({
+          sessionStorage.setItem('nc_current_user', JSON.stringify({
             fullName: 'System Admin', username: 'admin', role: 'admin', team: 'All Teams'
           }));
           showToast('System Admin');
@@ -614,7 +614,7 @@
           zoho_id: user['Id'] || ''
         };
 
-        localStorage.setItem('nc_current_user', JSON.stringify(sessionUser));
+        sessionStorage.setItem('nc_current_user', JSON.stringify(sessionUser));
         showToast(sessionUser.fullName);
 
         try {
@@ -639,15 +639,16 @@
       }
     }
 
-    // Already logged in?
+    // Aynı sekmede zaten giriş yapılmış mı? (sessionStorage sekmeye özel —
+    // yeni sekme/gizli sekmede boş gelir, her zaman login ister)
     try {
-      const existing = JSON.parse(localStorage.getItem('nc_current_user') || 'null');
+      const existing = JSON.parse(sessionStorage.getItem('nc_current_user') || 'null');
       if (existing && existing.role) {
         if (existing.role === 'agent')                                        window.location.href = 'agent.html';
         else if (existing.role === 'team-leader' || existing.role === 'regional-manager') window.location.href = 'team-leader.html';
         else if (existing.role === 'admin' || existing.role === 'super-admin') window.location.href = 'admin.html';
       }
-    } catch(e) { localStorage.removeItem('nc_current_user'); }
+    } catch(e) { sessionStorage.removeItem('nc_current_user'); }
   </script>
 </body>
 </html>
