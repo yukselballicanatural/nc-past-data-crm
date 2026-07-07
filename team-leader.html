@@ -638,6 +638,7 @@
 <!-- Bildirim -->
 <div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);white-space:nowrap"></div>
 
+<script src="team-map.js"></script>
 <script src="alarm-engine.js"></script>
 <script>
   let SUPABASE_URL = '';
@@ -1001,11 +1002,17 @@
         showNotice('Uyarı: Kullanıcı kayıtında Takim Adi alanı boş. Tüm alarmlar gösterilecek.', 'error');
       }
 
+      // TL: takımın tüm yazım varyantlarını kapsa (eski alarmlar alias adla kayıtlı olabilir)
+      let teamParam = null;
+      if (!isRM && teamVal) {
+        teamParam = TeamMap.inFilter(TeamMap.aliasesFor(teamVal));
+      }
+
       let all = [], offset = 0;
       while (true) {
         let url = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc&limit=500&offset=${offset}`;
-        if (!isRM && teamVal) {
-          url += `&team=eq.${encodeURIComponent(teamVal)}`;
+        if (teamParam) {
+          url += `&team=${teamParam}`;
         } else if (isRM) {
           const region = getRegion(currentUser);
           url += `&region=eq.${encodeURIComponent(region)}`;
@@ -1027,7 +1034,7 @@
         if (isRM) {
           subtitle.textContent = `${getRegion(currentUser)} bölgesi alarmları — ${all.length} kayıt`;
         } else {
-          subtitle.textContent = `${teamVal || '?'} takımı alarmları — ${all.length} kayıt`;
+          subtitle.textContent = `${teamVal.trim() || '?'} takımı alarmları — ${all.length} kayıt`;
         }
       }
 
@@ -1052,9 +1059,9 @@
     return AlarmEngine.getRegion(user.team || '');
   }
 
-  // ── Alarm engine çalıştır ────────────────────────────────────────
+  // ── Alarm engine çalıştır — global: TÜM takımlar için alarm üretir ──
   async function runEngine(manual = false) {
-    const cacheKey = 'nc_engine_' + (currentUser.team || 'all');
+    const cacheKey = 'nc_engine_global';
     const lastRun  = Number(localStorage.getItem(cacheKey) || 0);
     const elapsed  = Date.now() - lastRun;
     if (!manual && elapsed < 60 * 60 * 1000) return; // Otomatik: 1 saatte bir
@@ -1064,10 +1071,7 @@
     if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
 
     try {
-      const isRM   = currentUser.role === 'regional-manager';
-      const filter = !isRM ? (currentUser.team || '') : '';
       const result = await AlarmEngine.run(SUPABASE_URL, SUPABASE_KEY, {
-        teamFilter: filter,
         onProgress: (msg) => { if (statusEl) statusEl.textContent = msg; },
       });
       localStorage.setItem(cacheKey, String(Date.now()));
@@ -1310,12 +1314,19 @@
         Authorization: 'Bearer ' + SUPABASE_KEY,
         Prefer: 'count=exact',
       };
+      const isRM   = currentUser.role === 'regional-manager';
       const search = (document.getElementById('dealSearch')?.value || '').trim();
       const stage  = document.getElementById('dealStageFilter')?.value || '';
       const owner  = (document.getElementById('dealOwnerFilter')?.value || '').trim();
       const offset = dealCurrentPage * DEAL_PAGE_SIZE;
 
       let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,raw&order=id.asc&limit=${DEAL_PAGE_SIZE}&offset=${offset}`;
+      // Rol bazlı kapsam: TL kendi takımı (tüm yazım varyantları), RM kendi bölgesindeki tüm takımlar
+      if (!isRM && currentUser.team) {
+        url += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+      } else if (isRM) {
+        url += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
+      }
       if (stage)  url += `&stage=eq.${encodeURIComponent(stage)}`;
       if (search) url += `&deal_name=ilike.*${encodeURIComponent(search)}*`;
       if (owner)  url += `&deal_owner=ilike.*${encodeURIComponent(owner)}*`;
@@ -1366,6 +1377,8 @@
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
       const isRM = currentUser.role === 'regional-manager';
       let url = `${SUPABASE_URL}/rest/v1/deals?select=stage&limit=1000`;
+      if (!isRM && currentUser.team) url += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+      else if (isRM) url += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
       const r = await fetch(url, { headers: H });
       if (!r.ok) return;
       const rows = await r.json();
@@ -1616,10 +1629,18 @@
 
   function renderRmTeamCards() {
     const activeStatuses = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+    const region = getRegion(currentUser);
+
+    // Bölgedeki TÜM TL takımlarıyla başla — alarmı olmayan takımlar da görünsün
     const teams = {};
+    TeamMap.teamsForRegion(region).forEach(t => {
+      teams[t.canonical] = { open:0, overdue:0, today:0, missing:0, escalated:0, inprogress:0, total:0, leader:t.leader, label:t.label };
+    });
+
     allAlarms.forEach(a => {
-      const t = a.team || '—';
-      if (!teams[t]) teams[t] = { open:0, overdue:0, today:0, missing:0, escalated:0, inprogress:0, total:0 };
+      // Eski alarmlar alias adla kayıtlı olabilir — kanonik ada çevir
+      const t = TeamMap.normalize(a.team) || a.team || '—';
+      if (!teams[t]) teams[t] = { open:0, overdue:0, today:0, missing:0, escalated:0, inprogress:0, total:0, leader:'', label:t };
       if (activeStatuses.has(a.status)) teams[t].total++;
       if (['open','seen'].includes(a.status)) teams[t].open++;
       if (isOverdue(a)) teams[t].overdue++;
@@ -1633,14 +1654,14 @@
     const sel = document.getElementById('rmTeamFilter');
     const cur = sel.value;
     sel.innerHTML = '<option value="">Tüm Takımlar</option>' +
-      Object.keys(teams).sort().map(t => `<option value="${t}">${t}</option>`).join('');
+      Object.keys(teams).sort().map(t => `<option value="${t}">${teams[t].label || t}</option>`).join('');
     if (cur) sel.value = cur;
 
-    const sorted = Object.entries(teams).sort((a,b) => b[1].overdue - a[1].overdue || b[1].open - a[1].open);
+    const sorted = Object.entries(teams).sort((a,b) => b[1].overdue - a[1].overdue || b[1].open - a[1].open || b[1].total - a[1].total);
     const container = document.getElementById('rmTeamCards');
 
     if (!sorted.length) {
-      container.innerHTML = '<div style="color:#475569;font-size:13px;padding:24px 0">Bölgede alarm bulunamadı.</div>';
+      container.innerHTML = '<div style="color:#475569;font-size:13px;padding:24px 0">Bölgede takım bulunamadı.</div>';
       return;
     }
 
@@ -1656,8 +1677,8 @@
       return `<div onclick="selectRmTeam('${safeTeam}')" style="background:${urgBg};border:2px solid ${urgBc};border-radius:14px;padding:16px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='#0d9488'" onmouseout="this.style.borderColor='${urgBc}'">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:10px;flex-wrap:wrap">
           <div>
-            <div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:2px">${teamName}</div>
-            <div style="font-size:10px;color:#64748b">${s.total} aktif alarm</div>
+            <div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:2px">${s.label || teamName}</div>
+            <div style="font-size:10px;color:#64748b">${s.leader ? 'TL: ' + s.leader + ' · ' : ''}${s.total} aktif alarm</div>
           </div>
           <div style="display:flex;gap:4px;flex-wrap:wrap">${badges}</div>
         </div>
@@ -1695,7 +1716,8 @@
 
   function renderRmTeamAlarmTable(teamName) {
     const activeStatuses = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
-    const data = allAlarms.filter(a => a.team === teamName && (activeStatuses.has(a.status) || isOverdue(a)));
+    // Alias adla kayıtlı eski alarmları da kapsa
+    const data = allAlarms.filter(a => (TeamMap.normalize(a.team) || a.team) === teamName && (activeStatuses.has(a.status) || isOverdue(a)));
     const tbody = document.getElementById('rmTeamAlarmTbody');
     const empty = document.getElementById('rmTeamAlarmEmpty');
     if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
@@ -1733,7 +1755,7 @@
     const activeStatuses = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
 
     const data = allAlarms.filter(a => {
-      if (teamFilt && a.team !== teamFilt) return false;
+      if (teamFilt && (TeamMap.normalize(a.team) || a.team) !== teamFilt) return false;
       if (statusFilt === 'overdue') { if (!isOverdue(a)) return false; }
       else if (statusFilt) { if (a.status !== statusFilt) return false; }
       else if (!activeStatuses.has(a.status) && !isOverdue(a)) return false;

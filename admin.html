@@ -6,6 +6,7 @@
   <title>Natural Clinic CRM - Admin Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="team-map.js"></script>
   <script src="alarm-engine.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
@@ -928,11 +929,16 @@
         document.getElementById(prefix + 'Open').textContent    = ra.filter(a => active.has(a.status) && a.status !== 'arrived' && a.status !== 'examined').length;
         document.getElementById(prefix + 'Overdue').textContent  = ra.filter(a => _amIsOverdue(a)).length;
         document.getElementById(prefix + 'Noshow').textContent   = ra.filter(a => a.status === 'no_show').length;
-        // Team breakdown
+        // Team breakdown — bölgedeki TÜM TL takımlarıyla başla (0 alarmlılar da görünsün)
         const teams = {};
+        if (window.TeamMap) {
+          TeamMap.teamsForRegion(region).forEach(t => {
+            teams[t.canonical] = { open:0, overdue:0, label:t.label, leader:t.leader };
+          });
+        }
         ra.filter(a => active.has(a.status)).forEach(a => {
-          const t = a.team || '—';
-          if (!teams[t]) teams[t] = { open:0, overdue:0 };
+          const t = (window.TeamMap && TeamMap.normalize(a.team)) || a.team || '—';
+          if (!teams[t]) teams[t] = { open:0, overdue:0, label:t, leader:'' };
           if (a.status === 'open') teams[t].open++;
           if (_amIsOverdue(a)) teams[t].overdue++;
         });
@@ -940,9 +946,12 @@
           .sort((a,b) => (b[1].open + b[1].overdue) - (a[1].open + a[1].overdue))
           .map(([team, v]) => `
             <div class="flex items-center justify-between py-1.5 border-b border-gray-800/50 last:border-0">
-              <span class="text-xs text-slate-300 truncate max-w-[140px]">${team}</span>
+              <div class="min-w-0">
+                <span class="text-xs text-slate-300 truncate block max-w-[160px]">${v.label || team}</span>
+                ${v.leader ? `<span class="text-[9px] text-slate-600">${v.leader}</span>` : ''}
+              </div>
               <div class="flex gap-2 text-[10px] font-bold shrink-0">
-                <span class="text-amber-400">${v.open} açık</span>
+                <span class="${v.open ? 'text-amber-400' : 'text-slate-600'}">${v.open} açık</span>
                 ${v.overdue ? `<span class="text-red-400">${v.overdue} gec.</span>` : ''}
               </div>
             </div>`).join('') || '<p class="text-xs text-slate-600">Aktif alarm yok.</p>';

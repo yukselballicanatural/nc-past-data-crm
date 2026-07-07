@@ -36,9 +36,18 @@ window.AlarmEngine = (function () {
     return Math.floor(Math.floor(Date.now() / 86400000) / 3);
   }
 
-  // Takım adından bölge belirle
+  // Takım adından bölge belirle — TeamMap varsa onu kullan
   function getRegion(team) {
+    if (typeof window !== 'undefined' && window.TeamMap) return window.TeamMap.regionForTeam(team);
     return (team || '').toLowerCase().includes('morocco') ? 'Morocco' : 'Istanbul';
+  }
+
+  // deals.team varyantını kanonik takım adına çevir (TL panelindeki filtrelerle eşleşsin)
+  function canonicalTeam(team) {
+    if (typeof window !== 'undefined' && window.TeamMap) {
+      return window.TeamMap.normalize(team) || team || '';
+    }
+    return team || '';
   }
 
   // deal.raw alanını parse et
@@ -65,16 +74,17 @@ window.AlarmEngine = (function () {
     const v2 = raw.Visit_Date_2 || raw.visit_date_2 || null;
     const v3 = raw.Visit_Date_3 || raw.visit_date_3 || null;
 
+    const team   = canonicalTeam(deal.team);
     const region = getRegion(deal.team);
     const base = {
       deal_id:                  String(deal.id),
       deal_name:                deal.deal_name  || '',
       deal_owner:               deal.deal_owner || '',
-      team:                     deal.team       || '',
+      team,
       region,
       payment_or_flight_ticket: pft,
       status:                   'open',
-      assigned_to:              deal.team       || '',
+      assigned_to:              team,
     };
 
     const alarms    = [];
@@ -162,17 +172,16 @@ window.AlarmEngine = (function () {
     return alarms;
   }
 
-  // Supabase'den aktif dealleri çek
-  async function fetchActiveDeals(BASE, KEY, teamFilter) {
+  // Supabase'den TÜM aktif dealleri çek — takım filtresi YOK, motor global çalışır
+  async function fetchActiveDeals(BASE, KEY) {
     const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
     // encodeURIComponent ile tüm filtre değerini encode et — Supabase JS client da böyle yapar
     const stageParam = encodeURIComponent('in.(' + ACTIVE_STAGES.map(s => '"' + s + '"').join(',') + ')');
     let all = [], offset = 0;
     while (true) {
-      let url = `${BASE}/rest/v1/deals?stage=${stageParam}` +
+      const url = `${BASE}/rest/v1/deals?stage=${stageParam}` +
         `&select=id,deal_name,deal_owner,stage,team,raw` +
         `&limit=500&offset=${offset}`;
-      if (teamFilter) url += `&team=eq.${encodeURIComponent(teamFilter)}`;
       const r = await fetch(url, { headers: H });
       if (!r.ok) {
         let detail = '';
@@ -219,36 +228,38 @@ window.AlarmEngine = (function () {
     }
     if (!filledIds.length) return 0;
 
-    const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
-    // Bu deallar için açık arrival_missing alarmları var mı?
-    const idList = filledIds.slice(0, 200).join(','); // PostgREST IN limit
-    const r = await fetch(
-      `${BASE}/rest/v1/alarms?alarm_type=eq.arrival_missing&status=in.(open,seen,in_progress)&deal_id=in.(${idList})&select=id`,
-      { headers: H }
-    );
-    if (!r.ok) return 0;
-    const toClose = await r.json();
-    if (!toClose.length) return 0;
-
+    const H   = { apikey: KEY, Authorization: 'Bearer ' + KEY };
     const now = new Date().toISOString();
     const PH  = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
     let closed = 0;
-    // Batch patch: tüm bu ID'leri tek seferde kapat
-    const idListAlarms = toClose.map(a => a.id).join(',');
-    const pr = await fetch(
-      `${BASE}/rest/v1/alarms?id=in.(${idListAlarms})`,
-      { method: 'PATCH', headers: PH,
-        body: JSON.stringify({ status: 'closed', close_reason: 'date_added', closed_at: now, closed_by: 'system' }) }
-    );
-    if (pr.ok) closed = toClose.length;
+
+    // URL uzunluğu sınırı nedeniyle 200'lük gruplar halinde işle
+    for (let i = 0; i < filledIds.length; i += 200) {
+      const idList = filledIds.slice(i, i + 200).join(',');
+      const r = await fetch(
+        `${BASE}/rest/v1/alarms?alarm_type=eq.arrival_missing&status=in.(open,seen,in_progress)&deal_id=in.(${idList})&select=id`,
+        { headers: H }
+      );
+      if (!r.ok) continue;
+      const toClose = await r.json();
+      if (!toClose.length) continue;
+
+      const idListAlarms = toClose.map(a => a.id).join(',');
+      const pr = await fetch(
+        `${BASE}/rest/v1/alarms?id=in.(${idListAlarms})`,
+        { method: 'PATCH', headers: PH,
+          body: JSON.stringify({ status: 'closed', close_reason: 'date_added', closed_at: now, closed_by: 'system' }) }
+      );
+      if (pr.ok) closed += toClose.length;
+    }
     return closed;
   }
 
-  // ── Ana çalıştırma ───────────────────────────────────────────────
+  // ── Ana çalıştırma — her zaman TÜM takımlar için üretir ─────────
   async function run(BASE, KEY, opts = {}) {
-    const { teamFilter, onProgress } = opts;
+    const { onProgress } = opts;
     if (onProgress) onProgress('Aktif deallar alınıyor...');
-    const deals = await fetchActiveDeals(BASE, KEY, teamFilter);
+    const deals = await fetchActiveDeals(BASE, KEY);
     if (onProgress) onProgress(`${deals.length} deal için alarm hesaplanıyor...`);
     const newAlarms = [];
     for (const deal of deals) newAlarms.push(...computeAlarms(deal));
