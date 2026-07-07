@@ -610,7 +610,8 @@
           Tüm Sistemi Güncelle
         </button>
         <button onclick="exportAdminAlarms()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Export CSV</button>
-        <button onclick="exportAlarmPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Performans CSV</button>
+        <button onclick="exportAlarmPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">TL Performans CSV</button>
+        <button onclick="exportRegionPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Bölge Performans CSV</button>
       </div>
     </div>
 
@@ -639,7 +640,7 @@
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Bugün Gelecek</div><div class="text-xl font-bold text-green-400" id="mk2">0</div></div>
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Gecikmiş</div><div class="text-xl font-bold text-red-400" id="mk3">0</div></div>
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Eksik Tarih</div><div class="text-xl font-bold text-slate-400" id="mk4">0</div></div>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">No-show</div><div class="text-xl font-bold text-rose-400" id="mk5">0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Bugün Gelemeyen</div><div class="text-xl font-bold text-rose-400" id="mk5">0</div></div>
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Payment Takip</div><div class="text-xl font-bold text-purple-400" id="mk6">0</div></div>
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Yaklaşan</div><div class="text-xl font-bold text-orange-400" id="mk7">0</div></div>
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">FT Takip</div><div class="text-xl font-bold text-blue-400" id="mk8">0</div></div>
@@ -684,6 +685,12 @@
             <option value="">Tüm Bölgeler</option>
             <option value="Istanbul">Istanbul</option>
             <option value="Morocco">Morocco</option>
+          </select>
+          <select id="amFilterTeam" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;max-width:160px">
+            <option value="">Tüm Team Leader'lar</option>
+          </select>
+          <select id="amFilterOwner" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;max-width:150px">
+            <option value="">Tüm Deal Owner'lar</option>
           </select>
           <select id="amFilterType" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
             <option value="">Tüm Tipler</option>
@@ -933,6 +940,7 @@
         }
         adminAllAlarms = all;
         updateAdminAlarmKPIs();
+        populateAdminAlarmFilters();
         renderAdminAlarmTable();
         renderRegionPanels();
         document.getElementById('adminEngineStatus').textContent = `${all.length} alarm yüklendi`;
@@ -951,7 +959,8 @@
       document.getElementById('mk2').textContent = a.filter(x => x.alarm_type === 'today_patient' && active.has(x.status)).length;
       document.getElementById('mk3').textContent = a.filter(x => _amIsOverdue(x)).length;
       document.getElementById('mk4').textContent = a.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
-      document.getElementById('mk5').textContent = a.filter(x => x.status === 'no_show').length;
+      const todayStr = new Date().toISOString().slice(0,10);
+      document.getElementById('mk5').textContent = a.filter(x => x.status === 'no_show' && x.closed_at && x.closed_at.slice(0,10) === todayStr).length;
       document.getElementById('mk6').textContent = a.filter(x => x.alarm_type === 'payment_tracking' && active.has(x.status)).length;
       document.getElementById('mk7').textContent = a.filter(x => ['arrival_approaching','visit_approaching'].includes(x.alarm_type) && active.has(x.status)).length;
       document.getElementById('mk8').textContent = a.filter(x => x.payment_or_flight_ticket === 'Flight Ticket' && ['arrival_approaching','visit_approaching','arrival_missing','today_patient'].includes(x.alarm_type) && active.has(x.status)).length;
@@ -997,6 +1006,8 @@
     // Ortak filtre — tablo render ve export aynı mantığı kullanır
     function filterAdminAlarms() {
       const region = document.getElementById('amFilterRegion').value;
+      const team   = document.getElementById('amFilterTeam')?.value || '';
+      const owner  = document.getElementById('amFilterOwner')?.value || '';
       const type   = document.getElementById('amFilterType').value;
       const status = document.getElementById('amFilterStatus').value;
       const pft    = document.getElementById('amFilterPft')?.value || '';
@@ -1008,6 +1019,8 @@
 
       return adminAllAlarms.filter(a => {
         if (region && a.region !== region) return false;
+        if (team   && (TeamMap.normalize(a.team) || a.team) !== team) return false;
+        if (owner  && a.deal_owner !== owner) return false;
         if (type   && a.alarm_type !== type) return false;
         if (status === 'active'  && !active.has(a.status)) return false;
         if (status === 'open'    && a.status !== 'open') return false;
@@ -1024,6 +1037,21 @@
         }
         return true;
       });
+    }
+
+    // Team Leader / Deal Owner dropdown'larını yüklenen alarmlardan doldur
+    function populateAdminAlarmFilters() {
+      const teams  = [...new Set(adminAllAlarms.map(a => (window.TeamMap && TeamMap.normalize(a.team)) || a.team).filter(Boolean))].sort();
+      const owners = [...new Set(adminAllAlarms.map(a => a.deal_owner).filter(Boolean))].sort();
+      const fill = (id, arr, placeholder) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const cur = sel.value;
+        sel.innerHTML = `<option value="">${placeholder}</option>` + arr.map(v => `<option value="${v}">${v}</option>`).join('');
+        if (cur) sel.value = cur;
+      };
+      fill('amFilterTeam', teams, "Tüm Team Leader'lar");
+      fill('amFilterOwner', owners, "Tüm Deal Owner'lar");
     }
 
     function renderAdminAlarmTable() {
@@ -1153,6 +1181,28 @@
         .sort((a,b) => b[1].total - a[1].total)
         .map(([team, v]) => _csvRow([team, v.leader, v.region, v.total, v.open, v.overdue, v.closed, v.noshow, v.total ? Math.round((v.closed + v.noshow) / v.total * 100) : 0]))];
       _csvDownload(rows, `alarm_performans_${new Date().toISOString().slice(0,10)}.csv`);
+    }
+
+    // Region bazlı alarm performans raporu (PDF Bölüm 14 — TL'den ayrı, bölge özeti)
+    function exportRegionPerformance() {
+      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+      const regions = {};
+      adminAllAlarms.forEach(a => {
+        const r = a.region || 'Bilinmiyor';
+        if (!regions[r]) regions[r] = { total:0, open:0, overdue:0, closed:0, noshow:0, missing:0, today:0 };
+        regions[r].total++;
+        if (active.has(a.status)) regions[r].open++;
+        if (_amIsOverdue(a)) regions[r].overdue++;
+        if (['closed','cancelled'].includes(a.status)) regions[r].closed++;
+        if (a.status === 'no_show') regions[r].noshow++;
+        if (a.alarm_type === 'arrival_missing' && active.has(a.status)) regions[r].missing++;
+        if (a.alarm_type === 'today_patient' && active.has(a.status)) regions[r].today++;
+      });
+      const headers = _csvRow(['Bölge','Toplam Alarm','Aktif','Gecikmiş','Bugün Gelecek','Eksik Tarih','Kapatılan','No-show','Kapatma Oranı %']);
+      const rows = [headers, ...Object.entries(regions)
+        .sort((a,b) => b[1].total - a[1].total)
+        .map(([region, v]) => _csvRow([region, v.total, v.open, v.overdue, v.today, v.missing, v.closed, v.noshow, v.total ? Math.round((v.closed + v.noshow) / v.total * 100) : 0]))];
+      _csvDownload(rows, `region_performans_${new Date().toISOString().slice(0,10)}.csv`);
     }
 
     // ── Parametre Yönetimi (PDF 10.3 / 17) — app_settings tablosu ──

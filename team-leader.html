@@ -513,6 +513,8 @@
             <th>#</th>
             <th>Hasta</th>
             <th>Danışman</th>
+            <th>Takım</th>
+            <th>Bölge</th>
             <th>Ref Alan</th>
             <th>Planlanan Tarih</th>
             <th>Gelemedi Tarihi</th>
@@ -1064,6 +1066,7 @@
         }
       }
 
+      notifyNewAlarms(all, isRM ? ('region_' + getRegion(currentUser)) : ('team_' + teamVal));
       updateTabCounts();
       renderAlarms();
       renderConsultantStrip();
@@ -1074,6 +1077,23 @@
       document.getElementById('alarmTableWrap').style.display = 'block';
       showNotice('Alarmlar yüklenemedi: ' + e.message, 'error');
     }
+  }
+
+  // Yeni alarm bildirimi — son ziyaretten sonra oluşan alarm sayısını toast ile göster (PDF Bölüm 12)
+  function notifyNewAlarms(alarms, scopeKey) {
+    const key = 'nc_last_alarm_seen_' + scopeKey;
+    const lastSeen = localStorage.getItem(key);
+    let maxCreated = lastSeen || '';
+    let newCount = 0;
+    for (const a of alarms) {
+      if (!a.created_at) continue;
+      if (a.created_at > maxCreated) maxCreated = a.created_at;
+      if (lastSeen && a.created_at > lastSeen) newCount++;
+    }
+    if (lastSeen && newCount > 0) {
+      showNotice(`${newCount} yeni alarm oluştu`, 'success');
+    }
+    if (maxCreated) localStorage.setItem(key, maxCreated);
   }
 
   // ── Region belirle (RM için) ─────────────────────────────────────
@@ -1646,6 +1666,8 @@
       <td style="color:#475569;font-size:10px">${i+1}</td>
       <td style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap">${fmt(a.deal_name)}</td>
       <td style="color:#94a3b8;font-size:11px;white-space:nowrap">${fmt(a.deal_owner)}</td>
+      <td style="color:#94a3b8;font-size:10px;white-space:nowrap">${fmt((typeof TeamMap!=='undefined' && TeamMap.normalize(a.team)) || a.team)}</td>
+      <td style="color:#64748b;font-size:10px;white-space:nowrap">${fmt(a.region)}</td>
       <td style="color:#94a3b8;font-size:11px">${fieldLabel(a.reference_field)}</td>
       <td style="color:#f87171;font-size:11px;white-space:nowrap">${formatDate(a.reference_date)}</td>
       <td style="color:#64748b;font-size:11px;white-space:nowrap">${formatDateTime(a.closed_at)}</td>
@@ -2003,8 +2025,8 @@
 
   function exportNoshow() {
     const data = allAlarms.filter(a => a.status === 'no_show');
-    const headers = csvRow(['Hasta','Danışman','Ref Alan','Planlanan Tarih','Gelemedi Tarihi','Not']);
-    const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,a.reference_field,a.reference_date,a.closed_at,a.note]))];
+    const headers = csvRow(['Hasta','Danışman','Takım','Bölge','Ref Alan','Planlanan Tarih','Gelemedi Tarihi','Not']);
+    const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),a.region,a.reference_field,a.reference_date,a.closed_at,a.note]))];
     downloadCsv(rows, `noshow_raporu_${new Date().toISOString().slice(0,10)}.csv`);
   }
 
