@@ -236,7 +236,7 @@
       <select id="alarmConsultantFilter" class="filter-sel" onchange="renderAlarms()" style="width:170px">
         <option value="">Danışman: Tümü</option>
       </select>
-      <select id="alarmSortSel" class="filter-sel" onchange="renderAlarms()" style="width:180px">
+      <select id="alarmSortSel" class="filter-sel" onchange="alarmSortCol=null;renderAlarms()" style="width:180px">
         <option value="created_desc">En Yeni Önce</option>
         <option value="days_asc">Kalan Gün (Acil Önce)</option>
         <option value="overdue_first">Gecikmiş Önce</option>
@@ -282,15 +282,15 @@
           <thead>
             <tr>
               <th style="width:34px">#</th>
-              <th>Hasta / Danışman</th>
-              <th>Alarm Tipi</th>
-              <th>Alan</th>
-              <th>Tarih</th>
-              <th>Kalan Gün</th>
-              <th>Durum</th>
-              <th>P/FT</th>
-              <th>Ödeme</th>
-              <th>Not</th>
+              <th onclick="alarmSortBy('deal_name')" style="cursor:pointer;user-select:none">Hasta / Danışman<span id="asort-deal_name" class="sarrow"></span></th>
+              <th onclick="alarmSortBy('alarm_type')" style="cursor:pointer;user-select:none">Alarm Tipi<span id="asort-alarm_type" class="sarrow"></span></th>
+              <th onclick="alarmSortBy('reference_field')" style="cursor:pointer;user-select:none">Alan<span id="asort-reference_field" class="sarrow"></span></th>
+              <th onclick="alarmSortBy('reference_date')" style="cursor:pointer;user-select:none">Tarih<span id="asort-reference_date" class="sarrow"></span></th>
+              <th onclick="alarmSortBy('days_left')" style="cursor:pointer;user-select:none">Kalan Gün<span id="asort-days_left" class="sarrow"></span></th>
+              <th onclick="alarmSortBy('status')" style="cursor:pointer;user-select:none">Durum<span id="asort-status" class="sarrow"></span></th>
+              <th onclick="alarmSortBy('payment_or_flight_ticket')" style="cursor:pointer;user-select:none">P/FT<span id="asort-payment_or_flight_ticket" class="sarrow"></span></th>
+              <th onclick="alarmSortBy('payment_remaining')" style="cursor:pointer;user-select:none">Ödeme<span id="asort-payment_remaining" class="sarrow"></span></th>
+              <th onclick="alarmSortBy('note')" style="cursor:pointer;user-select:none">Not<span id="asort-note" class="sarrow"></span></th>
               <th style="width:90px">Aksiyon</th>
             </tr>
           </thead>
@@ -696,12 +696,16 @@
     if (!ids.length) return;
     const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
     const CHUNK = 150;
-    for (let i = 0; i < ids.length; i += CHUNK) {
-      const chunk = ids.slice(i, i + CHUNK);
+    const chunks = [];
+    for (let i = 0; i < ids.length; i += CHUNK) chunks.push(ids.slice(i, i + CHUNK));
+
+    // Chunk'lar birbirinden bağımsız — paralel çekilince toplam süre
+    // (chunk sayısı x tek istek süresi) yerine tek bir istek süresine iner
+    await Promise.all(chunks.map(async chunk => {
       try {
         const url = `${SUPABASE_URL}/rest/v1/deals?select=id,amount,total_paid_amount,stage,raw&id=in.(${chunk.join(',')})`;
         const r = await fetch(url, { headers: H });
-        if (!r.ok) continue;
+        if (!r.ok) return;
         const rows = await r.json();
         rows.forEach(d => {
           const raw = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw || {});
@@ -713,7 +717,7 @@
           dealFinanceMap[d.id] = { total, paid, remaining, pct, stage: d.stage, isWon };
         });
       } catch(e) { /* finans bilgisi opsiyonel, sessiz geç */ }
-    }
+    }));
   }
 
   function paymentCellHtml(dealId) {
@@ -737,11 +741,13 @@
   async function applyPaymentAutoRules() {
     const activeStatuses = new Set(['open','seen','in_progress','escalated']);
     const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
-    for (const a of allAlarms) {
+    // Alarmlar birbirinden bağımsız — kapatma isteklerini paralel gönder,
+    // sıra sıra (await ... await ...) beklemek yüzlerce alarmda çok yavaşlıyordu
+    await Promise.all(allAlarms.map(async a => {
       a._paymentMismatch = null;
-      if (a.alarm_type !== 'payment_tracking' || !activeStatuses.has(a.status)) continue;
+      if (a.alarm_type !== 'payment_tracking' || !activeStatuses.has(a.status)) return;
       const fin = dealFinanceMap[a.deal_id];
-      if (!fin || fin.pct === null) continue;
+      if (!fin || fin.pct === null) return;
       const fullyPaid = fin.pct >= 100;
       if (fin.isWon && fullyPaid) {
         const updates = { status: 'closed', closed_at: new Date().toISOString(), close_reason: I18N.t('Ödeme %100 ve deal Won — otomatik kapatıldı') };
@@ -757,7 +763,7 @@
           ? `${I18N.t('Won ama ödeme %')}${Math.round(fin.pct)}${I18N.t(' — tamamlanmadı')}`
           : `${I18N.t('Ödeme %100 ama stage Won değil')} (${fin.stage || '—'})`;
       }
-    }
+    }));
   }
 
   function daysUntil(dateStr) {
@@ -892,6 +898,55 @@
     return '';
   }
 
+  // ── Alarmlar tablosu kolon başlığı sıralama ───────────────────────
+  let alarmSortCol = null;
+  let alarmSortDir = 'asc';
+
+  function alarmSortBy(col) {
+    if (alarmSortCol === col) {
+      alarmSortDir = alarmSortDir === 'asc' ? 'desc' : 'asc';
+    } else {
+      alarmSortCol = col;
+      alarmSortDir = 'asc';
+    }
+    renderAlarms();
+  }
+
+  function updateAlarmSortArrows() {
+    ['deal_name','alarm_type','reference_field','reference_date','days_left','status','payment_or_flight_ticket','payment_remaining','note'].forEach(col => {
+      const el = document.getElementById('asort-' + col);
+      if (!el) return;
+      if (col === alarmSortCol) {
+        el.textContent = alarmSortDir === 'asc' ? ' ▲' : ' ▼';
+        el.classList.add('active');
+      } else {
+        el.textContent = '';
+        el.classList.remove('active');
+      }
+    });
+  }
+
+  function alarmSortValue(a, col) {
+    switch (col) {
+      case 'deal_name':         return (a.deal_name || '').toLowerCase();
+      case 'alarm_type':        return alarmTypeMeta(a.alarm_type).label.toLowerCase();
+      case 'reference_field':   return fieldLabel(a.reference_field).toLowerCase();
+      case 'reference_date':    return a.reference_date || '';
+      case 'days_left': {
+        const d = a.days_remaining !== null && a.days_remaining !== undefined ? a.days_remaining : daysUntil(a.reference_date);
+        return (d === null || d === undefined) ? 9999 : d;
+      }
+      case 'status':            return statusMeta(a.status).label.toLowerCase();
+      case 'payment_or_flight_ticket': return (a.payment_or_flight_ticket || '').toLowerCase();
+      case 'payment_remaining': {
+        const fin = dealFinanceMap[a.deal_id];
+        return (fin && fin.remaining !== null && fin.remaining !== undefined) ? fin.remaining : -Infinity;
+      }
+      case 'note':              return (a.note || '').toLowerCase();
+      default:                  return '';
+    }
+  }
+
   // ── Alarm tablo render ───────────────────────────────────────────
   function renderAlarms() {
     let data = filterAlarms(activeAlarmTab);
@@ -914,19 +969,28 @@
     const thF = document.getElementById('alarmThreshFilter')?.value || '';
     if (thF) data = data.filter(a => String(a.threshold_days) === thF);
 
-    // Sıralama
-    const sortVal = document.getElementById('alarmSortSel')?.value || 'created_desc';
-    if (sortVal === 'days_asc') {
+    // Sıralama — kolon başlığına tıklanmışsa o öncelikli, yoksa üstteki dropdown
+    if (alarmSortCol) {
       data = [...data].sort((a, b) => {
-        const da = a.days_remaining !== null ? a.days_remaining : (daysUntil(a.reference_date) ?? 9999);
-        const db = b.days_remaining !== null ? b.days_remaining : (daysUntil(b.reference_date) ?? 9999);
-        return da - db;
+        const va = alarmSortValue(a, alarmSortCol), vb = alarmSortValue(b, alarmSortCol);
+        const cmp = (typeof va === 'number' && typeof vb === 'number') ? (va - vb) : String(va).localeCompare(String(vb));
+        return alarmSortDir === 'asc' ? cmp : -cmp;
       });
-    } else if (sortVal === 'overdue_first') {
-      data = [...data].sort((a, b) => (isOverdue(b) ? 1 : 0) - (isOverdue(a) ? 1 : 0));
-    } else if (sortVal === 'name_asc') {
-      data = [...data].sort((a, b) => (a.deal_name || '').localeCompare(b.deal_name || ''));
+    } else {
+      const sortVal = document.getElementById('alarmSortSel')?.value || 'created_desc';
+      if (sortVal === 'days_asc') {
+        data = [...data].sort((a, b) => {
+          const da = a.days_remaining !== null ? a.days_remaining : (daysUntil(a.reference_date) ?? 9999);
+          const db = b.days_remaining !== null ? b.days_remaining : (daysUntil(b.reference_date) ?? 9999);
+          return da - db;
+        });
+      } else if (sortVal === 'overdue_first') {
+        data = [...data].sort((a, b) => (isOverdue(b) ? 1 : 0) - (isOverdue(a) ? 1 : 0));
+      } else if (sortVal === 'name_asc') {
+        data = [...data].sort((a, b) => (a.deal_name || '').localeCompare(b.deal_name || ''));
+      }
     }
+    updateAlarmSortArrows();
 
     const tbody = document.getElementById('alarmTbody');
     const empty = document.getElementById('alarmEmpty');
@@ -1109,27 +1173,39 @@
         teamParam = TeamMap.inFilter(TeamMap.aliasesFor(teamVal));
       }
 
-      let all = [], offset = 0;
-      while (true) {
-        let url = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc&limit=500&offset=${offset}`;
+      const PAGE = 500;
+      const buildAlarmsUrl = (off) => {
+        let url = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc&limit=${PAGE}&offset=${off}`;
         if (teamParam) {
           url += `&team=${teamParam}`;
         } else if (isRM) {
-          const region = getRegion(currentUser);
-          url += `&region=eq.${encodeURIComponent(region)}`;
+          url += `&region=eq.${encodeURIComponent(getRegion(currentUser))}`;
         }
-        const r = await fetch(url, { headers: H });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const batch = await r.json();
-        if (!Array.isArray(batch) || !batch.length) break;
-        all.push(...batch);
-        if (batch.length < 500) break;
-        offset += 500;
+        return url;
+      };
+
+      // İlk sayfayı toplam kayıt sayısıyla (Content-Range) birlikte çek,
+      // geri kalan sayfaları sırayla değil paralel iste — büyük (RM) veri
+      // setlerinde toplam bekleme süresini sayfa sayısından tekil isteğe indirir
+      const firstR = await fetch(buildAlarmsUrl(0), { headers: { ...H, Prefer: 'count=exact' } });
+      if (!firstR.ok) throw new Error('HTTP ' + firstR.status);
+      let all = await firstR.json();
+      let total = all.length;
+      const range = firstR.headers.get('content-range');
+      if (range) {
+        const m = range.match(/\/(\d+)$/);
+        if (m) total = parseInt(m[1], 10);
+      }
+      if (total > all.length) {
+        const offsets = [];
+        for (let off = PAGE; off < total; off += PAGE) offsets.push(off);
+        const pages = await Promise.all(offsets.map(off =>
+          fetch(buildAlarmsUrl(off), { headers: H }).then(r => r.ok ? r.json() : [])
+        ));
+        pages.forEach(p => { if (Array.isArray(p)) all.push(...p); });
       }
 
       allAlarms = all;
-      await loadDealFinance(all.map(a => a.deal_id));
-      await applyPaymentAutoRules();
 
       // Subtitle: hangi takımın alarmları gösterildiğini açıkça yaz
       const subtitle = document.getElementById('alarmSubtitle');
@@ -1147,6 +1223,15 @@
       renderConsultantStrip();
       document.getElementById('alarmLoading').style.display = 'none';
       document.getElementById('alarmTableWrap').style.display = 'block';
+
+      // Ödeme/finans verisi ve Won+ödeme otomatik kapama kuralı arka planda
+      // çalışır — tabloyu ilk göstermek için bunları beklemeye gerek yok,
+      // hazır olunca ilgili kolon/kartlar kendini günceller (performans)
+      loadDealFinance(all.map(a => a.deal_id))
+        .then(() => { renderAlarms(); if (activeView === 'today') renderToday(); })
+        .then(() => applyPaymentAutoRules())
+        .then(() => { updateTabCounts(); renderAlarms(); if (activeView === 'today') renderToday(); })
+        .catch(() => {});
     } catch(e) {
       document.getElementById('alarmLoading').style.display = 'none';
       document.getElementById('alarmTableWrap').style.display = 'block';
