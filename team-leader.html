@@ -238,6 +238,19 @@
         <option value="overdue_first">Gecikmiş Önce</option>
         <option value="name_asc">İsme Göre A-Z</option>
       </select>
+      <select id="alarmPftFilter" class="filter-sel" onchange="renderAlarms()" style="width:130px">
+        <option value="">P / FT: Tümü</option>
+        <option value="Payment">Payment</option>
+        <option value="Flight Ticket">Flight Ticket</option>
+      </select>
+      <select id="alarmThreshFilter" class="filter-sel" onchange="renderAlarms()" style="width:120px">
+        <option value="">Eşik: Tümü</option>
+        <option value="45">45 Gün</option>
+        <option value="30">30 Gün</option>
+        <option value="15">15 Gün</option>
+        <option value="7">7 Gün</option>
+        <option value="3">3 Gün</option>
+      </select>
     </div>
 
     <!-- Sub-tabs -->
@@ -606,6 +619,12 @@
       <textarea id="noteInput" class="modal-note" placeholder="Hasta durumu, arama sonucu, notlar..."></textarea>
     </div>
 
+    <!-- Aksiyon Geçmişi -->
+    <div id="alarmHistoryWrap" style="display:none;margin-bottom:18px">
+      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Aksiyon Geçmişi</label>
+      <div id="alarmHistoryList" style="max-height:160px;overflow-y:auto;background:#0d1526;border:1px solid #1e293b;border-radius:10px;padding:8px 12px"></div>
+    </div>
+
     <div style="display:flex;gap:10px">
       <button onclick="closeAlarmModal()" style="flex:1;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">İptal</button>
       <button onclick="saveAlarmAction()" id="btnSaveAction" style="flex:2;padding:11px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kaydet</button>
@@ -796,6 +815,14 @@
     if (searchQ) {
       data = data.filter(a => [a.deal_name, a.deal_owner, a.team].join(' ').toLowerCase().includes(searchQ));
     }
+
+    // Payment / Flight Ticket filtresi
+    const pftF = document.getElementById('alarmPftFilter')?.value || '';
+    if (pftF) data = data.filter(a => a.payment_or_flight_ticket === pftF);
+
+    // Eşik gün filtresi
+    const thF = document.getElementById('alarmThreshFilter')?.value || '';
+    if (thF) data = data.filter(a => String(a.threshold_days) === thF);
 
     // Sıralama
     const sortVal = document.getElementById('alarmSortSel')?.value || 'created_desc';
@@ -1153,6 +1180,31 @@
       (currentUser && currentUser.role === 'regional-manager') ? '' : 'none';
     document.getElementById('alarmModal').classList.add('open');
     document.body.style.overflow = 'hidden';
+    loadAlarmHistory(a.id);
+  }
+
+  // alarm_logs tablosundan aksiyon geçmişini yükle (tablo yoksa bölüm gizli kalır)
+  async function loadAlarmHistory(alarmId) {
+    const wrap = document.getElementById('alarmHistoryWrap');
+    const list = document.getElementById('alarmHistoryList');
+    wrap.style.display = 'none';
+    try {
+      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/alarm_logs?alarm_id=eq.${alarmId}&order=created_at.desc&limit=30`, { headers: H });
+      if (!r.ok) return;
+      const logs = await r.json();
+      if (!Array.isArray(logs) || !logs.length) return;
+      const actionLabels = { status_change:'Durum Değişti', note:'Not Eklendi', closed:'Kapatıldı', reopened:'Yeniden Açıldı', created:'Oluşturuldu' };
+      list.innerHTML = logs.map(l => `
+        <div style="padding:6px 0;border-bottom:1px solid #0f172a">
+          <div style="display:flex;justify-content:space-between;gap:8px">
+            <span style="font-size:10px;font-weight:700;color:#2dd4bf">${actionLabels[l.action_type] || l.action_type}${l.new_status && l.new_status !== l.old_status ? ' → ' + (statusMeta(l.new_status).label || l.new_status) : ''}</span>
+            <span style="font-size:9px;color:#475569;white-space:nowrap">${formatDateTime(l.created_at)}</span>
+          </div>
+          <div style="font-size:10px;color:#64748b">${l.action_by || '—'}${l.note ? ' · ' + l.note : ''}</div>
+        </div>`).join('');
+      wrap.style.display = 'block';
+    } catch(e) { /* sessiz */ }
   }
 
   function closeAlarmModal() {
@@ -1165,6 +1217,26 @@
     const needReason = ['closed','cancelled'].includes(this.value);
     document.getElementById('closeReasonWrap').style.display = needReason ? 'block' : 'none';
   });
+
+  // Alarm aksiyonunu alarm_logs tablosuna yaz — tablo yoksa sessizce atla
+  function logAlarmAction(alarm, actionType, oldStatus, newStatus, note) {
+    try {
+      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+      fetch(`${SUPABASE_URL}/rest/v1/alarm_logs`, {
+        method: 'POST', headers: H,
+        body: JSON.stringify({
+          alarm_id:    alarm.id,
+          deal_id:     alarm.deal_id || null,
+          action_type: actionType,
+          old_status:  oldStatus || null,
+          new_status:  newStatus || null,
+          note:        note || null,
+          action_by:   currentUser.fullName || currentUser.username,
+          action_role: currentUser.role,
+        }),
+      }).catch(() => {});
+    } catch(e) { /* loglama ana akışı bozmasın */ }
+  }
 
   async function saveAlarmAction() {
     const newStatus  = document.getElementById('newStatus').value;
@@ -1194,6 +1266,9 @@
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
       const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${currentAlarm.id}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
+      // Aksiyon geçmişine yaz
+      const actionType = ['no_show','closed','cancelled'].includes(newStatus) ? 'closed' : (newStatus ? 'status_change' : 'note');
+      logAlarmAction(currentAlarm, actionType, currentAlarm.status, newStatus || currentAlarm.status, note);
       // Local state güncelle
       const idx = allAlarms.findIndex(x => x.id === currentAlarm.id);
       if (idx >= 0) allAlarms[idx] = { ...allAlarms[idx], ...updates };
@@ -1276,7 +1351,10 @@
       const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${alarmId}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const idx = allAlarms.findIndex(x => x.id === alarmId);
-      if (idx >= 0) allAlarms[idx] = { ...allAlarms[idx], ...updates };
+      if (idx >= 0) {
+        logAlarmAction(allAlarms[idx], ['no_show','closed'].includes(status) ? 'closed' : 'status_change', allAlarms[idx].status, status, null);
+        allAlarms[idx] = { ...allAlarms[idx], ...updates };
+      }
       updateTabCounts();
       renderToday();
       renderAlarms();
@@ -1539,36 +1617,46 @@
   }
 
   // ── Payment / Aktivite Yok listesi ──────────────────────────────
-  function getNoActivityDeals() {
-    return allDeals.filter(d => {
-      const raw = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw||{});
-      return raw.Payment_Or_Flight_Ticket === 'Payment' && !raw.Last_Activity_Time;
-    });
-  }
+  // Server-side: aktif stage + Payment + Last Activity boş dealler (PDF 7.6)
+  let noActivityDeals = [];
 
-  function renderPaymentNoActivity() {
-    if (!allDeals.length) {
-      // Deallar yüklenmemişse önce yükle
-      loadDeals().then(() => renderPaymentNoActivityNow());
-      return;
+  async function renderPaymentNoActivity() {
+    const tbody = document.getElementById('noActivityTbody');
+    const empty = document.getElementById('noActivityEmpty');
+    try {
+      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+      const isRM = currentUser.role === 'regional-manager';
+      const stageParam = encodeURIComponent('in.(' + AlarmEngine.ACTIVE_STAGES.map(s => '"' + s + '"').join(',') + ')');
+      let all = [], offset = 0;
+      while (true) {
+        let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,raw` +
+          `&stage=${stageParam}&raw->>Payment_Or_Flight_Ticket=eq.Payment&raw->>Last_Activity_Time=is.null` +
+          `&limit=500&offset=${offset}`;
+        if (!isRM && currentUser.team) url += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+        else if (isRM) url += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
+        const r = await fetch(url, { headers: H });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const batch = await r.json();
+        if (!Array.isArray(batch) || !batch.length) break;
+        all.push(...batch);
+        if (batch.length < 500) break;
+        offset += 500;
+      }
+      noActivityDeals = all;
+    } catch(e) {
+      showNotice('Aktivite Yok listesi yüklenemedi: ' + e.message, 'error');
+      noActivityDeals = [];
     }
-    renderPaymentNoActivityNow();
-  }
 
-  function renderPaymentNoActivityNow() {
-    const data = getNoActivityDeals();
+    const data = noActivityDeals;
     const cnt = document.getElementById('cnt-noactivity');
     if (cnt) cnt.textContent = data.length;
     document.getElementById('noActivityCount').textContent = `${data.length} kayıt gösteriliyor`;
 
-    const tbody = document.getElementById('noActivityTbody');
-    const empty = document.getElementById('noActivityEmpty');
     if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
 
-    tbody.innerHTML = data.map((d, i) => {
-      const raw = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw||{});
-      return `<tr onclick="openDealModal(allDeals[${allDeals.indexOf(d)}])">
+    tbody.innerHTML = data.map((d, i) => `<tr onclick="openDealModal(noActivityDeals[${i}])">
         <td style="color:#475569;font-size:10px">${i+1}</td>
         <td>
           <div style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${fmt(d.deal_name)}</div>
@@ -1578,8 +1666,7 @@
         <td style="color:#94a3b8;font-size:11px">${fmt(d.stage)}</td>
         <td><span style="color:#f87171;font-size:11px;font-weight:600">Son aktivite girilmemiş</span></td>
         <td style="color:#60a5fa;font-size:11px">${fmtMoney(d.amount)}</td>
-      </tr>`;
-    }).join('');
+      </tr>`).join('');
   }
 
   // ── Regional Manager Overview ────────────────────────────────────
@@ -1610,6 +1697,9 @@
     const inprogress= allAlarms.filter(a => a.status === 'in_progress').length;
     const total     = allAlarms.filter(a => activeStatuses.has(a.status)).length;
 
+    const payment = allAlarms.filter(a => a.alarm_type === 'payment_tracking' && activeStatuses.has(a.status)).length;
+    const flight  = allAlarms.filter(a => a.payment_or_flight_ticket === 'Flight Ticket' && ['arrival_approaching','visit_approaching','arrival_missing','today_patient'].includes(a.alarm_type) && activeStatuses.has(a.status)).length;
+
     const kpis = [
       { label:'Toplam Aktif',  value:total,      bg:'#1e293b', bc:'#334155', vc:'#f1f5f9'  },
       { label:'Açık',          value:open,       bg:'#422006', bc:'#92400e', vc:'#fbbf24'  },
@@ -1617,6 +1707,8 @@
       { label:'Gecikmiş',      value:overdue,    bg:'#450a0a', bc:'#7f1d1d', vc:'#f87171'  },
       { label:'Eksik Tarih',   value:missing,    bg:'#1e293b', bc:'#334155', vc:'#94a3b8'  },
       { label:'No-show',       value:noshow,     bg:'#1e293b', bc:'#334155', vc:'#f87171'  },
+      { label:'Payment Takip', value:payment,    bg:'#2e1065', bc:'#4c1d95', vc:'#c084fc'  },
+      { label:'FT Takip',      value:flight,     bg:'#1e3a5f', bc:'#1e40af', vc:'#60a5fa'  },
       { label:'Eskale',        value:escalated,  bg:'#431407', bc:'#9a3412', vc:'#fb923c'  },
       { label:'Takipte',       value:inprogress, bg:'#042f2e', bc:'#0d9488', vc:'#2dd4bf'  },
     ];
@@ -1640,7 +1732,9 @@
     allAlarms.forEach(a => {
       // Eski alarmlar alias adla kayıtlı olabilir — kanonik ada çevir
       const t = TeamMap.normalize(a.team) || a.team || '—';
-      if (!teams[t]) teams[t] = { open:0, overdue:0, today:0, missing:0, escalated:0, inprogress:0, total:0, leader:'', label:t };
+      if (!teams[t]) teams[t] = { open:0, overdue:0, today:0, missing:0, escalated:0, inprogress:0, total:0, closed:0, grand:0, leader:'', label:t };
+      if (teams[t].closed === undefined) { teams[t].closed = 0; teams[t].grand = 0; }
+      teams[t].grand++;
       if (activeStatuses.has(a.status)) teams[t].total++;
       if (['open','seen'].includes(a.status)) teams[t].open++;
       if (isOverdue(a)) teams[t].overdue++;
@@ -1648,6 +1742,7 @@
       if (a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status)) teams[t].missing++;
       if (a.status === 'escalated') teams[t].escalated++;
       if (a.status === 'in_progress') teams[t].inprogress++;
+      if (['closed','no_show','cancelled'].includes(a.status)) teams[t].closed++;
     });
 
     // Takım filtre dropdown'unu güncelle
@@ -1679,6 +1774,7 @@
           <div>
             <div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:2px">${s.label || teamName}</div>
             <div style="font-size:10px;color:#64748b">${s.leader ? 'TL: ' + s.leader + ' · ' : ''}${s.total} aktif alarm</div>
+            <div style="font-size:9px;color:#475569;margin-top:1px">Kapatılan: ${s.closed || 0}${s.grand ? ' · Kapatma oranı %' + Math.round((s.closed || 0) / s.grand * 100) : ''}</div>
           </div>
           <div style="display:flex;gap:4px;flex-wrap:wrap">${badges}</div>
         </div>

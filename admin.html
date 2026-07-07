@@ -610,6 +610,26 @@
           Tüm Sistemi Güncelle
         </button>
         <button onclick="exportAdminAlarms()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Export CSV</button>
+        <button onclick="exportAlarmPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Performans CSV</button>
+      </div>
+    </div>
+
+    <!-- Parametre Yönetimi -->
+    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-6">
+      <div class="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h3 class="text-sm font-bold text-white">Alarm Parametreleri</h3>
+          <p class="text-[10px] text-slate-500 mt-0.5">Eşik günleri ve eksik tarih tekrar periyodu — motor bir sonraki çalışmada uygular</p>
+        </div>
+        <div id="settingsForm" style="display:none" class="flex items-center gap-2 flex-wrap">
+          <label class="text-[10px] text-slate-400">Eşikler (gün):</label>
+          <input id="setThresholds" placeholder="45,30,15,7,3" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;width:130px">
+          <label class="text-[10px] text-slate-400">Eksik tarih tekrarı (gün):</label>
+          <input id="setRepeatDays" type="number" min="1" placeholder="3" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;width:60px">
+          <button onclick="saveAlarmSettings()" class="px-3 py-1.5 bg-teal-700 hover:bg-teal-600 text-white text-xs rounded-lg font-semibold">Kaydet</button>
+          <span id="settingsStatus" class="text-[10px] text-teal-400"></span>
+        </div>
+        <p id="settingsUnavailable" style="display:none" class="text-[10px] text-amber-500">app_settings tablosu bulunamadı — alarm_logs_and_settings.sql dosyasını Supabase SQL Editor'de çalıştırın.</p>
       </div>
     </div>
 
@@ -622,7 +642,7 @@
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">No-show</div><div class="text-xl font-bold text-rose-400" id="mk5">0</div></div>
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Payment Takip</div><div class="text-xl font-bold text-purple-400" id="mk6">0</div></div>
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Yaklaşan</div><div class="text-xl font-bold text-orange-400" id="mk7">0</div></div>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Toplam Alarm</div><div class="text-xl font-bold text-white" id="mk8">0</div></div>
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">FT Takip</div><div class="text-xl font-bold text-blue-400" id="mk8">0</div></div>
     </div>
 
     <!-- İki Bölge Grid -->
@@ -682,6 +702,21 @@
             <option value="no_show">No-show</option>
             <option value="closed">Kapatıldı</option>
           </select>
+          <select id="amFilterPft" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
+            <option value="">P / FT: Tümü</option>
+            <option value="Payment">Payment</option>
+            <option value="Flight Ticket">Flight Ticket</option>
+          </select>
+          <select id="amFilterThresh" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
+            <option value="">Eşik: Tümü</option>
+            <option value="45">45 Gün</option>
+            <option value="30">30 Gün</option>
+            <option value="15">15 Gün</option>
+            <option value="7">7 Gün</option>
+            <option value="3">3 Gün</option>
+          </select>
+          <input type="date" id="amDateFrom" onchange="renderAdminAlarmTable()" title="Referans tarih başlangıç" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
+          <input type="date" id="amDateTo" onchange="renderAdminAlarmTable()" title="Referans tarih bitiş" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
           <input id="amSearch" placeholder="Hasta, danışman..." oninput="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;width:160px">
         </div>
       </div>
@@ -697,6 +732,7 @@
               <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Kalan</th>
               <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Durum</th>
               <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">TL Notu</th>
+              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Aksiyon</th>
             </tr>
           </thead>
           <tbody id="adminAlarmTbody"></tbody>
@@ -918,7 +954,7 @@
       document.getElementById('mk5').textContent = a.filter(x => x.status === 'no_show').length;
       document.getElementById('mk6').textContent = a.filter(x => x.alarm_type === 'payment_tracking' && active.has(x.status)).length;
       document.getElementById('mk7').textContent = a.filter(x => ['arrival_approaching','visit_approaching'].includes(x.alarm_type) && active.has(x.status)).length;
-      document.getElementById('mk8').textContent = a.length;
+      document.getElementById('mk8').textContent = a.filter(x => x.payment_or_flight_ticket === 'Flight Ticket' && ['arrival_approaching','visit_approaching','arrival_missing','today_patient'].includes(x.alarm_type) && active.has(x.status)).length;
     }
 
     function renderRegionPanels() {
@@ -958,14 +994,19 @@
       });
     }
 
-    function renderAdminAlarmTable() {
+    // Ortak filtre — tablo render ve export aynı mantığı kullanır
+    function filterAdminAlarms() {
       const region = document.getElementById('amFilterRegion').value;
       const type   = document.getElementById('amFilterType').value;
       const status = document.getElementById('amFilterStatus').value;
+      const pft    = document.getElementById('amFilterPft')?.value || '';
+      const thresh = document.getElementById('amFilterThresh')?.value || '';
+      const dFrom  = document.getElementById('amDateFrom')?.value || '';
+      const dTo    = document.getElementById('amDateTo')?.value || '';
       const search = (document.getElementById('amSearch').value || '').toLowerCase();
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
 
-      const data = adminAllAlarms.filter(a => {
+      return adminAllAlarms.filter(a => {
         if (region && a.region !== region) return false;
         if (type   && a.alarm_type !== type) return false;
         if (status === 'active'  && !active.has(a.status)) return false;
@@ -973,12 +1014,20 @@
         if (status === 'overdue' && !_amIsOverdue(a)) return false;
         if (status === 'no_show' && a.status !== 'no_show') return false;
         if (status === 'closed'  && a.status !== 'closed') return false;
+        if (pft    && a.payment_or_flight_ticket !== pft) return false;
+        if (thresh && String(a.threshold_days) !== thresh) return false;
+        if (dFrom  && (!a.reference_date || a.reference_date < dFrom)) return false;
+        if (dTo    && (!a.reference_date || a.reference_date > dTo)) return false;
         if (search) {
           const txt = [a.deal_name,a.deal_owner,a.team,a.region].join(' ').toLowerCase();
           if (!txt.includes(search)) return false;
         }
         return true;
       });
+    }
+
+    function renderAdminAlarmTable() {
+      const data = filterAdminAlarms();
 
       const tbody = document.getElementById('adminAlarmTbody');
       const empty = document.getElementById('adminAlarmEmpty');
@@ -1008,8 +1057,46 @@
           <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">${daysTxt}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #0f172a"><span style="font-size:9px;font-weight:700;color:${sm.color};white-space:nowrap">${sm.label}</span></td>
           <td style="padding:8px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b;border-bottom:1px solid #0f172a">${a.note||'—'}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">${
+            ['closed','cancelled','no_show'].includes(a.status)
+              ? `<button onclick="adminAlarmAction('${a.id}','reopen')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">Yeniden Aç</button>`
+              : `<button onclick="adminAlarmAction('${a.id}','close')" style="padding:3px 10px;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#94a3b8;font-size:9px;font-weight:700;cursor:pointer">Kapat</button>`
+          }</td>
         </tr>`;
       }).join('');
+    }
+
+    // Admin: alarm kapat / yeniden aç (PDF 10.3) — aksiyon alarm_logs'a yazılır
+    async function adminAlarmAction(alarmId, action) {
+      const a = adminAllAlarms.find(x => x.id === alarmId);
+      if (!a) return;
+      const now = new Date().toISOString();
+      const adminName = (currentUser && (currentUser.fullName || currentUser.username)) || 'Admin';
+      const updates = action === 'close'
+        ? { status: 'closed', close_reason: 'manual', closed_at: now, closed_by: adminName }
+        : { status: 'open', close_reason: null, closed_at: null, closed_by: null };
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${alarmId}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        // Aksiyon logu — önceki kapanış bilgisi logda korunur (PDF 17)
+        fetch(`${SUPABASE_URL}/rest/v1/alarm_logs`, {
+          method: 'POST', headers: H,
+          body: JSON.stringify({
+            alarm_id: alarmId, deal_id: a.deal_id || null,
+            action_type: action === 'close' ? 'closed' : 'reopened',
+            old_status: a.status, new_status: updates.status,
+            note: action === 'reopen' && a.close_reason ? `Önceki kapanış: ${a.close_reason} (${a.closed_by || '—'})` : null,
+            action_by: adminName, action_role: 'admin',
+          }),
+        }).catch(() => {});
+        Object.assign(a, updates);
+        updateAdminAlarmKPIs();
+        renderAdminAlarmTable();
+        renderRegionPanels();
+      } catch(e) {
+        alert('İşlem başarısız: ' + e.message);
+      }
     }
 
     async function adminRunEngine() {
@@ -1030,30 +1117,79 @@
       }
     }
 
-    function exportAdminAlarms() {
-      const region = document.getElementById('amFilterRegion').value;
-      const type   = document.getElementById('amFilterType').value;
-      const status = document.getElementById('amFilterStatus').value;
-      const search = (document.getElementById('amSearch').value || '').toLowerCase();
-      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
-      const data = adminAllAlarms.filter(a => {
-        if (region && a.region !== region) return false;
-        if (type   && a.alarm_type !== type) return false;
-        if (status === 'active'  && !active.has(a.status)) return false;
-        if (status === 'open'    && a.status !== 'open') return false;
-        if (status === 'overdue' && !_amIsOverdue(a)) return false;
-        if (status === 'no_show' && a.status !== 'no_show') return false;
-        if (status === 'closed'  && a.status !== 'closed') return false;
-        if (search) { const txt = [a.deal_name,a.deal_owner,a.team,a.region].join(' ').toLowerCase(); if (!txt.includes(search)) return false; }
-        return true;
-      });
-      const row = cols => cols.map(c => `"${String(c??'').replace(/"/g,'""')}"`).join(',');
-      const headers = row(['Hasta','Danışman','Takım','Bölge','Alarm Tipi','Alan','Tarih','Kalan','Durum','Not','Oluşturma']);
-      const rows = [headers, ...data.map(a => row([a.deal_name,a.deal_owner,a.team,a.region,a.alarm_type,a.reference_field,a.reference_date,a.days_remaining,a.status,a.note,a.created_at]))];
+    function _csvDownload(rows, filename) {
       const blob = new Blob([rows.join('\n')], { type:'text/csv;charset=utf-8;' });
       const link = document.createElement('a'); link.href = URL.createObjectURL(blob);
-      link.download = `alarmlar_admin_${new Date().toISOString().slice(0,10)}.csv`;
+      link.download = filename;
       document.body.appendChild(link); link.click(); document.body.removeChild(link);
+    }
+    function _csvRow(cols) { return cols.map(c => `"${String(c??'').replace(/"/g,'""')}"`).join(','); }
+
+    function exportAdminAlarms() {
+      const data = filterAdminAlarms();
+      const headers = _csvRow(['Hasta','Danışman','Takım','Bölge','Alarm Tipi','P/FT','Eşik','Alan','Tarih','Kalan','Durum','Not','Oluşturma','Kapatan','Kapatma Nedeni']);
+      const rows = [headers, ...data.map(a => _csvRow([a.deal_name,a.deal_owner,a.team,a.region,a.alarm_type,a.payment_or_flight_ticket,a.threshold_days,a.reference_field,a.reference_date,a.days_remaining,a.status,a.note,a.created_at,a.closed_by,a.close_reason]))];
+      _csvDownload(rows, `alarmlar_admin_${new Date().toISOString().slice(0,10)}.csv`);
+    }
+
+    // TL / Bölge bazlı alarm performans raporu (PDF Bölüm 14)
+    function exportAlarmPerformance() {
+      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+      const teams = {};
+      adminAllAlarms.forEach(a => {
+        const t = (window.TeamMap && TeamMap.normalize(a.team)) || a.team || '—';
+        if (!teams[t]) {
+          const def = window.TeamMap && TeamMap.TEAMS[t];
+          teams[t] = { region: a.region || '', leader: def ? def.leader : '', total:0, open:0, overdue:0, closed:0, noshow:0 };
+        }
+        teams[t].total++;
+        if (active.has(a.status)) teams[t].open++;
+        if (_amIsOverdue(a)) teams[t].overdue++;
+        if (['closed','cancelled'].includes(a.status)) teams[t].closed++;
+        if (a.status === 'no_show') teams[t].noshow++;
+      });
+      const headers = _csvRow(['Takım','Team Leader','Bölge','Toplam Alarm','Aktif','Gecikmiş','Kapatılan','No-show','Kapatma Oranı %']);
+      const rows = [headers, ...Object.entries(teams)
+        .sort((a,b) => b[1].total - a[1].total)
+        .map(([team, v]) => _csvRow([team, v.leader, v.region, v.total, v.open, v.overdue, v.closed, v.noshow, v.total ? Math.round((v.closed + v.noshow) / v.total * 100) : 0]))];
+      _csvDownload(rows, `alarm_performans_${new Date().toISOString().slice(0,10)}.csv`);
+    }
+
+    // ── Parametre Yönetimi (PDF 10.3 / 17) — app_settings tablosu ──
+    async function loadAlarmSettings() {
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?select=key,value`, { headers: H });
+        if (!r.ok) { document.getElementById('settingsUnavailable').style.display = 'block'; return; }
+        const rows = await r.json();
+        for (const row of rows) {
+          if (row.key === 'alarm_thresholds')   document.getElementById('setThresholds').value = row.value;
+          if (row.key === 'missing_repeat_days') document.getElementById('setRepeatDays').value = row.value;
+        }
+        document.getElementById('settingsForm').style.display = 'flex';
+      } catch(e) { document.getElementById('settingsUnavailable').style.display = 'block'; }
+    }
+
+    async function saveAlarmSettings() {
+      const thresholds = (document.getElementById('setThresholds').value || '').trim();
+      const repeatDays = (document.getElementById('setRepeatDays').value || '').trim();
+      const nums = thresholds.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
+      if (!nums.length) { alert('Geçerli eşik listesi girin (örn: 45,30,15,7,3)'); return; }
+      if (!parseInt(repeatDays) || parseInt(repeatDays) < 1) { alert('Geçerli tekrar periyodu girin (gün)'); return; }
+      const adminName = (currentUser && (currentUser.fullName || currentUser.username)) || 'Admin';
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' };
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?on_conflict=key`, {
+          method: 'POST', headers: H,
+          body: JSON.stringify([
+            { key: 'alarm_thresholds',   value: nums.sort((a,b)=>b-a).join(','), updated_at: new Date().toISOString(), updated_by: adminName },
+            { key: 'missing_repeat_days', value: String(parseInt(repeatDays)),   updated_at: new Date().toISOString(), updated_by: adminName },
+          ]),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        document.getElementById('settingsStatus').textContent = 'Kaydedildi — bir sonraki motor çalışmasında geçerli olur.';
+        setTimeout(() => { document.getElementById('settingsStatus').textContent = ''; }, 4000);
+      } catch(e) { alert('Kaydedilemedi: ' + e.message); }
     }
     // ════════════════ ALARM MONITORING END ════════════════
 
@@ -1098,7 +1234,7 @@
       else if (v === 'users') loadUsers();
       else if (v === 'logs') loadLogs();
       else if (v === 'transfer') initTransferView();
-      else if (v === 'alarms-monitor') loadAdminAlarms();
+      else if (v === 'alarms-monitor') { loadAdminAlarms(); loadAlarmSettings(); }
     }
 
     function updateKPIs(data) {

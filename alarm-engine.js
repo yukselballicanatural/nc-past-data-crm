@@ -4,13 +4,39 @@ window.AlarmEngine = (function () {
   'use strict';
 
   // Eşik gün pencereleri — her aralık bir öncekinin hemen üstünden başlar
-  const THRESHOLDS = [
-    { t: 45, min: 31, max: 45 },
-    { t: 30, min: 16, max: 30 },
-    { t: 15, min: 8,  max: 15 },
-    { t: 7,  min: 4,  max: 7  },
-    { t: 3,  min: 1,  max: 3  },
-  ];
+  // Eşik listesi app_settings.alarm_thresholds parametresinden gelir (varsayılan 45,30,15,7,3)
+  function buildThresholds(list) {
+    const sorted = [...new Set(list)].filter(n => n > 0).sort((a, b) => b - a);
+    return sorted.map((t, i) => ({
+      t,
+      min: (sorted[i + 1] || 0) + 1,
+      max: t,
+    }));
+  }
+
+  let THRESHOLDS = buildThresholds([45, 30, 15, 7, 3]);
+  let MISSING_REPEAT_DAYS = 3;
+
+  // app_settings tablosundan parametreleri yükle — tablo yoksa varsayılanlar kalır
+  async function loadSettings(BASE, KEY) {
+    try {
+      const r = await fetch(`${BASE}/rest/v1/app_settings?select=key,value`, {
+        headers: { apikey: KEY, Authorization: 'Bearer ' + KEY },
+      });
+      if (!r.ok) return;
+      const rows = await r.json();
+      for (const row of rows) {
+        if (row.key === 'alarm_thresholds') {
+          const nums = String(row.value).split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n));
+          if (nums.length) THRESHOLDS = buildThresholds(nums);
+        }
+        if (row.key === 'missing_repeat_days') {
+          const n = parseInt(row.value);
+          if (!isNaN(n) && n > 0) MISSING_REPEAT_DAYS = n;
+        }
+      }
+    } catch (e) { /* tablo henüz oluşturulmamış olabilir — varsayılanlarla devam */ }
+  }
 
   const ACTIVE_STAGES = [
     'Waiting appointment', 'Reservation Pending', 'Approval',
@@ -31,9 +57,9 @@ window.AlarmEngine = (function () {
     return Math.round((d.getTime() - today.getTime()) / 86400000);
   }
 
-  // Epoch günü 3'e böl → eksik tarih alarmı her 3 günde bir yenilenir
+  // Epoch gününü periyoda böl → eksik tarih alarmı her N günde bir yenilenir
   function threeDayBucket() {
-    return Math.floor(Math.floor(Date.now() / 86400000) / 3);
+    return Math.floor(Math.floor(Date.now() / 86400000) / MISSING_REPEAT_DAYS);
   }
 
   // Takım adından bölge belirle — TeamMap varsa onu kullan
@@ -258,6 +284,8 @@ window.AlarmEngine = (function () {
   // ── Ana çalıştırma — her zaman TÜM takımlar için üretir ─────────
   async function run(BASE, KEY, opts = {}) {
     const { onProgress } = opts;
+    if (onProgress) onProgress('Parametreler yükleniyor...');
+    await loadSettings(BASE, KEY);
     if (onProgress) onProgress('Aktif deallar alınıyor...');
     const deals = await fetchActiveDeals(BASE, KEY);
     if (onProgress) onProgress(`${deals.length} deal için alarm hesaplanıyor...`);
