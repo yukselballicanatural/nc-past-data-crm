@@ -266,6 +266,7 @@
       <button class="tab-pill" id="atab-missing" onclick="switchAlarmTab('missing')">Eksik Tarih <span id="cnt-missing" class="badge-cnt" style="background:rgba(248,113,113,0.2);color:#f87171">0</span></button>
       <button class="tab-pill" id="atab-overdue" onclick="switchAlarmTab('overdue')">Gecikmiş <span id="cnt-overdue" class="badge-cnt" style="background:rgba(248,113,113,0.2);color:#f87171">0</span></button>
       <button class="tab-pill" id="atab-noshow" onclick="switchAlarmTab('noshow')">No-show <span id="cnt-noshow" class="badge-cnt" style="background:rgba(100,116,139,0.2);color:#94a3b8">0</span></button>
+      <button class="tab-pill" id="atab-cancelled" onclick="switchAlarmTab('cancelled')">İptal <span id="cnt-cancelled" class="badge-cnt" style="background:rgba(148,163,184,0.2);color:#94a3b8">0</span></button>
       <button class="tab-pill" id="atab-noactivity" onclick="switchAlarmTab('noactivity')">Aktivite Yok <span id="cnt-noactivity" class="badge-cnt" style="background:rgba(192,132,252,0.2);color:#c084fc">0</span></button>
     </div>
 
@@ -955,6 +956,7 @@
         case 'missing':     return a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status);
         case 'overdue':     return isOverdue(a);
         case 'noshow':      return a.status === 'no_show';
+        case 'cancelled':   return a.status === 'cancelled';
         default:            return true;
       }
     });
@@ -1135,6 +1137,7 @@
     const approachCnt = filterAlarms('approaching').length;
     const missing   = filterAlarms('missing').length;
     const noshow    = filterAlarms('noshow').length;
+    const cancelledCnt = filterAlarms('cancelled').length;
     const pills = [
       { label:`${total} ${I18N.t('Toplam Aktif')}`,   bg:'#1e293b', color:'#94a3b8', tab:'all'         },
       { label:`${todayCnt} ${I18N.t('Bugün')}`,        bg:'#052e16', color:'#4ade80', tab:'today'        },
@@ -1142,6 +1145,7 @@
       { label:`${approachCnt} ${I18N.t('Yaklaşan')}`,  bg:'#422006', color:'#fb923c', tab:'approaching'  },
       { label:`${missing} ${I18N.t('Eksik Tarih')}`,   bg:'#1e293b', color:'#6b7280', tab:'missing'      },
       ...(noshow > 0 ? [{ label:`${noshow} No-show`, bg:'#1e293b', color:'#f87171', tab:'noshow' }] : []),
+      ...(cancelledCnt > 0 ? [{ label:`${cancelledCnt} ${I18N.t('İptal')}`, bg:'#1e293b', color:'#94a3b8', tab:'cancelled' }] : []),
     ];
     el.innerHTML = pills.map(p =>
       `<button class="metric-pill" onclick="switchAlarmTab('${p.tab}')" style="background:${p.bg};color:${p.color};border:1px solid ${p.color}33">${p.label}</button>`
@@ -1158,6 +1162,7 @@
       missing:    filterAlarms('missing').length,
       overdue:    filterAlarms('overdue').length,
       noshow:     filterAlarms('noshow').length,
+      cancelled:  filterAlarms('cancelled').length,
     };
     Object.entries(counts).forEach(([k,v]) => {
       const el = document.getElementById('cnt-' + k);
