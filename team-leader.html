@@ -732,7 +732,7 @@
     const color = pct === null ? '#64748b' : pct >= 100 ? '#4ade80' : pct >= 50 ? '#fbbf24' : '#f87171';
     return `<div style="font-size:10px;white-space:nowrap;line-height:1.5">
       <div><span style="color:#94a3b8">${fmtMoney(fin.paid)}</span> / <span style="color:#64748b">${fmtMoney(fin.total)}</span></div>
-      <div style="color:${color};font-weight:700">${pct === null ? '—' : pct + '%'} · Kalan ${fmtMoney(fin.remaining)}</div>
+      <div style="color:${color};font-weight:700">${pct === null ? '—' : pct + '%'} · ${I18N.t('Kalan')} ${fmtMoney(fin.remaining)}</div>
     </div>`;
   }
 
@@ -753,7 +753,7 @@
       if (!fin || fin.pct === null) continue;
       const fullyPaid = fin.pct >= 100;
       if (fin.isWon && fullyPaid) {
-        const updates = { status: 'closed', closed_at: new Date().toISOString(), close_reason: 'Ödeme %100 ve deal Won — otomatik kapatıldı' };
+        const updates = { status: 'closed', closed_at: new Date().toISOString(), close_reason: I18N.t('Ödeme %100 ve deal Won — otomatik kapatıldı') };
         try {
           const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${a.id}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
           if (r.ok) {
@@ -763,8 +763,8 @@
         } catch(e) { /* bir sonraki yüklemede tekrar denenir */ }
       } else if (fin.isWon !== fullyPaid) {
         a._paymentMismatch = fin.isWon
-          ? `Won ama ödeme %${Math.round(fin.pct)} — tamamlanmadı`
-          : `Ödeme %100 ama stage Won değil (${fin.stage || '—'})`;
+          ? `${I18N.t('Won ama ödeme %')}${Math.round(fin.pct)}${I18N.t(' — tamamlanmadı')}`
+          : `${I18N.t('Ödeme %100 ama stage Won değil')} (${fin.stage || '—'})`;
       }
     }
   }
