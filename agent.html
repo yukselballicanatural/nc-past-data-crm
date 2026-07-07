@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Natural Clinic CRM - Agent Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="team-map.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; background-color: #080b11; }
@@ -316,13 +317,6 @@
     let sortCol = '';
     let sortDir = 1;
     let currentModalDeal = null;
-
-    async function safeJson(response) {
-      const text = await response.text();
-      // Prevent JS float64 precision loss on large Zoho IDs stored as integers
-      const fixed = text.replace(/"db\.Deal Id"\s*:\s*(\d+)/g, '"db.Deal Id":"$1"');
-      return JSON.parse(fixed);
-    }
 
     function parseDateString(str) {
       if (!str) return null;
@@ -741,12 +735,12 @@
         // Mevcut değerleri geri alma için sakla
         let oldValues = null;
         try {
-          const oldResp = await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?select=result_code,sub_code,agent_note,son_statu,son_status,deal_status,lock_approval_requested&%22db.Deal%20Id%22=eq.${encodeURIComponent(String(d['Deal Id']))}`, {
+          const oldResp = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=result_code,sub_code,agent_note,deal_status,lock_approval_requested&id=eq.${encodeURIComponent(String(d['Deal Id']))}`, {
             headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY }
           });
           if (oldResp.ok) { const od = await oldResp.json(); if (od[0]) oldValues = JSON.stringify(od[0]); }
         } catch(e) {}
-        const resp = await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?%22db.Deal%20Id%22=eq.${encodeURIComponent(String(d['Deal Id']))}`, {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(String(d['Deal Id']))}`, {
           method: 'PATCH',
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', 'Prefer': 'return=minimal' },
           body: JSON.stringify({ result_code: fullCode, sub_code: sub, agent_note: note, deal_status: newStatus, lock_approval_requested: false })
@@ -780,7 +774,7 @@
       const d = currentModalDeal || allDeals.find(x => x['Deal Id'] === dealId);
       const reason = document.getElementById('scReasonInput')?.value?.trim() || '';
       try {
-        const resp = await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?%22db.Deal%20Id%22=eq.${encodeURIComponent(String(dealId))}`, {
+        const resp = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(String(dealId))}`, {
           method: 'PATCH',
           headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', 'Prefer': 'return=minimal' },
           body: JSON.stringify({ lock_approval_requested: true })
@@ -874,6 +868,7 @@
       else if (type === 'unpaid') { document.getElementById('fPayment').value = 'Unpaid'; applyFilters(); }
     }
 
+    // deals tablosundan gelen satırı agent ekranının beklediği alan adlarına çevir
     function mapDeals(rawData) {
       return rawData.map(row => {
         function parseAmount(val) {
@@ -884,55 +879,44 @@
           else if (s.includes(',')) s = s.replace(/,/g, '.');
           const n = parseFloat(s); return isNaN(n) ? 0 : n;
         }
-        function checkArrivalPast(str) {
-          if (!str) return 'Hayır';
-          const p = String(str).split(' ');
-          const dp = p[0].split('.');
-          if (dp.length === 3) {
-            const h = p[1] ? parseInt(p[1].split(':')[0])||0 : 0;
-            const m = p[1] ? parseInt(p[1].split(':')[1])||0 : 0;
-            return new Date(+dp[2], +dp[1]-1, +dp[0], h, m) < new Date() ? 'Evet' : 'Hayır';
-          }
-          return 'Hayır';
-        }
-        const dealAmount   = parseAmount(row['db.Deal Amount']);
-        const paidAmount   = parseAmount(row['db.Paid Amount']);
-        const unpaidAmount = parseAmount(row['db.Unpaid Amount']) || Math.max(0, dealAmount - paidAmount);
-        const arrivalDate  = row['db.Arrival Date'];
-        const paymentStatus = row['db.Payment Status'] || 'Unpaid';
-        const visitStatus   = row['db.Visit Status']   || 'Not Visited';
-        const roleName      = row['db.Role Name'] || '';
+        const dateOnly = v => v ? String(v).split('T')[0] : '';
+
+        const dealAmount   = parseAmount(row.amount ?? row.rawAmount);
+        const paidAmount   = parseAmount(row.total_paid_amount ?? row.rawPaid);
+        const unpaidAmount = row.remaining_amount != null ? parseAmount(row.remaining_amount) : Math.max(0, dealAmount - paidAmount);
+        const arrivalDate  = dateOnly(row.arrival_date || row.rawArrival);
+        const paymentStatus = paidAmount <= 0 ? 'Unpaid' : (dealAmount > 0 && paidAmount >= dealAmount) ? 'Paid' : 'Partial';
+        const v1 = dateOnly(row.visit_date_1 || row.rawV1);
+        const v2 = dateOnly(row.visit_date_2 || row.rawV2);
+        const v3 = dateOnly(row.visit_date_3 || row.rawV3);
+        const team = (typeof TeamMap !== 'undefined' && TeamMap.normalize(row.team)) || row.team || '';
+        const region = typeof TeamMap !== 'undefined' ? TeamMap.regionForTeam(row.team) : '';
         return {
-          'Deal Id':   row['db.Deal Id'] || '',
-          'DealID':    row['db.DealID']  || '',
-          'Deal Name': row['db.Deal Name'] || '',
-          'Created Time': row['db.Created Time'] || '',
-          'Arrival Date':  arrivalDate || '',
-          '1. Visit Date': row['db.1. Visit Date'] || '',
-          '2. Visit Date': row['db.2. Visit Date'] || '',
-          '3. Visit Date': row['db.3. Visit Date'] || '',
-          'Region':   row['db.Region'] || '',
-          'Deal Owner Id':   row['db.Deal Owner Id']   || '',
-          'Deal Owner Name': row['db.Deal Owner Name'] || '',
-          'Raw Role Name': roleName,
-          'Stage':    row['db.Stage']    || '',
-          'Language': row['db.Language'] || '',
-          'Payment Or Flight Ticket': row['db.Payment Or Flight Ticket'] || '',
+          'Deal Id':   row.id || '',
+          'DealID':    row.deal_id || '',
+          'Deal Name': row.deal_name || '',
+          'Created Time': dateOnly(row.created_time),
+          'Arrival Date':  arrivalDate,
+          '1. Visit Date': v1,
+          '2. Visit Date': v2,
+          '3. Visit Date': v3,
+          'Region': region,
+          'Region Derived': region,
+          'Deal Owner Name': row.deal_owner || '',
+          'Team Group': team,
+          'Stage':    row.stage || '',
+          'Language': row.rawLang || '',
+          'Payment Or Flight Ticket': row.payment_or_flight_ticket || row.rawPft || '',
           'Deal Amount':  dealAmount,
           'Paid Amount':  paidAmount,
           'Unpaid Amount': unpaidAmount,
-          'Paid Payment Count': Number(row['db.Paid Payment Count'] || 0),
           'Payment Status': paymentStatus,
-          'Visit Status':   visitStatus,
-          'Team Group':     roleName.split(' - ')[0].trim(),
-          'Region Derived': row['db.Region'] || (roleName.includes(' - ') ? roleName.split(' - ')[1].trim() : ''),
-          'Arrival Past': checkArrivalPast(arrivalDate),
-          result_code: row['result_code'] || '',
-          sub_code:    row['sub_code']    || '',
-          agent_note:  row['agent_note']  || '',
-          son_statu:   row['son_statu']   || '',
-          status:      row['deal_status'] || 'pending',
-          lock_approval_requested: row['lock_approval_requested'] || false
+          'Visit Status':   (v1 || v2 || v3) ? 'Visited' : 'Not Visited',
+          result_code: row.result_code || '',
+          sub_code:    row.sub_code    || '',
+          agent_note:  row.agent_note  || '',
+          status:      row.deal_status || 'pending',
+          lock_approval_requested: row.lock_approval_requested || false
         };
       });
     }
@@ -947,36 +931,27 @@
 
       const dealOwnerName = (currentUser.fullName || '').trim();
       const h = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+      const SELECT = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,remaining_amount,' +
+        'arrival_date,visit_date_1,visit_date_2,visit_date_3,payment_or_flight_ticket,created_time,' +
+        'result_code,sub_code,agent_note,deal_status,lock_approval_requested,' +
+        'rawLang:raw->>Language,rawAmount:raw->>Amount,rawPaid:raw->>Total_Paid_Amount,' +
+        'rawArrival:raw->>Arrival_Date,rawV1:raw->>Visit_Date,rawV2:raw->>Visit_Date1,rawV3:raw->>Visit_Date2,' +
+        'rawPft:raw->>Payment_Or_Flight_Ticket';
 
       async function doFetch() {
-        // Önce name filtreli tek istek dene (en hızlı yol)
-        const resp = await fetch(
-          `${SUPABASE_URL}/rest/v1/Raw-Data?select=*,%22db.Deal%20Id%22&%22db.Deal%20Owner%20Name%22=eq.${encodeURIComponent(dealOwnerName)}`,
-          { headers: h }
-        );
-        if (resp.ok) {
-          const data = mapDeals(await safeJson(resp));
-          if (data.length > 0) return data;
+        let all = [], offset = 0;
+        while (true) {
+          const url = `${SUPABASE_URL}/rest/v1/deals?select=${SELECT}` +
+            `&deal_owner=eq.${encodeURIComponent(dealOwnerName)}&limit=1000&offset=${offset}`;
+          const resp = await fetch(url, { headers: h });
+          if (!resp.ok) throw new Error('HTTP ' + resp.status);
+          const batch = await resp.json();
+          if (!Array.isArray(batch) || !batch.length) break;
+          all.push(...batch);
+          if (batch.length < 1000) break;
+          offset += 1000;
         }
-        // Fallback: parallel full fetch + client filter
-        const cr = await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?select=*,%22db.Deal%20Id%22&limit=1`, {
-          headers: { ...h, Prefer: 'count=exact' }
-        });
-        const total = parseInt((cr.headers.get('content-range') || '').split('/')[1] || '0') || 0;
-        if (!total) return [];
-        const SIZE = 1000;
-        const chunks = await Promise.all(
-          Array.from({ length: Math.ceil(total / SIZE) }, (_, i) =>
-            fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?select=*,%22db.Deal%20Id%22&limit=${SIZE}&offset=${i * SIZE}`, { headers: h })
-              .then(r => safeJson(r))
-          )
-        );
-        const sn = dealOwnerName.toLowerCase();
-        const di = String(currentUser.id || currentUser.zoho_id || '').trim();
-        return mapDeals(chunks.flat()).filter(d => {
-          const ro = (d['Deal Owner Name'] || '').trim().toLowerCase();
-          return ro === sn || (di && String(d['Deal Owner Id'] || '').trim() === di);
-        });
+        return mapDeals(all);
       }
 
       // Tüm yollar için ortak render fonksiyonu
@@ -1014,12 +989,11 @@
         addLog('LOGIN', `Giriş yapıldı — ${deals.length} deal yüklendi`);
 
         if (deals.length === 0) {
-          const sr = await fetch(`${SUPABASE_URL}/rest/v1/Raw-Data?select=%22db.Deal%20Owner%20Name%22&limit=50`,
-            { headers: h });
+          const sr = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=deal_owner&limit=200`, { headers: h });
           let sampleNames = [];
           if (sr.ok) {
             const sd = await sr.json();
-            sampleNames = [...new Set(sd.map(d => d['db.Deal Owner Name']).filter(Boolean))].slice(0, 8);
+            sampleNames = [...new Set(sd.map(d => d.deal_owner).filter(Boolean))].slice(0, 8);
           }
           spinEl.classList.add('hidden');
           errEl.classList.remove('hidden');
