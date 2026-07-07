@@ -389,6 +389,7 @@
           <tr>
             <th style="width:34px">#</th>
             <th onclick="dealSortBy('deal_name')" style="cursor:pointer;user-select:none">Hasta Adı<span id="dsort-deal_name" class="sarrow"></span></th>
+            <th>Deal ID</th>
             <th onclick="dealSortBy('stage')" style="cursor:pointer;user-select:none">Stage<span id="dsort-stage" class="sarrow"></span></th>
             <th onclick="dealSortBy('deal_owner')" style="cursor:pointer;user-select:none">Danışman<span id="dsort-deal_owner" class="sarrow"></span></th>
             <th onclick="dealSortBy('arrival_date')" style="cursor:pointer;user-select:none">Arrival<span id="dsort-arrival_date" class="sarrow"></span></th>
@@ -882,7 +883,9 @@
       return `<tr class="${urgCls}" onclick="openAlarmById('${a.id}')" style="${rowBg ? 'background:' + rowBg : ''}">
         <td style="color:#475569;font-size:10px;font-variant-numeric:tabular-nums">${i+1}</td>
         <td>
-          <div style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">${fmt(a.deal_name)}</div>
+          <div style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px">
+            <a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(a.deal_name)}</a>
+          </div>
           <div style="font-size:9px;color:#64748b;margin-top:1px">${fmt(a.deal_owner)}</div>
         </td>
         <td style="white-space:nowrap">
@@ -1353,7 +1356,7 @@
       return `<div class="today-card" style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px">
           <div style="min-width:0;flex:1">
-            <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmt(a.deal_name)}</div>
+            <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(a.deal_name)}</a></div>
             <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600">${fmt(a.deal_owner)}</div>
           </div>
           <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
@@ -1659,6 +1662,7 @@
         <td>
           <div style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:200px">${fmt(d.deal_name)}</div>
         </td>
+        <td style="font-size:10px;font-family:monospace;white-space:nowrap"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#64748b;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color='#64748b'">${fmt(raw.DealID) || fmt(d.id)}</a></td>
         <td><span style="font-size:10px;font-weight:600;color:${stageColor}">${fmt(d.stage)}</span></td>
         <td style="color:#94a3b8;font-size:11px;white-space:nowrap">${fmt(d.deal_owner)}</td>
         <td style="color:#cbd5e1;font-size:11px;white-space:nowrap">${formatDate(arrival)}</td>
@@ -1674,7 +1678,7 @@
     currentDeal = d;
     const raw = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw || {});
     document.getElementById('dmDealName').textContent  = d.deal_name || '—';
-    document.getElementById('dmDealOwner').textContent = `${d.deal_owner || '—'} · ${d.team || '—'}`;
+    document.getElementById('dmDealOwner').innerHTML = `${fmt(d.deal_owner)} · ${fmt(d.team)} · <a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" style="color:#0d9488;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#2dd4bf'" onmouseout="this.style.color='#0d9488'">${fmt(raw.DealID) || d.id} ↗</a>`;
 
     const fields = [
       ['Stage',           d.stage],
@@ -1733,7 +1737,7 @@
     empty.style.display = 'none';
     tbody.innerHTML = data.map((a, i) => `<tr>
       <td style="color:#475569;font-size:10px">${i+1}</td>
-      <td style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap">${fmt(a.deal_name)}</td>
+      <td style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(a.deal_name)}</a></td>
       <td style="color:#94a3b8;font-size:11px;white-space:nowrap">${fmt(a.deal_owner)}</td>
       <td style="color:#94a3b8;font-size:10px;white-space:nowrap">${fmt((typeof TeamMap!=='undefined' && TeamMap.normalize(a.team)) || a.team)}</td>
       <td style="color:#64748b;font-size:10px;white-space:nowrap">${fmt(a.region)}</td>
@@ -1971,7 +1975,7 @@
       return `<tr onclick="openAlarmById('${safeId}')" style="${rowBg ? 'background:'+rowBg : ''}">
         <td style="color:#475569;font-size:10px">${i+1}</td>
         <td>
-          <div style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${fmt(a.deal_name)}</div>
+          <div style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(a.deal_name)}</a></div>
           <div style="font-size:9px;color:#64748b;margin-top:1px">${fmt(a.deal_owner)}</div>
         </td>
         <td><span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color};white-space:nowrap">${tm.label}</span></td>
@@ -2020,7 +2024,7 @@
       return `<tr onclick="openAlarmById('${a.id}')" style="${rowBg ? 'background:'+rowBg : ''}">
         <td style="color:#475569;font-size:10px">${i+1}</td>
         <td>
-          <div style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px">${fmt(a.deal_name)}</div>
+          <div style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(a.deal_name)}</a></div>
           <div style="font-size:9px;color:#64748b;margin-top:1px">${fmt(a.deal_owner)}</div>
         </td>
         <td style="color:#94a3b8;font-size:10px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis">${fmt(a.team)}</td>
