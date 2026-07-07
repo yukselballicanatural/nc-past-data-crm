@@ -386,16 +386,16 @@
           <tr>
             <th style="width:34px">#</th>
             <th onclick="dealSortBy('deal_name')" style="cursor:pointer;user-select:none">Hasta Adı<span id="dsort-deal_name" class="sarrow"></span></th>
-            <th>Deal ID</th>
+            <th onclick="dealSortBy('deal_id')" style="cursor:pointer;user-select:none">Deal ID<span id="dsort-deal_id" class="sarrow"></span></th>
             <th onclick="dealSortBy('stage')" style="cursor:pointer;user-select:none">Stage<span id="dsort-stage" class="sarrow"></span></th>
             <th onclick="dealSortBy('deal_owner')" style="cursor:pointer;user-select:none">Danışman<span id="dsort-deal_owner" class="sarrow"></span></th>
             <th onclick="dealSortBy('arrival_date')" style="cursor:pointer;user-select:none">Arrival<span id="dsort-arrival_date" class="sarrow"></span></th>
-            <th>Eklenme Tarihi</th>
-            <th>P/F</th>
+            <th onclick="dealSortBy('created_time')" style="cursor:pointer;user-select:none">Eklenme Tarihi<span id="dsort-created_time" class="sarrow"></span></th>
+            <th onclick="dealSortBy('payment_or_flight_ticket')" style="cursor:pointer;user-select:none">P/F<span id="dsort-payment_or_flight_ticket" class="sarrow"></span></th>
             <th>Alarm</th>
             <th onclick="dealSortBy('amount')" style="cursor:pointer;user-select:none">Tutar<span id="dsort-amount" class="sarrow"></span></th>
-            <th>Ödenen</th>
-            <th>Kalan</th>
+            <th onclick="dealSortBy('total_paid_amount')" style="cursor:pointer;user-select:none">Ödenen<span id="dsort-total_paid_amount" class="sarrow"></span></th>
+            <th onclick="dealSortBy('remaining_amount')" style="cursor:pointer;user-select:none">Kalan<span id="dsort-remaining_amount" class="sarrow"></span></th>
           </tr>
         </thead>
         <tbody id="dealTbody"></tbody>
@@ -1605,7 +1605,7 @@
   }
 
   function updateDealSortArrows() {
-    ['deal_name','stage','deal_owner','arrival_date','amount'].forEach(col => {
+    ['deal_name','deal_id','stage','deal_owner','arrival_date','created_time','payment_or_flight_ticket','amount','total_paid_amount','remaining_amount'].forEach(col => {
       const el = document.getElementById('dsort-' + col);
       if (!el) return;
       if (col === dealSortCol) {
