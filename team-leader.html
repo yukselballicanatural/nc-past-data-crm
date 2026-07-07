@@ -584,6 +584,9 @@
       </div>
     </div>
 
+    <!-- Deal / Hasta Detayları -->
+    <div class="info-grid" id="modalDealInfoGrid" style="margin-bottom:18px"></div>
+
     <!-- Aksiyon Geçmişi -->
     <div id="modalTimeline" style="background:#0b1220;border:1px solid #1e293b;border-radius:10px;padding:10px 14px;margin-bottom:14px">
       <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Aksiyon Geçmişi</div>
@@ -715,10 +718,82 @@
           const remaining = (total !== null && paid !== null) ? (total - paid) : null;
           const pct = (total && total > 0 && paid !== null) ? (paid / total * 100) : null;
           const isWon = !!(d.stage && d.stage.toLowerCase().includes('won'));
-          dealFinanceMap[d.id] = { total, paid, remaining, pct, stage: d.stage, isWon };
+          dealFinanceMap[d.id] = { total, paid, remaining, pct, stage: d.stage, isWon, raw };
         });
       } catch(e) { /* finans bilgisi opsiyonel, sessiz geç */ }
     }));
+  }
+
+  // ── Deal/Hasta detay alanları — deal modal ve alarm modalında ortak kullanılır ──
+  function rv(v) { return (v && typeof v === 'object') ? (v.name || null) : v; }
+
+  function buildDealFields(d, raw) {
+    raw = raw || {};
+    return [
+      ['__section__', 'Durum'],
+      ['Stage', d.stage],
+      ['Sonuç Kodu', raw.Result_Codes],
+      ['Onay Durumu', raw.Approval],
+      ['Payment / Ticket', raw.Payment_Or_Flight_Ticket || d.payment_or_flight_ticket],
+
+      ['__section__', 'Kişi Bilgileri'],
+      ['İletişim', rv(raw.Contact_Name)],
+      ['E-posta', raw.Email],
+      ['Pasaport', raw.Passport],
+      ['Ülke', raw.Country_Name],
+      ['Dil', raw.Language],
+      ['Yetişkin / Çocuk', (raw.Adults || raw.Children) ? `${raw.Adults ?? 0} / ${raw.Children ?? 0}` : null],
+      ['Yolcu Sayısı', raw.No_of_Passengers],
+
+      ['__section__', 'Tarihler'],
+      ['Arrival Date',    formatDate(raw.Arrival_Date)],
+      ['Eklenme Tarihi',  formatDate(raw.Created_Time)],
+      ['1. Vizit',        formatDate(raw.Visit_Date  || raw.Visit_Date_1)],
+      ['2. Vizit',        formatDate(raw.Visit_Date1 || raw.Visit_Date_2)],
+      ['3. Vizit',        formatDate(raw.Visit_Date2 || raw.Visit_Date_3)],
+      ['Son Aktivite',    formatDate(raw.Last_Activity_Time)],
+
+      ['__section__', 'Seyahat / Otel'],
+      ['Otel', raw.Hotel === 'Yes' ? (rv(raw.Hotel_Name) || 'Var') : (raw.Hotel === 'No' ? 'Yok' : null)],
+      ['Oda Tipi', raw.Room_type],
+      ['Check-in / Check-out', (raw.Check_in || raw.Check_out) ? `${formatDate(raw.Check_in)} — ${formatDate(raw.Check_out)}` : null],
+      ['Varış Uçuşu', raw.Arrival_Flight_No],
+      ['Dönüş Uçuşu', raw.Return_Flight_No],
+      ['Varış Havalimanı', rv(raw.Arrival_Airport)],
+      ['Dönüş Havalimanı', rv(raw.Return_Airport)],
+      ['Transfer Tipi', raw.Transfer_Type],
+      ['Doktor', raw.Doctor],
+      ['Booking Service', raw.Booking_Service],
+      ['Booking ID', raw.Booking_ID],
+      ['Invoice ID', raw.Invoice_ID],
+
+      ['__section__', 'Finans'],
+      ['Tutar',  fmtMoney(d.amount ?? raw.Amount ?? raw.Grand_Total_2)],
+      ['Ödenen', fmtMoney(d.total_paid_amount ?? raw.Total_Paid_Amount)],
+      ['Kalan',  fmtMoney((d.amount ?? raw.Amount ?? raw.Grand_Total_2 ?? 0) - (d.total_paid_amount ?? raw.Total_Paid_Amount ?? 0))],
+
+      ['__section__', 'Ekip'],
+      ['Bölge', AlarmEngine.getRegion(d.team)],
+      ['Süpervizör', raw.Supervisor],
+      ['Tercüman', raw.Translator || rv(raw.Translation_Group)],
+
+      ['__section__', 'Notlar'],
+      ['Danışman Notu', raw.Description],
+      ['Lead Kaynağı', raw.Lead_Source],
+    ];
+  }
+
+  function renderFieldsHtml(fields) {
+    return fields.map(([l, v], idx) => {
+      if (l === '__section__') {
+        return `<div style="grid-column:1/-1;font-size:10px;font-weight:700;color:#0d9488;text-transform:uppercase;letter-spacing:0.08em;${idx === 0 ? '' : 'margin-top:8px;padding-top:8px;border-top:1px solid #1e293b'}">${I18N.t(v)}</div>`;
+      }
+      return `
+      <div class="info-card">
+        <div class="info-label">${I18N.t(l)}</div>
+        <div class="info-val">${fmt(v)}</div>
+      </div>`;
+    }).join('');
   }
 
   function paymentCellHtml(dealId) {
@@ -1315,6 +1390,17 @@
     const days = a.days_remaining !== null ? a.days_remaining : daysUntil(a.reference_date);
     document.getElementById('modalDaysLeft').innerHTML    = daysDisplay(days, a.reference_date);
 
+    // Deal / hasta detayları — dealFinanceMap'ten (loadDealFinance ile arka planda doldurulur)
+    const fin = dealFinanceMap[a.deal_id] || {};
+    const pseudoDeal = {
+      stage: fin.stage,
+      payment_or_flight_ticket: a.payment_or_flight_ticket,
+      amount: fin.total,
+      total_paid_amount: fin.paid,
+      team: a.team,
+    };
+    document.getElementById('modalDealInfoGrid').innerHTML = renderFieldsHtml(buildDealFields(pseudoDeal, fin.raw));
+
     // Threshold badge
     const tColors = { 45:['#1e3a5f','#60a5fa'], 30:['#1e1b4b','#818cf8'], 15:['#422006','#f59e0b'], 7:['#431407','#f97316'], 3:['#450a0a','#ef4444'] };
     const tc2 = a.threshold_days ? (tColors[a.threshold_days] || ['#1e293b','#94a3b8']) : null;
@@ -1737,7 +1823,7 @@
 
     const bar = document.getElementById('dealTotalBar');
     bar.style.display = 'flex';
-    bar.innerHTML = '<span style="font-size:11px;color:#64748b">Toplamlar hesaplanıyor...</span>';
+    bar.innerHTML = `<span style="font-size:11px;color:#64748b">${I18N.t('Toplamlar hesaplanıyor...')}</span>`;
 
     try {
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
@@ -1773,16 +1859,16 @@
       }
 
       bar.innerHTML = `
-        <div class="deal-total-item"><div class="deal-total-label">Toplam Deal</div><div class="deal-total-value" style="color:#f1f5f9">${count.toLocaleString('tr-TR')}</div></div>
+        <div class="deal-total-item"><div class="deal-total-label">${I18N.t('Toplam Deal')}</div><div class="deal-total-value" style="color:#f1f5f9">${count.toLocaleString('tr-TR')}</div></div>
         <div style="width:1px;background:#1e293b;align-self:stretch"></div>
-        <div class="deal-total-item"><div class="deal-total-label">Toplam Tutar</div><div class="deal-total-value" style="color:#60a5fa">€${totalAmt.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+        <div class="deal-total-item"><div class="deal-total-label">${I18N.t('Toplam Tutar')}</div><div class="deal-total-value" style="color:#60a5fa">€${totalAmt.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
         <div style="width:1px;background:#1e293b;align-self:stretch"></div>
-        <div class="deal-total-item"><div class="deal-total-label">Ödenen</div><div class="deal-total-value" style="color:#4ade80">€${totalPaid.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+        <div class="deal-total-item"><div class="deal-total-label">${I18N.t('Ödenen')}</div><div class="deal-total-value" style="color:#4ade80">€${totalPaid.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
         <div style="width:1px;background:#1e293b;align-self:stretch"></div>
         <div class="deal-total-item"><div class="deal-total-label">Flight Ticket</div><div class="deal-total-value" style="color:#60a5fa">${ftCount.toLocaleString('tr-TR')}</div></div>
         <div class="deal-total-item"><div class="deal-total-label">Payment</div><div class="deal-total-value" style="color:#c084fc">${payCount.toLocaleString('tr-TR')}</div></div>`;
     } catch(e) {
-      bar.innerHTML = `<span style="font-size:11px;color:#f87171">Toplamlar yüklenemedi: ${e.message}</span>`;
+      bar.innerHTML = `<span style="font-size:11px;color:#f87171">${I18N.t('Toplamlar yüklenemedi: ')}${e.message}</span>`;
       dealTotalsKey = null; // tekrar denesin
     }
   }
@@ -1838,27 +1924,7 @@
     document.getElementById('dmDealName').textContent  = d.deal_name || '—';
     document.getElementById('dmDealOwner').innerHTML = `${fmt(d.deal_owner)} · ${fmt(d.team)} · <a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" style="color:#0d9488;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#2dd4bf'" onmouseout="this.style.color='#0d9488'">${fmt(raw.DealID) || d.id} ↗</a>`;
 
-    const fields = [
-      ['Stage',           d.stage],
-      ['Payment / Ticket',raw.Payment_Or_Flight_Ticket || '—'],
-      ['Arrival Date',    formatDate(raw.Arrival_Date)],
-      ['Eklenme Tarihi',  formatDate(raw.Created_Time)],
-      ['1. Vizit',        formatDate(raw.Visit_Date  || raw.Visit_Date_1)],
-      ['2. Vizit',        formatDate(raw.Visit_Date1 || raw.Visit_Date_2)],
-      ['3. Vizit',        formatDate(raw.Visit_Date2 || raw.Visit_Date_3)],
-      ['Tutar',           fmtMoney(d.amount ?? raw.Amount ?? raw.Grand_Total_2)],
-      ['Ödenen',          fmtMoney(d.total_paid_amount ?? raw.Total_Paid_Amount)],
-      ['Kalan',           fmtMoney((d.amount ?? raw.Amount ?? raw.Grand_Total_2 ?? 0) - (d.total_paid_amount ?? raw.Total_Paid_Amount ?? 0))],
-      ['Bölge',           AlarmEngine.getRegion(d.team)],
-      ['Son Aktivite',    formatDate(raw.Last_Activity_Time)],
-      ['Danışman Notu',   raw.Description || '—'],
-      ['Lead Kaynağı',    raw.Lead_Source || '—'],
-    ];
-    document.getElementById('dmGrid').innerHTML = fields.map(([l,v]) => `
-      <div class="info-card">
-        <div class="info-label">${I18N.t(l)}</div>
-        <div class="info-val">${fmt(v)}</div>
-      </div>`).join('');
+    document.getElementById('dmGrid').innerHTML = renderFieldsHtml(buildDealFields(d, raw));
 
     // Aktif alarmlar
     const dealAlarms = allAlarms.filter(a => a.deal_id === String(d.id) && !['closed','cancelled'].includes(a.status));
