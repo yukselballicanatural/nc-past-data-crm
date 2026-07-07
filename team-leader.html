@@ -1331,7 +1331,13 @@
     grid.innerHTML = todayAlarms.map(a => {
       const sm  = statusMeta(a.status);
       const field = fieldLabel(a.reference_field);
-      const actionBtns = ['arrived','examined','processing','no_show','closed'].includes(a.status) ? '' : `
+      const actionBtns = ['arrived','examined','processing','no_show','closed'].includes(a.status) ? `
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <button onclick="undoQuickAction('${a.id}')" style="flex:1;padding:6px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#cbd5e1;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;display:flex;align-items:center;justify-content:center;gap:5px">
+            <svg style="width:11px;height:11px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L4 10m0 0l5-5m-5 5h11a4 4 0 010 8h-1"/></svg>
+            Geri Al
+          </button>
+        </div>` : `
         <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
           <button onclick="quickAction('${a.id}','arrived')" style="flex:1;padding:6px;background:#052e16;border:1px solid #166534;border-radius:8px;color:#4ade80;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Hasta Geldi</button>
           <button onclick="quickAction('${a.id}','examined')" style="flex:1;padding:6px;background:#083344;border:1px solid #0e7490;border-radius:8px;color:#67e8f9;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Muayene</button>
@@ -1385,6 +1391,25 @@
       renderToday();
       renderAlarms();
       showNotice('Güncellendi.', 'success');
+    } catch(e) { showNotice('Hata: ' + e.message, 'error'); }
+  }
+
+  async function undoQuickAction(alarmId) {
+    const idx = allAlarms.findIndex(x => x.id === alarmId);
+    const prevStatus = idx >= 0 ? allAlarms[idx].status : null;
+    const updates = { status: 'open', actioned_at: null, closed_at: null, closed_by: null, close_reason: null };
+    try {
+      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${alarmId}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (idx >= 0) {
+        logAlarmAction(allAlarms[idx], 'reopened', prevStatus, 'open', null);
+        allAlarms[idx] = { ...allAlarms[idx], ...updates };
+      }
+      updateTabCounts();
+      renderToday();
+      renderAlarms();
+      showNotice('Aksiyon geri alındı.', 'success');
     } catch(e) { showNotice('Hata: ' + e.message, 'error'); }
   }
 
