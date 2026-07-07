@@ -390,6 +390,7 @@
             <th onclick="dealSortBy('stage')" style="cursor:pointer;user-select:none">Stage<span id="dsort-stage" class="sarrow"></span></th>
             <th onclick="dealSortBy('deal_owner')" style="cursor:pointer;user-select:none">Danışman<span id="dsort-deal_owner" class="sarrow"></span></th>
             <th onclick="dealSortBy('arrival_date')" style="cursor:pointer;user-select:none">Arrival<span id="dsort-arrival_date" class="sarrow"></span></th>
+            <th>Eklenme Tarihi</th>
             <th>P/F</th>
             <th>Alarm</th>
             <th onclick="dealSortBy('amount')" style="cursor:pointer;user-select:none">Tutar<span id="dsort-amount" class="sarrow"></span></th>
@@ -1819,6 +1820,7 @@
         <td><span style="font-size:10px;font-weight:600;color:${stageColor}">${fmt(d.stage)}</span></td>
         <td style="color:#94a3b8;font-size:11px;white-space:nowrap">${fmt(d.deal_owner)}</td>
         <td style="color:#cbd5e1;font-size:11px;white-space:nowrap">${formatDate(arrival)}</td>
+        <td style="color:#64748b;font-size:11px;white-space:nowrap">${formatDate(raw.Created_Time)}</td>
         <td style="font-size:10px;color:#94a3b8;white-space:nowrap">${fmt(pft)}</td>
         <td>${alarmBadge}</td>
         <td style="color:#60a5fa;font-size:11px;white-space:nowrap">${amount === null ? '<span style="color:#475569">—</span>' : fmtMoney(amount)}</td>
@@ -1840,6 +1842,7 @@
       ['Stage',           d.stage],
       ['Payment / Ticket',raw.Payment_Or_Flight_Ticket || '—'],
       ['Arrival Date',    formatDate(raw.Arrival_Date)],
+      ['Eklenme Tarihi',  formatDate(raw.Created_Time)],
       ['1. Vizit',        formatDate(raw.Visit_Date  || raw.Visit_Date_1)],
       ['2. Vizit',        formatDate(raw.Visit_Date1 || raw.Visit_Date_2)],
       ['3. Vizit',        formatDate(raw.Visit_Date2 || raw.Visit_Date_3)],
@@ -1853,7 +1856,7 @@
     ];
     document.getElementById('dmGrid').innerHTML = fields.map(([l,v]) => `
       <div class="info-card">
-        <div class="info-label">${l}</div>
+        <div class="info-label">${I18N.t(l)}</div>
         <div class="info-val">${fmt(v)}</div>
       </div>`).join('');
 
