@@ -936,10 +936,9 @@
     document.getElementById('kpiOverdue').textContent = filterAlarms('overdue').length;
     document.getElementById('kpiMissing').textContent = filterAlarms('missing').length;
 
-    // Noactivity count (Payment dealleri)
-    const noActCnt = getNoActivityDeals().length;
-    const noActEl  = document.getElementById('cnt-noactivity');
-    if (noActEl) noActEl.textContent = noActCnt;
+    // Noactivity count — server-side liste sekme açılınca yüklenir, son bilinen sayıyı göster
+    const noActEl = document.getElementById('cnt-noactivity');
+    if (noActEl && noActivityDeals.length) noActEl.textContent = noActivityDeals.length;
 
     // Nav badges
     const openCnt  = filterAlarms('open').length;
