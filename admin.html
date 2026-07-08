@@ -796,15 +796,22 @@
     <div class="am-panel p-4 mb-6">
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div class="flex items-center gap-2.5">
-          <div class="am-kpi-icon" style="margin:0">⚙️</div>
+          <div class="am-kpi-icon" style="margin:0">🎯</div>
           <div>
-            <h3 class="text-sm font-bold text-white">Alarm Parametreleri</h3>
-            <p class="text-[10px] text-slate-500 mt-0.5">Eşik günleri ve eksik tarih tekrar periyodu — motor bir sonraki çalışmada uygular</p>
+            <h3 class="text-sm font-bold text-white">Eşik Filtresi</h3>
+            <p class="text-[10px] text-slate-500 mt-0.5">Bir eşiğe tıklayarak aşağıdaki Alarm Listesi'ni o güne göre filtrele</p>
           </div>
         </div>
+        <div class="flex items-center gap-3 flex-wrap">
+          <div id="amThreshFilterChips" class="flex items-center gap-1.5 flex-wrap"></div>
+          <button type="button" onclick="_amToggleEngineSettings()" class="am-btn" id="amEngineSettingsToggle">⚙️ Motor Ayarları</button>
+        </div>
+      </div>
+      <div id="engineSettingsPanel" style="display:none" class="mt-4 pt-4 border-t border-white/5">
+        <p class="text-[10px] text-slate-500 mb-3">Bu ayarlar listeyi filtrelemez — alarm motorunun bir sonraki çalışmasında <b>hangi gün eşiklerinde yeni alarm üretileceğini</b> belirler.</p>
         <div id="settingsForm" style="display:none" class="flex items-center gap-4 flex-wrap">
           <div class="flex items-center gap-2 flex-wrap">
-            <label class="text-[10px] text-slate-400 uppercase font-semibold">Eşikler:</label>
+            <label class="text-[10px] text-slate-400 uppercase font-semibold">Motor eşikleri:</label>
             <div id="thresholdChips" class="flex items-center gap-1.5 flex-wrap"></div>
             <input id="setThresholds" type="hidden">
           </div>
@@ -906,7 +913,7 @@
             <option value="Payment">Payment</option>
             <option value="Flight Ticket">Flight Ticket</option>
           </select>
-          <select id="amFilterThresh" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
+          <select id="amFilterThresh" onchange="_amRenderThreshFilterChips();renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
             <option value="">Eşik: Tümü</option>
             <option value="45">45 Gün</option>
             <option value="30">30 Gün</option>
@@ -1742,6 +1749,31 @@
       _csvDownload(rows, `region_performans_${new Date().toISOString().slice(0,10)}.csv`);
     }
 
+    // ── Eşik Filtresi (Alarm Listesi'ni gerçek zamanlı filtreler) ──
+    const _AM_FILTER_THRESHOLD_PRESETS = [45, 30, 15, 7, 3];
+
+    function _amRenderThreshFilterChips() {
+      const sel = document.getElementById('amFilterThresh');
+      const cur = sel ? sel.value : '';
+      const chip = (val, label) => `<button type="button" onclick="_amSetThreshFilter('${val}')"
+        class="px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all ${cur === val
+          ? 'bg-teal-600 border-teal-500 text-white shadow shadow-teal-900/40'
+          : 'bg-gray-950 border-gray-700 text-slate-400 hover:border-teal-600 hover:text-teal-300'}">${label}</button>`;
+      document.getElementById('amThreshFilterChips').innerHTML =
+        chip('', 'Tümü') + _AM_FILTER_THRESHOLD_PRESETS.map(v => chip(String(v), v + 'g')).join('');
+    }
+    function _amSetThreshFilter(val) {
+      const sel = document.getElementById('amFilterThresh');
+      if (sel) sel.value = val;
+      _amRenderThreshFilterChips();
+      renderAdminAlarmTable();
+    }
+    function _amToggleEngineSettings() {
+      const panel = document.getElementById('engineSettingsPanel');
+      const open = panel.style.display !== 'none';
+      panel.style.display = open ? 'none' : 'block';
+    }
+
     // ── Parametre Yönetimi (PDF 10.3 / 17) — app_settings tablosu ──
     const _AM_THRESHOLD_PRESETS = [60, 45, 30, 15, 7, 3, 1];
 
@@ -2037,7 +2069,7 @@
       });
       if (v === 'summary') { renderSummary(); _startAnalyticsAutoRefresh(); }
       else _stopAnalyticsAutoRefresh();
-      if (v === 'alarms-monitor') { loadAdminAlarms(); loadAlarmSettings(); _startAlarmMonitorAutoRefresh(); }
+      if (v === 'alarms-monitor') { loadAdminAlarms(); loadAlarmSettings(); _amRenderThreshFilterChips(); _startAlarmMonitorAutoRefresh(); }
       else _stopAlarmMonitorAutoRefresh();
       if (v === 'users') loadUsers();
       else if (v === 'logs') loadLogs();
