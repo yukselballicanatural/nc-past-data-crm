@@ -67,7 +67,7 @@
     /* ── Alarm Monitoring (TV Dashboard) ─────────────────────────── */
     .am-live-dot { width:9px; height:9px; border-radius:50%; background:#34d399; box-shadow:0 0 0 0 rgba(52,211,153,.7); animation:amPulseDot 1.8s infinite; }
     @keyframes amPulseDot { 0%{box-shadow:0 0 0 0 rgba(52,211,153,.6);} 70%{box-shadow:0 0 0 9px rgba(52,211,153,0);} 100%{box-shadow:0 0 0 0 rgba(52,211,153,0);} }
-    .am-kpi { position:relative; border-radius:18px; padding:16px 14px; overflow:hidden; border:1px solid rgba(255,255,255,.06); background:linear-gradient(155deg,rgba(255,255,255,.05),rgba(255,255,255,0) 60%),#0d1220; transition:transform .25s ease, box-shadow .25s ease; }
+    .am-kpi { position:relative; border-radius:18px; padding:18px 14px 16px; overflow:hidden; border:1px solid rgba(255,255,255,.06); border-top:2.5px solid color-mix(in srgb, var(--am-glow,#6366f1) 55%, transparent); background:linear-gradient(155deg,rgba(255,255,255,.05),rgba(255,255,255,0) 60%),#0d1220; transition:transform .25s ease, box-shadow .25s ease; }
     .am-kpi:hover { transform:translateY(-3px); box-shadow:0 14px 32px -12px rgba(0,0,0,.55); }
     .am-kpi .am-kpi-val { font-family:'Outfit',sans-serif; font-size:clamp(1.5rem,2.6vw,2.1rem); font-weight:800; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; min-height:1.2em; }
     .am-kpi .am-kpi-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#7d8aa3; margin-top:6px; }
@@ -79,6 +79,33 @@
     .am-team-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.04); transition:background .15s; }
     .am-team-row:hover { background:rgba(255,255,255,.06); }
     .am-clock { font-family:'Outfit',sans-serif; font-variant-numeric:tabular-nums; letter-spacing:.02em; }
+
+    .am-page { position:relative; }
+    .am-page::before {
+      content:''; position:absolute; top:-40px; left:-10%; width:65%; height:340px; z-index:-1;
+      background:radial-gradient(60% 100% at 30% 0%, rgba(99,102,241,.16), transparent 70%),
+                 radial-gradient(40% 100% at 80% 0%, rgba(34,211,238,.10), transparent 70%);
+      filter:blur(10px); pointer-events:none;
+    }
+    .am-topbar {
+      display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap;
+      background:linear-gradient(180deg,rgba(255,255,255,.035),rgba(255,255,255,0)),#0b101c;
+      border:1px solid rgba(255,255,255,.07); border-radius:22px; padding:18px 24px;
+      box-shadow:0 20px 45px -20px rgba(0,0,0,.6);
+    }
+    .am-topbar-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+    .am-btn {
+      display:inline-flex; align-items:center; gap:6px; font-size:11.5px; font-weight:700; letter-spacing:.01em;
+      padding:8px 14px; border-radius:11px; border:1px solid rgba(255,255,255,.08); color:#cbd5e1;
+      background:rgba(255,255,255,.04); transition:all .15s;
+    }
+    .am-btn:hover { background:rgba(255,255,255,.09); color:#fff; border-color:rgba(255,255,255,.16); }
+    .am-btn-primary { background:linear-gradient(135deg,#0d9488,#0891b2); border-color:transparent; color:#fff; box-shadow:0 8px 20px -6px rgba(13,148,136,.55); }
+    .am-btn-primary:hover { filter:brightness(1.1); color:#fff; }
+    .am-panel { background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0)),#0b101c; border:1px solid rgba(255,255,255,.07); border-radius:20px; }
+    .am-kpi-icon { width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin:0 auto 8px; font-size:15px; background:rgba(255,255,255,.06); }
+    .am-region-bar { height:6px; border-radius:99px; background:rgba(255,255,255,.06); overflow:hidden; margin-top:10px; }
+    .am-region-bar > div { height:100%; border-radius:99px; transition:width .6s ease; }
     .nav-btn { width:100%; padding:8px 14px; font-size:11px; font-weight:700; border-radius:10px; display:flex; align-items:center; gap:8px; transition:all 0.15s; cursor:pointer; text-align:left; }
     .nav-btn.active { background:#4F46E5; color:#fff; }
     .nav-btn:not(.active) { color:#94A3B8; }
@@ -682,8 +709,6 @@
       </div>
     </div>
 
-  </main>
-
   <!-- User Edit / Add Modal -->
   <div id="userModal" onclick="if(event.target===this)closeUserModal()">
     <div class="modal-panel" style="max-width:480px;width:95%">
@@ -742,36 +767,40 @@
   </div>
 
   <!-- ════════════════ ALARM MONITORING VIEW ════════════════ -->
-  <div id="view-alarms-monitor" class="hidden">
+  <div id="view-alarms-monitor" class="hidden am-page">
     <!-- Header -->
-    <div class="flex items-center justify-between mb-3 flex-wrap gap-4 pt-1">
+    <div class="am-topbar mb-6">
       <div>
         <div class="flex items-center gap-2.5">
-          <h2 class="text-2xl font-bold text-white tracking-tight">Alarm Monitoring</h2>
+          <h2 class="text-[26px] font-bold text-white tracking-tight">Alarm Monitoring</h2>
           <span class="am-live-dot"></span>
           <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Canlı</span>
         </div>
-        <p class="text-xs text-slate-500 mt-1">Tüm bölgeler — sistem geneli alarm durumu · <span id="amLastRefresh">—</span> güncellendi</p>
+        <p class="text-xs text-slate-500 mt-1.5">Tüm bölgeler — sistem geneli alarm durumu · <span id="amLastRefresh">—</span> güncellendi · <span id="adminEngineStatus" class="text-slate-500"></span></p>
       </div>
-      <div class="am-clock text-3xl font-bold text-white bg-gray-900/80 border border-gray-800 rounded-xl px-5 py-2" id="amClock">--:--:--</div>
-    </div>
-    <div class="flex items-center justify-end gap-2 flex-wrap mb-6">
-      <span id="adminEngineStatus" class="text-xs text-slate-500 mr-auto"></span>
-      <button onclick="adminRunEngine()" id="adminBtnEngine" class="px-3 py-1.5 bg-teal-700 hover:bg-teal-600 text-white text-xs rounded-lg font-semibold flex items-center gap-1.5">
-        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-        Tüm Sistemi Güncelle
-      </button>
-      <button onclick="exportAdminAlarms()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Export CSV</button>
-      <button onclick="exportAlarmPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">TL Performans CSV</button>
-      <button onclick="exportRegionPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Bölge Performans CSV</button>
+      <div class="flex items-center gap-4 flex-wrap">
+        <div class="am-clock text-3xl font-bold text-white bg-black/30 border border-white/10 rounded-2xl px-5 py-2" id="amClock">--:--:--</div>
+        <div class="am-topbar-actions">
+          <button onclick="adminRunEngine()" id="adminBtnEngine" class="am-btn am-btn-primary">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Tüm Sistemi Güncelle
+          </button>
+          <button onclick="exportAdminAlarms()" class="am-btn">Export CSV</button>
+          <button onclick="exportAlarmPerformance()" class="am-btn">TL Performans</button>
+          <button onclick="exportRegionPerformance()" class="am-btn">Bölge Performans</button>
+        </div>
+      </div>
     </div>
 
     <!-- Parametre Yönetimi -->
-    <div class="bg-gray-900 border border-gray-800 rounded-2xl p-4 mb-6">
+    <div class="am-panel p-4 mb-6">
       <div class="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h3 class="text-sm font-bold text-white">Alarm Parametreleri</h3>
-          <p class="text-[10px] text-slate-500 mt-0.5">Eşik günleri ve eksik tarih tekrar periyodu — motor bir sonraki çalışmada uygular</p>
+        <div class="flex items-center gap-2.5">
+          <div class="am-kpi-icon" style="margin:0">⚙️</div>
+          <div>
+            <h3 class="text-sm font-bold text-white">Alarm Parametreleri</h3>
+            <p class="text-[10px] text-slate-500 mt-0.5">Eşik günleri ve eksik tarih tekrar periyodu — motor bir sonraki çalışmada uygular</p>
+          </div>
         </div>
         <div id="settingsForm" style="display:none" class="flex items-center gap-4 flex-wrap">
           <div class="flex items-center gap-2 flex-wrap">
@@ -797,14 +826,14 @@
 
     <!-- KPI Cards — 8 kart -->
     <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
-      <div class="am-kpi text-center am-critical" style="--am-glow:#fbbf24"><div class="am-kpi-val text-amber-400" id="mk1">0</div><div class="am-kpi-label">Açık Alarm</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-val text-cyan-400" id="mk2">0</div><div class="am-kpi-label">Bugün Gelecek</div></div>
-      <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-val text-red-400" id="mk3">0</div><div class="am-kpi-label">Gecikmiş</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#94a3b8"><div class="am-kpi-val text-slate-400" id="mk4">0</div><div class="am-kpi-label">Eksik Tarih</div></div>
-      <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-val text-red-400" id="mk5">0</div><div class="am-kpi-label">Bugün Gelemeyen</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-val text-cyan-400" id="mk6">0</div><div class="am-kpi-label">Payment Takip</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#fbbf24"><div class="am-kpi-val text-amber-400" id="mk7">0</div><div class="am-kpi-label">Yaklaşan</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-val text-cyan-400" id="mk8">0</div><div class="am-kpi-label">FT Takip</div></div>
+      <div class="am-kpi text-center am-critical" style="--am-glow:#fbbf24"><div class="am-kpi-icon">🔔</div><div class="am-kpi-val text-amber-400" id="mk1">0</div><div class="am-kpi-label">Açık Alarm</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-icon">📅</div><div class="am-kpi-val text-cyan-400" id="mk2">0</div><div class="am-kpi-label">Bugün Gelecek</div></div>
+      <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-icon">⏱️</div><div class="am-kpi-val text-red-400" id="mk3">0</div><div class="am-kpi-label">Gecikmiş</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#94a3b8"><div class="am-kpi-icon">❔</div><div class="am-kpi-val text-slate-400" id="mk4">0</div><div class="am-kpi-label">Eksik Tarih</div></div>
+      <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-icon">🚫</div><div class="am-kpi-val text-red-400" id="mk5">0</div><div class="am-kpi-label">Bugün Gelemeyen</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-icon">💳</div><div class="am-kpi-val text-cyan-400" id="mk6">0</div><div class="am-kpi-label">Payment Takip</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#fbbf24"><div class="am-kpi-icon">⏳</div><div class="am-kpi-val text-amber-400" id="mk7">0</div><div class="am-kpi-label">Yaklaşan</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-icon">✈️</div><div class="am-kpi-val text-cyan-400" id="mk8">0</div><div class="am-kpi-label">FT Takip</div></div>
     </div>
 
     <!-- İki Bölge Grid -->
@@ -815,11 +844,12 @@
           <div class="w-2.5 h-2.5 rounded-full bg-blue-400" style="box-shadow:0 0 10px 2px rgba(96,165,250,.6)"></div>
           <h3 class="text-base font-bold text-white tracking-tight">Istanbul Bölgesi</h3>
         </div>
-        <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="grid grid-cols-3 gap-2 mb-1">
           <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400" id="istOpen">0</div></div>
           <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Gecikmiş</div><div class="text-xl font-bold text-red-400" id="istOverdue">0</div></div>
           <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400" id="istNoshow">0</div></div>
         </div>
+        <div class="am-region-bar mb-4"><div id="istRatioBar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#f87171)"></div></div>
         <div id="istTeamList" class="space-y-1.5"></div>
       </div>
       <!-- Morocco -->
@@ -828,11 +858,12 @@
           <div class="w-2.5 h-2.5 rounded-full bg-orange-400" style="box-shadow:0 0 10px 2px rgba(251,146,60,.6)"></div>
           <h3 class="text-base font-bold text-white tracking-tight">Morocco Bölgesi</h3>
         </div>
-        <div class="grid grid-cols-3 gap-2 mb-4">
+        <div class="grid grid-cols-3 gap-2 mb-1">
           <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400" id="morOpen">0</div></div>
           <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Gecikmiş</div><div class="text-xl font-bold text-red-400" id="morOverdue">0</div></div>
           <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400" id="morNoshow">0</div></div>
         </div>
+        <div class="am-region-bar mb-4"><div id="morRatioBar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#f87171)"></div></div>
         <div id="morTeamList" class="space-y-1.5"></div>
       </div>
     </div>
@@ -962,6 +993,8 @@
     <div id="cancelledAlarmGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
     <div id="cancelledAlarmEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">İptal edilmiş alarm bulunamadı.</div>
   </div>
+
+  </main>
 
   <!-- Admin Alarm Detail/Action Modal -->
   <div id="adminAlarmModal">
@@ -1278,9 +1311,15 @@
         const prefix = region === 'Istanbul' ? 'ist' : 'mor';
         const ra = adminAllAlarms.filter(a => a.region === region);
         const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
-        document.getElementById(prefix + 'Open').textContent    = ra.filter(a => active.has(a.status) && a.status !== 'arrived' && a.status !== 'examined').length;
-        document.getElementById(prefix + 'Overdue').textContent  = ra.filter(a => _amIsOverdue(a)).length;
-        document.getElementById(prefix + 'Noshow').textContent   = ra.filter(a => a.status === 'no_show').length;
+        const openCount    = ra.filter(a => active.has(a.status) && a.status !== 'arrived' && a.status !== 'examined').length;
+        const overdueCount = ra.filter(a => _amIsOverdue(a)).length;
+        const noshowCount  = ra.filter(a => a.status === 'no_show').length;
+        document.getElementById(prefix + 'Open').textContent    = openCount;
+        document.getElementById(prefix + 'Overdue').textContent = overdueCount;
+        document.getElementById(prefix + 'Noshow').textContent  = noshowCount;
+        const ratioTotal = openCount + overdueCount + noshowCount;
+        const ratioBar = document.getElementById(prefix + 'RatioBar');
+        if (ratioBar) ratioBar.style.width = ratioTotal ? Math.round((overdueCount + noshowCount) / ratioTotal * 100) + '%' : '0%';
         // Team breakdown — bölgedeki TÜM TL takımlarıyla başla (0 alarmlılar da görünsün)
         const teams = {};
         if (window.TeamMap) {
