@@ -63,6 +63,22 @@
 
     .spinner-anim { border:3px solid rgba(99,102,241,0.2); border-top:3px solid #6366F1; border-radius:50%; width:40px; height:40px; animation:spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Alarm Monitoring (TV Dashboard) ─────────────────────────── */
+    .am-live-dot { width:9px; height:9px; border-radius:50%; background:#34d399; box-shadow:0 0 0 0 rgba(52,211,153,.7); animation:amPulseDot 1.8s infinite; }
+    @keyframes amPulseDot { 0%{box-shadow:0 0 0 0 rgba(52,211,153,.6);} 70%{box-shadow:0 0 0 9px rgba(52,211,153,0);} 100%{box-shadow:0 0 0 0 rgba(52,211,153,0);} }
+    .am-kpi { position:relative; border-radius:18px; padding:16px 14px; overflow:hidden; border:1px solid rgba(255,255,255,.06); background:linear-gradient(155deg,rgba(255,255,255,.05),rgba(255,255,255,0) 60%),#0d1220; transition:transform .25s ease, box-shadow .25s ease; }
+    .am-kpi:hover { transform:translateY(-3px); box-shadow:0 14px 32px -12px rgba(0,0,0,.55); }
+    .am-kpi .am-kpi-val { font-family:'Outfit',sans-serif; font-size:clamp(1.5rem,2.6vw,2.1rem); font-weight:800; line-height:1; letter-spacing:-.02em; }
+    .am-kpi .am-kpi-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#7d8aa3; margin-top:6px; }
+    .am-kpi::after { content:''; position:absolute; right:-18px; top:-18px; width:72px; height:72px; border-radius:50%; filter:blur(18px); opacity:.35; background:var(--am-glow,#6366f1); }
+    .am-kpi.am-critical { border-color:rgba(248,113,113,.35); }
+    .am-kpi.am-critical .am-kpi-val { animation:amCriticalGlow 2.2s ease-in-out infinite; }
+    @keyframes amCriticalGlow { 0%,100%{ text-shadow:0 0 0 rgba(248,113,113,0);} 50%{ text-shadow:0 0 18px rgba(248,113,113,.65);} }
+    .am-region-card { border-radius:20px; padding:20px; background:radial-gradient(120% 140% at 0% 0%,rgba(99,102,241,.08),transparent 55%),#0d1220; border:1px solid rgba(255,255,255,.07); }
+    .am-team-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.04); transition:background .15s; }
+    .am-team-row:hover { background:rgba(255,255,255,.06); }
+    .am-clock { font-family:'Outfit',sans-serif; font-variant-numeric:tabular-nums; letter-spacing:.02em; }
     .nav-btn { width:100%; padding:8px 14px; font-size:11px; font-weight:700; border-radius:10px; display:flex; align-items:center; gap:8px; transition:all 0.15s; cursor:pointer; text-align:left; }
     .nav-btn.active { background:#4F46E5; color:#fff; }
     .nav-btn:not(.active) { color:#94A3B8; }
@@ -730,18 +746,25 @@
     <!-- Header -->
     <div class="flex items-start justify-between mb-6 flex-wrap gap-3">
       <div>
-        <h2 class="text-xl font-bold text-white">Alarm Monitoring</h2>
-        <p class="text-xs text-slate-400 mt-0.5">Tüm bölgeler — sistem geneli alarm durumu</p>
+        <div class="flex items-center gap-2.5">
+          <h2 class="text-2xl font-bold text-white tracking-tight">Alarm Monitoring</h2>
+          <span class="am-live-dot"></span>
+          <span class="text-[11px] font-bold text-emerald-400 uppercase tracking-wider">Canlı</span>
+        </div>
+        <p class="text-xs text-slate-500 mt-1">Tüm bölgeler — sistem geneli alarm durumu · <span id="amLastRefresh">—</span> güncellendi</p>
       </div>
-      <div class="flex items-center gap-2 flex-wrap">
-        <span id="adminEngineStatus" class="text-xs text-slate-500"></span>
-        <button onclick="adminRunEngine()" id="adminBtnEngine" class="px-3 py-1.5 bg-teal-700 hover:bg-teal-600 text-white text-xs rounded-lg font-semibold flex items-center gap-1.5">
-          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          Tüm Sistemi Güncelle
-        </button>
-        <button onclick="exportAdminAlarms()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Export CSV</button>
-        <button onclick="exportAlarmPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">TL Performans CSV</button>
-        <button onclick="exportRegionPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Bölge Performans CSV</button>
+      <div class="flex items-center gap-3 flex-wrap">
+        <div class="am-clock text-2xl font-bold text-white bg-gray-900/80 border border-gray-800 rounded-xl px-4 py-1.5" id="amClock">--:--:--</div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <span id="adminEngineStatus" class="text-xs text-slate-500"></span>
+          <button onclick="adminRunEngine()" id="adminBtnEngine" class="px-3 py-1.5 bg-teal-700 hover:bg-teal-600 text-white text-xs rounded-lg font-semibold flex items-center gap-1.5">
+            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+            Tüm Sistemi Güncelle
+          </button>
+          <button onclick="exportAdminAlarms()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Export CSV</button>
+          <button onclick="exportAlarmPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">TL Performans CSV</button>
+          <button onclick="exportRegionPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Bölge Performans CSV</button>
+        </div>
       </div>
     </div>
 
@@ -766,41 +789,41 @@
 
     <!-- KPI Cards — 8 kart -->
     <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Açık Alarm</div><div class="text-xl font-bold text-amber-400" id="mk1">0</div></div>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Bugün Gelecek</div><div class="text-xl font-bold text-green-400" id="mk2">0</div></div>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Gecikmiş</div><div class="text-xl font-bold text-red-400" id="mk3">0</div></div>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Eksik Tarih</div><div class="text-xl font-bold text-slate-400" id="mk4">0</div></div>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Bugün Gelemeyen</div><div class="text-xl font-bold text-rose-400" id="mk5">0</div></div>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Payment Takip</div><div class="text-xl font-bold text-purple-400" id="mk6">0</div></div>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">Yaklaşan</div><div class="text-xl font-bold text-orange-400" id="mk7">0</div></div>
-      <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 text-center"><div class="text-[9px] text-slate-400 uppercase font-semibold mb-1">FT Takip</div><div class="text-xl font-bold text-blue-400" id="mk8">0</div></div>
+      <div class="am-kpi text-center am-critical" style="--am-glow:#f59e0b"><div class="am-kpi-val text-amber-400" id="mk1">0</div><div class="am-kpi-label">Açık Alarm</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#4ade80"><div class="am-kpi-val text-green-400" id="mk2">0</div><div class="am-kpi-label">Bugün Gelecek</div></div>
+      <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-val text-red-400" id="mk3">0</div><div class="am-kpi-label">Gecikmiş</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#94a3b8"><div class="am-kpi-val text-slate-400" id="mk4">0</div><div class="am-kpi-label">Eksik Tarih</div></div>
+      <div class="am-kpi text-center am-critical" style="--am-glow:#fb7185"><div class="am-kpi-val text-rose-400" id="mk5">0</div><div class="am-kpi-label">Bugün Gelemeyen</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#c084fc"><div class="am-kpi-val text-purple-400" id="mk6">0</div><div class="am-kpi-label">Payment Takip</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#fb923c"><div class="am-kpi-val text-orange-400" id="mk7">0</div><div class="am-kpi-label">Yaklaşan</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#60a5fa"><div class="am-kpi-val text-blue-400" id="mk8">0</div><div class="am-kpi-label">FT Takip</div></div>
     </div>
 
     <!-- İki Bölge Grid -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
       <!-- Istanbul -->
-      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-2 h-2 rounded-full bg-blue-400"></div>
-          <h3 class="text-sm font-bold text-white">Istanbul Bölgesi</h3>
+      <div class="am-region-card">
+        <div class="flex items-center gap-2.5 mb-4">
+          <div class="w-2.5 h-2.5 rounded-full bg-blue-400" style="box-shadow:0 0 10px 2px rgba(96,165,250,.6)"></div>
+          <h3 class="text-base font-bold text-white tracking-tight">Istanbul Bölgesi</h3>
         </div>
         <div class="grid grid-cols-3 gap-2 mb-4">
-          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">Açık</div><div class="text-base font-bold text-amber-400" id="istOpen">0</div></div>
-          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">Gecikmiş</div><div class="text-base font-bold text-red-400" id="istOverdue">0</div></div>
-          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">No-show</div><div class="text-base font-bold text-rose-400" id="istNoshow">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400" id="istOpen">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Gecikmiş</div><div class="text-xl font-bold text-red-400" id="istOverdue">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400" id="istNoshow">0</div></div>
         </div>
         <div id="istTeamList" class="space-y-1.5"></div>
       </div>
       <!-- Morocco -->
-      <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
-        <div class="flex items-center gap-2 mb-4">
-          <div class="w-2 h-2 rounded-full bg-orange-400"></div>
-          <h3 class="text-sm font-bold text-white">Morocco Bölgesi</h3>
+      <div class="am-region-card">
+        <div class="flex items-center gap-2.5 mb-4">
+          <div class="w-2.5 h-2.5 rounded-full bg-orange-400" style="box-shadow:0 0 10px 2px rgba(251,146,60,.6)"></div>
+          <h3 class="text-base font-bold text-white tracking-tight">Morocco Bölgesi</h3>
         </div>
         <div class="grid grid-cols-3 gap-2 mb-4">
-          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">Açık</div><div class="text-base font-bold text-amber-400" id="morOpen">0</div></div>
-          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">Gecikmiş</div><div class="text-base font-bold text-red-400" id="morOverdue">0</div></div>
-          <div class="bg-gray-800 rounded-lg p-2 text-center"><div class="text-[9px] text-slate-400">No-show</div><div class="text-base font-bold text-rose-400" id="morNoshow">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400" id="morOpen">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Gecikmiş</div><div class="text-xl font-bold text-red-400" id="morOverdue">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400" id="morNoshow">0</div></div>
         </div>
         <div id="morTeamList" class="space-y-1.5"></div>
       </div>
@@ -1205,6 +1228,8 @@
         renderAdminAlarmTable();
         renderRegionPanels();
         document.getElementById('adminEngineStatus').textContent = `${all.length} ${I18N.t('alarm yüklendi')}`;
+        const lr = document.getElementById('amLastRefresh');
+        if (lr) lr.textContent = new Date().toLocaleTimeString('tr-TR');
         const badge = document.getElementById('adminAlarmBadge');
         const overdue = all.filter(a => _amIsOverdue(a)).length;
         if (overdue > 0) { badge.textContent = overdue; badge.style.display = 'inline-block'; }
@@ -1259,9 +1284,9 @@
         document.getElementById(prefix + 'TeamList').innerHTML = Object.entries(teams)
           .sort((a,b) => (b[1].open + b[1].overdue) - (a[1].open + a[1].overdue))
           .map(([team, v]) => `
-            <div onclick="selectAdminTeam('${team.replace(/'/g,"\\'")}')" style="cursor:pointer" class="flex items-center justify-between py-1.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/40 rounded-lg px-1.5 -mx-1.5 transition-colors">
+            <div onclick="selectAdminTeam('${team.replace(/'/g,"\\'")}')" class="am-team-row cursor-pointer">
               <div class="min-w-0">
-                <span class="text-xs text-slate-300 truncate block max-w-[160px]">${v.label || team}</span>
+                <span class="text-xs text-slate-200 font-medium truncate block max-w-[160px]">${v.label || team}</span>
                 ${v.leader ? `<span class="text-[9px] text-slate-600">${v.leader}</span>` : ''}
               </div>
               <div class="flex gap-2 text-[10px] font-bold shrink-0">
@@ -1933,13 +1958,32 @@
       });
       if (v === 'summary') { renderSummary(); _startAnalyticsAutoRefresh(); }
       else _stopAnalyticsAutoRefresh();
+      if (v === 'alarms-monitor') { loadAdminAlarms(); loadAlarmSettings(); _startAlarmMonitorAutoRefresh(); }
+      else _stopAlarmMonitorAutoRefresh();
       if (v === 'users') loadUsers();
       else if (v === 'logs') loadLogs();
       else if (v === 'transfer') initTransferView();
-      else if (v === 'alarms-monitor') { loadAdminAlarms(); loadAlarmSettings(); }
       else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       else if (v === 'noshow') loadAdminAlarms().then(renderAdminNoshow);
       else if (v === 'cancelled-alarms') loadAdminAlarms().then(renderAdminCancelledAlarms);
+    }
+
+    // ── Alarm Monitoring: canlı saat + dakika başı otomatik yenileme ──
+    setInterval(() => {
+      const el = document.getElementById('amClock');
+      if (el) el.textContent = new Date().toLocaleTimeString('tr-TR');
+    }, 1000);
+
+    let _alarmMonitorTimer = null;
+    function _startAlarmMonitorAutoRefresh() {
+      if (_alarmMonitorTimer) return;
+      _alarmMonitorTimer = setInterval(() => {
+        if (document.getElementById('view-alarms-monitor').classList.contains('hidden')) return;
+        loadAdminAlarms();
+      }, 60000);
+    }
+    function _stopAlarmMonitorAutoRefresh() {
+      if (_alarmMonitorTimer) { clearInterval(_alarmMonitorTimer); _alarmMonitorTimer = null; }
     }
 
     function updateKPIs(data) {
