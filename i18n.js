@@ -226,6 +226,7 @@
     'deal için alarm hesaplanıyor...': 'deals — calculating alarms...',
     'alarm kaydediliyor (dedup aktif)...': 'alarms — saving (dedup active)...',
     'Tarih girilen alarmlar kapatılıyor...': 'Closing alarms with dates now entered...',
+    'İptal olan dealler için alarmlar kapatılıyor...': 'Cancelling alarms for cancelled deals...',
     'Son çalıştırma:': 'Last run:',
     'deal gösteriliyor': 'deals shown',
     'alarm gösteriliyor': 'alarms shown',

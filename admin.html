@@ -1682,7 +1682,7 @@
         const result = await AlarmEngine.run(SUPABASE_URL, SUPABASE_KEY, {
           onProgress: (msg) => { statusEl.textContent = msg; },
         });
-        statusEl.textContent = `${I18N.t('Tamamlandı:')} ${result.deals} ${I18N.t('deal,')} ${result.generated} alarm`;
+        statusEl.textContent = `${I18N.t('Tamamlandı:')} ${result.deals} ${I18N.t('deal,')} ${result.generated} alarm, ${result.cancelled || 0} ${I18N.t('İptal')}`;
         await loadAdminAlarms();
       } catch(e) {
         statusEl.textContent = I18N.t('Hata: ') + e.message;

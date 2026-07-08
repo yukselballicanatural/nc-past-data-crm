@@ -282,6 +282,49 @@ window.AlarmEngine = (function () {
     return closed;
   }
 
+  // Stage'i "Cancelled" (veya iptal anlamına gelen bir varyant) olan deallerin
+  // hâlâ açık kalmış alarmlarını iptal et — deal iptal olunca alarm da iptal sayılır
+  async function closeAlarmsForCancelledDeals(BASE, KEY) {
+    const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+    const stageParam = encodeURIComponent('ilike.*cancel*');
+    let dealIds = [], offset = 0;
+    while (true) {
+      const url = `${BASE}/rest/v1/deals?stage=${stageParam}&select=id&limit=1000&offset=${offset}`;
+      const r = await fetch(url, { headers: H });
+      if (!r.ok) break;
+      const batch = await r.json();
+      if (!Array.isArray(batch) || !batch.length) break;
+      dealIds.push(...batch.map(d => String(d.id)));
+      if (batch.length < 1000) break;
+      offset += 1000;
+    }
+    if (!dealIds.length) return 0;
+
+    const now = new Date().toISOString();
+    const PH  = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+    let cancelled = 0;
+
+    for (let i = 0; i < dealIds.length; i += 200) {
+      const idList = dealIds.slice(i, i + 200).join(',');
+      const r = await fetch(
+        `${BASE}/rest/v1/alarms?status=in.(open,seen,in_progress,escalated)&deal_id=in.(${idList})&select=id`,
+        { headers: H }
+      );
+      if (!r.ok) continue;
+      const toCancel = await r.json();
+      if (!toCancel.length) continue;
+
+      const idListAlarms = toCancel.map(a => a.id).join(',');
+      const pr = await fetch(
+        `${BASE}/rest/v1/alarms?id=in.(${idListAlarms})`,
+        { method: 'PATCH', headers: PH,
+          body: JSON.stringify({ status: 'cancelled', close_reason: 'deal_cancelled', closed_at: now, closed_by: 'system' }) }
+      );
+      if (pr.ok) cancelled += toCancel.length;
+    }
+    return cancelled;
+  }
+
   // ── Ana çalıştırma — her zaman TÜM takımlar için üretir ─────────
   const _t = (s) => (typeof I18N !== 'undefined' ? I18N.t(s) : s);
   async function run(BASE, KEY, opts = {}) {
@@ -298,8 +341,11 @@ window.AlarmEngine = (function () {
     // Arrival Date artık dolu olan deallerin eksik tarih alarmlarını kapat
     if (onProgress) onProgress(_t('Tarih girilen alarmlar kapatılıyor...'));
     const closedCount = await closeStaleArrivalMissing(BASE, KEY, deals);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, ...result };
+    // Stage'i Cancelled olan deallerin açık kalan alarmlarını iptal et
+    if (onProgress) onProgress(_t('İptal olan dealler için alarmlar kapatılıyor...'));
+    const cancelledCount = await closeAlarmsForCancelledDeals(BASE, KEY);
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals };
 })();

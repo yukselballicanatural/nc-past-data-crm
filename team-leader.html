@@ -1646,7 +1646,7 @@
         onProgress: (msg) => { if (statusEl) statusEl.textContent = msg; },
       });
       localStorage.setItem(cacheKey, String(Date.now()));
-      if (statusEl) statusEl.textContent = `${I18N.t('Son çalıştırma:')} ${new Date().toLocaleTimeString(I18N.getLang() === 'en' ? 'en-US' : 'tr-TR')} — ${result.deals} ${I18N.t('deal,')} ${result.generated} alarm`;
+      if (statusEl) statusEl.textContent = `${I18N.t('Son çalıştırma:')} ${new Date().toLocaleTimeString(I18N.getLang() === 'en' ? 'en-US' : 'tr-TR')} — ${result.deals} ${I18N.t('deal,')} ${result.generated} alarm, ${result.cancelled || 0} ${I18N.t('İptal')}`;
       if (manual) showNotice(`${I18N.t('Motor tamamlandı:')} ${result.deals} ${I18N.t('deal,')} ${result.generated} ${I18N.t('alarm kontrol edildi')}`, 'success');
       await loadAlarms();
     } catch(e) {
