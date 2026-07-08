@@ -69,7 +69,7 @@
     @keyframes amPulseDot { 0%{box-shadow:0 0 0 0 rgba(52,211,153,.6);} 70%{box-shadow:0 0 0 9px rgba(52,211,153,0);} 100%{box-shadow:0 0 0 0 rgba(52,211,153,0);} }
     .am-kpi { position:relative; border-radius:18px; padding:16px 14px; overflow:hidden; border:1px solid rgba(255,255,255,.06); background:linear-gradient(155deg,rgba(255,255,255,.05),rgba(255,255,255,0) 60%),#0d1220; transition:transform .25s ease, box-shadow .25s ease; }
     .am-kpi:hover { transform:translateY(-3px); box-shadow:0 14px 32px -12px rgba(0,0,0,.55); }
-    .am-kpi .am-kpi-val { font-family:'Outfit',sans-serif; font-size:clamp(1.5rem,2.6vw,2.1rem); font-weight:800; line-height:1; letter-spacing:-.02em; }
+    .am-kpi .am-kpi-val { font-family:'Outfit',sans-serif; font-size:clamp(1.5rem,2.6vw,2.1rem); font-weight:800; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; min-height:1.2em; }
     .am-kpi .am-kpi-label { font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:#7d8aa3; margin-top:6px; }
     .am-kpi::after { content:''; position:absolute; right:-18px; top:-18px; width:72px; height:72px; border-radius:50%; filter:blur(18px); opacity:.35; background:var(--am-glow,#6366f1); }
     .am-kpi.am-critical { border-color:rgba(248,113,113,.35); }
@@ -225,7 +225,7 @@
   </aside>
 
   <!-- Main Content -->
-  <main class="flex-grow p-4 md:p-6 space-y-5 overflow-x-hidden">
+  <main class="flex-grow min-w-0 p-5 md:p-8 space-y-5 overflow-x-hidden">
 
     <!-- ===== DEALS VIEW ===== -->
     <div id="view-deals">
@@ -744,7 +744,7 @@
   <!-- ════════════════ ALARM MONITORING VIEW ════════════════ -->
   <div id="view-alarms-monitor" class="hidden">
     <!-- Header -->
-    <div class="flex items-start justify-between mb-6 flex-wrap gap-3">
+    <div class="flex items-center justify-between mb-3 flex-wrap gap-4 pt-1">
       <div>
         <div class="flex items-center gap-2.5">
           <h2 class="text-2xl font-bold text-white tracking-tight">Alarm Monitoring</h2>
@@ -753,19 +753,17 @@
         </div>
         <p class="text-xs text-slate-500 mt-1">Tüm bölgeler — sistem geneli alarm durumu · <span id="amLastRefresh">—</span> güncellendi</p>
       </div>
-      <div class="flex items-center gap-3 flex-wrap">
-        <div class="am-clock text-2xl font-bold text-white bg-gray-900/80 border border-gray-800 rounded-xl px-4 py-1.5" id="amClock">--:--:--</div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <span id="adminEngineStatus" class="text-xs text-slate-500"></span>
-          <button onclick="adminRunEngine()" id="adminBtnEngine" class="px-3 py-1.5 bg-teal-700 hover:bg-teal-600 text-white text-xs rounded-lg font-semibold flex items-center gap-1.5">
-            <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-            Tüm Sistemi Güncelle
-          </button>
-          <button onclick="exportAdminAlarms()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Export CSV</button>
-          <button onclick="exportAlarmPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">TL Performans CSV</button>
-          <button onclick="exportRegionPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Bölge Performans CSV</button>
-        </div>
-      </div>
+      <div class="am-clock text-3xl font-bold text-white bg-gray-900/80 border border-gray-800 rounded-xl px-5 py-2" id="amClock">--:--:--</div>
+    </div>
+    <div class="flex items-center justify-end gap-2 flex-wrap mb-6">
+      <span id="adminEngineStatus" class="text-xs text-slate-500 mr-auto"></span>
+      <button onclick="adminRunEngine()" id="adminBtnEngine" class="px-3 py-1.5 bg-teal-700 hover:bg-teal-600 text-white text-xs rounded-lg font-semibold flex items-center gap-1.5">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
+        Tüm Sistemi Güncelle
+      </button>
+      <button onclick="exportAdminAlarms()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Export CSV</button>
+      <button onclick="exportAlarmPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">TL Performans CSV</button>
+      <button onclick="exportRegionPerformance()" class="px-3 py-1.5 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs rounded-lg font-semibold">Bölge Performans CSV</button>
     </div>
 
     <!-- Parametre Yönetimi -->
@@ -775,12 +773,22 @@
           <h3 class="text-sm font-bold text-white">Alarm Parametreleri</h3>
           <p class="text-[10px] text-slate-500 mt-0.5">Eşik günleri ve eksik tarih tekrar periyodu — motor bir sonraki çalışmada uygular</p>
         </div>
-        <div id="settingsForm" style="display:none" class="flex items-center gap-2 flex-wrap">
-          <label class="text-[10px] text-slate-400">Eşikler (gün):</label>
-          <input id="setThresholds" placeholder="45,30,15,7,3" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;width:130px">
-          <label class="text-[10px] text-slate-400">Eksik tarih tekrarı (gün):</label>
-          <input id="setRepeatDays" type="number" min="1" placeholder="3" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;width:60px">
-          <button onclick="saveAlarmSettings()" class="px-3 py-1.5 bg-teal-700 hover:bg-teal-600 text-white text-xs rounded-lg font-semibold">Kaydet</button>
+        <div id="settingsForm" style="display:none" class="flex items-center gap-4 flex-wrap">
+          <div class="flex items-center gap-2 flex-wrap">
+            <label class="text-[10px] text-slate-400 uppercase font-semibold">Eşikler:</label>
+            <div id="thresholdChips" class="flex items-center gap-1.5 flex-wrap"></div>
+            <input id="setThresholds" type="hidden">
+          </div>
+          <div class="flex items-center gap-2">
+            <label class="text-[10px] text-slate-400 uppercase font-semibold whitespace-nowrap">Eksik tarih tekrarı:</label>
+            <div class="flex items-center gap-1 bg-gray-950 border border-gray-700 rounded-lg overflow-hidden">
+              <button type="button" onclick="_amStepRepeat(-1)" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-gray-800 text-xs font-bold">−</button>
+              <input id="setRepeatDays" type="number" min="1" placeholder="3" class="text-center" style="background:transparent;border:none;color:#E2E8F0;padding:5px 4px;font-size:11px;width:36px;outline:none">
+              <button type="button" onclick="_amStepRepeat(1)" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-gray-800 text-xs font-bold">+</button>
+            </div>
+            <span class="text-[10px] text-slate-500">gün</span>
+          </div>
+          <button onclick="saveAlarmSettings()" class="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs rounded-lg font-bold shadow-lg shadow-teal-900/30">Kaydet</button>
           <span id="settingsStatus" class="text-[10px] text-teal-400"></span>
         </div>
         <p id="settingsUnavailable" style="display:none" class="text-[10px] text-amber-500">app_settings tablosu bulunamadı — alarm_logs_and_settings.sql dosyasını Supabase SQL Editor'de çalıştırın.</p>
@@ -789,14 +797,14 @@
 
     <!-- KPI Cards — 8 kart -->
     <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
-      <div class="am-kpi text-center am-critical" style="--am-glow:#f59e0b"><div class="am-kpi-val text-amber-400" id="mk1">0</div><div class="am-kpi-label">Açık Alarm</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#4ade80"><div class="am-kpi-val text-green-400" id="mk2">0</div><div class="am-kpi-label">Bugün Gelecek</div></div>
+      <div class="am-kpi text-center am-critical" style="--am-glow:#fbbf24"><div class="am-kpi-val text-amber-400" id="mk1">0</div><div class="am-kpi-label">Açık Alarm</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-val text-cyan-400" id="mk2">0</div><div class="am-kpi-label">Bugün Gelecek</div></div>
       <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-val text-red-400" id="mk3">0</div><div class="am-kpi-label">Gecikmiş</div></div>
       <div class="am-kpi text-center" style="--am-glow:#94a3b8"><div class="am-kpi-val text-slate-400" id="mk4">0</div><div class="am-kpi-label">Eksik Tarih</div></div>
-      <div class="am-kpi text-center am-critical" style="--am-glow:#fb7185"><div class="am-kpi-val text-rose-400" id="mk5">0</div><div class="am-kpi-label">Bugün Gelemeyen</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#c084fc"><div class="am-kpi-val text-purple-400" id="mk6">0</div><div class="am-kpi-label">Payment Takip</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#fb923c"><div class="am-kpi-val text-orange-400" id="mk7">0</div><div class="am-kpi-label">Yaklaşan</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#60a5fa"><div class="am-kpi-val text-blue-400" id="mk8">0</div><div class="am-kpi-label">FT Takip</div></div>
+      <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-val text-red-400" id="mk5">0</div><div class="am-kpi-label">Bugün Gelemeyen</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-val text-cyan-400" id="mk6">0</div><div class="am-kpi-label">Payment Takip</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#fbbf24"><div class="am-kpi-val text-amber-400" id="mk7">0</div><div class="am-kpi-label">Yaklaşan</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-val text-cyan-400" id="mk8">0</div><div class="am-kpi-label">FT Takip</div></div>
     </div>
 
     <!-- İki Bölge Grid -->
@@ -1208,8 +1216,11 @@
       return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : str;
     }
 
-    async function loadAdminAlarms() {
-      document.getElementById('adminEngineStatus').textContent = I18N.t('Alarmlar yükleniyor...');
+    // silent=true: arka plan otomatik yenileme — sadece sayılar/grafikler güncellenir,
+    // filtre dropdown'ları ve dev alarm tablosu yeniden inşa edilmez (açık bir select
+    // menüsü varken DOM'un altından çekilip layout'un bozulmasını önler).
+    async function loadAdminAlarms(silent) {
+      if (!silent) document.getElementById('adminEngineStatus').textContent = I18N.t('Alarmlar yükleniyor...');
       try {
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
         let all = [], offset = 0;
@@ -1224,9 +1235,11 @@
         }
         adminAllAlarms = all;
         updateAdminAlarmKPIs();
-        populateAdminAlarmFilters();
-        renderAdminAlarmTable();
         renderRegionPanels();
+        if (!silent) {
+          populateAdminAlarmFilters();
+          renderAdminAlarmTable();
+        }
         document.getElementById('adminEngineStatus').textContent = `${all.length} ${I18N.t('alarm yüklendi')}`;
         const lr = document.getElementById('amLastRefresh');
         if (lr) lr.textContent = new Date().toLocaleTimeString('tr-TR');
@@ -1691,16 +1704,43 @@
     }
 
     // ── Parametre Yönetimi (PDF 10.3 / 17) — app_settings tablosu ──
+    const _AM_THRESHOLD_PRESETS = [60, 45, 30, 15, 7, 3, 1];
+
+    function _amRenderThresholdChips() {
+      const cur = new Set((document.getElementById('setThresholds').value || '').split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n)));
+      document.getElementById('thresholdChips').innerHTML = _AM_THRESHOLD_PRESETS.map(v => {
+        const active = cur.has(v);
+        return `<button type="button" onclick="_amToggleThreshold(${v})"
+          class="px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all ${active
+            ? 'bg-teal-600 border-teal-500 text-white shadow shadow-teal-900/40'
+            : 'bg-gray-950 border-gray-700 text-slate-400 hover:border-teal-600 hover:text-teal-300'}">${v}g</button>`;
+      }).join('');
+    }
+    function _amToggleThreshold(v) {
+      const el = document.getElementById('setThresholds');
+      const cur = new Set((el.value || '').split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n)));
+      if (cur.has(v)) cur.delete(v); else cur.add(v);
+      el.value = [...cur].sort((a,b) => b-a).join(',');
+      _amRenderThresholdChips();
+    }
+    function _amStepRepeat(delta) {
+      const el = document.getElementById('setRepeatDays');
+      const n = Math.max(1, (parseInt(el.value) || 3) + delta);
+      el.value = n;
+    }
+
     async function loadAlarmSettings() {
       try {
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
         const r = await fetch(`${SUPABASE_URL}/rest/v1/app_settings?select=key,value`, { headers: H });
         if (!r.ok) { document.getElementById('settingsUnavailable').style.display = 'block'; return; }
         const rows = await r.json();
+        document.getElementById('setThresholds').value = '45,30,15,7,3';
         for (const row of rows) {
           if (row.key === 'alarm_thresholds')   document.getElementById('setThresholds').value = row.value;
           if (row.key === 'missing_repeat_days') document.getElementById('setRepeatDays').value = row.value;
         }
+        _amRenderThresholdChips();
         document.getElementById('settingsForm').style.display = 'flex';
       } catch(e) { document.getElementById('settingsUnavailable').style.display = 'block'; }
     }
@@ -1979,7 +2019,7 @@
       if (_alarmMonitorTimer) return;
       _alarmMonitorTimer = setInterval(() => {
         if (document.getElementById('view-alarms-monitor').classList.contains('hidden')) return;
-        loadAdminAlarms();
+        loadAdminAlarms(true);
       }, 60000);
     }
     function _stopAlarmMonitorAutoRefresh() {
