@@ -281,8 +281,21 @@
 
       <!-- Table -->
       <div id="cardsContainer" class="hidden">
-        <div class="flex justify-between items-center mb-2">
+        <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
           <span class="text-xs text-slate-400" id="resultInfo">0 deals shown</span>
+          <div class="flex items-center gap-2">
+            <select id="dealPageSizeSel" class="filter-select" onchange="dealChangePageSize()" style="width:110px">
+              <option value="100">100 / sayfa</option>
+              <option value="500" selected>500 / sayfa</option>
+              <option value="1000">1000 / sayfa</option>
+              <option value="2000">2000 / sayfa</option>
+            </select>
+            <div id="dealPager" style="display:none;align-items:center;gap:6px">
+              <button id="btnDealPrev" onclick="dealChangePage(-1)" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded-lg font-bold">← Önceki</button>
+              <span id="dealPageLbl" class="text-[11px] text-slate-400">Sayfa 1 / 1</span>
+              <button id="btnDealNext" onclick="dealChangePage(1)" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] rounded-lg font-bold">Sonraki →</button>
+            </div>
+          </div>
         </div>
         <div class="overflow-x-auto rounded-xl border border-gray-800 bg-gray-900" style="max-height:70vh;">
           <table class="deal-tbl">
@@ -836,6 +849,8 @@
     let activeTab = 'all';
     let sortCol = '';
     let sortDir = 1;
+    let dealCurrentPage = 0;
+    let dealPageSize = 500;
     let currentModalDeal = null;
     let currentModalIndex = -1;
     let allLogs = [];
@@ -1601,6 +1616,7 @@
     }
 
     function applyFilters() {
+      dealCurrentPage = 0;
       const team    = document.getElementById('fTeam').value;
       const agent   = document.getElementById('fAgent').value;
       const stage   = document.getElementById('fStage').value;
@@ -1684,14 +1700,43 @@
       }
     }
 
+    function dealChangePage(dir) {
+      const maxPage = Math.max(0, Math.ceil(filteredDeals.length / dealPageSize) - 1);
+      dealCurrentPage = Math.max(0, Math.min(maxPage, dealCurrentPage + dir));
+      renderDeals(filteredDeals);
+    }
+    function dealChangePageSize() {
+      dealPageSize = parseInt(document.getElementById('dealPageSizeSel').value) || 500;
+      dealCurrentPage = 0;
+      renderDeals(filteredDeals);
+    }
+
     function renderDeals(data) {
       const tbody = document.getElementById('dealsBody');
       const empty = document.getElementById('emptyState');
-      document.getElementById('resultInfo').textContent = data.length + ' deals shown' + (data.length > 2000 ? ' (max 2000 rows)' : '');
+      const pager = document.getElementById('dealPager');
+
+      const maxPage = Math.max(0, Math.ceil(data.length / dealPageSize) - 1);
+      dealCurrentPage = Math.min(dealCurrentPage, maxPage);
+      const pageStart = dealCurrentPage * dealPageSize;
+      const pageEnd   = Math.min(pageStart + dealPageSize, data.length);
+      const pageData  = data.slice(pageStart, pageEnd);
+
+      document.getElementById('resultInfo').textContent = data.length
+        ? `${pageStart+1}–${pageEnd} / ${data.length} deals shown`
+        : '0 deals shown';
+      if (pager) {
+        pager.style.display = data.length > dealPageSize ? 'flex' : 'none';
+        document.getElementById('dealPageLbl').textContent = `Sayfa ${dealCurrentPage+1} / ${maxPage+1}`;
+        document.getElementById('btnDealPrev').disabled = dealCurrentPage === 0;
+        document.getElementById('btnDealNext').disabled = dealCurrentPage >= maxPage;
+      }
+
       if (!data.length) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
       empty.classList.add('hidden');
 
-      tbody.innerHTML = data.slice(0, 2000).map((d, i) => {
+      tbody.innerHTML = pageData.map((d, i) => {
+        const idx = pageStart + i;
         const unpaid = isUnpaid(d);
         const pastArr = isBeforeCutoff(d['Arrival Date']);
         const rowCls = (pastArr && unpaid) ? 'row-red' : unpaid ? 'row-amber' : '';
@@ -1704,8 +1749,8 @@
         } else {
           resultBadge = `<span class="text-[9px] text-slate-600 italic">Pending</span>`;
         }
-        return `<tr class="${rowCls}" onclick="openModal(${i})">
-          <td class="text-slate-600 text-[10px]">${i+1}</td>
+        return `<tr class="${rowCls}" onclick="openModal(${idx})">
+          <td class="text-slate-600 text-[10px]">${idx+1}</td>
           <td class="text-white font-medium" title="${(d['Deal Name']||'').replace(/"/g,'&quot;')}">${fmt(d['Deal Name'])}</td>
           <td class="text-slate-500 font-mono text-[10px]"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d['Deal Id']}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:underline;text-decoration-style:dotted" class="hover:text-indigo-400">${fmt(d['DealID'])||fmt(d['Deal Id'])}</a></td>
           <td class="text-slate-400 text-[10px]">${fmt(d['Team Group'])}</td>
