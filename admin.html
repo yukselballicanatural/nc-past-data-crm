@@ -82,8 +82,16 @@
     #dealModal.open { display:flex; }
     #userModal { display:none; position:fixed; inset:0; z-index:9998; align-items:center; justify-content:center; padding:16px; background:rgba(0,0,0,0.75); }
     #userModal.open { display:flex; }
+    #adminAlarmModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
+    #adminAlarmModal.open { display:flex; }
     .modal-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.75); }
     .modal-panel { position:relative; z-index:1; width:100%; max-width:700px; max-height:90vh; overflow-y:auto; background:#0d1526; border:1px solid #1e293b; border-radius:16px; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.6); }
+    .aam-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    .aam-info-card { background:#111827; border:1px solid #1e293b; border-radius:10px; padding:10px 12px; }
+    .aam-info-label { font-size:9px; color:#475569; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:3px; }
+    .aam-info-val { font-size:12px; color:#e2e8f0; font-weight:500; }
+    textarea.aam-note { background:#111827; border:1px solid #374151; color:#e2e8f0; border-radius:10px; padding:10px 12px; font-size:12px; width:100%; resize:vertical; min-height:80px; box-sizing:border-box; }
+    textarea.aam-note:focus { outline:none; border-color:#0d9488; }
   </style>
 </head>
 <body class="min-h-screen text-slate-100 flex flex-col lg:flex-row">
@@ -807,6 +815,82 @@
     </div>
   </div>
 
+  <!-- Admin Alarm Detail/Action Modal -->
+  <div id="adminAlarmModal">
+    <div class="modal-backdrop" onclick="closeAdminAlarmModal()"></div>
+    <div class="modal-panel">
+      <div class="flex items-start justify-between mb-5">
+        <div>
+          <h3 class="text-base font-bold text-white" id="aamDealName">—</h3>
+          <div class="text-[10px] text-slate-500 mt-1" id="aamDealOwner">—</div>
+        </div>
+        <button onclick="closeAdminAlarmModal()" class="text-slate-500 hover:text-white ml-4 shrink-0 transition-colors">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+
+      <div class="aam-info-grid mb-5">
+        <div class="aam-info-card"><div class="aam-info-label">Alarm Tipi</div><div class="aam-info-val" id="aamAlarmType">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Durum</div><div class="aam-info-val" id="aamAlarmStatus">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Referans Alan</div><div class="aam-info-val" id="aamRefField">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Referans Tarih</div><div class="aam-info-val" id="aamRefDate">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Kalan Gün</div><div class="aam-info-val" id="aamDaysLeft">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Alarm Tarihi</div><div class="aam-info-val" id="aamCreatedAt">—</div></div>
+      </div>
+
+      <div style="background:#0b1220;border:1px solid #1e293b;border-radius:10px;padding:10px 14px;margin-bottom:14px">
+        <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Durum Zaman Çizelgesi</div>
+        <div id="aamTimelineBody"></div>
+      </div>
+
+      <div id="aamExistingNoteWrap" style="display:none;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;margin-bottom:14px">
+        <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;margin-bottom:4px">Mevcut Not</div>
+        <div style="font-size:12px;color:#cbd5e1" id="aamExistingNote"></div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Yeni Durum</label>
+        <select id="aamNewStatus" class="filter-select">
+          <option value="">— Durum seçin —</option>
+          <option value="open">Açık (Yeniden Aç)</option>
+          <option value="seen">Görüldü</option>
+          <option value="in_progress">Takipte</option>
+          <option value="arrived">Hasta Geldi</option>
+          <option value="examined">Muayene Oldu</option>
+          <option value="processing">İşlemleri Yapılıyor</option>
+          <option value="no_show">Gelemedi (No-show)</option>
+          <option value="closed">Kapatıldı</option>
+          <option value="cancelled">İptal / Geçersiz</option>
+        </select>
+      </div>
+
+      <div id="aamCloseReasonWrap" style="display:none;margin-bottom:12px">
+        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Kapatma Sebebi</label>
+        <select id="aamCloseReason" class="filter-select">
+          <option value="completed">Tamamlandı</option>
+          <option value="date_added">Tarih Eklendi</option>
+          <option value="manual">Manuel Kapatma</option>
+          <option value="cancelled">İptal</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:18px">
+        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Not <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></label>
+        <textarea id="aamNoteInput" class="aam-note" placeholder="Hasta durumu, arama sonucu, notlar..."></textarea>
+      </div>
+
+      <div id="aamHistoryWrap" style="display:none;margin-bottom:18px">
+        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Aksiyon Geçmişi</label>
+        <div id="aamHistoryList" style="max-height:160px;overflow-y:auto;background:#0d1526;border:1px solid #1e293b;border-radius:10px;padding:8px 12px"></div>
+      </div>
+
+      <div style="display:flex;gap:10px">
+        <button onclick="closeAdminAlarmModal()" style="flex:1;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">İptal</button>
+        <button onclick="saveAdminAlarmAction()" id="aamBtnSave" style="flex:2;padding:11px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kaydet</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Deal Modal -->
   <div id="dealModal">
     <div class="modal-backdrop" onclick="closeModal()"></div>
@@ -1145,46 +1229,156 @@
           <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">${daysTxt}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #0f172a"><span style="font-size:9px;font-weight:700;color:${sm.color};white-space:nowrap">${sm.label}</span></td>
           <td style="padding:8px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b;border-bottom:1px solid #0f172a">${a.note||'—'}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">${
-            ['closed','cancelled','no_show'].includes(a.status)
-              ? `<button onclick="adminAlarmAction('${a.id}','reopen')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Yeniden Aç')}</button>`
-              : `<button onclick="adminAlarmAction('${a.id}','close')" style="padding:3px 10px;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#94a3b8;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Kapat')}</button>`
-          }</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">
+            <button onclick="openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
+          </td>
         </tr>`;
       }).join('');
       I18N.translateDOM(tbody);
     }
 
-    // Admin: alarm kapat / yeniden aç (PDF 10.3) — aksiyon alarm_logs'a yazılır
-    async function adminAlarmAction(alarmId, action) {
+    // ── Admin alarm detay/aksiyon modalı ─────────────────────────────
+    let currentAdminAlarm = null;
+
+    function _amFmtDateTime(str) {
+      if (!str) return '—';
+      const d = new Date(str);
+      if (isNaN(d.getTime())) return String(str);
+      return d.toLocaleDateString('tr-TR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+    }
+
+    function openAdminAlarmModal(alarmId) {
       const a = adminAllAlarms.find(x => x.id === alarmId);
       if (!a) return;
+      currentAdminAlarm = a;
+      const tm = _amTypeMeta(a.alarm_type);
+      const sm = _amStatusMeta(a.status);
+      document.getElementById('aamDealName').textContent  = a.deal_name || '—';
+      document.getElementById('aamDealOwner').textContent = `${a.deal_owner||'—'} · ${a.team||'—'} · ${a.region||'—'}`;
+      document.getElementById('aamAlarmType').innerHTML   = `<span style="padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;background:${tm.color}22;color:${tm.color}">${tm.label}</span>`;
+      document.getElementById('aamAlarmStatus').innerHTML = `<span style="padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;background:${sm.color}22;color:${sm.color}">${sm.label}</span>`;
+      document.getElementById('aamRefField').textContent  = a.reference_field || '—';
+      document.getElementById('aamRefDate').textContent   = _amFmtDate(a.reference_date);
+      document.getElementById('aamCreatedAt').textContent = _amFmtDateTime(a.created_at);
+      const days = a.days_remaining !== null ? a.days_remaining : _amDaysUntil(a.reference_date);
+      document.getElementById('aamDaysLeft').innerHTML = days === null ? '—'
+        : days < 0  ? `<span style="color:#f87171;font-weight:700">${Math.abs(days)} gün GECİKMİŞ</span>`
+        : days === 0 ? `<span style="color:#4ade80;font-weight:800">BUGÜN</span>`
+        : `<span style="color:#94a3b8">${days} gün</span>`;
+
+      const tlItems = [
+        { time: a.created_at,  label: 'Oluşturuldu',   color:'#475569' },
+        { time: a.seen_at,     label: 'Görüldü',        color:'#60a5fa' },
+        { time: a.actioned_at, label: 'Aksiyon Alındı', color:'#2dd4bf' },
+        { time: a.closed_at,   label: 'Kapatıldı' + (a.close_reason ? ' — '+a.close_reason : ''), color:'#94a3b8' },
+      ].filter(t => !!t.time);
+      document.getElementById('aamTimelineBody').innerHTML = tlItems.length ?
+        tlItems.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #0f172a">
+          <span style="width:6px;height:6px;border-radius:50%;background:${t.color};flex-shrink:0"></span>
+          <span style="font-size:11px;color:${t.color};font-weight:600;flex:1">${t.label}</span>
+          <span style="font-size:10px;color:#475569">${_amFmtDateTime(t.time)}</span>
+        </div>`).join('') :
+        `<span style="font-size:11px;color:#475569">Henüz aksiyon yok.</span>`;
+
+      if (a.note) {
+        document.getElementById('aamExistingNoteWrap').style.display = 'block';
+        document.getElementById('aamExistingNote').textContent = a.note;
+      } else {
+        document.getElementById('aamExistingNoteWrap').style.display = 'none';
+      }
+      document.getElementById('aamNewStatus').value = '';
+      document.getElementById('aamNoteInput').value = '';
+      document.getElementById('aamCloseReasonWrap').style.display = 'none';
+      document.getElementById('adminAlarmModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      loadAdminAlarmHistory(a.id);
+    }
+
+    function closeAdminAlarmModal() {
+      document.getElementById('adminAlarmModal').classList.remove('open');
+      document.body.style.overflow = '';
+      currentAdminAlarm = null;
+    }
+
+    document.getElementById('aamNewStatus').addEventListener('change', function() {
+      const needReason = ['closed','cancelled'].includes(this.value);
+      document.getElementById('aamCloseReasonWrap').style.display = needReason ? 'block' : 'none';
+    });
+
+    async function loadAdminAlarmHistory(alarmId) {
+      const wrap = document.getElementById('aamHistoryWrap');
+      const list = document.getElementById('aamHistoryList');
+      wrap.style.display = 'none';
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/alarm_logs?alarm_id=eq.${alarmId}&order=created_at.desc&limit=30`, { headers: H });
+        if (!r.ok) return;
+        const logs = await r.json();
+        if (!Array.isArray(logs) || !logs.length) return;
+        const actionLabels = { status_change:'Durum Değişti', note:'Not Eklendi', closed:'Kapatıldı', reopened:'Yeniden Açıldı', created:'Oluşturuldu', auto_closed:'Otomatik Kapatıldı' };
+        list.innerHTML = logs.map(l => `
+          <div style="padding:6px 0;border-bottom:1px solid #0f172a">
+            <div style="display:flex;justify-content:space-between;gap:8px">
+              <span style="font-size:10px;font-weight:700;color:#2dd4bf">${actionLabels[l.action_type] || l.action_type}${l.new_status && l.new_status !== l.old_status ? ' → ' + (_amStatusMeta(l.new_status).label || l.new_status) : ''}</span>
+              <span style="font-size:9px;color:#475569;white-space:nowrap">${_amFmtDateTime(l.created_at)}</span>
+            </div>
+            <div style="font-size:10px;color:#64748b">${l.action_by || '—'}${l.note ? ' · ' + l.note : ''}</div>
+          </div>`).join('');
+        wrap.style.display = 'block';
+      } catch(e) { /* sessiz */ }
+    }
+
+    // Admin: alarm durum/not güncelle — aksiyon alarm_logs'a ve Logs'a yazılır
+    async function saveAdminAlarmAction() {
+      const a = currentAdminAlarm;
+      if (!a) return;
+      const newStatus   = document.getElementById('aamNewStatus').value;
+      const note        = document.getElementById('aamNoteInput').value.trim();
+      const closeReason = document.getElementById('aamCloseReason').value;
+      if (!newStatus && !note) { alert('Durum seçin veya not girin.'); return; }
+      const btn = document.getElementById('aamBtnSave');
+      btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+
       const now = new Date().toISOString();
       const adminName = (currentUser && (currentUser.fullName || currentUser.username)) || 'Admin';
-      const updates = action === 'close'
-        ? { status: 'closed', close_reason: 'manual', closed_at: now, closed_by: adminName }
-        : { status: 'open', close_reason: null, closed_at: null, closed_by: null };
+      const updates = {};
+      if (newStatus) updates.status = newStatus;
+      if (note)      updates.note   = note;
+      if (['no_show','closed','cancelled'].includes(newStatus)) {
+        updates.closed_at    = now;
+        updates.closed_by    = adminName;
+        updates.close_reason = newStatus === 'no_show' ? 'no_show' : closeReason;
+      } else if (newStatus === 'open') {
+        updates.close_reason = null; updates.closed_at = null; updates.closed_by = null;
+      }
+
       try {
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${alarmId}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${a.id}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
         if (!r.ok) throw new Error('HTTP ' + r.status);
-        // Aksiyon logu — önceki kapanış bilgisi logda korunur (PDF 17)
+
+        const actionType = ['no_show','closed','cancelled'].includes(newStatus) ? 'closed'
+          : newStatus === 'open' ? 'reopened'
+          : newStatus ? 'status_change' : 'note';
         fetch(`${SUPABASE_URL}/rest/v1/alarm_logs`, {
           method: 'POST', headers: H,
           body: JSON.stringify({
-            alarm_id: alarmId, deal_id: a.deal_id || null,
-            action_type: action === 'close' ? 'closed' : 'reopened',
-            old_status: a.status, new_status: updates.status,
-            note: action === 'reopen' && a.close_reason ? `Önceki kapanış: ${a.close_reason} (${a.closed_by || '—'})` : null,
-            action_by: adminName, action_role: 'admin',
+            alarm_id: a.id, deal_id: a.deal_id || null,
+            action_type: actionType, old_status: a.status, new_status: newStatus || a.status,
+            note: note || null, action_by: adminName, action_role: currentUser.role,
           }),
         }).catch(() => {});
+        addLog(actionType === 'closed' ? 'ALARM_CLOSE' : 'ALARM_UPDATE', `Admin alarm güncelledi (${a.status} → ${newStatus || a.status})${note ? ' — Not: '+note : ''}`, a.deal_id, a.deal_name);
+
         Object.assign(a, updates);
         updateAdminAlarmKPIs();
         renderAdminAlarmTable();
         renderRegionPanels();
+        closeAdminAlarmModal();
       } catch(e) {
-        alert('İşlem başarısız: ' + e.message);
+        alert('Kayıt hatası: ' + e.message);
+      } finally {
+        btn.disabled = false; btn.textContent = 'Kaydet';
       }
     }
 
