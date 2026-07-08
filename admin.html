@@ -2974,11 +2974,11 @@
           'Visit Status':   (v1 || v2 || v3) ? 'Visited' : 'Not Visited',
           'Team Group':     team,
           'Region Derived': region,
-          result_code: row.result_code || '',
-          sub_code:    row.sub_code    || '',
-          agent_note:  row.agent_note  || '',
-          status:      row.deal_status || 'pending',
-          lock_approval_requested: row.lock_approval_requested || false
+          result_code: row.result_codes || '',
+          sub_code:    '',
+          agent_note:  '',
+          status:      'pending',
+          lock_approval_requested: false
         };
       });
     }
@@ -3003,7 +3003,7 @@
     // (49K+ kayıtta tam raw blob çekmek tarayıcıyı yavaşlatır)
     const _DEALS_SELECT = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,remaining_amount,' +
       'arrival_date,visit_date_1,visit_date_2,visit_date_3,payment_or_flight_ticket,created_time,' +
-      'result_code,sub_code,agent_note,deal_status,lock_approval_requested,' +
+      'result_codes,' +
       'rawLang:raw->>Language,rawAmount:raw->>Amount,rawPaid:raw->>Total_Paid_Amount,' +
       'rawArrival:raw->>Arrival_Date,rawV1:raw->>Visit_Date,rawV2:raw->>Visit_Date1,rawV3:raw->>Visit_Date2,' +
       'rawPft:raw->>Payment_Or_Flight_Ticket';
