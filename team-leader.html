@@ -262,6 +262,12 @@
         <option value="7">7 Gün</option>
         <option value="3">3 Gün</option>
       </select>
+      <div style="display:flex;align-items:center;gap:5px">
+        <input type="date" id="alarmDateFrom" class="filter-inp" onchange="renderAlarms()" style="width:135px" title="Referans tarih — başlangıç">
+        <span style="color:#475569;font-size:11px">–</span>
+        <input type="date" id="alarmDateTo" class="filter-inp" onchange="renderAlarms()" style="width:135px" title="Referans tarih — bitiş">
+        <button onclick="document.getElementById('alarmDateFrom').value='';document.getElementById('alarmDateTo').value='';renderAlarms()" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Tarih filtresini temizle">✕</button>
+      </div>
     </div>
 
     <!-- Sub-tabs -->
@@ -375,6 +381,12 @@
           <option value="">Tüm Stageler</option>
         </select>
         <input id="dealOwnerFilter" class="filter-inp" placeholder="Danışman filtrele..." oninput="debounceDealSearch()" style="width:160px">
+        <div style="display:flex;align-items:center;gap:5px">
+          <input type="date" id="dealDateFrom" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Arrival Date — başlangıç">
+          <span style="color:#475569;font-size:11px">–</span>
+          <input type="date" id="dealDateTo" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Arrival Date — bitiş">
+          <button onclick="document.getElementById('dealDateFrom').value='';document.getElementById('dealDateTo').value='';loadDeals(true)" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Tarih filtresini temizle">✕</button>
+        </div>
         <select id="dealPageSizeSel" class="filter-sel" onchange="dealChangePageSize()" style="width:110px">
           <option value="100">100 / sayfa</option>
           <option value="500">500 / sayfa</option>
@@ -1070,6 +1082,12 @@
     const thF = document.getElementById('alarmThreshFilter')?.value || '';
     if (thF) data = data.filter(a => String(a.threshold_days) === thF);
 
+    // Referans tarih aralığı filtresi
+    const dateFrom = document.getElementById('alarmDateFrom')?.value || '';
+    const dateTo   = document.getElementById('alarmDateTo')?.value || '';
+    if (dateFrom) data = data.filter(a => a.reference_date && a.reference_date >= dateFrom);
+    if (dateTo)   data = data.filter(a => a.reference_date && a.reference_date <= dateTo);
+
     // Sıralama — kolon başlığına tıklanmışsa o öncelikli, yoksa üstteki dropdown
     if (alarmSortCol) {
       data = [...data].sort((a, b) => {
@@ -1751,6 +1769,8 @@
       const search = (document.getElementById('dealSearch')?.value || '').trim();
       const stage  = document.getElementById('dealStageFilter')?.value || '';
       const owner  = (document.getElementById('dealOwnerFilter')?.value || '').trim();
+      const dateFrom = document.getElementById('dealDateFrom')?.value || '';
+      const dateTo   = document.getElementById('dealDateTo')?.value || '';
       const offset = dealCurrentPage * DEAL_PAGE_SIZE;
 
       // Postgres varsayılanı DESC'te null'ları öne koyar — nullslast ile boş değerleri sona at
@@ -1766,6 +1786,8 @@
       if (stage)  url += `&stage=eq.${encodeURIComponent(stage)}`;
       if (search) url += `&deal_name=ilike.*${encodeURIComponent(search)}*`;
       if (owner)  url += `&deal_owner=ilike.*${encodeURIComponent(owner)}*`;
+      if (dateFrom) url += `&arrival_date=gte.${encodeURIComponent(dateFrom)}`;
+      if (dateTo)   url += `&arrival_date=lte.${encodeURIComponent(dateTo)}`;
 
       const r = await fetch(url, { headers: H });
       if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1843,6 +1865,8 @@
       document.getElementById('dealSearch')?.value || '',
       document.getElementById('dealStageFilter')?.value || '',
       document.getElementById('dealOwnerFilter')?.value || '',
+      document.getElementById('dealDateFrom')?.value || '',
+      document.getElementById('dealDateTo')?.value || '',
     ].join('|');
   }
 
@@ -1861,6 +1885,8 @@
       const search = (document.getElementById('dealSearch')?.value || '').trim();
       const stage  = document.getElementById('dealStageFilter')?.value || '';
       const owner  = (document.getElementById('dealOwnerFilter')?.value || '').trim();
+      const dateFrom = document.getElementById('dealDateFrom')?.value || '';
+      const dateTo   = document.getElementById('dealDateTo')?.value || '';
 
       // Sadece küçük alanları çek — raw'ın tamamı değil, JSON içinden seçilen değerler
       let base = `${SUPABASE_URL}/rest/v1/deals?select=amount,total_paid_amount,ramt:raw->>Amount,rpaid:raw->>Total_Paid_Amount,pft:raw->>Payment_Or_Flight_Ticket`;
@@ -1869,6 +1895,8 @@
       if (stage)  base += `&stage=eq.${encodeURIComponent(stage)}`;
       if (search) base += `&deal_name=ilike.*${encodeURIComponent(search)}*`;
       if (owner)  base += `&deal_owner=ilike.*${encodeURIComponent(owner)}*`;
+      if (dateFrom) base += `&arrival_date=gte.${encodeURIComponent(dateFrom)}`;
+      if (dateTo)   base += `&arrival_date=lte.${encodeURIComponent(dateTo)}`;
 
       let totalAmt = 0, totalPaid = 0, ftCount = 0, payCount = 0, count = 0, offset = 0;
       while (true) {
