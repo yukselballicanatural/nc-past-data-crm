@@ -1134,7 +1134,7 @@
         document.getElementById(prefix + 'TeamList').innerHTML = Object.entries(teams)
           .sort((a,b) => (b[1].open + b[1].overdue) - (a[1].open + a[1].overdue))
           .map(([team, v]) => `
-            <div class="flex items-center justify-between py-1.5 border-b border-gray-800/50 last:border-0">
+            <div onclick="selectAdminTeam('${team.replace(/'/g,"\\'")}')" style="cursor:pointer" class="flex items-center justify-between py-1.5 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/40 rounded-lg px-1.5 -mx-1.5 transition-colors">
               <div class="min-w-0">
                 <span class="text-xs text-slate-300 truncate block max-w-[160px]">${v.label || team}</span>
                 ${v.leader ? `<span class="text-[9px] text-slate-600">${v.leader}</span>` : ''}
@@ -1145,6 +1145,15 @@
               </div>
             </div>`).join('') || '<p class="text-xs text-slate-600">Aktif alarm yok.</p>';
       });
+    }
+
+    // Bölge panelindeki bir takıma tıklanınca alt taraftaki Alarm Listesi'ni o takıma filtrele
+    function selectAdminTeam(team) {
+      const sel = document.getElementById('amFilterTeam');
+      if (sel) sel.value = team;
+      renderAdminAlarmTable();
+      const section = document.getElementById('adminAlarmTbody')?.closest('.bg-gray-900');
+      if (section) section.scrollIntoView({ behavior:'smooth', block:'start' });
     }
 
     // Ortak filtre — tablo render ve export aynı mantığı kullanır
