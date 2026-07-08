@@ -19,10 +19,14 @@ language sql
 stable
 security definer
 set search_path = public
+set statement_timeout to '30000'   -- 30 sn: tek geçişli olsa da anon rolünün 8 sn'lik sınırına takılmasın
 as $$
-  with flags as (
+  -- ÖNEMLİ: 'materialized' → deals tablosu 49K satır SADECE BİR KEZ taranır ve
+  -- jsonb (raw->>'Language') bir kez parse edilir. Aksi halde CTE inline edilip
+  -- her alt-sorguda tekrar taranıyor ve statement timeout'a (57014) düşüyordu.
+  with flags as materialized (
     select
-      coalesce(amount, 0)::numeric            as amount,
+      coalesce(amount, 0)::numeric             as amount,
       coalesce(total_paid_amount, 0)::numeric  as paid,
       coalesce(remaining_amount, 0)::numeric   as unpaid,
       coalesce(stage, '')                      as stage,
@@ -32,7 +36,7 @@ as $$
       visit_date_1                             as v1,
       visit_date_2                             as v2,
       visit_date_3                             as v3,
-      created_time,
+      created_time::date                       as created_d,
       nullif(result_codes, '')                 as rc,
       coalesce(nullif(raw->>'Language',''), 'Unknown') as lang,
       (lower(coalesce(stage,'')) like '%won%')    as is_won,
@@ -44,30 +48,46 @@ as $$
       end as pay_status,
       (visit_date_1 is not null or visit_date_2 is not null or visit_date_3 is not null) as visited
     from public.deals
+  ),
+  -- Tüm skaler toplam/sayımlar TEK geçişte (FILTER ile)
+  scalars as (
+    select
+      count(*)                                                    as total,
+      coalesce(sum(amount),0)                                     as sum_amount,
+      coalesce(sum(paid),0)                                       as sum_paid,
+      coalesce(sum(unpaid),0)                                     as sum_unpaid,
+      count(*) filter (where is_won)                              as won,
+      count(*) filter (where is_cancel)                           as cancel,
+      count(*) filter (where rc is null)                          as no_result,
+      count(*) filter (where visited)                             as visited,
+      count(*) filter (where not is_won and not is_cancel and arrival < date '2026-06-15') as badge_arrival,
+      count(*) filter (where not is_won and not is_cancel and v1 < date '2026-06-15')      as badge_v1,
+      count(*) filter (where not is_won and not is_cancel and v2 < date '2026-06-15')      as badge_v2,
+      count(*) filter (where not is_won and not is_cancel and v3 < date '2026-06-15')      as badge_v3,
+      count(*) filter (where not is_won and is_cancel and (
+                 arrival < date '2026-06-15' or
+                 v1 < date '2026-06-15' or
+                 v2 < date '2026-06-15' or
+                 v3 < date '2026-06-15' or
+                 created_d < date '2026-06-15'
+               ))                                                 as badge_cancelled
+    from flags
   )
   select jsonb_build_object(
-    'total',            (select count(*) from flags),
-    'sum_amount',       (select coalesce(sum(amount),0)  from flags),
-    'sum_paid',         (select coalesce(sum(paid),0)    from flags),
-    'sum_unpaid',       (select coalesce(sum(unpaid),0)  from flags),
-    'won',              (select count(*) from flags where is_won),
-    'cancel',           (select count(*) from flags where is_cancel),
-    'no_result',        (select count(*) from flags where rc is null),
-    'visited',          (select count(*) from flags where visited),
+    'total',            sc.total,
+    'sum_amount',       sc.sum_amount,
+    'sum_paid',         sc.sum_paid,
+    'sum_unpaid',       sc.sum_unpaid,
+    'won',              sc.won,
+    'cancel',           sc.cancel,
+    'no_result',        sc.no_result,
+    'visited',          sc.visited,
     'unlock_requested', 0,  -- deals tablosunda lock_approval_requested kolonu yok (mevcut davranışla aynı: 0)
-
-    -- Sekme rozetleri: won hariç; a/v1/v2/v3 = iptal de hariç, tarih cutoff öncesi
-    'badge_arrival',    (select count(*) from flags where not is_won and not is_cancel and arrival < date '2026-06-15'),
-    'badge_v1',         (select count(*) from flags where not is_won and not is_cancel and v1 < date '2026-06-15'),
-    'badge_v2',         (select count(*) from flags where not is_won and not is_cancel and v2 < date '2026-06-15'),
-    'badge_v3',         (select count(*) from flags where not is_won and not is_cancel and v3 < date '2026-06-15'),
-    'badge_cancelled',  (select count(*) from flags where not is_won and is_cancel and (
-                            arrival < date '2026-06-15' or
-                            v1 < date '2026-06-15' or
-                            v2 < date '2026-06-15' or
-                            v3 < date '2026-06-15' or
-                            created_time::date < date '2026-06-15'
-                         )),
+    'badge_arrival',    sc.badge_arrival,
+    'badge_v1',         sc.badge_v1,
+    'badge_v2',         sc.badge_v2,
+    'badge_v3',         sc.badge_v3,
+    'badge_cancelled',  sc.badge_cancelled,
 
     'by_stage',   (select coalesce(jsonb_agg(jsonb_build_object('stage',stage,'cnt',cnt) order by cnt desc),'[]'::jsonb)
                      from (select stage, count(*) cnt from flags group by stage) a),
@@ -91,7 +111,8 @@ as $$
                              from flags group by owner) a),
     'by_language',(select coalesce(jsonb_agg(jsonb_build_object('lang',lang,'cnt',cnt) order by cnt desc),'[]'::jsonb)
                      from (select lang, count(*) cnt from flags group by lang) a)
-  );
+  )
+  from scalars sc;
 $$;
 
 grant execute on function public.admin_deal_summary() to anon, authenticated;
