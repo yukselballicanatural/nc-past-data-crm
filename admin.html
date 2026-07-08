@@ -140,6 +140,18 @@
           Alarm Monitoring
           <span id="adminAlarmBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:800;padding:1px 6px;min-width:20px;text-align:center">0</span>
         </button>
+        <button onclick="switchView('today')" class="nav-btn" id="nav-today">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+          Bugün Gelecekler
+        </button>
+        <button onclick="switchView('noshow')" class="nav-btn" id="nav-noshow">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
+          No-show
+        </button>
+        <button onclick="switchView('cancelled-alarms')" class="nav-btn" id="nav-cancelled-alarms">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          İptal Alarmları
+        </button>
       </div>
 
       <div class="space-y-2 pt-3 border-t border-gray-800">
@@ -815,6 +827,58 @@
     </div>
   </div>
 
+  <!-- ════════════════ BUGÜN GELECEKLER VIEW ════════════════ -->
+  <div id="view-today" class="hidden">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+      <div>
+        <h2 class="text-xl font-bold text-white">Bugün Gelecek Hastalar</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Tüm bölgeler — sistem geneli</p>
+      </div>
+      <select id="todayPftFilter" onchange="renderAdminToday()" class="filter-select" style="width:170px">
+        <option value="">Tümü (Payment / FT)</option>
+        <option value="Payment">Payment</option>
+        <option value="Flight Ticket">Flight Ticket</option>
+      </select>
+    </div>
+    <div id="todayGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+    <div id="todayEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">Bugün için programlanmış hasta bulunamadı.</div>
+  </div>
+
+  <!-- ════════════════ NO-SHOW VIEW ════════════════ -->
+  <div id="view-noshow" class="hidden">
+    <div class="mb-4">
+      <h2 class="text-xl font-bold text-white">No-show Hastalar</h2>
+      <p class="text-xs text-slate-400 mt-0.5">Tüm bölgeler — sistem geneli</p>
+    </div>
+    <div style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:#0f172a">
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Hasta</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Danışman</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Takım</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Bölge</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Tarih</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Not</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Aksiyon</th>
+          </tr>
+        </thead>
+        <tbody id="noshowTbody"></tbody>
+      </table>
+      <div id="noshowEmpty" style="display:none;text-align:center;padding:40px 16px;color:#475569;font-size:13px">No-show kaydı bulunamadı.</div>
+    </div>
+  </div>
+
+  <!-- ════════════════ İPTAL ALARMLARI VIEW ════════════════ -->
+  <div id="view-cancelled-alarms" class="hidden">
+    <div class="mb-4">
+      <h2 class="text-xl font-bold text-white">İptal Alarmları</h2>
+      <p class="text-xs text-slate-400 mt-0.5">Durumu "İptal" olan alarmlar — deal stage'inden bağımsız (Deal Listesi'ndeki "Cancelled" tab'ı deal stage bazlıdır)</p>
+    </div>
+    <div id="cancelledAlarmGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+    <div id="cancelledAlarmEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">İptal edilmiş alarm bulunamadı.</div>
+  </div>
+
   <!-- Admin Alarm Detail/Action Modal -->
   <div id="adminAlarmModal">
     <div class="modal-backdrop" onclick="closeAdminAlarmModal()"></div>
@@ -1154,6 +1218,77 @@
       renderAdminAlarmTable();
       const section = document.getElementById('adminAlarmTbody')?.closest('.bg-gray-900');
       if (section) section.scrollIntoView({ behavior:'smooth', block:'start' });
+    }
+
+    // ── Bugün Gelecekler ──────────────────────────────────────────────
+    function renderAdminToday() {
+      let data = adminAllAlarms.filter(a => a.alarm_type === 'today_patient');
+      const pftSel = document.getElementById('todayPftFilter');
+      if (pftSel && pftSel.value) data = data.filter(a => a.payment_or_flight_ticket === pftSel.value);
+
+      const grid  = document.getElementById('todayGrid');
+      const empty = document.getElementById('todayEmpty');
+      if (!data.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+
+      grid.innerHTML = data.map(a => {
+        const sm = _amStatusMeta(a.status);
+        const pftDisplay = a.payment_or_flight_ticket === 'Payment'
+          ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#2e1065;color:#c084fc;border:1px solid #4c1d95">Payment</span>'
+          : a.payment_or_flight_ticket === 'Flight Ticket'
+            ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#1e3a5f;color:#60a5fa;border:1px solid #1e40af">Flight Ticket</span>'
+            : '';
+        return `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px;cursor:pointer" onclick="openAdminAlarmModal('${a.id}')">
+          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:8px">
+            <div style="min-width:0;flex:1">
+              <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmt(a.deal_name)}</div>
+              <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600">${fmt(a.deal_owner)}</div>
+              <div style="font-size:9px;color:#64748b;margin-top:1px">${fmt(a.team)} · ${fmt(a.region)}</div>
+            </div>
+            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
+              ${pftDisplay}
+              <span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.color}22;color:${sm.color}">${sm.label}</span>
+            </div>
+          </div>
+          ${a.note ? `<div style="font-size:10px;color:#64748b;background:#1e293b;padding:7px 10px;border-radius:8px;border:1px solid #334155;margin-top:8px">${fmt(a.note)}</div>` : ''}
+        </div>`;
+      }).join('');
+    }
+
+    // ── No-show ───────────────────────────────────────────────────────
+    function renderAdminNoshow() {
+      const data = adminAllAlarms.filter(a => a.status === 'no_show');
+      const tbody = document.getElementById('noshowTbody');
+      const empty = document.getElementById('noshowEmpty');
+      if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      tbody.innerHTML = data.map(a => `<tr>
+        <td style="padding:8px 10px;font-size:11px;font-weight:600;color:#f1f5f9;border-bottom:1px solid #0f172a">${fmt(a.deal_name)}</td>
+        <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.deal_owner)}</td>
+        <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.team)}</td>
+        <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.region)}</td>
+        <td style="padding:8px 10px;font-size:10px;color:#cbd5e1;border-bottom:1px solid #0f172a;white-space:nowrap">${_amFmtDate(a.reference_date)}</td>
+        <td style="padding:8px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b;border-bottom:1px solid #0f172a">${fmt(a.note)}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">
+          <button onclick="openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
+        </td>
+      </tr>`).join('');
+    }
+
+    // ── İptal Alarmları ──────────────────────────────────────────────
+    function renderAdminCancelledAlarms() {
+      const data = adminAllAlarms.filter(a => a.status === 'cancelled');
+      const grid  = document.getElementById('cancelledAlarmGrid');
+      const empty = document.getElementById('cancelledAlarmEmpty');
+      if (!data.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      grid.innerHTML = data.map(a => `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px;cursor:pointer" onclick="openAdminAlarmModal('${a.id}')">
+        <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmt(a.deal_name)}</div>
+        <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600">${fmt(a.deal_owner)}</div>
+        <div style="font-size:9px;color:#64748b;margin-top:1px">${fmt(a.team)} · ${fmt(a.region)}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:8px">${_amFmtDate(a.reference_date)}${a.close_reason ? ' — '+a.close_reason : ''}</div>
+        ${a.note ? `<div style="font-size:10px;color:#64748b;background:#1e293b;padding:7px 10px;border-radius:8px;border:1px solid #334155;margin-top:8px">${fmt(a.note)}</div>` : ''}
+      </div>`).join('');
     }
 
     // Ortak filtre — tablo render ve export aynı mantığı kullanır
@@ -1731,7 +1866,7 @@
     }
 
     function switchView(v) {
-      ['deals','summary','users','logs','transfer','alarms-monitor'].forEach(name => {
+      ['deals','summary','users','logs','transfer','alarms-monitor','today','noshow','cancelled-alarms'].forEach(name => {
         document.getElementById('view-' + name).classList.toggle('hidden', name !== v);
         document.getElementById('nav-' + name).classList.toggle('active', name === v);
       });
@@ -1740,6 +1875,9 @@
       else if (v === 'logs') loadLogs();
       else if (v === 'transfer') initTransferView();
       else if (v === 'alarms-monitor') { loadAdminAlarms(); loadAlarmSettings(); }
+      else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
+      else if (v === 'noshow') loadAdminAlarms().then(renderAdminNoshow);
+      else if (v === 'cancelled-alarms') loadAdminAlarms().then(renderAdminCancelledAlarms);
     }
 
     function updateKPIs(data) {
