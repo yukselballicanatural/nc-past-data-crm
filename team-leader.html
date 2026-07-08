@@ -1145,6 +1145,21 @@
     setTimeout(() => { el.style.display = 'none'; }, 3500);
   }
 
+  // Kullanıcı aksiyonunu admin'in Loglar sekmesinde görünsün diye Logs tablosuna yaz
+  async function addLog(actionType, details, dealId, dealName, oldValues) {
+    try {
+      const u = currentUser || JSON.parse(sessionStorage.getItem('nc_current_user') || '{}');
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/Logs`, {
+        method: 'POST',
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', 'Prefer': 'return=minimal' },
+        body: JSON.stringify({ username: u.username||'', full_name: u.fullName||u.username||'', role: u.role||'', team: u.team||'', page: 'team-leader', action_type: actionType, details: String(details||''), deal_id: dealId ? String(dealId) : null, deal_name: dealName ? String(dealName) : null, old_values: oldValues ? String(oldValues) : null })
+      });
+      if (!r.ok) console.error('Log hatası: ' + await r.text());
+    } catch(e) {
+      console.error('Log bağlantı hatası: ' + e.message);
+    }
+  }
+
   // ── Alarm tipi meta ──────────────────────────────────────────────
   function alarmTypeMeta(type) {
     const m = {
@@ -1807,6 +1822,7 @@
       // Aksiyon geçmişine yaz
       const actionType = ['no_show','closed','cancelled'].includes(newStatus) ? 'closed' : (newStatus ? 'status_change' : 'note');
       logAlarmAction(currentAlarm, actionType, currentAlarm.status, newStatus || currentAlarm.status, note);
+      addLog(actionType === 'closed' ? 'ALARM_CLOSE' : 'ALARM_UPDATE', `Alarm güncellendi (${currentAlarm.status} → ${newStatus || currentAlarm.status})${note ? ' — Not: '+note : ''}`, currentAlarm.deal_id, currentAlarm.deal_name);
       // Local state güncelle
       const idx = allAlarms.findIndex(x => x.id === currentAlarm.id);
       if (idx >= 0) allAlarms[idx] = { ...allAlarms[idx], ...updates };
@@ -1899,7 +1915,9 @@
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const idx = allAlarms.findIndex(x => x.id === alarmId);
       if (idx >= 0) {
-        logAlarmAction(allAlarms[idx], ['no_show','closed'].includes(status) ? 'closed' : 'status_change', allAlarms[idx].status, status, null);
+        const isClose = ['no_show','closed'].includes(status);
+        logAlarmAction(allAlarms[idx], isClose ? 'closed' : 'status_change', allAlarms[idx].status, status, null);
+        addLog(isClose ? 'ALARM_CLOSE' : 'ALARM_QUICK_ACTION', `Hızlı aksiyon: ${allAlarms[idx].status} → ${status}`, allAlarms[idx].deal_id, allAlarms[idx].deal_name);
         allAlarms[idx] = { ...allAlarms[idx], ...updates };
       }
       updateTabCounts();
@@ -1919,6 +1937,7 @@
       if (!r.ok) throw new Error('HTTP ' + r.status);
       if (idx >= 0) {
         logAlarmAction(allAlarms[idx], 'reopened', prevStatus, 'open', null);
+        addLog('ALARM_REOPEN', `Alarm yeniden açıldı (${prevStatus} → open)`, allAlarms[idx].deal_id, allAlarms[idx].deal_name);
         allAlarms[idx] = { ...allAlarms[idx], ...updates };
       }
       updateTabCounts();
@@ -2612,7 +2631,10 @@
       const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${alarmId}`, { method:'PATCH', headers:H, body:JSON.stringify(updates) });
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const idx = allAlarms.findIndex(x => x.id === alarmId);
-      if (idx >= 0) allAlarms[idx] = { ...allAlarms[idx], ...updates };
+      if (idx >= 0) {
+        addLog('ALARM_ESCALATE', `Alarm eskale edildi (${allAlarms[idx].status} → escalated)`, allAlarms[idx].deal_id, allAlarms[idx].deal_name);
+        allAlarms[idx] = { ...allAlarms[idx], ...updates };
+      }
       showNotice('Alarm eskale edildi.', 'success');
       loadRmOverview();
     } catch(e) { showNotice('Eskale hatası: ' + e.message, 'error'); }
@@ -2682,6 +2704,7 @@
       if (session.role === 'admin') { window.location.href = 'admin.html'; return; }
       currentUser = session;
       const isRM = session.role === 'regional-manager';
+      addLog('LOGIN', `Giriş yapıldı — ${isRM ? 'Regional Manager' : 'Team Leader'}`);
 
       document.getElementById('sidebarName').textContent = session.fullName || session.username || '';
       document.getElementById('sidebarTeam').textContent = isRM ? 'Regional Manager' : (session.team || '');

@@ -388,6 +388,11 @@
             <option value="EDIT_USER">Kullanıcı Düzenle</option>
             <option value="ADD_USER">Kullanıcı Ekle</option>
             <option value="DATA_VIEW">Data Görüntüleme</option>
+            <option value="ALARM_CLOSE">Alarm Kapatma</option>
+            <option value="ALARM_UPDATE">Alarm Güncelleme</option>
+            <option value="ALARM_QUICK_ACTION">Alarm Hızlı Aksiyon</option>
+            <option value="ALARM_REOPEN">Alarm Yeniden Aç</option>
+            <option value="ALARM_ESCALATE">Alarm Eskale</option>
           </select>
         </div>
         <div>
@@ -1979,12 +1984,16 @@
     const LOG_COLORS = {
       LOGIN:'#22c55e', VIEW_DEAL:'#64748b', SAVE_RESULT:'#6366f1',
       UNLOCK_REQUEST:'#f59e0b', UNLOCK_APPROVE:'#14b8a6', UNLOCK_REJECT:'#ef4444',
-      EDIT_USER:'#8b5cf6', ADD_USER:'#3b82f6', DATA_VIEW:'#475569'
+      EDIT_USER:'#8b5cf6', ADD_USER:'#3b82f6', DATA_VIEW:'#475569',
+      ALARM_CLOSE:'#14b8a6', ALARM_UPDATE:'#6366f1', ALARM_QUICK_ACTION:'#0ea5e9',
+      ALARM_REOPEN:'#f59e0b', ALARM_ESCALATE:'#fb923c'
     };
     const LOG_LABELS = {
       LOGIN:'Login', VIEW_DEAL:I18N.t('Deal Görüntüle'), SAVE_RESULT:I18N.t('Kayıt/Kilitle'),
       UNLOCK_REQUEST:I18N.t('Unlock Talep'), UNLOCK_APPROVE:I18N.t('Unlock Onay'), UNLOCK_REJECT:I18N.t('Unlock Red'),
-      EDIT_USER:I18N.t('Kullanıcı Düzenle'), ADD_USER:I18N.t('Kullanıcı Ekle'), DATA_VIEW:I18N.t('Data Görüntüle')
+      EDIT_USER:I18N.t('Kullanıcı Düzenle'), ADD_USER:I18N.t('Kullanıcı Ekle'), DATA_VIEW:I18N.t('Data Görüntüle'),
+      ALARM_CLOSE:I18N.t('Alarm Kapatma'), ALARM_UPDATE:I18N.t('Alarm Güncelleme'), ALARM_QUICK_ACTION:I18N.t('Alarm Hızlı Aksiyon'),
+      ALARM_REOPEN:I18N.t('Alarm Yeniden Aç'), ALARM_ESCALATE:I18N.t('Alarm Eskale')
     };
 
     function renderLogs() {
