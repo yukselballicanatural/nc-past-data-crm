@@ -1163,6 +1163,10 @@
     let allDeals = [];
     let filteredDeals = [];
     let activeTab = 'all';
+    // Sunucu taraflı özet (admin_deal_summary RPC). Doluysa KPI/rozet/Analytics
+    // rakamları 49K satırı beklemeden anında buradan gelir. RPC yoksa null kalır
+    // ve panel eski (istemci tarafı) hesaplamaya güvenli şekilde düşer.
+    let dealSummary = null;
     let sortCol = '';
     let sortDir = 1;
     let dealCurrentPage = 0;
@@ -2237,7 +2241,15 @@
       if (_alarmMonitorTimer) { clearInterval(_alarmMonitorTimer); _alarmMonitorTimer = null; }
     }
 
+    function _hasActiveDealFilter() {
+      const ids = ['fTeam','fAgent','fStage','fPayment','fLang','fResult','fSearch','dealDateFrom','dealDateTo'];
+      return ids.some(id => { const el = document.getElementById(id); return el && el.value; });
+    }
+
     function updateKPIs(data) {
+      // Filtre yok + 'all' sekmesi + RPC özeti varsa: kartları anında özetten
+      // doldur (tablo tam inince istemci hesabıyla üzerine yazıp titretme).
+      if (dealSummary && activeTab === 'all' && !_hasActiveDealFilter()) { renderKpisFromSummary(dealSummary); return; }
       const total   = data.length;
       const deal    = data.reduce((s,d) => s + (Number(d['Deal Amount']) || 0), 0);
       const paid    = data.reduce((s,d) => s + (Number(d['Paid Amount'])  || 0), 0);
@@ -2296,6 +2308,7 @@
     }
 
     function updateTabBadges() {
+      if (dealSummary) { renderBadgesFromSummary(dealSummary); return; }
       const nw = allDeals.filter(d => !(d['Stage']||'').toLowerCase().includes('won'));
       const nc = d => !(d['Stage']||'').toLowerCase().includes('cancel');
       const allC = allDeals.length;
@@ -2608,12 +2621,20 @@
       a.download = 'deals_' + new Date().toISOString().slice(0,10) + '.csv'; a.click();
     }
 
+    // Analytics açıkken sadece küçük özeti (RPC) yenile — 49K satırlık deal
+    // tablosunu her dakika tekrar indirme. RPC yoksa eski tam yenilemeye düşer.
+    async function refreshSummaryOnly() {
+      const s = await _fetchDealSummary();
+      if (s) applyServerSummary(s);
+      else loadDeals(true);
+    }
+
     let _analyticsRefreshTimer = null;
     function _startAnalyticsAutoRefresh() {
       if (_analyticsRefreshTimer) return;
       _analyticsRefreshTimer = setInterval(() => {
         if (document.getElementById('view-summary').classList.contains('hidden')) return;
-        loadDeals(true);
+        refreshSummaryOnly();
       }, 60000);
     }
     function _stopAnalyticsAutoRefresh() {
@@ -2621,6 +2642,7 @@
     }
 
     function renderSummary() {
+      if (dealSummary) { renderSummaryFromRPC(dealSummary); return; }
       // ── KPI Strip ────────────────────────────────────────────
       const total = allDeals.length;
       const totalAmount = allDeals.reduce((s,d) => s + (Number(d['Deal Amount'])||0), 0);
@@ -2765,6 +2787,185 @@
             <div class="text-lg font-bold text-indigo-400">${c}</div>
             <div class="text-xs text-slate-400 mt-1">${l}</div>
           </div>`).join('');
+    }
+
+    // ═══════════════════════════════════════════════════════════════
+    // Sunucu taraflı özet (admin_deal_summary RPC) → istemci render'ı
+    // Rakamlar 49K satır beklemeden anında dolar. RPC yoksa bu fonksiyonlar
+    // hiç çağrılmaz, panel eski istemci-tarafı hesaplamaya düşer.
+    // ═══════════════════════════════════════════════════════════════
+    async function _fetchDealSummary() {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_deal_summary`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+          body: '{}'
+        });
+        if (!r.ok) return null;
+        const j = await r.json();
+        return (j && typeof j === 'object') ? j : null;
+      } catch(e) { return null; }
+    }
+
+    function renderKpisFromSummary(s) {
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('k1', s.total); set('k2', fmtCompact(s.sum_amount)); set('k3', fmtCompact(s.sum_paid)); set('k4', fmtCompact(s.sum_unpaid));
+      set('k5', s.won); set('k6', s.cancel); set('k7', s.unlock_requested); set('k8', s.no_result);
+      set('sKpi1', s.total); set('sKpi2', fmtCompact(s.sum_amount)); set('sKpi3', fmtCompact(s.sum_paid)); set('sKpi4', fmtCompact(s.sum_unpaid));
+    }
+
+    function renderBadgesFromSummary(s) {
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('badge-all', s.total); set('badge-arrival', s.badge_arrival); set('badge-visit1', s.badge_v1);
+      set('badge-visit2', s.badge_v2); set('badge-visit3', s.badge_v3); set('badge-cancelled', s.badge_cancelled);
+      set('statFull', s.total); set('statArrival', s.badge_arrival); set('statV1', s.badge_v1);
+      set('statV2', s.badge_v2); set('statV3', s.badge_v3); set('statCancelled', s.badge_cancelled); set('statUnlock', s.unlock_requested);
+    }
+
+    function populateFiltersFromSummary(s) {
+      const teams  = [...new Set((s.by_team||[]).map(t => (window.TeamMap && TeamMap.normalize(t.team)) || t.team).filter(Boolean))].sort();
+      const agents = [...new Set((s.by_owner||[]).map(o => o.owner).filter(Boolean))].sort();
+      const stages = [...new Set((s.by_stage||[]).map(x => x.stage).filter(Boolean))].sort();
+      const langs  = [...new Set((s.by_language||[]).map(x => x.lang).filter(l => l && l !== 'Unknown'))].sort();
+      const fill = (id, arr) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const existing = Array.from(sel.options).slice(1).map(o => o.value);
+        if (existing.join('|') === arr.join('|')) return;
+        if (document.activeElement === sel) return;
+        const cur = sel.value;
+        sel.innerHTML = `<option value="">${sel.options[0] ? sel.options[0].text : ''}</option>`;
+        arr.forEach(v => {
+          const o = document.createElement('option');
+          o.value = v; o.text = v;
+          o.style.background = '#111827'; o.style.color = '#E2E8F0';
+          sel.appendChild(o);
+        });
+        if (cur) sel.value = cur;
+      };
+      fill('fTeam', teams); fill('fAgent', agents); fill('fStage', stages); fill('fLang', langs);
+    }
+
+    function renderSummaryFromRPC(s) {
+      const total = s.total || 0;
+      // ── KPI Strip ────────────────────────────────────────────
+      const kpis = [
+        { label: 'Toplam Deal', value: total.toLocaleString('tr-TR'), color: 'text-indigo-400' },
+        { label: 'Toplam Ciro', value: fmtMoney(s.sum_amount), color: 'text-emerald-400' },
+        { label: 'Tahsil Edilen', value: fmtMoney(s.sum_paid), color: 'text-emerald-300' },
+        { label: 'Bekleyen Tahsilat', value: fmtMoney(s.sum_unpaid), color: 'text-amber-400' },
+        { label: 'Ziyaret Oranı', value: total ? ((s.visited/total*100).toFixed(1)+'%') : '0%', color: 'text-sky-400' },
+        { label: 'Won Oranı', value: total ? ((s.won/total*100).toFixed(1)+'%') : '0%', color: 'text-fuchsia-400' },
+      ];
+      document.getElementById('analyticsKpiStrip').innerHTML = kpis.map(k => `
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/30 transition-all duration-300">
+          <div class="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">${k.label}</div>
+          <div class="text-lg font-bold ${k.color}">${k.value}</div>
+        </div>`).join('');
+      const lu = document.getElementById('analyticsLastUpdate');
+      if (lu) lu.textContent = new Date().toLocaleTimeString('tr-TR');
+
+      // Payment status
+      const payColors = { Paid:'bg-emerald-500', Partial:'bg-amber-500', Unpaid:'bg-rose-500' };
+      const payArr = (s.by_payment||[]).slice().sort((a,b) => b.cnt-a.cnt);
+      const maxPay = Math.max(...payArr.map(p => p.cnt), 1);
+      document.getElementById('paymentChart').innerHTML = payArr.map(p => `
+          <div class="group cursor-default" title="${p.status}: ${p.cnt} deal (${(p.cnt/total*100).toFixed(1)}%)">
+            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300 group-hover:text-white transition-colors">${p.status}</span><span class="text-slate-400 group-hover:text-white transition-colors">${p.cnt}</span></div>
+            <div class="h-2 bg-gray-800 rounded-full overflow-hidden"><div class="h-2 ${payColors[p.status]||'bg-indigo-500'} rounded-full transition-all duration-700 ease-out group-hover:brightness-125" style="width:${(p.cnt/maxPay*100).toFixed(1)}%"></div></div>
+          </div>`).join('');
+
+      // Region distribution (ham takımdan TeamMap ile türet)
+      const regionMap = {};
+      (s.by_team||[]).forEach(t => { const r = (window.TeamMap ? TeamMap.regionForTeam(t.team) : '') || 'Unknown'; regionMap[r] = (regionMap[r]||0) + t.deals; });
+      const maxR = Math.max(...Object.values(regionMap), 1);
+      document.getElementById('regionChart').innerHTML =
+        Object.entries(regionMap).sort((a,b) => b[1]-a[1]).map(([r,c]) => `
+          <div class="group cursor-default" title="${r}: ${c} deal (${(c/total*100).toFixed(1)}%)">
+            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300 group-hover:text-white transition-colors">${r}</span><span class="text-slate-400 group-hover:text-white transition-colors">${c}</span></div>
+            <div class="h-2 bg-gray-800 rounded-full overflow-hidden"><div class="h-2 bg-sky-500 rounded-full transition-all duration-700 ease-out group-hover:brightness-125" style="width:${(c/maxR*100).toFixed(1)}%"></div></div>
+          </div>`).join('');
+
+      // Monthly trend (arrival date) — son 12 ay
+      const months = (s.by_month||[]).slice(-12);
+      const maxCount = Math.max(...months.map(m => m.cnt), 1);
+      document.getElementById('trendChart').innerHTML = months.length ? months.map(m => {
+        const h = Math.max(6, (m.cnt/maxCount*130));
+        return `
+          <div class="group flex flex-col items-center gap-1 flex-shrink-0 cursor-default" style="width:56px" title="${m.ym}: ${m.cnt} deal · ${fmtMoney(m.amount)}">
+            <div class="text-[10px] text-slate-400 group-hover:text-white transition-colors">${m.cnt}</div>
+            <div class="w-6 bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t transition-all duration-700 ease-out group-hover:from-indigo-500 group-hover:to-indigo-300 group-hover:scale-x-125" style="height:${h.toFixed(0)}px"></div>
+            <div class="text-[9px] text-slate-500 group-hover:text-slate-300 transition-colors">${m.ym}</div>
+          </div>`;
+      }).join('') : '<div class="text-xs text-slate-600 py-8 mx-auto">Arrival date verisi yok.</div>';
+
+      // Result codes breakdown
+      document.getElementById('resultCodeBody').innerHTML =
+        (s.by_result||[]).map(r => `
+          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+            <td class="py-1.5 text-slate-200">${r.code}</td>
+            <td class="py-1.5 text-slate-400">—</td>
+            <td class="py-1.5 text-right text-indigo-400 font-bold">${r.cnt}</td>
+            <td class="py-1.5 text-right text-slate-400">${r.agents}</td>
+          </tr>`).join('') || '<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">No result codes entered yet.</td></tr>';
+
+      // Teams (ham takımı TeamMap ile normalize edip yeniden topla)
+      const teamMap = {};
+      (s.by_team||[]).forEach(t => {
+        const name = (window.TeamMap && TeamMap.normalize(t.team)) || t.team || 'Unknown';
+        if (!teamMap[name]) teamMap[name] = { deals:0, paid:0, unpaid:0, won:0 };
+        teamMap[name].deals += t.deals; teamMap[name].paid += t.paid; teamMap[name].unpaid += t.unpaid; teamMap[name].won += t.won;
+      });
+      document.getElementById('teamSummaryBody').innerHTML =
+        Object.entries(teamMap).sort((a,b) => b[1].deals - a[1].deals).map(([t,v]) => `
+          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+            <td class="py-1 text-slate-200">${t}</td>
+            <td class="py-1 text-right text-slate-300">${v.deals}</td>
+            <td class="py-1 text-right text-emerald-400">${fmtMoney(v.paid)}</td>
+            <td class="py-1 text-right text-amber-400">${fmtMoney(v.unpaid)}</td>
+            <td class="py-1 text-right text-emerald-300">${v.won}</td>
+          </tr>`).join('');
+
+      // Stages
+      const stageArr = (s.by_stage||[]).slice().sort((a,b) => b.cnt-a.cnt);
+      const maxS = Math.max(...stageArr.map(x => x.cnt), 1);
+      document.getElementById('stageChart').innerHTML =
+        stageArr.map(x => `
+          <div class="group cursor-default" title="${x.stage}: ${x.cnt} deal (${(x.cnt/total*100).toFixed(1)}%)">
+            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300 group-hover:text-white transition-colors">${x.stage}</span><span class="text-slate-400 group-hover:text-white transition-colors">${x.cnt}</span></div>
+            <div class="h-2 bg-gray-800 rounded-full overflow-hidden"><div class="h-2 bg-indigo-500 rounded-full transition-all duration-700 ease-out group-hover:brightness-125" style="width:${(x.cnt/maxS*100).toFixed(1)}%"></div></div>
+          </div>`).join('');
+
+      // Agents (ham deal_owner, ilk 30)
+      document.getElementById('agentSummaryBody').innerHTML =
+        (s.by_owner||[]).slice(0,30).map(o => `
+          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+            <td class="py-1 text-slate-200">${o.owner || 'Unknown'}</td>
+            <td class="py-1 text-right text-slate-300">${o.deals}</td>
+            <td class="py-1 text-right text-emerald-400">${fmtMoney(o.paid)}</td>
+            <td class="py-1 text-right text-indigo-400">${o.results}</td>
+          </tr>`).join('');
+
+      // Languages
+      document.getElementById('langChart').innerHTML =
+        (s.by_language||[]).slice().sort((a,b) => b.cnt-a.cnt).map(l => `
+          <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${l.lang}: ${(l.cnt/total*100).toFixed(1)}%">
+            <div class="text-lg font-bold text-indigo-400">${l.cnt}</div>
+            <div class="text-xs text-slate-400 mt-1">${l.lang}</div>
+          </div>`).join('');
+    }
+
+    // RPC özeti geldiğinde: KPI kartları + rozetler + Analytics + filtre
+    // dropdown'ları anında doldurulur; yükleme "pulse" durumu kaldırılır.
+    function applyServerSummary(s) {
+      dealSummary = s;
+      renderKpisFromSummary(s);
+      renderBadgesFromSummary(s);
+      populateFiltersFromSummary(s);
+      // Analytics görünümü açıksa hemen yenile (kapalıysa açılınca renderSummary çağrılır)
+      const av = document.getElementById('view-summary');
+      if (av && !av.classList.contains('hidden')) renderSummaryFromRPC(s);
+      _setKpiLoadingState(false);
     }
 
     let allUsers = [];
@@ -3532,6 +3733,11 @@
       const spinEl = document.getElementById('loadingState');
       const cardEl = document.getElementById('cardsContainer');
       const errEl  = document.getElementById('errorState');
+
+      // Sunucu taraflı özeti paralel çek — KPI/rozet/Analytics rakamları 49K
+      // satırlık deal tablosunun inmesini beklemeden anında dolsun. RPC kurulu
+      // değilse null döner ve panel eski istemci-tarafı hesaplamaya düşer.
+      _fetchDealSummary().then(s => { if (s) applyServerSummary(s); });
 
       // Cache'den anında yükle (ilk açılış dahil)
       if (!forceRefresh) {
