@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Natural Clinic — Team Leader Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     body { font-family: 'Inter', sans-serif; background: #020617; }
     h1,h2,h3,h4 { font-family: 'Outfit', sans-serif; }
@@ -106,6 +106,7 @@
 
     /* Smooth row hover */
     .alarm-tbl tbody tr { transition:background 0.12s; }
+    .nc-project-name { font-family:'Cormorant Garamond', serif; font-style:italic; font-weight:500; font-size:12px; letter-spacing:.03em; line-height:1.35; color:#a5b4d6; margin-top:6px; }
   </style>
 </head>
 <body class="flex flex-row min-h-screen text-slate-100" style="background:#020617">
@@ -116,6 +117,7 @@
   <div style="padding:18px 16px 14px;border-bottom:1px solid #1e293b;display:flex;align-items:flex-end;justify-content:space-between;gap:8px">
     <div style="flex:1;min-width:0">
       <img src="naturallogobeyaz.png" alt="natural.clinic" style="width:100%;height:auto;max-height:42px;object-fit:contain;object-position:left">
+      <p class="nc-project-name">Natural Clinic Takım Lideri Alarm Takip Sistemi</p>
     </div>
     <button onclick="toggleSidebar()" style="width:26px;height:26px;border-radius:8px;background:#1e293b;border:1px solid #334155;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s" onmouseover="this.style.background='#0d9488';this.style.color='#fff'" onmouseout="this.style.background='#1e293b';this.style.color='#64748b'">
       <svg style="width:12px;height:12px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>

@@ -244,6 +244,7 @@
     'Son aktiviteden': 'Since last activity,',
 
     // ── admin.html ──────────────────────────────────────────────────
+    'Natural Clinic Takım Lideri Alarm Takip Sistemi': 'Natural Clinic Team Leader Alarm Tracking System',
     'Aktif (kapalı hariç)': 'Active (excluding closed)',
     'Alarm Listesi': 'Alarm List',
     'Alarm Parametreleri': 'Alarm Parameters',
