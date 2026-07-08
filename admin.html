@@ -997,7 +997,7 @@
   <div id="view-cancelled-alarms" class="hidden">
     <div class="mb-4">
       <h2 class="text-xl font-bold text-white">İptal Alarmları</h2>
-      <p class="text-xs text-slate-400 mt-0.5">Durumu "İptal" olan alarmlar — deal stage'inden bağımsız (Deal Listesi'ndeki "Cancelled" tab'ı deal stage bazlıdır)</p>
+      <p class="text-xs text-slate-400 mt-0.5">Stage'i "Cancelled" olan tüm dealler — alarm durumu veya tarihi fark etmeksizin</p>
     </div>
     <div id="cancelledAlarmGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
     <div id="cancelledAlarmEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">İptal edilmiş alarm bulunamadı.</div>
@@ -1431,19 +1431,51 @@
     }
 
     // ── İptal Alarmları ──────────────────────────────────────────────
-    function renderAdminCancelledAlarms() {
-      const data = adminAllAlarms.filter(a => a.status === 'cancelled');
+    let adminCancelledDeals = null;
+    async function loadAdminCancelledDeals() {
       const grid  = document.getElementById('cancelledAlarmGrid');
       const empty = document.getElementById('cancelledAlarmEmpty');
-      if (!data.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
       empty.style.display = 'none';
-      grid.innerHTML = data.map(a => `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px;cursor:pointer" onclick="openAdminAlarmModal('${a.id}')">
-        <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmt(a.deal_name)}</div>
-        <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600">${fmt(a.deal_owner)}</div>
-        <div style="font-size:9px;color:#64748b;margin-top:1px">${fmt(a.team)} · ${fmt(a.region)}</div>
-        <div style="font-size:10px;color:#94a3b8;margin-top:8px">${_amFmtDate(a.reference_date)}${a.close_reason ? ' — '+a.close_reason : ''}</div>
-        ${a.note ? `<div style="font-size:10px;color:#64748b;background:#1e293b;padding:7px 10px;border-radius:8px;border:1px solid #334155;margin-top:8px">${fmt(a.note)}</div>` : ''}
-      </div>`).join('');
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</div>`;
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const stageParam = encodeURIComponent('ilike.*cancel*');
+        let all = [], offset = 0;
+        while (true) {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}` +
+            `&select=id,deal_id,deal_name,deal_owner,team,stage,arrival_date&order=deal_name.asc&limit=1000&offset=${offset}`, { headers: H });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const batch = await r.json();
+          if (!Array.isArray(batch) || !batch.length) break;
+          all.push(...batch);
+          if (batch.length < 1000) break;
+          offset += 1000;
+        }
+        adminCancelledDeals = all;
+        renderAdminCancelledAlarms();
+      } catch(e) {
+        grid.innerHTML = '';
+        empty.textContent = I18N.t('Yükleme hatası: ') + e.message;
+        empty.style.display = 'block';
+      }
+    }
+
+    function renderAdminCancelledAlarms() {
+      const data = adminCancelledDeals || [];
+      const grid  = document.getElementById('cancelledAlarmGrid');
+      const empty = document.getElementById('cancelledAlarmEmpty');
+      if (!data.length) { grid.innerHTML = ''; empty.textContent = I18N.t('İptal edilmiş alarm bulunamadı.'); empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      grid.innerHTML = data.map(d => {
+        const region = (typeof AlarmEngine !== 'undefined') ? AlarmEngine.getRegion(d.team) : '';
+        const zohoId = d.deal_id || '';
+        return `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px">
+        <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmt(d.deal_name)}${zohoId ? ` <a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${zohoId}" target="_blank" rel="noopener" style="text-decoration:underline;text-decoration-style:dotted;color:#818cf8;font-size:10px;font-weight:600">↗</a>` : ''}</div>
+        <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600">${fmt(d.deal_owner)}</div>
+        <div style="font-size:9px;color:#64748b;margin-top:1px">${fmt(d.team)} · ${fmt(region)}</div>
+        <div style="font-size:10px;color:#94a3b8;margin-top:8px">${fmt(d.stage)}${d.arrival_date ? ' — ' + _amFmtDate(d.arrival_date) : ''}</div>
+      </div>`;
+      }).join('');
     }
 
     // Ortak filtre — tablo render ve export aynı mantığı kullanır
@@ -1705,7 +1737,7 @@
         });
         if (curView === 'today') renderAdminToday();
         else if (curView === 'noshow') renderAdminNoshow();
-        else if (curView === 'cancelled-alarms') renderAdminCancelledAlarms();
+        else if (curView === 'cancelled-alarms') loadAdminCancelledDeals();
       } catch(e) {
         if (statusEl) statusEl.textContent = I18N.t('Hata: ') + e.message;
       } finally {
@@ -2100,7 +2132,7 @@
       else if (v === 'transfer') initTransferView();
       else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       else if (v === 'noshow') loadAdminAlarms().then(renderAdminNoshow);
-      else if (v === 'cancelled-alarms') loadAdminAlarms().then(renderAdminCancelledAlarms);
+      else if (v === 'cancelled-alarms') loadAdminCancelledDeals();
     }
 
     // ── Alarm Monitoring: canlı saat + dakika başı otomatik yenileme ──
