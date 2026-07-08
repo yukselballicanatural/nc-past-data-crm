@@ -327,8 +327,8 @@
           <span class="text-xs text-slate-400" id="resultInfo">0 deals shown</span>
           <div class="flex items-center gap-2">
             <select id="dealPageSizeSel" class="filter-select" onchange="dealChangePageSize()" style="width:110px">
-              <option value="100">100 / sayfa</option>
-              <option value="500" selected>500 / sayfa</option>
+              <option value="100" selected>100 / sayfa</option>
+              <option value="500">500 / sayfa</option>
               <option value="1000">1000 / sayfa</option>
               <option value="2000">2000 / sayfa</option>
             </select>
@@ -1021,7 +1021,7 @@
     let sortCol = '';
     let sortDir = 1;
     let dealCurrentPage = 0;
-    let dealPageSize = 500;
+    let dealPageSize = 100;
     let currentModalDeal = null;
     let currentModalIndex = -1;
     let allLogs = [];
@@ -3008,8 +3008,21 @@
       'arrival_date,visit_date_1,visit_date_2,visit_date_3,payment_or_flight_ticket,created_time,' +
       'result_codes,rawLang:raw->>Language';
 
-    async function _fetchAllRaw() {
+    // onBatch(rows) her parça indikçe çağrılır — böylece tablo hepsi
+    // inmeden önce, ilk 100 satırla hemen dolmaya başlar.
+    async function _fetchAllRaw(onBatch) {
       const h = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+      const sleep = ms => new Promise(res => setTimeout(res, ms));
+
+      async function fetchRange(offset, limit, attempt) {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=${_DEALS_SELECT}&limit=${limit}&offset=${offset}`, { headers: h });
+        if (!r.ok) {
+          if (r.status >= 500 && attempt < 3) { await sleep(500 * attempt); return fetchRange(offset, limit, attempt + 1); }
+          throw new Error('HTTP ' + r.status);
+        }
+        return r.json();
+      }
+
       // 1. Toplam satır sayısını al (veri indirme yok)
       const cr = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=id&limit=1`, {
         headers: { ...h, Prefer: 'count=exact' }
@@ -3018,32 +3031,31 @@
       const total = parseInt((cr.headers.get('content-range') || '').split('/')[1] || '0') || 0;
       if (!total) return [];
 
-      // 2. Sayfaları sınırlı eşzamanlılıkla indir (Supabase çok fazla
-      // paralel isteği aynı anda kaldıramıyor, statement timeout / 500 dönüyor)
+      // 2. İlk 100 satırı hemen çek ve göster
+      const FIRST = 100;
+      const firstRows = await fetchRange(0, FIRST, 1);
+      if (onBatch) onBatch(firstRows);
+      if (total <= FIRST) return firstRows;
+
+      // 3. Kalanları sınırlı eşzamanlılıkla, parça parça indir (Supabase çok
+      // fazla paralel isteği aynı anda kaldıramıyor, statement timeout / 500 dönüyor)
       const SIZE = 1000;
       const CONCURRENCY = 4;
-      const pages = Math.ceil(total / SIZE);
-      const sleep = ms => new Promise(res => setTimeout(res, ms));
-
-      async function fetchPage(i, attempt) {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=${_DEALS_SELECT}&limit=${SIZE}&offset=${i * SIZE}`, { headers: h });
-        if (!r.ok) {
-          if (r.status >= 500 && attempt < 3) { await sleep(500 * attempt); return fetchPage(i, attempt + 1); }
-          throw new Error('HTTP ' + r.status);
-        }
-        return r.json();
-      }
-
+      const remaining = total - FIRST;
+      const pages = Math.ceil(remaining / SIZE);
+      const offsets = Array.from({ length: pages }, (_, i) => FIRST + i * SIZE);
       const results = new Array(pages);
       let next = 0;
       async function worker() {
         while (next < pages) {
           const i = next++;
-          results[i] = await fetchPage(i, 1);
+          const rows = await fetchRange(offsets[i], SIZE, 1);
+          results[i] = rows;
+          if (onBatch) onBatch(rows);
         }
       }
       await Promise.all(Array.from({ length: Math.min(CONCURRENCY, pages) }, worker));
-      return results.flat();
+      return firstRows.concat(results.flat());
     }
 
     function _applyAll() {
@@ -3051,6 +3063,15 @@
       updateTabBadges();
       applyFilters();
       renderSummary();
+    }
+
+    // Ardı ardına gelen küçük parçalarda her seferinde tam yeniden render
+    // yapmamak için bir sonraki animasyon frame'ine kadar birikip tek seferde uygular.
+    let _renderScheduled = false;
+    function _scheduleApplyAll() {
+      if (_renderScheduled) return;
+      _renderScheduled = true;
+      requestAnimationFrame(() => { _renderScheduled = false; _applyAll(); });
     }
 
     async function loadDeals(forceRefresh) {
@@ -3078,23 +3099,36 @@
         }
       }
 
-      // Cache yok veya force refresh — spinner göster
+      // Cache yok veya force refresh — ilk 100 satır gelir gelmez göster,
+      // gerisini arka planda parça parça doldur.
       spinEl.classList.remove('hidden');
       cardEl.classList.add('hidden');
       errEl.classList.add('hidden');
+      allDeals = [];
+      let firstBatchShown = false;
       try {
-        const raw   = await _fetchAllRaw();
-        const deals = mapDeals(raw);
-        _setCache(deals);
-        allDeals = deals;
+        const raw = await _fetchAllRaw((batch) => {
+          if (!batch.length) return;
+          allDeals = allDeals.concat(mapDeals(batch));
+          if (!firstBatchShown) {
+            firstBatchShown = true;
+            spinEl.classList.add('hidden');
+            cardEl.classList.remove('hidden');
+          }
+          _scheduleApplyAll();
+        });
+        allDeals = mapDeals(raw);
+        _setCache(allDeals);
         document.getElementById('lastRefresh').textContent = 'Updated: ' + new Date().toLocaleTimeString();
         _applyAll();
-        spinEl.classList.add('hidden');
-        cardEl.classList.remove('hidden');
       } catch(e) {
-        spinEl.classList.add('hidden');
-        errEl.classList.remove('hidden');
-        document.getElementById('errorMsg').textContent = 'Error: ' + e.message;
+        if (!firstBatchShown) {
+          spinEl.classList.add('hidden');
+          errEl.classList.remove('hidden');
+          document.getElementById('errorMsg').textContent = 'Error: ' + e.message;
+        } else {
+          showSiteNotice('Veri yükleme hatası: ' + e.message, 'error');
+        }
       }
     }
 
