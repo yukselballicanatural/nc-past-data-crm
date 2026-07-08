@@ -1226,6 +1226,13 @@
       return (a.reference_date && _amDaysUntil(a.reference_date) < 0);
     }
 
+    // "today_patient" etiketi alarm oluşurken bir kereliğine set ediliyor ve
+    // sonra hiç güncellenmiyor — o gün geçince alarm "eski" kalıyor. Bu yüzden
+    // "bugün mü" sorusunu her zaman referans tarihinden canlı hesapla.
+    function _amIsToday(a) {
+      return !!(a.reference_date && _amDaysUntil(a.reference_date) === 0);
+    }
+
     function _amTypeMeta(type) {
       const m = {
         'arrival_approaching':{ label:I18N.t('Arrival Yaklaşıyor'), color:'#fb923c' },
@@ -1297,7 +1304,7 @@
       const a = adminAllAlarms;
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
       document.getElementById('mk1').textContent = a.filter(x => x.status === 'open' || x.status === 'seen').length;
-      document.getElementById('mk2').textContent = a.filter(x => x.alarm_type === 'today_patient' && active.has(x.status)).length;
+      document.getElementById('mk2').textContent = a.filter(x => _amIsToday(x) && active.has(x.status)).length;
       document.getElementById('mk3').textContent = a.filter(x => _amIsOverdue(x)).length;
       document.getElementById('mk4').textContent = a.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
       const todayStr = new Date().toISOString().slice(0,10);
@@ -1309,7 +1316,7 @@
       const sOpen = document.getElementById('sAlarmOpen');
       if (sOpen) {
         sOpen.textContent    = a.filter(x => x.status === 'open' || x.status === 'seen').length;
-        document.getElementById('sAlarmToday').textContent   = a.filter(x => x.alarm_type === 'today_patient' && active.has(x.status)).length;
+        document.getElementById('sAlarmToday').textContent   = a.filter(x => _amIsToday(x) && active.has(x.status)).length;
         document.getElementById('sAlarmOverdue').textContent = a.filter(x => _amIsOverdue(x)).length;
         document.getElementById('sAlarmMissing').textContent = a.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
       }
@@ -1369,7 +1376,8 @@
 
     // ── Bugün Gelecekler ──────────────────────────────────────────────
     function renderAdminToday() {
-      let data = adminAllAlarms.filter(a => a.alarm_type === 'today_patient');
+      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+      let data = adminAllAlarms.filter(a => _amIsToday(a) && (active.has(a.status) || a.status === 'no_show'));
       const pftSel = document.getElementById('todayPftFilter');
       if (pftSel && pftSel.value) data = data.filter(a => a.payment_or_flight_ticket === pftSel.value);
 
@@ -1742,7 +1750,7 @@
         if (['closed','cancelled'].includes(a.status)) regions[r].closed++;
         if (a.status === 'no_show') regions[r].noshow++;
         if (a.alarm_type === 'arrival_missing' && active.has(a.status)) regions[r].missing++;
-        if (a.alarm_type === 'today_patient' && active.has(a.status)) regions[r].today++;
+        if (_amIsToday(a) && active.has(a.status)) regions[r].today++;
       });
       const headers = _csvRow(['Bölge','Toplam Alarm','Aktif','Gecikmiş','Bugün Gelecek','Eksik Tarih','Kapatılan','No-show','Kapatma Oranı %']);
       const rows = [headers, ...Object.entries(regions)

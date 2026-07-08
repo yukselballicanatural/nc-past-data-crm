@@ -1137,6 +1137,13 @@
     return (daysUntil(a.reference_date) || 0) < 0;
   }
 
+  // Alarm oluşturulduğu gün "today_patient" etiketi alıyor ama bu etiket
+  // sonradan güncellenmiyor — o gün geçince alarm "eski" kalıyor. Bu yüzden
+  // "bugün mü" sorusunu her zaman referans tarihinden canlı hesapla.
+  function isToday(a) {
+    return !!(a.reference_date && daysUntil(a.reference_date) === 0);
+  }
+
   function showNotice(msg, type) {
     const el = document.getElementById('siteNotice');
     el.textContent = I18N.t(msg);
@@ -1229,7 +1236,7 @@
       switch(tab) {
         case 'all':         return activeStatuses.has(a.status);
         case 'open':        return a.status === 'open' || a.status === 'seen';
-        case 'today':       return a.alarm_type === 'today_patient' && (activeStatuses.has(a.status) || a.status === 'no_show');
+        case 'today':       return isToday(a) && (activeStatuses.has(a.status) || a.status === 'no_show');
         case 'approaching': return ['arrival_approaching','visit_approaching','payment_tracking'].includes(a.alarm_type) && activeStatuses.has(a.status) && (a.days_remaining || 0) > 0;
         case 'missing':     return a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status);
         case 'overdue':     return isOverdue(a);
@@ -1243,7 +1250,7 @@
   // ── Row urgency class ────────────────────────────────────────────
   function getRowUrgencyClass(a) {
     if (isOverdue(a)) return 'alarm-row-overdue';
-    if (a.alarm_type === 'today_patient') return 'alarm-row-today';
+    if (isToday(a)) return 'alarm-row-today';
     const days = a.days_remaining !== null ? a.days_remaining : daysUntil(a.reference_date);
     if (days !== null && days >= 0) {
       if (days <= 3)  return 'alarm-row-urgent';
@@ -1376,7 +1383,7 @@
       const tm     = alarmTypeMeta(a.alarm_type);
       const sm     = statusMeta(a.status);
       const overdue = isOverdue(a);
-      const rowBg   = overdue ? 'rgba(127,29,29,0.12)' : a.alarm_type === 'today_patient' ? 'rgba(5,46,22,0.2)' : '';
+      const rowBg   = overdue ? 'rgba(127,29,29,0.12)' : isToday(a) ? 'rgba(5,46,22,0.2)' : '';
       const urgCls  = getRowUrgencyClass(a);
       const pftBadge = a.payment_or_flight_ticket === 'Payment'
         ? '<span style="color:#c084fc;font-weight:800">P</span>'
@@ -2426,7 +2433,7 @@
   function renderRmKpis() {
     const activeStatuses = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
     const open      = allAlarms.filter(a => ['open','seen'].includes(a.status)).length;
-    const today     = allAlarms.filter(a => a.alarm_type === 'today_patient' && activeStatuses.has(a.status)).length;
+    const today     = allAlarms.filter(a => isToday(a) && activeStatuses.has(a.status)).length;
     const overdue   = allAlarms.filter(a => isOverdue(a)).length;
     const missing   = allAlarms.filter(a => a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status)).length;
     const noshow    = allAlarms.filter(a => a.status === 'no_show').length;
@@ -2475,7 +2482,7 @@
       if (activeStatuses.has(a.status)) teams[t].total++;
       if (['open','seen'].includes(a.status)) teams[t].open++;
       if (isOverdue(a)) teams[t].overdue++;
-      if (a.alarm_type === 'today_patient' && activeStatuses.has(a.status)) teams[t].today++;
+      if (isToday(a) && activeStatuses.has(a.status)) teams[t].today++;
       if (a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status)) teams[t].missing++;
       if (a.status === 'escalated') teams[t].escalated++;
       if (a.status === 'in_progress') teams[t].inprogress++;
@@ -2558,7 +2565,7 @@
     tbody.innerHTML = data.map((a, i) => {
       const tm = alarmTypeMeta(a.alarm_type);
       const sm = statusMeta(a.status);
-      const rowBg = isOverdue(a) ? 'rgba(127,29,29,0.12)' : a.alarm_type === 'today_patient' ? 'rgba(5,46,22,0.2)' : '';
+      const rowBg = isOverdue(a) ? 'rgba(127,29,29,0.12)' : isToday(a) ? 'rgba(5,46,22,0.2)' : '';
       const safeId = a.id;
       return `<tr onclick="openAlarmById('${safeId}')" style="${rowBg ? 'background:'+rowBg : ''}">
         <td style="color:#475569;font-size:10px">${i+1}</td>
@@ -2609,7 +2616,7 @@
     tbody.innerHTML = data.map((a, i) => {
       const tm = alarmTypeMeta(a.alarm_type);
       const sm = statusMeta(a.status);
-      const rowBg = isOverdue(a) ? 'rgba(127,29,29,0.12)' : a.alarm_type === 'today_patient' ? 'rgba(5,46,22,0.2)' : '';
+      const rowBg = isOverdue(a) ? 'rgba(127,29,29,0.12)' : isToday(a) ? 'rgba(5,46,22,0.2)' : '';
       return `<tr onclick="openAlarmById('${a.id}')" style="${rowBg ? 'background:'+rowBg : ''}">
         <td style="color:#475569;font-size:10px">${i+1}</td>
         <td>
