@@ -1681,21 +1681,35 @@
       }
     }
 
-    async function adminRunEngine() {
+    async function adminRunEngine(manual = true) {
+      const cacheKey = 'nc_engine_global';
+      if (!manual) {
+        const lastRun = Number(localStorage.getItem(cacheKey) || 0);
+        if (Date.now() - lastRun < 60 * 60 * 1000) return; // Otomatik: saatte bir
+      }
       const btn = document.getElementById('adminBtnEngine');
       const statusEl = document.getElementById('adminEngineStatus');
-      btn.disabled = true; btn.style.opacity = '0.6';
+      if (btn) { btn.disabled = true; btn.style.opacity = '0.6'; }
       try {
         if (typeof AlarmEngine === 'undefined') throw new Error('alarm-engine.js yüklenmemiş');
         const result = await AlarmEngine.run(SUPABASE_URL, SUPABASE_KEY, {
-          onProgress: (msg) => { statusEl.textContent = msg; },
+          onProgress: (msg) => { if (statusEl) statusEl.textContent = msg; },
         });
-        statusEl.textContent = `${I18N.t('Tamamlandı:')} ${result.deals} ${I18N.t('deal,')} ${result.generated} alarm, ${result.cancelled || 0} ${I18N.t('İptal')}`;
+        localStorage.setItem(cacheKey, String(Date.now()));
+        if (statusEl) statusEl.textContent = `${I18N.t('Tamamlandı:')} ${result.deals} ${I18N.t('deal,')} ${result.generated} alarm, ${result.cancelled || 0} ${I18N.t('İptal')}`;
         await loadAdminAlarms();
+        // O an açık olan alarm-bağımlı görünümü de tazele
+        const curView = ['today','noshow','cancelled-alarms'].find(v => {
+          const el = document.getElementById('view-' + v);
+          return el && !el.classList.contains('hidden');
+        });
+        if (curView === 'today') renderAdminToday();
+        else if (curView === 'noshow') renderAdminNoshow();
+        else if (curView === 'cancelled-alarms') renderAdminCancelledAlarms();
       } catch(e) {
-        statusEl.textContent = I18N.t('Hata: ') + e.message;
+        if (statusEl) statusEl.textContent = I18N.t('Hata: ') + e.message;
       } finally {
-        btn.disabled = false; btn.style.opacity = '1';
+        if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
       }
     }
 
@@ -3438,6 +3452,7 @@
         ['dealDateFrom', 'dealDateTo', 'amDateFrom', 'amDateTo'].forEach(id => NCDatePicker.attach(id));
         loadDeals();
         loadAdminAlarms();
+        adminRunEngine(false);
       } catch(e) { sessionStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
     })();
   </script>

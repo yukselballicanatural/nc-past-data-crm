@@ -307,7 +307,7 @@ window.AlarmEngine = (function () {
     for (let i = 0; i < dealIds.length; i += 200) {
       const idList = dealIds.slice(i, i + 200).join(',');
       const r = await fetch(
-        `${BASE}/rest/v1/alarms?status=in.(open,seen,in_progress,escalated)&deal_id=in.(${idList})&select=id`,
+        `${BASE}/rest/v1/alarms?status=in.(open,seen,in_progress,escalated,arrived,examined,processing)&deal_id=in.(${idList})&select=id`,
         { headers: H }
       );
       if (!r.ok) continue;
