@@ -2325,7 +2325,7 @@
       const dFrom   = document.getElementById('dealDateFrom').value;
       const dTo     = document.getElementById('dealDateTo').value;
 
-      updateTabBadges();
+      if (!_dealsLoadInProgress) updateTabBadges();
 
       filteredDeals = allDeals.filter(d => {
         // Tab filters (All Data tab shows everything)
@@ -2373,7 +2373,7 @@
         return true;
       });
 
-      updateKPIs(filteredDeals);
+      if (!_dealsLoadInProgress) updateKPIs(filteredDeals);
       applySortAndRender();
     }
 
@@ -3392,19 +3392,23 @@
     }
 
     // ── Perf helpers ─────────────────────────────────────────────
+    // localStorage kullanılıyor (sessionStorage değil) — böylece sekme/tarayıcı
+    // kapatılıp yeniden açılsa bile veri elde tutulur ve panel her açılışta
+    // sıfırdan 49K+ satırı parça parça çekip rakamların gözünün önünde
+    // değişmesine (yavaşlık hissi) neden olmaz. Arka planda sessizce tazelenir.
     const _DEALS_CACHE = 'nc_admin_deals_v1';
-    const _DEALS_TTL   = 5 * 60 * 1000; // 5 dk
+    const _DEALS_TTL   = 20 * 60 * 1000; // 20 dk
 
     function _getCached() {
       try {
-        const c = JSON.parse(sessionStorage.getItem(_DEALS_CACHE) || 'null');
+        const c = JSON.parse(localStorage.getItem(_DEALS_CACHE) || 'null');
         if (c && Date.now() - c.ts < _DEALS_TTL) return c.deals;
       } catch(e) {}
       return null;
     }
     function _setCache(deals) {
-      try { sessionStorage.setItem(_DEALS_CACHE, JSON.stringify({ ts: Date.now(), deals })); }
-      catch(e) { try { sessionStorage.removeItem(_DEALS_CACHE); } catch(e2) {} }
+      try { localStorage.setItem(_DEALS_CACHE, JSON.stringify({ ts: Date.now(), deals })); }
+      catch(e) { try { localStorage.removeItem(_DEALS_CACHE); } catch(e2) {} }
     }
 
     // deals tablosundan raw JSONB'nin tamamını değil, ihtiyaç duyulan alanları çekiyoruz
@@ -3466,11 +3470,17 @@
       return firstRows.concat(results.flat());
     }
 
+    // İlk (cache'siz) yükleme sırasında parça parça gelen her batch'te rakamları
+    // (menü badge'leri, KPI kartları, Analytics) güncellemiyoruz — sadece deal
+    // tablosu satırları akar. Rakamlar veri tamamen inince tek seferde belirir,
+    // böylece sürekli değişip "sistem yavaşladı" hissi vermez.
+    let _dealsLoadInProgress = false;
+
     function _applyAll() {
       populateFilters(allDeals);
-      updateTabBadges();
+      if (!_dealsLoadInProgress) updateTabBadges();
       applyFilters();
-      renderSummary();
+      if (!_dealsLoadInProgress) renderSummary();
     }
 
     // Ardı ardına gelen küçük parçalarda her seferinde tam yeniden render
@@ -3514,6 +3524,7 @@
       errEl.classList.add('hidden');
       allDeals = [];
       let firstBatchShown = false;
+      _dealsLoadInProgress = true;
       try {
         const raw = await _fetchAllRaw((batch) => {
           if (!batch.length) return;
@@ -3528,7 +3539,6 @@
         allDeals = mapDeals(raw);
         _setCache(allDeals);
         document.getElementById('lastRefresh').textContent = 'Updated: ' + new Date().toLocaleTimeString();
-        _applyAll();
       } catch(e) {
         if (!firstBatchShown) {
           spinEl.classList.add('hidden');
@@ -3537,6 +3547,9 @@
         } else {
           showSiteNotice('Veri yükleme hatası: ' + e.message, 'error');
         }
+      } finally {
+        _dealsLoadInProgress = false;
+        _applyAll();
       }
     }
 
