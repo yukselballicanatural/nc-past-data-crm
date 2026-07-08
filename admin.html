@@ -369,7 +369,35 @@
 
     <!-- ===== ANALYTICS VIEW ===== -->
     <div id="view-summary" class="hidden space-y-5">
-      <h2 class="text-xl font-bold text-white">Analytics & Summary</h2>
+      <div class="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <h2 class="text-xl font-bold text-white">Analytics & Summary</h2>
+          <p class="text-xs text-slate-500 mt-0.5">Deals tablosundaki canlı verilere göre otomatik hesaplanır.</p>
+        </div>
+      </div>
+
+      <!-- KPI Strip -->
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" id="analyticsKpiStrip"></div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h3 class="text-sm font-bold text-white mb-3">Payment Status</h3>
+          <div id="paymentChart" class="space-y-2"></div>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h3 class="text-sm font-bold text-white mb-3">Stage Distribution</h3>
+          <div id="stageChart" class="space-y-2"></div>
+        </div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+          <h3 class="text-sm font-bold text-white mb-3">Region Distribution</h3>
+          <div id="regionChart" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <h3 class="text-sm font-bold text-white mb-3">Aylık Deal & Ciro Trendi (Arrival Date)</h3>
+        <div id="trendChart" class="flex items-end gap-2 overflow-x-auto pb-2" style="min-height:160px"></div>
+      </div>
 
       <!-- Result Code Breakdown -->
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
@@ -386,19 +414,15 @@
         </div>
       </div>
 
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <h3 class="text-sm font-bold text-white mb-3">Team Performance</h3>
           <div class="overflow-auto max-h-80">
             <table class="tbl w-full">
-              <thead><tr class="text-slate-400"><th>Team</th><th>Deals</th><th>Paid</th><th>Won</th></tr></thead>
+              <thead><tr class="text-slate-400"><th>Team</th><th>Deals</th><th>Paid</th><th>Unpaid</th><th>Won</th></tr></thead>
               <tbody id="teamSummaryBody"></tbody>
             </table>
           </div>
-        </div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <h3 class="text-sm font-bold text-white mb-3">Stage Distribution</h3>
-          <div id="stageChart" class="space-y-2"></div>
         </div>
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
           <h3 class="text-sm font-bold text-white mb-3">Top Agents by Deals</h3>
@@ -2282,6 +2306,73 @@
     }
 
     function renderSummary() {
+      // ── KPI Strip ────────────────────────────────────────────
+      const total = allDeals.length;
+      const totalAmount = allDeals.reduce((s,d) => s + (Number(d['Deal Amount'])||0), 0);
+      const totalPaid   = allDeals.reduce((s,d) => s + (Number(d['Paid Amount'])||0), 0);
+      const totalUnpaid = allDeals.reduce((s,d) => s + (Number(d['Unpaid Amount'])||0), 0);
+      const visited     = allDeals.filter(d => d['Visit Status'] === 'Visited').length;
+      const won         = allDeals.filter(d => (d['Stage']||'').toLowerCase().includes('won')).length;
+      const kpis = [
+        { label: 'Toplam Deal', value: total.toLocaleString('tr-TR'), color: 'text-indigo-400' },
+        { label: 'Toplam Ciro', value: fmtMoney(totalAmount), color: 'text-emerald-400' },
+        { label: 'Tahsil Edilen', value: fmtMoney(totalPaid), color: 'text-emerald-300' },
+        { label: 'Bekleyen Tahsilat', value: fmtMoney(totalUnpaid), color: 'text-amber-400' },
+        { label: 'Ziyaret Oranı', value: total ? ((visited/total*100).toFixed(1)+'%') : '0%', color: 'text-sky-400' },
+        { label: 'Won Oranı', value: total ? ((won/total*100).toFixed(1)+'%') : '0%', color: 'text-fuchsia-400' },
+      ];
+      document.getElementById('analyticsKpiStrip').innerHTML = kpis.map(k => `
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 transition-colors">
+          <div class="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">${k.label}</div>
+          <div class="text-lg font-bold ${k.color}">${k.value}</div>
+        </div>`).join('');
+
+      // Payment status
+      const payMap = {};
+      allDeals.forEach(d => { const p = d['Payment Status']||'Unknown'; payMap[p] = (payMap[p]||0)+1; });
+      const maxPay = Math.max(...Object.values(payMap), 1);
+      const payColors = { Paid:'bg-emerald-500', Partial:'bg-amber-500', Unpaid:'bg-rose-500' };
+      document.getElementById('paymentChart').innerHTML =
+        Object.entries(payMap).sort((a,b) => b[1]-a[1]).map(([p,c]) => `
+          <div>
+            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">${p}</span><span class="text-slate-400">${c}</span></div>
+            <div class="h-2 bg-gray-800 rounded-full"><div class="h-2 ${payColors[p]||'bg-indigo-500'} rounded-full" style="width:${(c/maxPay*100).toFixed(1)}%"></div></div>
+          </div>`).join('');
+
+      // Region distribution
+      const regionMap = {};
+      allDeals.forEach(d => { const r = d['Region']||'Unknown'; regionMap[r] = (regionMap[r]||0)+1; });
+      const maxR = Math.max(...Object.values(regionMap), 1);
+      document.getElementById('regionChart').innerHTML =
+        Object.entries(regionMap).sort((a,b) => b[1]-a[1]).map(([r,c]) => `
+          <div>
+            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300">${r}</span><span class="text-slate-400">${c}</span></div>
+            <div class="h-2 bg-gray-800 rounded-full"><div class="h-2 bg-sky-500 rounded-full" style="width:${(c/maxR*100).toFixed(1)}%"></div></div>
+          </div>`).join('');
+
+      // Monthly trend (by Arrival Date)
+      const trendMap = {};
+      allDeals.forEach(d => {
+        const dt = d['Arrival Date'];
+        if (!dt) return;
+        const ym = dt.slice(0,7);
+        if (!trendMap[ym]) trendMap[ym] = { count: 0, amount: 0 };
+        trendMap[ym].count++;
+        trendMap[ym].amount += (Number(d['Deal Amount'])||0);
+      });
+      const months = Object.keys(trendMap).sort().slice(-12);
+      const maxCount = Math.max(...months.map(m => trendMap[m].count), 1);
+      document.getElementById('trendChart').innerHTML = months.length ? months.map(m => {
+        const v = trendMap[m];
+        const h = Math.max(6, (v.count/maxCount*130));
+        return `
+          <div class="flex flex-col items-center gap-1 flex-shrink-0" style="width:56px" title="${v.count} deal · ${fmtMoney(v.amount)}">
+            <div class="text-[10px] text-slate-400">${v.count}</div>
+            <div class="w-6 bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t" style="height:${h.toFixed(0)}px"></div>
+            <div class="text-[9px] text-slate-500">${m}</div>
+          </div>`;
+      }).join('') : '<div class="text-xs text-slate-600 py-8 mx-auto">Arrival date verisi yok.</div>';
+
       // Result codes breakdown
       const rcMap = {};
       allDeals.filter(d => d.result_code).forEach(d => {
@@ -2303,9 +2394,10 @@
       const teamMap = {};
       allDeals.forEach(d => {
         const t = d['Team Group'] || 'Unknown';
-        if (!teamMap[t]) teamMap[t] = { deals:0, paid:0, won:0 };
+        if (!teamMap[t]) teamMap[t] = { deals:0, paid:0, unpaid:0, won:0 };
         teamMap[t].deals++;
         teamMap[t].paid += (Number(d['Paid Amount'])||0);
+        teamMap[t].unpaid += (Number(d['Unpaid Amount'])||0);
         if ((d['Stage']||'').toLowerCase().includes('won')) teamMap[t].won++;
       });
       document.getElementById('teamSummaryBody').innerHTML =
@@ -2314,6 +2406,7 @@
             <td class="py-1 text-slate-200">${t}</td>
             <td class="py-1 text-right text-slate-300">${v.deals}</td>
             <td class="py-1 text-right text-emerald-400">${fmtMoney(v.paid)}</td>
+            <td class="py-1 text-right text-amber-400">${fmtMoney(v.unpaid)}</td>
             <td class="py-1 text-right text-emerald-300">${v.won}</td>
           </tr>`).join('');
 
