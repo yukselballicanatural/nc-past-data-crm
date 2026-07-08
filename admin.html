@@ -175,6 +175,28 @@
           </div>
         </div>
       </div>
+
+      <div class="space-y-2 pt-3 border-t border-gray-800">
+        <div class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Alarm Özeti</div>
+        <div class="grid grid-cols-2 gap-2">
+          <div onclick="switchView('alarms-monitor')" class="bg-amber-900/20 rounded-lg p-2 text-center border border-amber-800/20 cursor-pointer hover:border-amber-600/50 transition-colors">
+            <div class="text-sm font-bold text-amber-400 leading-tight" id="sAlarmOpen">0</div>
+            <div class="text-[9px] text-slate-400 mt-0.5">Açık</div>
+          </div>
+          <div onclick="switchView('today')" class="bg-emerald-900/20 rounded-lg p-2 text-center border border-emerald-800/20 cursor-pointer hover:border-emerald-600/50 transition-colors">
+            <div class="text-sm font-bold text-emerald-400 leading-tight" id="sAlarmToday">0</div>
+            <div class="text-[9px] text-slate-400 mt-0.5">Bugün</div>
+          </div>
+          <div onclick="switchView('alarms-monitor')" class="bg-red-900/20 rounded-lg p-2 text-center border border-red-800/20 cursor-pointer hover:border-red-600/50 transition-colors">
+            <div class="text-sm font-bold text-red-400 leading-tight" id="sAlarmOverdue">0</div>
+            <div class="text-[9px] text-slate-400 mt-0.5">Gecikmiş</div>
+          </div>
+          <div onclick="switchView('alarms-monitor')" class="bg-slate-800/60 rounded-lg p-2 text-center border border-slate-700/40 cursor-pointer hover:border-slate-500/60 transition-colors">
+            <div class="text-sm font-bold text-slate-300 leading-tight" id="sAlarmMissing">0</div>
+            <div class="text-[9px] text-slate-400 mt-0.5">Eksik Tarih</div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="mt-6 pt-4 border-t border-gray-800">
@@ -1172,6 +1194,14 @@
       document.getElementById('mk6').textContent = a.filter(x => x.alarm_type === 'payment_tracking' && active.has(x.status)).length;
       document.getElementById('mk7').textContent = a.filter(x => ['arrival_approaching','visit_approaching'].includes(x.alarm_type) && active.has(x.status)).length;
       document.getElementById('mk8').textContent = a.filter(x => x.payment_or_flight_ticket === 'Flight Ticket' && ['arrival_approaching','visit_approaching','arrival_missing','today_patient'].includes(x.alarm_type) && active.has(x.status)).length;
+
+      const sOpen = document.getElementById('sAlarmOpen');
+      if (sOpen) {
+        sOpen.textContent    = a.filter(x => x.status === 'open' || x.status === 'seen').length;
+        document.getElementById('sAlarmToday').textContent   = a.filter(x => x.alarm_type === 'today_patient' && active.has(x.status)).length;
+        document.getElementById('sAlarmOverdue').textContent = a.filter(x => _amIsOverdue(x)).length;
+        document.getElementById('sAlarmMissing').textContent = a.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
+      }
     }
 
     function renderRegionPanels() {
@@ -3077,6 +3107,7 @@
         document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
         ['dealDateFrom', 'dealDateTo', 'amDateFrom', 'amDateTo'].forEach(id => NCDatePicker.attach(id));
         loadDeals();
+        loadAdminAlarms();
       } catch(e) { sessionStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
     })();
   </script>
