@@ -312,6 +312,7 @@
                 <th data-sort="lang"    onclick="sortBy('lang')"    style="cursor:pointer;user-select:none">Language<span class="sarrow" style="color:#475569"> ↕</span></th>
                 <th data-sort="amount"  onclick="sortBy('amount')"  style="cursor:pointer;user-select:none">Deal Amt<span class="sarrow" style="color:#475569"> ↕</span></th>
                 <th data-sort="paid"    onclick="sortBy('paid')"    style="cursor:pointer;user-select:none">Paid<span class="sarrow" style="color:#475569"> ↕</span></th>
+                <th data-sort="remaining" onclick="sortBy('remaining')" style="cursor:pointer;user-select:none">Kalan<span class="sarrow" style="color:#475569"> ↕</span></th>
                 <th data-sort="payment" onclick="sortBy('payment')" style="cursor:pointer;user-select:none">Pay Status<span class="sarrow" style="color:#475569"> ↕</span></th>
                 <th data-sort="result"  onclick="sortBy('result')"  style="cursor:pointer;user-select:none">Result Code<span class="sarrow" style="color:#475569"> ↕</span></th>
                 <th data-sort="sub"     onclick="sortBy('sub')"     style="cursor:pointer;user-select:none">Sub Code<span class="sarrow" style="color:#475569"> ↕</span></th>
@@ -900,6 +901,7 @@
       if (col === 'lang')    return (d['Language'] || '').toLowerCase();
       if (col === 'amount')  return Number(d['Deal Amount']) || 0;
       if (col === 'paid')    return Number(d['Paid Amount']) || 0;
+      if (col === 'remaining') return Number(d['Unpaid Amount']) || 0;
       if (col === 'payment') return (d['Payment Status'] || '').toLowerCase();
       if (col === 'result')  return (d.result_code || '').toLowerCase();
       if (col === 'sub')     return (d.sub_code || '').toLowerCase();
@@ -1761,6 +1763,7 @@
           <td class="text-slate-400 text-[11px]">${fmt(d['Language'])}</td>
           <td class="text-blue-400 font-bold">${fmtMoney(d['Deal Amount'])}</td>
           <td class="${(d['Paid Amount']||0)>0?'text-emerald-400':'text-red-400'} font-bold">${fmtMoney(d['Paid Amount'])}</td>
+          <td class="${(d['Unpaid Amount']||0)>0?'text-amber-400':'text-slate-500'} font-bold">${fmtMoney(d['Unpaid Amount'])}</td>
           <td class="text-[10px] ${unpaid?'text-amber-400':'text-slate-400'}">${fmt(d['Payment Status'])}</td>
           <td>${resultBadge}</td>
           <td class="text-slate-400 text-[10px]">${fmt(d.sub_code)}</td>
