@@ -273,8 +273,8 @@
 
     <!-- Search + Sort bar -->
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
-      <input id="alarmSearch" class="filter-inp" placeholder="Hasta, danışman ara..." oninput="renderAlarms()" style="flex:1;min-width:160px;max-width:280px">
-      <select id="alarmConsultantFilter" class="filter-sel" onchange="renderAlarms()" style="width:170px">
+      <input id="alarmSearch" class="filter-inp" placeholder="Hasta, danışman ara..." oninput="updateTabCounts();renderAlarms()" style="flex:1;min-width:160px;max-width:280px">
+      <select id="alarmConsultantFilter" class="filter-sel" onchange="updateTabCounts();renderAlarms()" style="width:170px">
         <option value="">Danışman: Tümü</option>
       </select>
       <select id="alarmSortSel" class="filter-sel" onchange="alarmSortCol=null;renderAlarms()" style="width:180px">
@@ -283,12 +283,12 @@
         <option value="overdue_first">Gecikmiş Önce</option>
         <option value="name_asc">İsme Göre A-Z</option>
       </select>
-      <select id="alarmPftFilter" class="filter-sel" onchange="renderAlarms()" style="width:130px">
+      <select id="alarmPftFilter" class="filter-sel" onchange="updateTabCounts();renderAlarms()" style="width:130px">
         <option value="">P / FT: Tümü</option>
         <option value="Payment">Payment</option>
         <option value="Flight Ticket">Flight Ticket</option>
       </select>
-      <select id="alarmThreshFilter" class="filter-sel" onchange="renderAlarms()" style="width:120px">
+      <select id="alarmThreshFilter" class="filter-sel" onchange="updateTabCounts();renderAlarms()" style="width:120px">
         <option value="">Eşik: Tümü</option>
         <option value="45">45 Gün</option>
         <option value="30">30 Gün</option>
@@ -297,9 +297,9 @@
         <option value="3">3 Gün</option>
       </select>
       <div style="display:flex;align-items:center;gap:5px">
-        <input type="date" id="alarmDateFrom" class="filter-inp" onchange="renderAlarms()" style="width:135px" title="Referans tarih — başlangıç">
+        <input type="date" id="alarmDateFrom" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Referans tarih — başlangıç">
         <span style="color:#475569;font-size:11px">–</span>
-        <input type="date" id="alarmDateTo" class="filter-inp" onchange="renderAlarms()" style="width:135px" title="Referans tarih — bitiş">
+        <input type="date" id="alarmDateTo" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Referans tarih — bitiş">
         <button onclick="ncClearAlarmDates()" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Tarih filtresini temizle">✕</button>
       </div>
     </div>
@@ -1303,10 +1303,9 @@
     }
   }
 
-  // ── Alarm tablo render ───────────────────────────────────────────
-  function renderAlarms() {
-    let data = filterAlarms(activeAlarmTab);
-
+  // Arama / danışman / P-FT / eşik / tarih aralığı filtreleri — hem tablo hem
+  // sekme sayaçları (updateTabCounts) aynı filtre setini uygulasın diye ortak fonksiyon
+  function applyExtraAlarmFilters(data) {
     // Arama filtresi
     const searchQ = (document.getElementById('alarmSearch')?.value || '').toLowerCase().trim();
     if (searchQ) {
@@ -1330,6 +1329,13 @@
     const dateTo   = document.getElementById('alarmDateTo')?.value || '';
     if (dateFrom) data = data.filter(a => a.reference_date && a.reference_date >= dateFrom);
     if (dateTo)   data = data.filter(a => a.reference_date && a.reference_date <= dateTo);
+
+    return data;
+  }
+
+  // ── Alarm tablo render ───────────────────────────────────────────
+  function renderAlarms() {
+    let data = applyExtraAlarmFilters(filterAlarms(activeAlarmTab));
 
     // Sıralama — kolon başlığına tıklanmışsa o öncelikli, yoksa üstteki dropdown
     if (alarmSortCol) {
@@ -1415,13 +1421,13 @@
   function renderMetricsStrip() {
     const el = document.getElementById('metricsStrip');
     if (!el) return;
-    const total     = filterAlarms('all').length;
-    const todayCnt  = filterAlarms('today').length;
-    const overdue   = filterAlarms('overdue').length;
-    const approachCnt = filterAlarms('approaching').length;
-    const missing   = filterAlarms('missing').length;
-    const noshow    = filterAlarms('noshow').length;
-    const cancelledCnt = filterAlarms('cancelled').length;
+    const total     = applyExtraAlarmFilters(filterAlarms('all')).length;
+    const todayCnt  = applyExtraAlarmFilters(filterAlarms('today')).length;
+    const overdue   = applyExtraAlarmFilters(filterAlarms('overdue')).length;
+    const approachCnt = applyExtraAlarmFilters(filterAlarms('approaching')).length;
+    const missing   = applyExtraAlarmFilters(filterAlarms('missing')).length;
+    const noshow    = applyExtraAlarmFilters(filterAlarms('noshow')).length;
+    const cancelledCnt = applyExtraAlarmFilters(filterAlarms('cancelled')).length;
     const pills = [
       { label:`${total} ${I18N.t('Toplam Aktif')}`,   bg:'#1e293b', color:'#94a3b8', tab:'all'         },
       { label:`${todayCnt} ${I18N.t('Bugün')}`,        bg:'#052e16', color:'#4ade80', tab:'today'        },
@@ -1438,15 +1444,16 @@
 
   // ── Tab badge sayaçları güncelle ─────────────────────────────────
   function updateTabCounts() {
+    // Sekme sayaçları da aktif filtrelere (danışman, P/FT, eşik, tarih, arama) göre hesaplanır
     const counts = {
-      all:        filterAlarms('all').length,
-      open:       filterAlarms('open').length,
-      today:      filterAlarms('today').length,
-      approaching:filterAlarms('approaching').length,
-      missing:    filterAlarms('missing').length,
-      overdue:    filterAlarms('overdue').length,
-      noshow:     filterAlarms('noshow').length,
-      cancelled:  filterAlarms('cancelled').length,
+      all:        applyExtraAlarmFilters(filterAlarms('all')).length,
+      open:       applyExtraAlarmFilters(filterAlarms('open')).length,
+      today:      applyExtraAlarmFilters(filterAlarms('today')).length,
+      approaching:applyExtraAlarmFilters(filterAlarms('approaching')).length,
+      missing:    applyExtraAlarmFilters(filterAlarms('missing')).length,
+      overdue:    applyExtraAlarmFilters(filterAlarms('overdue')).length,
+      noshow:     applyExtraAlarmFilters(filterAlarms('noshow')).length,
+      cancelled:  applyExtraAlarmFilters(filterAlarms('cancelled')).length,
     };
     Object.entries(counts).forEach(([k,v]) => {
       const el = document.getElementById('cnt-' + k);
@@ -1454,18 +1461,18 @@
     });
 
     // Sidebar KPIs
-    document.getElementById('kpiOpen').textContent    = filterAlarms('open').length;
-    document.getElementById('kpiToday').textContent   = filterAlarms('today').length;
-    document.getElementById('kpiOverdue').textContent = filterAlarms('overdue').length;
-    document.getElementById('kpiMissing').textContent = filterAlarms('missing').length;
+    document.getElementById('kpiOpen').textContent    = counts.open;
+    document.getElementById('kpiToday').textContent   = counts.today;
+    document.getElementById('kpiOverdue').textContent = counts.overdue;
+    document.getElementById('kpiMissing').textContent = counts.missing;
 
     // Noactivity count — server-side liste sekme açılınca yüklenir, son bilinen sayıyı göster
     const noActEl = document.getElementById('cnt-noactivity');
     if (noActEl && noActivityDeals.length) noActEl.textContent = noActivityDeals.length;
 
     // Nav badges
-    const openCnt  = filterAlarms('open').length;
-    const todayCnt = filterAlarms('today').length;
+    const openCnt  = counts.open;
+    const todayCnt = counts.today;
     const nbA = document.getElementById('navBadgeAlarms');
     const nbT = document.getElementById('navBadgeToday');
     if (openCnt > 0)  { nbA.textContent = openCnt;  nbA.style.display = 'inline-flex'; }
