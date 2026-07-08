@@ -29,6 +29,38 @@
     select option { background:#0f172a; color:#e2e8f0; }
     input.filter-input { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:100%; }
     input.filter-input:focus { outline:none; border-color:#6366F1; }
+
+    /* ── Özel takvim (date picker) ─────────────────────────────────── */
+    .nc-date-field { position:relative; display:inline-block; }
+    .nc-date-trigger { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:135px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:border-color .15s,box-shadow .15s; user-select:none; }
+    .nc-date-trigger:hover { border-color:#4b5f7a; }
+    .nc-date-trigger.active { border-color:#0d9488; box-shadow:0 0 0 3px rgba(13,148,136,0.12); }
+    .nc-date-trigger svg { flex-shrink:0; color:#64748b; }
+    .nc-date-trigger .nc-date-text { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; color:#E2E8F0; letter-spacing:.2px; }
+    .nc-date-trigger .nc-date-text.placeholder { color:#54637a; }
+    .nc-cal-popup { position:absolute; top:calc(100% + 8px); left:0; z-index:200; background:#141d30; border:1px solid #2a3752; border-radius:14px; box-shadow:0 24px 48px -12px rgba(0,0,0,0.55), 0 0 0 1px rgba(13,148,136,0.05); padding:14px; width:264px; animation:ncCalIn .13s cubic-bezier(.16,1,.3,1); }
+    @keyframes ncCalIn { from { opacity:0; transform:translateY(-6px) scale(.97); } to { opacity:1; transform:none; } }
+    .nc-cal-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .nc-cal-nav-btn { width:26px; height:26px; border-radius:8px; background:transparent; border:none; color:#8393ab; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:14px; transition:all .15s; }
+    .nc-cal-nav-btn:hover { background:#0d9488; color:#fff; }
+    .nc-cal-title { display:flex; gap:2px; }
+    .nc-cal-title button { background:transparent; border:none; color:#E2E8F0; font-size:12.5px; font-weight:700; cursor:pointer; padding:5px 9px; border-radius:7px; transition:all .15s; letter-spacing:.2px; }
+    .nc-cal-title button:hover { background:#1e2c45; color:#2dd4bf; }
+    .nc-cal-grid { display:grid; grid-template-columns:repeat(7,1fr); gap:1px; }
+    .nc-cal-dow { font-size:9px; font-weight:700; color:#48597a; text-transform:uppercase; text-align:center; padding:2px 0 8px; letter-spacing:.03em; }
+    .nc-cal-day { aspect-ratio:1; display:flex; align-items:center; justify-content:center; font-size:11.5px; color:#c3cee2; border-radius:8px; cursor:pointer; transition:background .12s,color .12s; position:relative; }
+    .nc-cal-day:hover { background:#1e2c45; color:#fff; }
+    .nc-cal-day.muted { color:#334155; }
+    .nc-cal-day.today:not(.selected)::after { content:''; position:absolute; bottom:3px; left:50%; transform:translateX(-50%); width:3px; height:3px; border-radius:50%; background:#2dd4bf; }
+    .nc-cal-day.selected { background:#0d9488; color:#fff; font-weight:700; box-shadow:0 2px 10px rgba(13,148,136,0.5); }
+    .nc-cal-footer { display:flex; justify-content:space-between; margin-top:10px; padding-top:10px; border-top:1px solid #223049; }
+    .nc-cal-footer button { background:transparent; border:none; color:#64748b; font-size:10.5px; font-weight:700; cursor:pointer; padding:5px 9px; border-radius:6px; transition:all .15s; }
+    .nc-cal-footer button:hover { background:#1e2c45; color:#2dd4bf; }
+    .nc-cal-panel-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; }
+    .nc-cal-panel-item { padding:11px 4px; text-align:center; border-radius:9px; font-size:12px; font-weight:600; color:#c3cee2; cursor:pointer; transition:all .12s; }
+    .nc-cal-panel-item:hover { background:#1e2c45; color:#fff; }
+    .nc-cal-panel-item.selected { background:#0d9488; color:#fff; }
+
     .spinner-anim { border:3px solid rgba(99,102,241,0.2); border-top:3px solid #6366F1; border-radius:50%; width:40px; height:40px; animation:spin 0.8s linear infinite; }
     @keyframes spin { to { transform: rotate(360deg); } }
     .nav-btn { width:100%; padding:8px 14px; font-size:11px; font-weight:700; border-radius:10px; display:flex; align-items:center; gap:8px; transition:all 0.15s; cursor:pointer; text-align:left; }
@@ -187,6 +219,10 @@
               <option value="">All</option><option value="pending">No Result</option><option value="locked">Has Result</option><option value="unlock">Unlock Req.</option></select></div>
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Search</label>
             <input id="fSearch" class="filter-input" placeholder="Name, ID, result..." oninput="applyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date From</label>
+            <input type="date" id="dealDateFrom" onchange="applyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date To</label>
+            <input type="date" id="dealDateTo" onchange="applyFilters()"></div>
         </div>
         <div class="flex flex-wrap gap-2">
           <button onclick="setPreset('noResult')" class="px-3 py-1 bg-rose-900/40 border border-rose-800/40 text-rose-300 text-[10px] rounded-lg font-bold">No Result Entered</button>
@@ -1271,6 +1307,197 @@
       return '€' + Math.round(n);
     }
 
+    // ── Özel takvim (date picker) — input[type=date]'i gizleyip yerine
+    // şık, tıklanabilir bir takvim popup'ı bağlar. Gerçek input'un value'su
+    // (yyyy-mm-dd) ve onchange davranışı korunur, sadece görünüm değişir.
+    const NCDatePicker = (() => {
+      const MONTHS_TR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+      const DOW_TR = ['Pt','Sa','Ça','Pe','Cu','Ct','Pz'];
+      let openState = null;
+
+      function pad(n) { return String(n).padStart(2, '0'); }
+      function toISO(d) { return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`; }
+      function fromISO(s) { if (!s) return null; const p = s.split('-').map(Number); return new Date(p[0], p[1]-1, p[2]); }
+      function fmtDisplay(d) { return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear()}`; }
+
+      function closeAll() {
+        if (openState && openState.popupEl) openState.popupEl.remove();
+        document.querySelectorAll('.nc-date-trigger.active').forEach(el => el.classList.remove('active'));
+        document.removeEventListener('mousedown', onDocClick, true);
+        openState = null;
+      }
+      function onDocClick(e) {
+        if (openState && !e.target.closest('.nc-date-field')) closeAll();
+      }
+
+      function attach(inputId) {
+        const input = document.getElementById(inputId);
+        if (!input || input.dataset.ncAttached) return;
+        input.dataset.ncAttached = '1';
+        input.style.display = 'none';
+
+        const field = document.createElement('div');
+        field.className = 'nc-date-field';
+        const trigger = document.createElement('div');
+        trigger.className = 'nc-date-trigger';
+        trigger.id = inputId + '_trigger';
+        trigger.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="nc-date-text placeholder">gg.aa.yyyy</span>`;
+        trigger.addEventListener('click', (e) => { e.stopPropagation(); toggle(inputId); });
+
+        input.parentNode.insertBefore(field, input);
+        field.appendChild(trigger);
+        field.appendChild(input);
+        refreshTrigger(inputId);
+      }
+
+      function refreshTrigger(inputId) {
+        const input = document.getElementById(inputId);
+        const trigger = document.getElementById(inputId + '_trigger');
+        if (!input || !trigger) return;
+        const span = trigger.querySelector('.nc-date-text');
+        const d = fromISO(input.value);
+        if (d) { span.textContent = fmtDisplay(d); span.classList.remove('placeholder'); }
+        else { span.textContent = 'gg.aa.yyyy'; span.classList.add('placeholder'); }
+      }
+
+      function setValue(inputId, iso) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        input.value = iso || '';
+        refreshTrigger(inputId);
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+
+      function toggle(inputId) {
+        if (openState && openState.inputId === inputId) { closeAll(); return; }
+        closeAll();
+        open(inputId);
+      }
+
+      function open(inputId) {
+        const input = document.getElementById(inputId);
+        const trigger = document.getElementById(inputId + '_trigger');
+        if (!input || !trigger) return;
+        trigger.classList.add('active');
+        const sel = fromISO(input.value);
+        const cursor = sel ? new Date(sel.getFullYear(), sel.getMonth(), 1) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const popup = document.createElement('div');
+        popup.className = 'nc-cal-popup';
+        trigger.parentNode.appendChild(popup);
+        openState = { inputId, view: 'days', cursor, selected: sel, popupEl: popup };
+        render();
+        setTimeout(() => document.addEventListener('mousedown', onDocClick, true), 0);
+      }
+
+      function render() {
+        if (!openState) return;
+        const { view, cursor, selected, popupEl } = openState;
+        if (view === 'months') popupEl.innerHTML = renderMonthsView(cursor);
+        else if (view === 'years') popupEl.innerHTML = renderYearsView(cursor);
+        else popupEl.innerHTML = renderDaysView(cursor, selected);
+      }
+
+      function renderDaysView(cursor, selected) {
+        const year = cursor.getFullYear(), month = cursor.getMonth();
+        const first = new Date(year, month, 1);
+        const startDow = (first.getDay() + 6) % 7;
+        const daysInMonth = new Date(year, month + 1, 0).getDate();
+        const daysInPrevMonth = new Date(year, month, 0).getDate();
+        const today = new Date();
+        let cells = '';
+        for (let i = 0; i < startDow; i++) {
+          const dnum = daysInPrevMonth - startDow + i + 1;
+          cells += `<div class="nc-cal-day muted" data-nav="-1" data-day="${dnum}">${dnum}</div>`;
+        }
+        for (let d = 1; d <= daysInMonth; d++) {
+          const isToday = today.getFullYear()===year && today.getMonth()===month && today.getDate()===d;
+          const isSel = selected && selected.getFullYear()===year && selected.getMonth()===month && selected.getDate()===d;
+          cells += `<div class="nc-cal-day${isToday?' today':''}${isSel?' selected':''}" data-day="${d}">${d}</div>`;
+        }
+        const totalCells = startDow + daysInMonth;
+        const remain = (7 - (totalCells % 7)) % 7;
+        for (let d = 1; d <= remain; d++) {
+          cells += `<div class="nc-cal-day muted" data-nav="1" data-day="${d}">${d}</div>`;
+        }
+        return `
+          <div class="nc-cal-header">
+            <button class="nc-cal-nav-btn" data-act="prev-month" type="button">‹</button>
+            <div class="nc-cal-title">
+              <button data-act="show-months" type="button">${MONTHS_TR[month]}</button>
+              <button data-act="show-years" type="button">${year}</button>
+            </div>
+            <button class="nc-cal-nav-btn" data-act="next-month" type="button">›</button>
+          </div>
+          <div class="nc-cal-grid">
+            ${DOW_TR.map(d => `<div class="nc-cal-dow">${d}</div>`).join('')}
+            ${cells}
+          </div>
+          <div class="nc-cal-footer">
+            <button data-act="today" type="button">Bugün</button>
+            <button data-act="clear" type="button">Temizle</button>
+          </div>`;
+      }
+
+      function renderMonthsView(cursor) {
+        const year = cursor.getFullYear();
+        return `
+          <div class="nc-cal-header">
+            <button class="nc-cal-nav-btn" data-act="prev-year" type="button">‹</button>
+            <div class="nc-cal-title"><button data-act="show-years" type="button">${year}</button></div>
+            <button class="nc-cal-nav-btn" data-act="next-year" type="button">›</button>
+          </div>
+          <div class="nc-cal-panel-grid">
+            ${MONTHS_TR.map((m,i) => `<div class="nc-cal-panel-item${i===cursor.getMonth()?' selected':''}" data-month="${i}">${m.slice(0,3)}</div>`).join('')}
+          </div>`;
+      }
+
+      function renderYearsView(cursor) {
+        const base = Math.floor(cursor.getFullYear() / 12) * 12;
+        let items = '';
+        for (let y = base - 1; y < base + 11; y++) {
+          items += `<div class="nc-cal-panel-item${y===cursor.getFullYear()?' selected':''}" data-year="${y}">${y}</div>`;
+        }
+        return `
+          <div class="nc-cal-header">
+            <button class="nc-cal-nav-btn" data-act="prev-decade" type="button">‹</button>
+            <div class="nc-cal-title"><span style="font-size:12.5px;font-weight:700;padding:5px 9px;color:#8393ab">${base}–${base+11}</span></div>
+            <button class="nc-cal-nav-btn" data-act="next-decade" type="button">›</button>
+          </div>
+          <div class="nc-cal-panel-grid">${items}</div>`;
+      }
+
+      document.addEventListener('click', (e) => {
+        if (!openState || !openState.popupEl.contains(e.target)) return;
+        const act = e.target.dataset.act;
+        const cursor = openState.cursor;
+        if (act === 'prev-month') { openState.cursor = new Date(cursor.getFullYear(), cursor.getMonth()-1, 1); render(); }
+        else if (act === 'next-month') { openState.cursor = new Date(cursor.getFullYear(), cursor.getMonth()+1, 1); render(); }
+        else if (act === 'prev-year') { openState.cursor = new Date(cursor.getFullYear()-1, cursor.getMonth(), 1); render(); }
+        else if (act === 'next-year') { openState.cursor = new Date(cursor.getFullYear()+1, cursor.getMonth(), 1); render(); }
+        else if (act === 'prev-decade') { openState.cursor = new Date(cursor.getFullYear()-12, cursor.getMonth(), 1); render(); }
+        else if (act === 'next-decade') { openState.cursor = new Date(cursor.getFullYear()+12, cursor.getMonth(), 1); render(); }
+        else if (act === 'show-months') { openState.view = 'months'; render(); }
+        else if (act === 'show-years') { openState.view = 'years'; render(); }
+        else if (act === 'today') { const t = new Date(); setValue(openState.inputId, toISO(t)); closeAll(); }
+        else if (act === 'clear') { setValue(openState.inputId, ''); closeAll(); }
+        else if (e.target.dataset.month !== undefined) { openState.cursor = new Date(cursor.getFullYear(), Number(e.target.dataset.month), 1); openState.view = 'days'; render(); }
+        else if (e.target.dataset.year !== undefined) { openState.cursor = new Date(Number(e.target.dataset.year), cursor.getMonth(), 1); openState.view = 'months'; render(); }
+        else if (e.target.classList.contains('nc-cal-day')) {
+          const day = Number(e.target.dataset.day);
+          const nav = e.target.dataset.nav;
+          let targetMonth = cursor.getMonth(), targetYear = cursor.getFullYear();
+          if (nav === '-1') { targetMonth--; if (targetMonth < 0) { targetMonth = 11; targetYear--; } }
+          else if (nav === '1') { targetMonth++; if (targetMonth > 11) { targetMonth = 0; targetYear++; } }
+          setValue(openState.inputId, toISO(new Date(targetYear, targetMonth, day)));
+          closeAll();
+        }
+      });
+
+      return { attach, refreshTrigger, setValue };
+    })();
+
+    function ncClearDealDates() { NCDatePicker.setValue('dealDateFrom', ''); NCDatePicker.setValue('dealDateTo', ''); }
+
     function stagePill(stage) {
       if (!stage) return '<span class="stage-pill stage-default">—</span>';
       const s = stage.toLowerCase();
@@ -1381,6 +1608,8 @@
       const lang    = document.getElementById('fLang').value;
       const result  = document.getElementById('fResult').value;
       const search  = document.getElementById('fSearch').value.toLowerCase();
+      const dFrom   = document.getElementById('dealDateFrom').value;
+      const dTo     = document.getElementById('dealDateTo').value;
 
       updateTabBadges();
 
@@ -1417,6 +1646,12 @@
         if (result === 'pending' && d.status === 'locked') return false;
         if (result === 'locked'  && d.status !== 'locked') return false;
         if (result === 'unlock'  && !d.lock_approval_requested) return false;
+        if (dFrom || dTo) {
+          const dt = parseDateString(d['Arrival Date']);
+          if (!dt) return false;
+          if (dFrom && dt < parseDateString(dFrom)) return false;
+          if (dTo && dt > parseDateString(dTo)) return false;
+        }
         if (search) {
           const t = [d['Deal Name'],d['DealID'],d['Deal Owner Name'],d['Team Group'],d['Stage'],d.result_code,d.sub_code,d.agent_note].join(' ').toLowerCase();
           if (!t.includes(search)) return false;
@@ -1431,6 +1666,7 @@
     function resetFilters() {
       ['fTeam','fAgent','fStage','fPayment','fLang','fResult'].forEach(id => document.getElementById(id).value = '');
       document.getElementById('fSearch').value = '';
+      ncClearDealDates();
       applyFilters();
     }
 
@@ -2450,6 +2686,7 @@
         }
         addLog('LOGIN', 'Admin panele giriş yapıldı');
         document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
+        ['dealDateFrom', 'dealDateTo', 'amDateFrom', 'amDateTo'].forEach(id => NCDatePicker.attach(id));
         loadDeals();
       } catch(e) { sessionStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
     })();
