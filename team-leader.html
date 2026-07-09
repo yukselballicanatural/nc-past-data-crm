@@ -978,9 +978,9 @@
         rows.forEach(d => {
           const raw = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw || {});
           const total = d.amount ?? raw.Amount ?? raw.Grand_Total_2 ?? null;
-          const paid  = d.total_paid_amount ?? raw.Total_Paid_Amount ?? null;
-          const remaining = (total !== null && paid !== null) ? (total - paid) : null;
-          const pct = (total && total > 0 && paid !== null) ? (paid / total * 100) : null;
+          const paid  = Number(d.total_paid_amount ?? raw.Total_Paid_Amount ?? 0) || 0;
+          const remaining = (total !== null) ? (total - paid) : null;
+          const pct = (total && total > 0) ? (paid / total * 100) : null;
           const isWon = !!(d.stage && d.stage.toLowerCase().includes('won'));
           dealFinanceMap[d.id] = { total, paid, remaining, pct, stage: d.stage, isWon, raw };
         });
