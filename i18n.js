@@ -343,6 +343,30 @@
     'Alarm Eskale': 'Alarm Escalate',
     'Takım bulunamadı': 'No team found',
 
+    // ── admin.html: Analytics & Summary ───────────────────────────────
+    'Ödeme Durumu': 'Payment Status',
+    'Stage Dağılımı': 'Stage Distribution',
+    'Bölge Dağılımı': 'Region Distribution',
+    'Sonuç Kodu Aktivitesi': 'Result Code Activity',
+    'Alt Kod': 'Sub Code',
+    'Adet': 'Count',
+    'Ödenmeyen': 'Unpaid',
+    'Kazanılan': 'Won',
+    'Deal Sayısına Göre En İyi Danışmanlar': 'Top Agents by Deals',
+    'Sonuç': 'Results',
+    'Dil Dağılımı': 'Language Breakdown',
+    'Henüz sonuç kodu girilmedi.': 'No result codes entered yet.',
+    'Tüm Takım Liderleri': 'All Team Leaders',
+    'Temizle': 'Clear',
+    'Ödendi': 'Paid',
+    'Kısmi': 'Partial',
+    'Ödenmedi': 'Unpaid',
+    'Veri yok.': 'No data.',
+    'Bilinmiyor': 'Unknown',
+    'Yükleniyor…': 'Loading…',
+    'Dil dağılımı yüklenemedi (RPC kurulu değil olabilir) — tekrar denemek için tıkla':
+      'Failed to load language breakdown (RPC may not be installed) — click to retry',
+
     // ── agent.html ──────────────────────────────────────────────────
     'Kaydedildi. (Not Reached — tekrar düzenlenebilir)': 'Saved. (Not Reached — can be edited again)',
     'Bu deal için aktif alarm yok.': 'No active alarm for this deal.',

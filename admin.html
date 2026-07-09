@@ -457,15 +457,15 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-5">
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <h3 class="text-sm font-bold text-white mb-3">Payment Status</h3>
+          <h3 class="text-sm font-bold text-white mb-3">Ödeme Durumu</h3>
           <div id="paymentChart" class="space-y-2"></div>
         </div>
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <h3 class="text-sm font-bold text-white mb-3">Stage Distribution</h3>
+          <h3 class="text-sm font-bold text-white mb-3">Stage Dağılımı</h3>
           <div id="stageChart" class="space-y-2"></div>
         </div>
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <h3 class="text-sm font-bold text-white mb-3">Region Distribution</h3>
+          <h3 class="text-sm font-bold text-white mb-3">Bölge Dağılımı</h3>
           <div id="regionChart" class="space-y-2"></div>
         </div>
       </div>
@@ -477,12 +477,12 @@
 
       <!-- Result Code Breakdown -->
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <h3 class="text-sm font-bold text-white mb-3">Result Code Activity</h3>
+        <h3 class="text-sm font-bold text-white mb-3">Sonuç Kodu Aktivitesi</h3>
         <div class="overflow-x-auto">
           <table class="tbl w-full">
             <thead>
               <tr class="text-slate-400 text-[10px]">
-                <th>Result Code</th><th>Sub Code</th><th class="text-right">Count</th><th class="text-right">Agents</th>
+                <th>Sonuç Kodu</th><th>Alt Kod</th><th class="text-right">Adet</th><th class="text-right">Danışman</th>
               </tr>
             </thead>
             <tbody id="resultCodeBody"></tbody>
@@ -492,30 +492,30 @@
 
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <h3 class="text-sm font-bold text-white mb-3">Team Performance</h3>
+          <h3 class="text-sm font-bold text-white mb-3">Takım Performansı</h3>
           <div class="overflow-auto max-h-80">
             <table class="tbl w-full">
               <thead><tr class="text-slate-400">
-                <th class="sortable-th" onclick="sortTeamTable('team')">Team</th>
-                <th class="sortable-th" onclick="sortTeamTable('deals')">Deals</th>
-                <th class="sortable-th" onclick="sortTeamTable('paid')">Paid</th>
-                <th class="sortable-th" onclick="sortTeamTable('unpaid')">Unpaid</th>
-                <th class="sortable-th" onclick="sortTeamTable('total')">Total</th>
-                <th class="sortable-th" onclick="sortTeamTable('won')">Won</th>
+                <th class="sortable-th" onclick="sortTeamTable('team')">Takım</th>
+                <th class="sortable-th" onclick="sortTeamTable('deals')">Deal</th>
+                <th class="sortable-th" onclick="sortTeamTable('paid')">Ödenen</th>
+                <th class="sortable-th" onclick="sortTeamTable('unpaid')">Ödenmeyen</th>
+                <th class="sortable-th" onclick="sortTeamTable('total')">Toplam</th>
+                <th class="sortable-th" onclick="sortTeamTable('won')">Kazanılan</th>
               </tr></thead>
               <tbody id="teamSummaryBody"></tbody>
             </table>
           </div>
         </div>
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-          <h3 class="text-sm font-bold text-white mb-3">Top Agents by Deals</h3>
+          <h3 class="text-sm font-bold text-white mb-3">Deal Sayısına Göre En İyi Danışmanlar</h3>
           <div class="overflow-auto max-h-80">
             <table class="tbl w-full">
               <thead><tr class="text-slate-400">
-                <th class="sortable-th" onclick="sortAgentTable('agent')">Agent</th>
-                <th class="sortable-th" onclick="sortAgentTable('deals')">Deals</th>
-                <th class="sortable-th" onclick="sortAgentTable('paid')">Paid</th>
-                <th class="sortable-th" onclick="sortAgentTable('results')">Results</th>
+                <th class="sortable-th" onclick="sortAgentTable('agent')">Danışman</th>
+                <th class="sortable-th" onclick="sortAgentTable('deals')">Deal</th>
+                <th class="sortable-th" onclick="sortAgentTable('paid')">Ödenen</th>
+                <th class="sortable-th" onclick="sortAgentTable('results')">Sonuç</th>
               </tr></thead>
               <tbody id="agentSummaryBody"></tbody>
             </table>
@@ -524,7 +524,7 @@
       </div>
 
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <h3 class="text-sm font-bold text-white mb-3">Language Breakdown</h3>
+        <h3 class="text-sm font-bold text-white mb-3">Dil Dağılımı</h3>
         <div id="langChart" class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-3"></div>
       </div>
     </div>
@@ -2035,6 +2035,11 @@
       // tr-TR: binlik ayırıcı nokta (.), ondalık ayırıcı virgül (,) — örn. 78.000,78
       return '€' + Number(v).toLocaleString('tr-TR', {minimumFractionDigits:0, maximumFractionDigits:2});
     }
+    // Ödeme durumu iç değerleri (Paid/Partial/Unpaid) filtre mantığında ve
+    // renk haritasında İngilizce kalıyor (değiştirilirse dropdown/filtreler
+    // bozulur) — sadece ekrana yazılan etiketi Türkçeleştiriyoruz.
+    const _PAY_STATUS_LABEL = { Paid: 'Ödendi', Partial: 'Kısmi', Unpaid: 'Ödenmedi' };
+    function payStatusLabel(p) { return I18N.t(_PAY_STATUS_LABEL[p] || p); }
     function fmtCompact(v) {
       const n = Number(v) || 0;
       if (Math.abs(n) >= 1e6) return '€' + (n/1e6).toFixed(1).replace('.', ',') + 'M';
@@ -2699,7 +2704,7 @@
             <td class="py-1 text-right text-amber-400">${fmtMoney(v.unpaid)}</td>
             <td class="py-1 text-right text-sky-400 font-semibold">${fmtMoney(v.total)}</td>
             <td class="py-1 text-right text-emerald-300">${v.won}</td>
-          </tr>`).join('') || '<tr><td colspan="6" class="py-4 text-center text-slate-600 text-xs">Veri yok.</td></tr>';
+          </tr>`).join('') || `<tr><td colspan="6" class="py-4 text-center text-slate-600 text-xs">${I18N.t('Veri yok.')}</td></tr>`;
       const ths = document.querySelectorAll('#view-summary table')[1]?.querySelectorAll('th') || [];
       ths.forEach(th => { th.querySelectorAll('.sort-arrow').forEach(a=>a.remove()); });
       const cols = ['team','deals','paid','unpaid','total','won'];
@@ -2723,7 +2728,7 @@
             <td class="py-1 text-right text-slate-300">${v.deals}</td>
             <td class="py-1 text-right text-emerald-400">${fmtMoney(v.paid)}</td>
             <td class="py-1 text-right text-indigo-400">${v.results}</td>
-          </tr>`).join('') || '<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">Veri yok.</td></tr>';
+          </tr>`).join('') || `<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">${I18N.t('Veri yok.')}</td></tr>`;
       const ths = document.querySelectorAll('#view-summary table')[2]?.querySelectorAll('th') || [];
       ths.forEach(th => { th.querySelectorAll('.sort-arrow').forEach(a=>a.remove()); });
       const cols = ['agent','deals','paid','results'];
@@ -2808,19 +2813,19 @@
 
       // Payment status
       const payMap = {};
-      allDeals.forEach(d => { const p = d['Payment Status']||'Unknown'; payMap[p] = (payMap[p]||0)+1; });
+      allDeals.forEach(d => { const p = d['Payment Status']||'Bilinmiyor'; payMap[p] = (payMap[p]||0)+1; });
       const maxPay = Math.max(...Object.values(payMap), 1);
       const payColors = { Paid:'bg-emerald-500', Partial:'bg-amber-500', Unpaid:'bg-rose-500' };
       document.getElementById('paymentChart').innerHTML =
         Object.entries(payMap).sort((a,b) => b[1]-a[1]).map(([p,c]) => `
-          <div class="group cursor-default" title="${p}: ${c} deal (${(c/total*100).toFixed(1)}%)">
-            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300 group-hover:text-white transition-colors">${p}</span><span class="text-slate-400 group-hover:text-white transition-colors">${c}</span></div>
+          <div class="group cursor-default" title="${payStatusLabel(p)}: ${c} deal (${(c/total*100).toFixed(1)}%)">
+            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300 group-hover:text-white transition-colors">${payStatusLabel(p)}</span><span class="text-slate-400 group-hover:text-white transition-colors">${c}</span></div>
             <div class="h-2 bg-gray-800 rounded-full overflow-hidden"><div class="h-2 ${payColors[p]||'bg-indigo-500'} rounded-full transition-all duration-700 ease-out group-hover:brightness-125" style="width:${(c/maxPay*100).toFixed(1)}%"></div></div>
           </div>`).join('');
 
       // Region distribution
       const regionMap = {};
-      allDeals.forEach(d => { const r = d['Region']||'Unknown'; regionMap[r] = (regionMap[r]||0)+1; });
+      allDeals.forEach(d => { const r = d['Region']||'Bilinmiyor'; regionMap[r] = (regionMap[r]||0)+1; });
       const maxR = Math.max(...Object.values(regionMap), 1);
       document.getElementById('regionChart').innerHTML =
         Object.entries(regionMap).sort((a,b) => b[1]-a[1]).map(([r,c]) => `
@@ -2867,12 +2872,12 @@
             <td class="py-1.5 text-slate-400">${r.sub}</td>
             <td class="py-1.5 text-right text-indigo-400 font-bold">${r.count}</td>
             <td class="py-1.5 text-right text-slate-400">${r.agents.size}</td>
-          </tr>`).join('') || '<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">No result codes entered yet.</td></tr>';
+          </tr>`).join('') || `<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">${I18N.t('Henüz sonuç kodu girilmedi.')}</td></tr>`;
 
       // Teams
       const teamMap = {};
       allDeals.forEach(d => {
-        const t = d['Team Group'] || 'Unknown';
+        const t = d['Team Group'] || 'Bilinmiyor';
         if (!teamMap[t]) teamMap[t] = { deals:0, paid:0, unpaid:0, won:0 };
         teamMap[t].deals++;
         teamMap[t].paid += (Number(d['Paid Amount'])||0);
@@ -2884,7 +2889,7 @@
 
       // Stages
       const stageMap = {};
-      allDeals.forEach(d => { const s = d['Stage']||'Unknown'; stageMap[s] = (stageMap[s]||0)+1; });
+      allDeals.forEach(d => { const s = d['Stage']||'Bilinmiyor'; stageMap[s] = (stageMap[s]||0)+1; });
       const maxS = Math.max(...Object.values(stageMap), 1);
       document.getElementById('stageChart').innerHTML =
         Object.entries(stageMap).sort((a,b) => b[1]-a[1]).map(([s,c]) => `
@@ -2896,7 +2901,7 @@
       // Agents
       const agentMap = {};
       allDeals.forEach(d => {
-        const a = d['Deal Owner Name']||'Unknown';
+        const a = d['Deal Owner Name']||'Bilinmiyor';
         if (!agentMap[a]) agentMap[a] = { deals:0, paid:0, results:0 };
         agentMap[a].deals++;
         agentMap[a].paid += (Number(d['Paid Amount'])||0);
@@ -2907,7 +2912,7 @@
 
       // Languages
       const langMap = {};
-      allDeals.forEach(d => { const l = d['Language']||'Unknown'; langMap[l] = (langMap[l]||0)+1; });
+      allDeals.forEach(d => { const l = d['Language']||'Bilinmiyor'; langMap[l] = (langMap[l]||0)+1; });
       document.getElementById('langChart').innerHTML =
         Object.entries(langMap).sort((a,b) => b[1]-a[1]).map(([l,c]) => `
           <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${l}: ${(c/total*100).toFixed(1)}%">
@@ -3023,14 +3028,14 @@
       const payArr = (s.by_payment||[]).slice().sort((a,b) => b.cnt-a.cnt);
       const maxPay = Math.max(...payArr.map(p => p.cnt), 1);
       document.getElementById('paymentChart').innerHTML = payArr.map(p => `
-          <div class="group cursor-default" title="${p.status}: ${p.cnt} deal (${(p.cnt/total*100).toFixed(1)}%)">
-            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300 group-hover:text-white transition-colors">${p.status}</span><span class="text-slate-400 group-hover:text-white transition-colors">${p.cnt}</span></div>
+          <div class="group cursor-default" title="${payStatusLabel(p.status)}: ${p.cnt} deal (${(p.cnt/total*100).toFixed(1)}%)">
+            <div class="flex justify-between text-xs mb-1"><span class="text-slate-300 group-hover:text-white transition-colors">${payStatusLabel(p.status)}</span><span class="text-slate-400 group-hover:text-white transition-colors">${p.cnt}</span></div>
             <div class="h-2 bg-gray-800 rounded-full overflow-hidden"><div class="h-2 ${payColors[p.status]||'bg-indigo-500'} rounded-full transition-all duration-700 ease-out group-hover:brightness-125" style="width:${(p.cnt/maxPay*100).toFixed(1)}%"></div></div>
           </div>`).join('');
 
       // Region distribution (ham takımdan TeamMap ile türet)
       const regionMap = {};
-      (s.by_team||[]).forEach(t => { const r = (window.TeamMap ? TeamMap.regionForTeam(t.team) : '') || 'Unknown'; regionMap[r] = (regionMap[r]||0) + t.deals; });
+      (s.by_team||[]).forEach(t => { const r = (window.TeamMap ? TeamMap.regionForTeam(t.team) : '') || 'Bilinmiyor'; regionMap[r] = (regionMap[r]||0) + t.deals; });
       const maxR = Math.max(...Object.values(regionMap), 1);
       document.getElementById('regionChart').innerHTML =
         Object.entries(regionMap).sort((a,b) => b[1]-a[1]).map(([r,c]) => `
@@ -3060,12 +3065,12 @@
             <td class="py-1.5 text-slate-400">—</td>
             <td class="py-1.5 text-right text-indigo-400 font-bold">${r.cnt}</td>
             <td class="py-1.5 text-right text-slate-400">${r.agents}</td>
-          </tr>`).join('') || '<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">No result codes entered yet.</td></tr>';
+          </tr>`).join('') || `<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">${I18N.t('Henüz sonuç kodu girilmedi.')}</td></tr>`;
 
       // Teams (ham takımı TeamMap ile normalize edip yeniden topla)
       const teamMap = {};
       (s.by_team||[]).forEach(t => {
-        const name = (window.TeamMap && TeamMap.normalize(t.team)) || t.team || 'Unknown';
+        const name = (window.TeamMap && TeamMap.normalize(t.team)) || t.team || 'Bilinmiyor';
         if (!teamMap[name]) teamMap[name] = { deals:0, paid:0, unpaid:0, won:0 };
         teamMap[name].deals += t.deals; teamMap[name].paid += t.paid; teamMap[name].unpaid += t.unpaid; teamMap[name].won += t.won;
       });
@@ -3083,7 +3088,7 @@
           </div>`).join('');
 
       // Agents (ham deal_owner)
-      _agentSummaryRows = (s.by_owner||[]).map(o => ({ agent: o.owner || 'Unknown', deals:o.deals, paid:o.paid, results:o.results }));
+      _agentSummaryRows = (s.by_owner||[]).map(o => ({ agent: o.owner || 'Bilinmiyor', deals:o.deals, paid:o.paid, results:o.results }));
       renderAgentSummaryTable();
 
       // Languages — ayrı, tembel çekilen veri (admin_language_breakdown),
@@ -3093,7 +3098,7 @@
       const langs = s.by_language || _languageBreakdownCache;
       if (langs) { _renderLangChartOnly(langs); }
       else {
-        document.getElementById('langChart').innerHTML = '<div class="text-xs text-slate-600 py-8 mx-auto">Yükleniyor...</div>';
+        document.getElementById('langChart').innerHTML = `<div class="text-xs text-slate-600 py-8 mx-auto">${I18N.t('Yükleniyor...')}</div>`;
         _loadLanguageBreakdownIfNeeded();
       }
     }
@@ -3101,12 +3106,16 @@
     function _renderLangChartOnly(langs) {
       const el = document.getElementById('langChart');
       if (!el) return;
-      if (!langs.length) { el.innerHTML = '<div class="text-xs text-slate-600 py-8 mx-auto">Dil verisi yok.</div>'; return; }
+      if (!langs.length) { el.innerHTML = `<div class="text-xs text-slate-600 py-8 mx-auto">${I18N.t('Veri yok.')}</div>`; return; }
       const grandTotal = langs.reduce((sum,l) => sum + (l.cnt||0), 0) || 1;
+      // 'Unknown' RPC'den ham veri değeri olarak geliyor (dil filtresi dropdown'ı
+      // bu değeri hâlâ 'Unknown' olarak dışlıyor) — sadece ekrandaki etiketi
+      // Türkçeleştiriyoruz, altta yatan değere dokunmuyoruz.
+      const langDisplay = l => l === 'Unknown' ? 'Bilinmiyor' : l;
       el.innerHTML = langs.slice().sort((a,b) => b.cnt-a.cnt).map(l => `
-          <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${l.lang}: ${(l.cnt/grandTotal*100).toFixed(1)}%">
+          <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${langDisplay(l.lang)}: ${(l.cnt/grandTotal*100).toFixed(1)}%">
             <div class="text-lg font-bold text-indigo-400">${l.cnt}</div>
-            <div class="text-xs text-slate-400 mt-1">${l.lang}</div>
+            <div class="text-xs text-slate-400 mt-1">${langDisplay(l.lang)}</div>
           </div>`).join('');
     }
 
@@ -3117,7 +3126,7 @@
       _langBreakdownFetching = false;
       if (!langs) {
         const el = document.getElementById('langChart');
-        if (el) el.innerHTML = '<div class="text-xs text-rose-400 py-8 mx-auto cursor-pointer underline" onclick="_retryLanguageBreakdown()">Dil dağılımı yüklenemedi (RPC kurulu değil olabilir) — tekrar denemek için tıkla</div>';
+        if (el) el.innerHTML = `<div class="text-xs text-rose-400 py-8 mx-auto cursor-pointer underline" onclick="_retryLanguageBreakdown()">${I18N.t('Dil dağılımı yüklenemedi (RPC kurulu değil olabilir) — tekrar denemek için tıkla')}</div>`;
         return;
       }
       _languageBreakdownCache = langs;
@@ -3126,7 +3135,7 @@
     }
 
     function _retryLanguageBreakdown() {
-      document.getElementById('langChart').innerHTML = '<div class="text-xs text-slate-600 py-8 mx-auto">Yükleniyor...</div>';
+      document.getElementById('langChart').innerHTML = `<div class="text-xs text-slate-600 py-8 mx-auto">${I18N.t('Yükleniyor...')}</div>`;
       _loadLanguageBreakdownIfNeeded();
     }
 
