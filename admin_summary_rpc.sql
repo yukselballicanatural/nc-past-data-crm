@@ -142,6 +142,42 @@ $$;
 
 grant execute on function public.admin_language_breakdown() to anon, authenticated;
 
+-- ============================================================
+-- TEŞHİS FONKSİYONU — sorunun nerede olduğunu ölçer (tablo taraması mı yoksa
+-- bizim sorgu mantığımız mı yavaş). Kalıcı değil, sorun çözülünce silinebilir:
+--   drop function if exists public.admin_deal_summary_debug();
+-- ============================================================
+create or replace function public.admin_deal_summary_debug()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+set statement_timeout to '30000'
+as $$
+declare
+  t0 timestamptz; t1 timestamptz; t2 timestamptz; t3 timestamptz;
+  n_total bigint; n_scan bigint;
+begin
+  t0 := clock_timestamp();
+  select count(*) into n_total from public.deals;                 -- çıplak seq scan + count
+  t1 := clock_timestamp();
+  select count(*) into n_scan from public.deals where amount is not null or amount is null; -- kolonlara dokun, hepsini oku
+  t2 := clock_timestamp();
+  perform public.admin_deal_summary();                            -- gerçek özet fonksiyonu
+  t3 := clock_timestamp();
+  return jsonb_build_object(
+    'row_count',            n_total,
+    'ms_bare_count',        round(extract(epoch from (t1-t0))*1000)::int,
+    'ms_touch_all_columns', round(extract(epoch from (t2-t1))*1000)::int,
+    'ms_full_summary_rpc',  round(extract(epoch from (t3-t2))*1000)::int
+  );
+end;
+$$;
+
+grant execute on function public.admin_deal_summary_debug() to anon, authenticated;
+
 -- Test:
 -- select public.admin_deal_summary();
 -- select public.admin_language_breakdown();
+-- select public.admin_deal_summary_debug();
