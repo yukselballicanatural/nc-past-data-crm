@@ -363,6 +363,21 @@
     'Ödenmedi': 'Unpaid',
     'Veri yok.': 'No data.',
     'Bilinmiyor': 'Unknown',
+
+    // ── Dil Dağılımı: CRM'deki ham dil adlarının TR karşılıkları ──────
+    'İngilizce': 'English', 'İtalyanca': 'Italian', 'Fransızca': 'French',
+    'Arapça': 'Arabic', 'İspanyolca': 'Spanish', 'Almanca': 'German',
+    'Türkçe': 'Turkish', 'Rusça': 'Russian', 'Farsça': 'Persian',
+    'Portekizce': 'Portuguese', 'Rumence': 'Romanian', 'Bulgarca': 'Bulgarian',
+    'Japonca': 'Japanese', 'Slovakça': 'Slovak', 'Çekçe': 'Czech',
+    'Sırpça': 'Serbian', 'Hollandaca': 'Dutch', 'Mandarin Çincesi': 'Mandarin',
+    'Korece': 'Korean', 'Somalice': 'Somali', 'Ukraynaca': 'Ukrainian',
+    'Bengalce': 'Bengali', 'Peştuca': 'Pashto', 'Macarca': 'Hungarian',
+    'Urduca': 'Urdu', 'Gan Çincesi': 'Gan Chinese', 'Azerbaycanca': 'Azerbaijani',
+    'İsveççe': 'Swedish', 'Lehçe': 'Polish', 'Hırvatça': 'Croatian',
+    'Endonezce': 'Indonesian', 'Kuzey Min Çincesi': 'Northern Min',
+    'Birmanca': 'Burmese', 'Malayca/Endonezce': 'Malay/Indonesian',
+    'Dil Yok': 'No Language',
     'Yükleniyor…': 'Loading…',
     'Dil dağılımı yüklenemedi (RPC kurulu değil olabilir) — tekrar denemek için tıkla':
       'Failed to load language breakdown (RPC may not be installed) — click to retry',

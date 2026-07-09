@@ -2040,6 +2040,27 @@
     // bozulur) — sadece ekrana yazılan etiketi Türkçeleştiriyoruz.
     const _PAY_STATUS_LABEL = { Paid: 'Ödendi', Partial: 'Kısmi', Unpaid: 'Ödenmedi' };
     function payStatusLabel(p) { return I18N.t(_PAY_STATUS_LABEL[p] || p); }
+
+    // CRM'deki (raw->>'Language') ham dil adları — veri kalitesi bozuk olduğu
+    // için yazım varyantları/yazım hataları da (Bulgaarian, Japan, Germany,
+    // No Language...) aynı Türkçe karşılığa eşleniyor.
+    const _LANGUAGE_LABEL = {
+      'English': 'İngilizce', 'Italian': 'İtalyanca', 'French': 'Fransızca',
+      'Arabic': 'Arapça', 'Spanish': 'İspanyolca', 'German': 'Almanca',
+      'Germany': 'Almanca', 'Turkish': 'Türkçe', 'Russian': 'Rusça',
+      'Persian': 'Farsça', 'Portuguese': 'Portekizce', 'Romanian': 'Rumence',
+      'Bulgarian': 'Bulgarca', 'Bulgaarian': 'Bulgarca', 'Japanese': 'Japonca',
+      'Japan': 'Japonca', 'Slovak': 'Slovakça', 'Czech': 'Çekçe',
+      'Serbian': 'Sırpça', 'Dutch': 'Hollandaca', 'Mandarin': 'Mandarin Çincesi',
+      'Korean': 'Korece', 'Somali': 'Somalice', 'Ukrainian': 'Ukraynaca',
+      'Bengali': 'Bengalce', 'Pashto': 'Peştuca', 'Hungarian': 'Macarca',
+      'Urdu': 'Urduca', 'Gan Chinese': 'Gan Çincesi', 'Azerbaijani': 'Azerbaycanca',
+      'Swedish': 'İsveççe', 'Polish': 'Lehçe', 'Croatian': 'Hırvatça',
+      'Indonesian': 'Endonezce', 'Northern Min': 'Kuzey Min Çincesi',
+      'Burmese': 'Birmanca', 'Malay/Indonesian': 'Malayca/Endonezce',
+      'No Language': 'Dil Yok', 'Unknown': 'Bilinmiyor',
+    };
+    function languageLabel(l) { return I18N.t(_LANGUAGE_LABEL[l] || l); }
     function fmtCompact(v) {
       const n = Number(v) || 0;
       if (Math.abs(n) >= 1e6) return '€' + (n/1e6).toFixed(1).replace('.', ',') + 'M';
@@ -2915,9 +2936,9 @@
       allDeals.forEach(d => { const l = d['Language']||'Bilinmiyor'; langMap[l] = (langMap[l]||0)+1; });
       document.getElementById('langChart').innerHTML =
         Object.entries(langMap).sort((a,b) => b[1]-a[1]).map(([l,c]) => `
-          <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${l}: ${(c/total*100).toFixed(1)}%">
+          <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${languageLabel(l)}: ${(c/total*100).toFixed(1)}%">
             <div class="text-lg font-bold text-indigo-400">${c}</div>
-            <div class="text-xs text-slate-400 mt-1">${l}</div>
+            <div class="text-xs text-slate-400 mt-1">${languageLabel(l)}</div>
           </div>`).join('');
     }
 
@@ -3108,14 +3129,12 @@
       if (!el) return;
       if (!langs.length) { el.innerHTML = `<div class="text-xs text-slate-600 py-8 mx-auto">${I18N.t('Veri yok.')}</div>`; return; }
       const grandTotal = langs.reduce((sum,l) => sum + (l.cnt||0), 0) || 1;
-      // 'Unknown' RPC'den ham veri değeri olarak geliyor (dil filtresi dropdown'ı
-      // bu değeri hâlâ 'Unknown' olarak dışlıyor) — sadece ekrandaki etiketi
-      // Türkçeleştiriyoruz, altta yatan değere dokunmuyoruz.
-      const langDisplay = l => l === 'Unknown' ? 'Bilinmiyor' : l;
+      // Ham dil adı RPC'den geliyor (dil filtresi dropdown'ı hâlâ 'Unknown' gibi
+      // ham değerleri karşılaştırıyor) — sadece ekrandaki etiketi Türkçeleştiriyoruz.
       el.innerHTML = langs.slice().sort((a,b) => b.cnt-a.cnt).map(l => `
-          <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${langDisplay(l.lang)}: ${(l.cnt/grandTotal*100).toFixed(1)}%">
+          <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${languageLabel(l.lang)}: ${(l.cnt/grandTotal*100).toFixed(1)}%">
             <div class="text-lg font-bold text-indigo-400">${l.cnt}</div>
-            <div class="text-xs text-slate-400 mt-1">${langDisplay(l.lang)}</div>
+            <div class="text-xs text-slate-400 mt-1">${languageLabel(l.lang)}</div>
           </div>`).join('');
     }
 
