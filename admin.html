@@ -103,9 +103,37 @@
     .am-btn-primary { background:linear-gradient(135deg,#0d9488,#0891b2); border-color:transparent; color:#fff; box-shadow:0 8px 20px -6px rgba(13,148,136,.55); }
     .am-btn-primary:hover { filter:brightness(1.1); color:#fff; }
     .am-panel { background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0)),#0b101c; border:1px solid rgba(255,255,255,.07); border-radius:20px; }
-    .am-kpi-icon { width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin:0 auto 8px; font-size:15px; background:rgba(255,255,255,.06); }
+    .am-kpi-icon { width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin:0 auto 8px; font-size:15px; background:color-mix(in srgb, var(--am-glow,#6366f1) 20%, transparent); border:1px solid color-mix(in srgb, var(--am-glow,#6366f1) 35%, transparent); }
     .am-region-bar { height:6px; border-radius:99px; background:rgba(255,255,255,.06); overflow:hidden; margin-top:10px; }
     .am-region-bar > div { height:100%; border-radius:99px; transition:width .6s ease; }
+
+    /* Bölge takım listesi — çok uzun olabildiği için sabit yükseklik + scroll */
+    .am-team-scroll { max-height:260px; overflow-y:auto; padding-right:4px; margin-right:-4px; }
+    .am-team-scroll::-webkit-scrollbar { width:6px; }
+    .am-team-scroll::-webkit-scrollbar-track { background:transparent; }
+    .am-team-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,.12); border-radius:99px; }
+    .am-team-scroll::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.22); }
+
+    .am-region-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
+    .am-region-title { display:flex; align-items:center; gap:10px; }
+    .am-region-count { font-size:10px; font-weight:700; color:#7d8aa3; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.07); border-radius:99px; padding:3px 10px; }
+
+    /* Gün Filtresi — eski "Eşik Filtresi/Motor Ayarları" panelinin yerine */
+    .am-day-chip {
+      padding:7px 15px; border-radius:11px; font-size:12px; font-weight:700; letter-spacing:.01em;
+      border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.03); color:#94a3b8;
+      transition:all .15s; cursor:pointer;
+    }
+    .am-day-chip:hover { background:rgba(255,255,255,.07); color:#e2e8f0; border-color:rgba(255,255,255,.14); }
+    .am-day-chip.active { background:linear-gradient(135deg,#0d9488,#0891b2); border-color:transparent; color:#fff; box-shadow:0 8px 20px -8px rgba(13,148,136,.6); }
+
+    /* Alarm Listesi tablosu — sabit başlık + satır hover'ı */
+    .am-table-wrap { max-height:560px; overflow-y:auto; }
+    .am-table-wrap thead th { position:sticky; top:0; z-index:1; background:#0f172a; }
+    .am-table-wrap tbody tr { transition:background .12s; }
+    .am-table-wrap tbody tr:hover { background:rgba(255,255,255,.035) !important; }
+    .am-zoho-link { color:#818cf8; text-decoration:none; opacity:.75; font-size:10px; margin-left:5px; transition:opacity .15s; }
+    .am-zoho-link:hover { opacity:1; text-decoration:underline; }
     .nc-project-name { font-family:'Cormorant Garamond', serif; font-style:italic; font-weight:500; font-size:13px; letter-spacing:.03em; line-height:1.35; color:#a5b4d6; text-align:center; margin-top:8px; }
     .nav-btn { width:100%; padding:8px 14px; font-size:11px; font-weight:700; border-radius:10px; display:flex; align-items:center; gap:8px; transition:all 0.15s; cursor:pointer; text-align:left; }
     .nav-btn.active { background:#4F46E5; color:#fff; }
@@ -129,6 +157,10 @@
     #adminAlarmModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
     #adminAlarmModal.open { display:flex; }
     #cancelledDealModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
+    #engineSettingsModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
+    #engineSettingsModal.open { display:flex; }
+    .am-icon-btn { width:34px; height:34px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#94a3b8; transition:all .15s; cursor:pointer; font-size:15px; }
+    .am-icon-btn:hover { background:rgba(255,255,255,.09); color:#fff; border-color:rgba(255,255,255,.16); }
     .kpi-loading { opacity:.35; animation: nc-kpi-pulse 1.1s ease-in-out infinite; pointer-events:none; }
     @keyframes nc-kpi-pulse { 0%,100% { opacity:.35; } 50% { opacity:.7; } }
     .sortable-th { cursor:pointer; user-select:none; white-space:nowrap; }
@@ -735,46 +767,22 @@
           <button onclick="exportAdminAlarms()" class="am-btn">Export CSV</button>
           <button onclick="exportAlarmPerformance()" class="am-btn">TL Performans</button>
           <button onclick="exportRegionPerformance()" class="am-btn">Bölge Performans</button>
+          <button onclick="openEngineSettingsModal()" class="am-icon-btn" title="Motor Ayarları">⚙️</button>
         </div>
       </div>
     </div>
 
-    <!-- Parametre Yönetimi -->
+    <!-- Gün Filtresi — Alarm Listesi'ni kalan güne göre gerçek zamanlı filtreler -->
     <div class="am-panel p-4 mb-6">
       <div class="flex items-center justify-between flex-wrap gap-3">
         <div class="flex items-center gap-2.5">
-          <div class="am-kpi-icon" style="margin:0">🎯</div>
+          <div class="am-kpi-icon" style="margin:0;--am-glow:#22d3ee">📆</div>
           <div>
-            <h3 class="text-sm font-bold text-white">Eşik Filtresi</h3>
-            <p class="text-[10px] text-slate-500 mt-0.5">Bir eşiğe tıklayarak aşağıdaki Alarm Listesi'ni o güne göre filtrele</p>
+            <h3 class="text-sm font-bold text-white">Gün Filtresi</h3>
+            <p class="text-[10px] text-slate-500 mt-0.5">Bir gün seçince aşağıdaki Alarm Listesi o kadar veya daha az gün kalanları gösterir</p>
           </div>
         </div>
-        <div class="flex items-center gap-3 flex-wrap">
-          <div id="amThreshFilterChips" class="flex items-center gap-1.5 flex-wrap"></div>
-          <button type="button" onclick="_amToggleEngineSettings()" class="am-btn" id="amEngineSettingsToggle">⚙️ Motor Ayarları</button>
-        </div>
-      </div>
-      <div id="engineSettingsPanel" style="display:none" class="mt-4 pt-4 border-t border-white/5">
-        <p class="text-[10px] text-slate-500 mb-3">Bu ayarlar listeyi filtrelemez — alarm motorunun bir sonraki çalışmasında <b>hangi gün eşiklerinde yeni alarm üretileceğini</b> belirler.</p>
-        <div id="settingsForm" style="display:none" class="flex items-center gap-4 flex-wrap">
-          <div class="flex items-center gap-2 flex-wrap">
-            <label class="text-[10px] text-slate-400 uppercase font-semibold">Motor eşikleri:</label>
-            <div id="thresholdChips" class="flex items-center gap-1.5 flex-wrap"></div>
-            <input id="setThresholds" type="hidden">
-          </div>
-          <div class="flex items-center gap-2">
-            <label class="text-[10px] text-slate-400 uppercase font-semibold whitespace-nowrap">Eksik tarih tekrarı:</label>
-            <div class="flex items-center gap-1 bg-gray-950 border border-gray-700 rounded-lg overflow-hidden">
-              <button type="button" onclick="_amStepRepeat(-1)" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-gray-800 text-xs font-bold">−</button>
-              <input id="setRepeatDays" type="number" min="1" placeholder="3" class="text-center" style="background:transparent;border:none;color:#E2E8F0;padding:5px 4px;font-size:11px;width:36px;outline:none">
-              <button type="button" onclick="_amStepRepeat(1)" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-gray-800 text-xs font-bold">+</button>
-            </div>
-            <span class="text-[10px] text-slate-500">gün</span>
-          </div>
-          <button onclick="saveAlarmSettings()" class="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs rounded-lg font-bold shadow-lg shadow-teal-900/30">Kaydet</button>
-          <span id="settingsStatus" class="text-[10px] text-teal-400"></span>
-        </div>
-        <p id="settingsUnavailable" style="display:none" class="text-[10px] text-amber-500">app_settings tablosu bulunamadı — alarm_logs_and_settings.sql dosyasını Supabase SQL Editor'de çalıştırın.</p>
+        <div id="amDayFilterChips" class="flex items-center gap-1.5 flex-wrap"></div>
       </div>
     </div>
 
@@ -794,9 +802,12 @@
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
       <!-- Istanbul -->
       <div class="am-region-card">
-        <div class="flex items-center gap-2.5 mb-4">
-          <div class="w-2.5 h-2.5 rounded-full bg-blue-400" style="box-shadow:0 0 10px 2px rgba(96,165,250,.6)"></div>
-          <h3 class="text-base font-bold text-white tracking-tight">Istanbul Bölgesi</h3>
+        <div class="am-region-head">
+          <div class="am-region-title">
+            <div class="w-2.5 h-2.5 rounded-full bg-blue-400" style="box-shadow:0 0 10px 2px rgba(96,165,250,.6)"></div>
+            <h3 class="text-base font-bold text-white tracking-tight">Istanbul Bölgesi</h3>
+          </div>
+          <span class="am-region-count" id="istTeamCount">0 takım</span>
         </div>
         <div class="grid grid-cols-3 gap-2 mb-1">
           <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400" id="istOpen">0</div></div>
@@ -804,13 +815,16 @@
           <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400" id="istNoshow">0</div></div>
         </div>
         <div class="am-region-bar mb-4"><div id="istRatioBar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#f87171)"></div></div>
-        <div id="istTeamList" class="space-y-1.5"></div>
+        <div id="istTeamList" class="space-y-1.5 am-team-scroll"></div>
       </div>
       <!-- Morocco -->
       <div class="am-region-card">
-        <div class="flex items-center gap-2.5 mb-4">
-          <div class="w-2.5 h-2.5 rounded-full bg-orange-400" style="box-shadow:0 0 10px 2px rgba(251,146,60,.6)"></div>
-          <h3 class="text-base font-bold text-white tracking-tight">Morocco Bölgesi</h3>
+        <div class="am-region-head">
+          <div class="am-region-title">
+            <div class="w-2.5 h-2.5 rounded-full bg-orange-400" style="box-shadow:0 0 10px 2px rgba(251,146,60,.6)"></div>
+            <h3 class="text-base font-bold text-white tracking-tight">Morocco Bölgesi</h3>
+          </div>
+          <span class="am-region-count" id="morTeamCount">0 takım</span>
         </div>
         <div class="grid grid-cols-3 gap-2 mb-1">
           <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400" id="morOpen">0</div></div>
@@ -818,7 +832,7 @@
           <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400" id="morNoshow">0</div></div>
         </div>
         <div class="am-region-bar mb-4"><div id="morRatioBar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#f87171)"></div></div>
-        <div id="morTeamList" class="space-y-1.5"></div>
+        <div id="morTeamList" class="space-y-1.5 am-team-scroll"></div>
       </div>
     </div>
 
@@ -860,20 +874,20 @@
             <option value="Payment">Payment</option>
             <option value="Flight Ticket">Flight Ticket</option>
           </select>
-          <select id="amFilterThresh" onchange="_amRenderThreshFilterChips();renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
-            <option value="">Eşik: Tümü</option>
-            <option value="45">45 Gün</option>
-            <option value="30">30 Gün</option>
-            <option value="15">15 Gün</option>
-            <option value="7">7 Gün</option>
-            <option value="3">3 Gün</option>
+          <select id="amFilterThresh" onchange="_amRenderDayFilterChips();renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
+            <option value="">Kalan Gün: Tümü</option>
+            <option value="45">45 gün ve altı</option>
+            <option value="30">30 gün ve altı</option>
+            <option value="15">15 gün ve altı</option>
+            <option value="7">7 gün ve altı</option>
+            <option value="3">3 gün ve altı</option>
           </select>
           <input type="date" id="amDateFrom" onchange="renderAdminAlarmTable()" title="Referans tarih başlangıç" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
           <input type="date" id="amDateTo" onchange="renderAdminAlarmTable()" title="Referans tarih bitiş" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
           <input id="amSearch" placeholder="Hasta, danışman..." oninput="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;width:160px">
         </div>
       </div>
-      <div style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b">
+      <div class="am-table-wrap" style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b">
         <table style="width:100%;border-collapse:collapse">
           <thead>
             <tr style="background:#0f172a">
@@ -970,11 +984,28 @@
           <h3 class="text-base font-bold text-white" id="aamDealName">—</h3>
           <div class="text-[10px] text-slate-500 mt-1" id="aamDealOwner">—</div>
         </div>
-        <button onclick="closeAdminAlarmModal()" class="text-slate-500 hover:text-white ml-4 shrink-0 transition-colors">
-          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-        </button>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+          <a id="aamZohoLink" href="#" target="_blank" rel="noopener" class="am-icon-btn" style="text-decoration:none;display:none" title="Zoho'da Aç">↗</a>
+          <button onclick="closeAdminAlarmModal()" class="text-slate-500 hover:text-white transition-colors">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
       </div>
 
+      <!-- Deal Detayları — All Deals sayfasındaki gibi tam bilgi -->
+      <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Deal Detayları</div>
+      <div class="aam-info-grid mb-5" id="aamDealDetailGrid">
+        <div class="aam-info-card"><div class="aam-info-label">Stage</div><div class="aam-info-val" id="aamDealStage">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Arrival Date</div><div class="aam-info-val" id="aamDealArrival">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Deal Amount</div><div class="aam-info-val" id="aamDealAmount">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Paid / Unpaid</div><div class="aam-info-val" id="aamDealPaidUnpaid">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Payment Status</div><div class="aam-info-val" id="aamDealPaymentStatus">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Language</div><div class="aam-info-val" id="aamDealLanguage">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">1. / 2. / 3. Vizit</div><div class="aam-info-val" id="aamDealVisits">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Visit Status</div><div class="aam-info-val" id="aamDealVisitStatus">—</div></div>
+      </div>
+
+      <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Alarm Detayları</div>
       <div class="aam-info-grid mb-5">
         <div class="aam-info-card"><div class="aam-info-label">Alarm Tipi</div><div class="aam-info-val" id="aamAlarmType">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Durum</div><div class="aam-info-val" id="aamAlarmStatus">—</div></div>
@@ -1060,6 +1091,44 @@
         <a id="cdmZohoLink" href="#" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#818cf8;font-size:12px;font-weight:700;text-decoration:none">Zoho'da Aç ↗</a>
         <button onclick="closeCancelledDealModal()" style="flex:1;padding:11px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kapat</button>
       </div>
+    </div>
+  </div>
+
+  <!-- Motor Ayarları modalı — hangi gün eşiklerinde alarm üretileceğini belirler,
+       Alarm Listesi'ni FİLTRELEMEZ (o iş Gün Filtresi'nde). ⚙️ ikonuyla açılır. -->
+  <div id="engineSettingsModal">
+    <div class="modal-backdrop" onclick="closeEngineSettingsModal()"></div>
+    <div class="modal-panel" style="max-width:520px">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <h3 class="text-base font-bold text-white">⚙️ Motor Ayarları</h3>
+          <p class="text-[11px] text-slate-500 mt-1">Alarm motorunun bir sonraki çalışmasında <b>hangi gün eşiklerinde yeni alarm üretileceğini</b> belirler. Bu ayarlar Alarm Listesi'ni filtrelemez.</p>
+        </div>
+        <button onclick="closeEngineSettingsModal()" class="text-slate-500 hover:text-white ml-4 shrink-0 transition-colors">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div id="settingsForm" style="display:none" class="flex flex-col gap-4">
+        <div>
+          <label class="text-[10px] text-slate-400 uppercase font-semibold block mb-2">Motor eşikleri:</label>
+          <div id="thresholdChips" class="flex items-center gap-1.5 flex-wrap"></div>
+          <input id="setThresholds" type="hidden">
+        </div>
+        <div class="flex items-center gap-2">
+          <label class="text-[10px] text-slate-400 uppercase font-semibold whitespace-nowrap">Eksik tarih tekrarı:</label>
+          <div class="flex items-center gap-1 bg-gray-950 border border-gray-700 rounded-lg overflow-hidden">
+            <button type="button" onclick="_amStepRepeat(-1)" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-gray-800 text-xs font-bold">−</button>
+            <input id="setRepeatDays" type="number" min="1" placeholder="3" class="text-center" style="background:transparent;border:none;color:#E2E8F0;padding:5px 4px;font-size:11px;width:36px;outline:none">
+            <button type="button" onclick="_amStepRepeat(1)" class="px-2 py-1 text-slate-400 hover:text-white hover:bg-gray-800 text-xs font-bold">+</button>
+          </div>
+          <span class="text-[10px] text-slate-500">gün</span>
+        </div>
+        <div class="flex items-center gap-3">
+          <button onclick="saveAlarmSettings()" class="px-4 py-1.5 bg-teal-600 hover:bg-teal-500 text-white text-xs rounded-lg font-bold shadow-lg shadow-teal-900/30">Kaydet</button>
+          <span id="settingsStatus" class="text-[10px] text-teal-400"></span>
+        </div>
+      </div>
+      <p id="settingsUnavailable" style="display:none" class="text-[10px] text-amber-500">app_settings tablosu bulunamadı — alarm_logs_and_settings.sql dosyasını Supabase SQL Editor'de çalıştırın.</p>
     </div>
   </div>
 
@@ -1341,8 +1410,8 @@
           if (a.status === 'open') teams[t].open++;
           if (_amIsOverdue(a)) teams[t].overdue++;
         });
-        document.getElementById(prefix + 'TeamList').innerHTML = Object.entries(teams)
-          .sort((a,b) => (b[1].open + b[1].overdue) - (a[1].open + a[1].overdue))
+        const teamEntries = Object.entries(teams).sort((a,b) => (b[1].open + b[1].overdue) - (a[1].open + a[1].overdue));
+        document.getElementById(prefix + 'TeamList').innerHTML = teamEntries
           .map(([team, v]) => `
             <div onclick="selectAdminTeam('${team.replace(/'/g,"\\'")}')" class="am-team-row cursor-pointer">
               <div class="min-w-0">
@@ -1354,6 +1423,8 @@
                 ${v.overdue ? `<span class="text-red-400">${v.overdue} gec.</span>` : ''}
               </div>
             </div>`).join('') || '<p class="text-xs text-slate-600">Aktif alarm yok.</p>';
+        const countEl = document.getElementById(prefix + 'TeamCount');
+        if (countEl) countEl.textContent = teamEntries.length + ' takım';
       });
     }
 
@@ -1477,7 +1548,6 @@
       if (!data.length) { grid.innerHTML = ''; empty.textContent = I18N.t('İptal edilmiş alarm bulunamadı.'); empty.style.display = 'block'; return; }
       empty.style.display = 'none';
       grid.innerHTML = data.map(d => {
-        const zohoId = d.deal_id || '';
         return `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px;cursor:pointer" onclick="openCancelledDealModal('${d.id}')">
         <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmt(d.deal_name)}</div>
         <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600">${fmt(d.deal_owner)}</div>
@@ -1498,8 +1568,8 @@
       document.getElementById('cdmStage').textContent     = d.stage || '—';
       document.getElementById('cdmArrival').textContent   = d.arrival_date ? _amFmtDate(d.arrival_date) : '—';
       const zohoLink = document.getElementById('cdmZohoLink');
-      if (d.deal_id) {
-        zohoLink.href = `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.deal_id}`;
+      if (d.id) {
+        zohoLink.href = `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}`;
         zohoLink.style.display = '';
       } else {
         zohoLink.style.display = 'none';
@@ -1538,7 +1608,13 @@
         if (status === 'no_show' && a.status !== 'no_show') return false;
         if (status === 'closed'  && a.status !== 'closed') return false;
         if (pft    && a.payment_or_flight_ticket !== pft) return false;
-        if (thresh && String(a.threshold_days) !== thresh) return false;
+        if (thresh) {
+          // "Ng" filtresi: kalan gün <= N olan alarmları göster (gecikmişler dahil,
+          // en aciller de görünsün). Statik threshold_days DEĞİL, canlı hesaplanan
+          // kalan gün kullanılıyor — tabloda "Kalan" sütununda görünenle birebir aynı.
+          const dr = a.days_remaining !== null && a.days_remaining !== undefined ? a.days_remaining : _amDaysUntil(a.reference_date);
+          if (dr === null || dr > Number(thresh)) return false;
+        }
         if (dFrom  && (!a.reference_date || a.reference_date < dFrom)) return false;
         if (dTo    && (!a.reference_date || a.reference_date > dTo)) return false;
         if (search) {
@@ -1583,7 +1659,7 @@
         return `<tr style="${rowBg?'background:'+rowBg:''}">
           <td style="padding:8px 10px;font-size:10px;color:#475569;border-bottom:1px solid #0f172a">${i+1}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #0f172a">
-            <div style="font-size:11px;font-weight:600;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${a.deal_name||'—'}</div>
+            <div style="font-size:11px;font-weight:600;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${a.deal_name||'—'}${a.deal_id ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="am-zoho-link" title="Zoho'da Aç">↗</a>` : ''}</div>
             <div style="font-size:9px;color:#64748b">${a.deal_owner||'—'}</div>
           </td>
           <td style="padding:8px 10px;border-bottom:1px solid #0f172a">
@@ -1617,6 +1693,9 @@
       const a = adminAllAlarms.find(x => x.id === alarmId);
       if (!a) return;
       currentAdminAlarm = a;
+      const zohoLink = document.getElementById('aamZohoLink');
+      if (a.deal_id) { zohoLink.href = `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}`; zohoLink.style.display = ''; }
+      else { zohoLink.style.display = 'none'; }
       const tm = _amTypeMeta(a.alarm_type);
       const sm = _amStatusMeta(a.status);
       document.getElementById('aamDealName').textContent  = a.deal_name || '—';
@@ -1658,6 +1737,38 @@
       document.getElementById('adminAlarmModal').classList.add('open');
       document.body.style.overflow = 'hidden';
       loadAdminAlarmHistory(a.id);
+      loadAdminAlarmDealDetails(a.deal_id);
+    }
+
+    // Alarm modalı açılınca deal'in TÜM bilgilerini (All Deals sayfasındaki gibi)
+    // canlı Supabase'den çeker — alarms tablosu sadece birkaç alan tutuyor.
+    async function loadAdminAlarmDealDetails(dealId) {
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('aamDealStage', '…'); set('aamDealArrival', '…'); set('aamDealAmount', '…');
+      set('aamDealPaidUnpaid', '…'); set('aamDealPaymentStatus', '…'); set('aamDealLanguage', '…');
+      set('aamDealVisits', '…'); set('aamDealVisitStatus', '…');
+      if (!dealId) return;
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const sel = 'id,stage,amount,total_paid_amount,remaining_amount,arrival_date,visit_date_1,visit_date_2,visit_date_3,rawLang:raw->>Language';
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(dealId)}&select=${sel}&limit=1`, { headers: H });
+        if (!r.ok) return;
+        const rows = await r.json();
+        const d = rows && rows[0];
+        // Bu arada modal kapat/başka alarm açılmış olabilir — hâlâ aynı deal mi kontrol et
+        if (!d || !currentAdminAlarm || String(currentAdminAlarm.deal_id) !== String(dealId)) return;
+        set('aamDealStage', d.stage || '—');
+        set('aamDealArrival', _amFmtDate(d.arrival_date));
+        set('aamDealAmount', fmtMoney(d.amount));
+        const paid = Number(d.total_paid_amount) || 0, unpaid = Number(d.remaining_amount) || 0;
+        document.getElementById('aamDealPaidUnpaid').innerHTML = `<span style="color:#34d399">${fmtMoney(paid)}</span> / <span style="color:#f87171">${fmtMoney(unpaid)}</span>`;
+        const payStatus = paid <= 0 ? 'Unpaid' : (Number(d.amount) > 0 && paid >= Number(d.amount)) ? 'Paid' : 'Partial';
+        set('aamDealPaymentStatus', payStatusLabel(payStatus));
+        set('aamDealLanguage', languageLabel(d.rawLang || 'Bilinmiyor'));
+        const visits = [d.visit_date_1, d.visit_date_2, d.visit_date_3].map(v => v ? _amFmtDate(v) : '—').join(' / ');
+        set('aamDealVisits', visits);
+        set('aamDealVisitStatus', (d.visit_date_1 || d.visit_date_2 || d.visit_date_3) ? 'Visited' : 'Not Visited');
+      } catch(e) { /* sessiz — alanlar "…" placeholder'da kalır */ }
     }
 
     function closeAdminAlarmModal() {
@@ -1840,29 +1951,36 @@
       _csvDownload(rows, `region_performans_${new Date().toISOString().slice(0,10)}.csv`);
     }
 
-    // ── Eşik Filtresi (Alarm Listesi'ni gerçek zamanlı filtreler) ──
-    const _AM_FILTER_THRESHOLD_PRESETS = [45, 30, 15, 7, 3];
+    // ── Gün Filtresi (Alarm Listesi'ni CANLI kalan güne göre filtreler) ──
+    // "Ng" = kalan gün <= N (gecikmişler dahil, en acil olanlar da görünür).
+    // Aynı amFilterThresh <select>'i sürüyor; chip'ler sadece görsel kısayol.
+    const _AM_DAY_FILTER_PRESETS = [45, 30, 15, 7, 3];
 
-    function _amRenderThreshFilterChips() {
+    function _amRenderDayFilterChips() {
       const sel = document.getElementById('amFilterThresh');
       const cur = sel ? sel.value : '';
-      const chip = (val, label) => `<button type="button" onclick="_amSetThreshFilter('${val}')"
-        class="px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all ${cur === val
-          ? 'bg-teal-600 border-teal-500 text-white shadow shadow-teal-900/40'
-          : 'bg-gray-950 border-gray-700 text-slate-400 hover:border-teal-600 hover:text-teal-300'}">${label}</button>`;
-      document.getElementById('amThreshFilterChips').innerHTML =
-        chip('', 'Tümü') + _AM_FILTER_THRESHOLD_PRESETS.map(v => chip(String(v), v + 'g')).join('');
+      const chip = (val, label) => `<button type="button" onclick="_amSetDayFilter('${val}')"
+        class="am-day-chip${cur === val ? ' active' : ''}">${label}</button>`;
+      document.getElementById('amDayFilterChips').innerHTML =
+        chip('', 'Tümü') + _AM_DAY_FILTER_PRESETS.map(v => chip(String(v), v + ' gün')).join('');
     }
-    function _amSetThreshFilter(val) {
+    function _amSetDayFilter(val) {
       const sel = document.getElementById('amFilterThresh');
       if (sel) sel.value = val;
-      _amRenderThreshFilterChips();
+      _amRenderDayFilterChips();
       renderAdminAlarmTable();
     }
-    function _amToggleEngineSettings() {
-      const panel = document.getElementById('engineSettingsPanel');
-      const open = panel.style.display !== 'none';
-      panel.style.display = open ? 'none' : 'block';
+
+    // ── Motor Ayarları modalı (eskiden ana sayfada açık duran, kafa karıştıran
+    // panel — şimdi ⚙️ ikonuyla açılan bir modala taşındı) ──
+    function openEngineSettingsModal() {
+      document.getElementById('engineSettingsModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+      loadAlarmSettings();
+    }
+    function closeEngineSettingsModal() {
+      document.getElementById('engineSettingsModal').classList.remove('open');
+      document.body.style.overflow = '';
     }
 
     // ── Parametre Yönetimi (PDF 10.3 / 17) — app_settings tablosu ──
@@ -2187,7 +2305,7 @@
       });
       if (v === 'summary') { renderSummary(); _startAnalyticsAutoRefresh(); }
       else _stopAnalyticsAutoRefresh();
-      if (v === 'alarms-monitor') { loadAdminAlarms(); loadAlarmSettings(); _amRenderThreshFilterChips(); _startAlarmMonitorAutoRefresh(); }
+      if (v === 'alarms-monitor') { loadAdminAlarms(); _amRenderDayFilterChips(); _startAlarmMonitorAutoRefresh(); }
       else _stopAlarmMonitorAutoRefresh();
       if (v === 'users') loadUsers();
       else if (v === 'logs') loadLogs();
