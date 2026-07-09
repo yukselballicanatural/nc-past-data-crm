@@ -131,6 +131,9 @@
     #cancelledDealModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
     .kpi-loading { opacity:.35; animation: nc-kpi-pulse 1.1s ease-in-out infinite; pointer-events:none; }
     @keyframes nc-kpi-pulse { 0%,100% { opacity:.35; } 50% { opacity:.7; } }
+    .sortable-th { cursor:pointer; user-select:none; white-space:nowrap; }
+    .sortable-th:hover { color:#e2e8f0; }
+    .sortable-th .sort-arrow { font-size:9px; margin-left:3px; opacity:.7; }
     #cancelledDealModal.open { display:flex; }
     .modal-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.75); }
     .modal-panel { position:relative; z-index:1; width:100%; max-width:700px; max-height:90vh; overflow-y:auto; background:#0d1526; border:1px solid #1e293b; border-radius:16px; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.6); }
@@ -432,6 +435,23 @@
         </div>
       </div>
 
+      <!-- Analytics Filtreleri -->
+      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+        <select id="anFilterRegion" onchange="_anOnRegionChange();loadAnalyticsSummary()" class="filter-select">
+          <option value="">Tüm Bölgeler</option>
+          <option value="Istanbul">Istanbul Bölgesi</option>
+          <option value="Morocco">Morocco Bölgesi</option>
+        </select>
+        <select id="anFilterTeam" onchange="loadAnalyticsSummary()" class="filter-select">
+          <option value="">Tüm Takım Liderleri</option>
+        </select>
+        <input id="anFilterDateFrom" type="date" onchange="loadAnalyticsSummary()" class="filter-select" title="Arrival Date başlangıç">
+        <span class="text-slate-500 text-xs">—</span>
+        <input id="anFilterDateTo" type="date" onchange="loadAnalyticsSummary()" class="filter-select" title="Arrival Date bitiş">
+        <button onclick="_anResetFilters()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700">Temizle</button>
+        <span id="anFilterLoading" style="display:none;font-size:11px;color:#818cf8">Yükleniyor…</span>
+      </div>
+
       <!-- KPI Strip -->
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3" id="analyticsKpiStrip"></div>
 
@@ -475,7 +495,14 @@
           <h3 class="text-sm font-bold text-white mb-3">Team Performance</h3>
           <div class="overflow-auto max-h-80">
             <table class="tbl w-full">
-              <thead><tr class="text-slate-400"><th>Team</th><th>Deals</th><th>Paid</th><th>Unpaid</th><th>Won</th></tr></thead>
+              <thead><tr class="text-slate-400">
+                <th class="sortable-th" onclick="sortTeamTable('team')">Team</th>
+                <th class="sortable-th" onclick="sortTeamTable('deals')">Deals</th>
+                <th class="sortable-th" onclick="sortTeamTable('paid')">Paid</th>
+                <th class="sortable-th" onclick="sortTeamTable('unpaid')">Unpaid</th>
+                <th class="sortable-th" onclick="sortTeamTable('total')">Total</th>
+                <th class="sortable-th" onclick="sortTeamTable('won')">Won</th>
+              </tr></thead>
               <tbody id="teamSummaryBody"></tbody>
             </table>
           </div>
@@ -484,7 +511,12 @@
           <h3 class="text-sm font-bold text-white mb-3">Top Agents by Deals</h3>
           <div class="overflow-auto max-h-80">
             <table class="tbl w-full">
-              <thead><tr class="text-slate-400"><th>Agent</th><th>Deals</th><th>Paid</th><th>Results</th></tr></thead>
+              <thead><tr class="text-slate-400">
+                <th class="sortable-th" onclick="sortAgentTable('agent')">Agent</th>
+                <th class="sortable-th" onclick="sortAgentTable('deals')">Deals</th>
+                <th class="sortable-th" onclick="sortAgentTable('paid')">Paid</th>
+                <th class="sortable-th" onclick="sortAgentTable('results')">Results</th>
+              </tr></thead>
               <tbody id="agentSummaryBody"></tbody>
             </table>
           </div>
@@ -1167,6 +1199,12 @@
     // rakamları 49K satırı beklemeden anında buradan gelir. RPC yoksa null kalır
     // ve panel eski (istemci tarafı) hesaplamaya güvenli şekilde düşer.
     let dealSummary = null;
+    // Analytics'teki Team Performance / Top Agents tabloları için son çizilen
+    // satırlar — başlığa tıklayınca yeniden fetch etmeden sadece bunları sıralarız.
+    let _teamSummaryRows = [];
+    let _teamSortCol = 'deals', _teamSortDir = -1;
+    let _agentSummaryRows = [];
+    let _agentSortCol = 'deals', _agentSortDir = -1;
     let sortCol = '';
     let sortDir = 1;
     let dealCurrentPage = 0;
@@ -1994,12 +2032,13 @@
     function fmt(v) { return (v === null || v === undefined || v === '') ? '—' : fixTR(String(v)); }
     function fmtMoney(v) {
       if (!v && v !== 0) return '€0';
-      return '€' + Number(v).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2});
+      // tr-TR: binlik ayırıcı nokta (.), ondalık ayırıcı virgül (,) — örn. 78.000,78
+      return '€' + Number(v).toLocaleString('tr-TR', {minimumFractionDigits:0, maximumFractionDigits:2});
     }
     function fmtCompact(v) {
       const n = Number(v) || 0;
-      if (Math.abs(n) >= 1e6) return '€' + (n/1e6).toFixed(1) + 'M';
-      if (Math.abs(n) >= 1e3) return '€' + (n/1e3).toFixed(1) + 'K';
+      if (Math.abs(n) >= 1e6) return '€' + (n/1e6).toFixed(1).replace('.', ',') + 'M';
+      if (Math.abs(n) >= 1e3) return '€' + (n/1e3).toFixed(1).replace('.', ',') + 'K';
       return '€' + Math.round(n);
     }
 
@@ -2641,8 +2680,109 @@
       if (_analyticsRefreshTimer) { clearInterval(_analyticsRefreshTimer); _analyticsRefreshTimer = null; }
     }
 
+    // ── Team Performance / Top Agents — sıralanabilir tablolar ──────────
+    function _sortArrowHtml(activeCol, col, dir) {
+      return activeCol === col ? `<span class="sort-arrow">${dir === 1 ? '▲' : '▼'}</span>` : '';
+    }
+
+    function renderTeamSummaryTable() {
+      const rows = _teamSummaryRows.slice().sort((a,b) => {
+        const va = a[_teamSortCol], vb = b[_teamSortCol];
+        if (typeof va === 'string') return _teamSortDir * String(va).localeCompare(String(vb));
+        return _teamSortDir * ((va||0) - (vb||0));
+      });
+      document.getElementById('teamSummaryBody').innerHTML = rows.map(v => `
+          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+            <td class="py-1 text-slate-200">${fmt(v.team)}</td>
+            <td class="py-1 text-right text-slate-300">${v.deals}</td>
+            <td class="py-1 text-right text-emerald-400">${fmtMoney(v.paid)}</td>
+            <td class="py-1 text-right text-amber-400">${fmtMoney(v.unpaid)}</td>
+            <td class="py-1 text-right text-sky-400 font-semibold">${fmtMoney(v.total)}</td>
+            <td class="py-1 text-right text-emerald-300">${v.won}</td>
+          </tr>`).join('') || '<tr><td colspan="6" class="py-4 text-center text-slate-600 text-xs">Veri yok.</td></tr>';
+      const ths = document.querySelectorAll('#view-summary table')[1]?.querySelectorAll('th') || [];
+      ths.forEach(th => { th.querySelectorAll('.sort-arrow').forEach(a=>a.remove()); });
+      const cols = ['team','deals','paid','unpaid','total','won'];
+      const idx = cols.indexOf(_teamSortCol);
+      if (idx >= 0 && ths[idx]) ths[idx].insertAdjacentHTML('beforeend', _sortArrowHtml(_teamSortCol, _teamSortCol, _teamSortDir));
+    }
+    function sortTeamTable(col) {
+      if (_teamSortCol === col) _teamSortDir = -_teamSortDir; else { _teamSortCol = col; _teamSortDir = col === 'team' ? 1 : -1; }
+      renderTeamSummaryTable();
+    }
+
+    function renderAgentSummaryTable() {
+      const rows = _agentSummaryRows.slice().sort((a,b) => {
+        const va = a[_agentSortCol], vb = b[_agentSortCol];
+        if (typeof va === 'string') return _agentSortDir * String(va).localeCompare(String(vb));
+        return _agentSortDir * ((va||0) - (vb||0));
+      }).slice(0, 30);
+      document.getElementById('agentSummaryBody').innerHTML = rows.map(v => `
+          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+            <td class="py-1 text-slate-200">${fmt(v.agent)}</td>
+            <td class="py-1 text-right text-slate-300">${v.deals}</td>
+            <td class="py-1 text-right text-emerald-400">${fmtMoney(v.paid)}</td>
+            <td class="py-1 text-right text-indigo-400">${v.results}</td>
+          </tr>`).join('') || '<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">Veri yok.</td></tr>';
+      const ths = document.querySelectorAll('#view-summary table')[2]?.querySelectorAll('th') || [];
+      ths.forEach(th => { th.querySelectorAll('.sort-arrow').forEach(a=>a.remove()); });
+      const cols = ['agent','deals','paid','results'];
+      const idx = cols.indexOf(_agentSortCol);
+      if (idx >= 0 && ths[idx]) ths[idx].insertAdjacentHTML('beforeend', _sortArrowHtml(_agentSortCol, _agentSortCol, _agentSortDir));
+    }
+    function sortAgentTable(col) {
+      if (_agentSortCol === col) _agentSortDir = -_agentSortDir; else { _agentSortCol = col; _agentSortDir = col === 'agent' ? 1 : -1; }
+      renderAgentSummaryTable();
+    }
+
+    // ── Analytics filtreleri (Bölge / Takım Lideri / Tarih) ──────────────
+    function _anPopulateTeamOptions() {
+      const sel = document.getElementById('anFilterTeam');
+      if (!sel || !window.TeamMap) return;
+      const region = document.getElementById('anFilterRegion')?.value || '';
+      const cur = sel.value;
+      const teams = Object.entries(TeamMap.TEAMS)
+        .filter(([, d]) => !region || d.region === region)
+        .map(([canonical, d]) => ({ canonical, label: d.label }))
+        .sort((a,b) => a.label.localeCompare(b.label));
+      sel.innerHTML = '<option value="">Tüm Takım Liderleri</option>' +
+        teams.map(t => `<option value="${t.canonical}">${t.label}</option>`).join('');
+      if (teams.some(t => t.canonical === cur)) sel.value = cur;
+    }
+    function _anOnRegionChange() { _anPopulateTeamOptions(); }
+    function _anResetFilters() {
+      document.getElementById('anFilterRegion').value = '';
+      document.getElementById('anFilterTeam').value = '';
+      document.getElementById('anFilterDateFrom').value = '';
+      document.getElementById('anFilterDateTo').value = '';
+      _anPopulateTeamOptions();
+      loadAnalyticsSummary();
+    }
+    function _anResolveTeams() {
+      if (!window.TeamMap) return null;
+      const team = document.getElementById('anFilterTeam')?.value || '';
+      const region = document.getElementById('anFilterRegion')?.value || '';
+      if (team) return TeamMap.aliasesFor(team);
+      if (region) return TeamMap.aliasesForRegion(region);
+      return null;
+    }
+    let analyticsFilterActive = false;
+    async function loadAnalyticsSummary() {
+      const teams  = _anResolveTeams();
+      const dFrom  = document.getElementById('anFilterDateFrom')?.value || '';
+      const dTo    = document.getElementById('anFilterDateTo')?.value || '';
+      analyticsFilterActive = !!(teams || dFrom || dTo);
+      if (!dealSummary) { renderSummary(); return; } // RPC yok — eski istemci-tarafı hesaplamaya düş
+      if (!analyticsFilterActive) { renderSummaryFromRPC(dealSummary); return; }
+      const loadingEl = document.getElementById('anFilterLoading');
+      if (loadingEl) loadingEl.style.display = '';
+      const s = await _fetchDealSummary({ teams, dateFrom: dFrom, dateTo: dTo });
+      if (loadingEl) loadingEl.style.display = 'none';
+      if (s) renderSummaryFromRPC(s);
+    }
+
     function renderSummary() {
-      if (dealSummary) { renderSummaryFromRPC(dealSummary); return; }
+      if (dealSummary) { loadAnalyticsSummary(); return; }
       // ── KPI Strip ────────────────────────────────────────────
       const total = allDeals.length;
       const totalAmount = allDeals.reduce((s,d) => s + (Number(d['Deal Amount'])||0), 0);
@@ -2739,15 +2879,8 @@
         teamMap[t].unpaid += (Number(d['Unpaid Amount'])||0);
         if ((d['Stage']||'').toLowerCase().includes('won')) teamMap[t].won++;
       });
-      document.getElementById('teamSummaryBody').innerHTML =
-        Object.entries(teamMap).sort((a,b) => b[1].deals - a[1].deals).map(([t,v]) => `
-          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
-            <td class="py-1 text-slate-200">${t}</td>
-            <td class="py-1 text-right text-slate-300">${v.deals}</td>
-            <td class="py-1 text-right text-emerald-400">${fmtMoney(v.paid)}</td>
-            <td class="py-1 text-right text-amber-400">${fmtMoney(v.unpaid)}</td>
-            <td class="py-1 text-right text-emerald-300">${v.won}</td>
-          </tr>`).join('');
+      _teamSummaryRows = Object.entries(teamMap).map(([t,v]) => ({ team:t, deals:v.deals, paid:v.paid, unpaid:v.unpaid, total:v.paid+v.unpaid, won:v.won }));
+      renderTeamSummaryTable();
 
       // Stages
       const stageMap = {};
@@ -2769,14 +2902,8 @@
         agentMap[a].paid += (Number(d['Paid Amount'])||0);
         if (d.result_code) agentMap[a].results++;
       });
-      document.getElementById('agentSummaryBody').innerHTML =
-        Object.entries(agentMap).sort((a,b) => b[1].deals - a[1].deals).slice(0,30).map(([a,v]) => `
-          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
-            <td class="py-1 text-slate-200">${a}</td>
-            <td class="py-1 text-right text-slate-300">${v.deals}</td>
-            <td class="py-1 text-right text-emerald-400">${fmtMoney(v.paid)}</td>
-            <td class="py-1 text-right text-indigo-400">${v.results}</td>
-          </tr>`).join('');
+      _agentSummaryRows = Object.entries(agentMap).map(([a,v]) => ({ agent:a, deals:v.deals, paid:v.paid, results:v.results }));
+      renderAgentSummaryTable();
 
       // Languages
       const langMap = {};
@@ -2794,12 +2921,18 @@
     // Rakamlar 49K satır beklemeden anında dolar. RPC yoksa bu fonksiyonlar
     // hiç çağrılmaz, panel eski istemci-tarafı hesaplamaya düşer.
     // ═══════════════════════════════════════════════════════════════
-    async function _fetchDealSummary() {
+    async function _fetchDealSummary(filters) {
       try {
+        const body = {};
+        if (filters) {
+          if (filters.teams && filters.teams.length) body.p_teams = filters.teams;
+          if (filters.dateFrom) body.p_date_from = filters.dateFrom;
+          if (filters.dateTo) body.p_date_to = filters.dateTo;
+        }
         const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_deal_summary`, {
           method: 'POST',
           headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
-          body: '{}'
+          body: JSON.stringify(body)
         });
         if (!r.ok) return null;
         const j = await r.json();
@@ -2809,8 +2942,11 @@
 
     // Dil dağılımı ayrı fonksiyonda — raw JSONB'ye dokunduğu için yavaş
     // olabilir (TOAST maliyeti), bu yüzden ana özeti bloklamadan arka planda
-    // çekilir. Sadece Analytics açıkken tetiklenir.
-    let _langBreakdownFetched = false;
+    // çekilir. Sadece Analytics açıkken tetiklenir. Sonuç global cache'te
+    // tutulur (dil dağılımı filtre-bağımsız) — Analytics filtreleri değişse
+    // bile yeniden çekilmez, sadece grafiği ayrı render eder.
+    let _languageBreakdownCache = null;
+    let _langBreakdownFetching = false;
     async function _fetchLanguageBreakdown() {
       try {
         const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_language_breakdown`, {
@@ -2933,15 +3069,8 @@
         if (!teamMap[name]) teamMap[name] = { deals:0, paid:0, unpaid:0, won:0 };
         teamMap[name].deals += t.deals; teamMap[name].paid += t.paid; teamMap[name].unpaid += t.unpaid; teamMap[name].won += t.won;
       });
-      document.getElementById('teamSummaryBody').innerHTML =
-        Object.entries(teamMap).sort((a,b) => b[1].deals - a[1].deals).map(([t,v]) => `
-          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
-            <td class="py-1 text-slate-200">${t}</td>
-            <td class="py-1 text-right text-slate-300">${v.deals}</td>
-            <td class="py-1 text-right text-emerald-400">${fmtMoney(v.paid)}</td>
-            <td class="py-1 text-right text-amber-400">${fmtMoney(v.unpaid)}</td>
-            <td class="py-1 text-right text-emerald-300">${v.won}</td>
-          </tr>`).join('');
+      _teamSummaryRows = Object.entries(teamMap).map(([t,v]) => ({ team:t, deals:v.deals, paid:v.paid, unpaid:v.unpaid, total:v.paid+v.unpaid, won:v.won }));
+      renderTeamSummaryTable();
 
       // Stages
       const stageArr = (s.by_stage||[]).slice().sort((a,b) => b.cnt-a.cnt);
@@ -2953,40 +3082,52 @@
             <div class="h-2 bg-gray-800 rounded-full overflow-hidden"><div class="h-2 bg-indigo-500 rounded-full transition-all duration-700 ease-out group-hover:brightness-125" style="width:${(x.cnt/maxS*100).toFixed(1)}%"></div></div>
           </div>`).join('');
 
-      // Agents (ham deal_owner, ilk 30)
-      document.getElementById('agentSummaryBody').innerHTML =
-        (s.by_owner||[]).slice(0,30).map(o => `
-          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
-            <td class="py-1 text-slate-200">${o.owner || 'Unknown'}</td>
-            <td class="py-1 text-right text-slate-300">${o.deals}</td>
-            <td class="py-1 text-right text-emerald-400">${fmtMoney(o.paid)}</td>
-            <td class="py-1 text-right text-indigo-400">${o.results}</td>
-          </tr>`).join('');
+      // Agents (ham deal_owner)
+      _agentSummaryRows = (s.by_owner||[]).map(o => ({ agent: o.owner || 'Unknown', deals:o.deals, paid:o.paid, results:o.results }));
+      renderAgentSummaryTable();
 
-      // Languages — ayrı, tembel çekilen veri (admin_language_breakdown).
-      // Henüz gelmediyse bloklamadan bir "yükleniyor" durumu göster.
-      const langChartEl = document.getElementById('langChart');
-      if (!s.by_language) {
-        langChartEl.innerHTML = '<div class="text-xs text-slate-600 py-8 mx-auto">Yükleniyor...</div>';
+      // Languages — ayrı, tembel çekilen veri (admin_language_breakdown),
+      // filtre-bağımsız global cache'ten. Analytics filtresi değişse bile
+      // burası yeniden istek atmaz, sadece kendi grafiğini günceller —
+      // filtrelenmiş görünümün geri kalanını ASLA ezmez.
+      const langs = s.by_language || _languageBreakdownCache;
+      if (langs) { _renderLangChartOnly(langs); }
+      else {
+        document.getElementById('langChart').innerHTML = '<div class="text-xs text-slate-600 py-8 mx-auto">Yükleniyor...</div>';
         _loadLanguageBreakdownIfNeeded();
-      } else {
-        langChartEl.innerHTML = s.by_language.slice().sort((a,b) => b.cnt-a.cnt).map(l => `
-            <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${l.lang}: ${(l.cnt/total*100).toFixed(1)}%">
-              <div class="text-lg font-bold text-indigo-400">${l.cnt}</div>
-              <div class="text-xs text-slate-400 mt-1">${l.lang}</div>
-            </div>`).join('');
       }
     }
 
+    function _renderLangChartOnly(langs) {
+      const el = document.getElementById('langChart');
+      if (!el) return;
+      if (!langs.length) { el.innerHTML = '<div class="text-xs text-slate-600 py-8 mx-auto">Dil verisi yok.</div>'; return; }
+      const grandTotal = langs.reduce((sum,l) => sum + (l.cnt||0), 0) || 1;
+      el.innerHTML = langs.slice().sort((a,b) => b.cnt-a.cnt).map(l => `
+          <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${l.lang}: ${(l.cnt/grandTotal*100).toFixed(1)}%">
+            <div class="text-lg font-bold text-indigo-400">${l.cnt}</div>
+            <div class="text-xs text-slate-400 mt-1">${l.lang}</div>
+          </div>`).join('');
+    }
+
     async function _loadLanguageBreakdownIfNeeded() {
-      if (_langBreakdownFetched || !dealSummary) return;
-      _langBreakdownFetched = true;
+      if (_langBreakdownFetching || _languageBreakdownCache) return;
+      _langBreakdownFetching = true;
       const langs = await _fetchLanguageBreakdown();
-      if (!langs) { _langBreakdownFetched = false; return; }
-      dealSummary.by_language = langs;
-      populateFiltersFromSummary(dealSummary);
-      const av = document.getElementById('view-summary');
-      if (av && !av.classList.contains('hidden')) renderSummaryFromRPC(dealSummary);
+      _langBreakdownFetching = false;
+      if (!langs) {
+        const el = document.getElementById('langChart');
+        if (el) el.innerHTML = '<div class="text-xs text-rose-400 py-8 mx-auto cursor-pointer underline" onclick="_retryLanguageBreakdown()">Dil dağılımı yüklenemedi (RPC kurulu değil olabilir) — tekrar denemek için tıkla</div>';
+        return;
+      }
+      _languageBreakdownCache = langs;
+      if (dealSummary) { dealSummary.by_language = langs; populateFiltersFromSummary(dealSummary); }
+      _renderLangChartOnly(langs);
+    }
+
+    function _retryLanguageBreakdown() {
+      document.getElementById('langChart').innerHTML = '<div class="text-xs text-slate-600 py-8 mx-auto">Yükleniyor...</div>';
+      _loadLanguageBreakdownIfNeeded();
     }
 
     // RPC özeti geldiğinde: KPI kartları + rozetler + Analytics + filtre
@@ -2997,9 +3138,11 @@
       renderBadgesFromSummary(s);
       populateFiltersFromSummary(s);
       _loadLanguageBreakdownIfNeeded();
-      // Analytics görünümü açıksa hemen yenile (kapalıysa açılınca renderSummary çağrılır)
+      _anPopulateTeamOptions();
+      // Analytics görünümü açıksa hemen yenile — aktif filtre varsa onu koru
+      // (filtrelenmiş görünümün üzerine ham veriyle yazmasın)
       const av = document.getElementById('view-summary');
-      if (av && !av.classList.contains('hidden')) renderSummaryFromRPC(s);
+      if (av && !av.classList.contains('hidden')) loadAnalyticsSummary();
       _setKpiLoadingState(false);
     }
 
@@ -3858,7 +4001,8 @@
         }
         addLog('LOGIN', 'Admin panele giriş yapıldı');
         document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
-        ['dealDateFrom', 'dealDateTo', 'amDateFrom', 'amDateTo'].forEach(id => NCDatePicker.attach(id));
+        ['dealDateFrom', 'dealDateTo', 'amDateFrom', 'amDateTo', 'anFilterDateFrom', 'anFilterDateTo'].forEach(id => NCDatePicker.attach(id));
+        _anPopulateTeamOptions();
         loadDeals();
         loadAdminAlarms();
         adminRunEngine(false);

@@ -9,6 +9,12 @@
 -- sadece birkaç KB'lık özet döndürür. Yeni deal geldiğinde otomatik yansır —
 -- bakım/trigger gerektirmez, drift olmaz.
 --
+-- v4: Analytics sayfası için isteğe bağlı filtre parametreleri eklendi
+-- (p_teams, p_date_from, p_date_to). Parametresiz çağrı (admin.html'deki
+-- ana KPI/rozet paneli) eskisiyle birebir aynı davranır — filtre YOKSA hiç
+-- WHERE koşulu eklenmez. Analytics'teki Bölge/Takım Lideri/Tarih filtreleri
+-- bu parametreleri doldurup AYNI fonksiyonu çağırır.
+--
 -- v3: `raw->>'Language'` alan ayıklaması ANA fonksiyondan çıkarıldı. Sebep:
 -- `raw` her satırda ~169 alanlı büyük bir JSONB (TOAST'lanmış, ayrı diskte
 -- saklanıyor); sadece "Language" almak için bile Postgres'in 49K satırın
@@ -21,7 +27,16 @@
 -- aynıdır. Değiştirirsen iki yeri birlikte güncelle.
 -- ============================================================
 
-create or replace function public.admin_deal_summary()
+-- Önceki (parametresiz) sürümü düşür — parametre listesi değiştiği için
+-- "create or replace" aynı isimde YENİ bir overload yaratır ve PostgREST
+-- "ambiguous function" hatası verir. Önce eskisini temizlemek gerekiyor.
+drop function if exists public.admin_deal_summary();
+
+create or replace function public.admin_deal_summary(
+  p_teams      text[] default null,   -- doluysa: sadece bu takım adı varyantlarına (deals.team) sahip dealler
+  p_date_from  date   default null,   -- doluysa: arrival_date >= bu tarih
+  p_date_to    date   default null    -- doluysa: arrival_date <= bu tarih
+)
 returns jsonb
 language sql
 stable
@@ -55,6 +70,9 @@ as $$
       end as pay_status,
       (visit_date_1 is not null or visit_date_2 is not null or visit_date_3 is not null) as visited
     from public.deals
+    where (p_teams is null or team = any(p_teams))
+      and (p_date_from is null or arrival_date >= p_date_from)
+      and (p_date_to   is null or arrival_date <= p_date_to)
   ),
   scalars as (
     select
@@ -119,7 +137,7 @@ as $$
   from scalars sc;
 $$;
 
-grant execute on function public.admin_deal_summary() to anon, authenticated;
+grant execute on function public.admin_deal_summary(text[], date, date) to anon, authenticated;
 
 -- Ayrı, tembel-çağrılan fonksiyon: sadece dil dağılımı (raw JSONB'ye dokunan
 -- tek yer burası). Analytics sekmesi açılınca bir kez çağrılır, ana özeti
@@ -164,7 +182,7 @@ begin
   t1 := clock_timestamp();
   select count(*) into n_scan from public.deals where amount is not null or amount is null; -- kolonlara dokun, hepsini oku
   t2 := clock_timestamp();
-  perform public.admin_deal_summary();                            -- gerçek özet fonksiyonu
+  perform public.admin_deal_summary();                            -- gerçek özet fonksiyonu (filtresiz)
   t3 := clock_timestamp();
   return jsonb_build_object(
     'row_count',            n_total,
@@ -179,5 +197,6 @@ grant execute on function public.admin_deal_summary_debug() to anon, authenticat
 
 -- Test:
 -- select public.admin_deal_summary();
+-- select public.admin_deal_summary(array['Askif Team'], '2026-01-01', '2026-12-31');
 -- select public.admin_language_breakdown();
 -- select public.admin_deal_summary_debug();
