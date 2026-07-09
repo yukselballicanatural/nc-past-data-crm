@@ -9,6 +9,11 @@
 -- sadece birkaç KB'lık özet döndürür. Yeni deal geldiğinde otomatik yansır —
 -- bakım/trigger gerektirmez, drift olmaz.
 --
+-- v5: Dil dağılımı artık gerçek anlamda Supabase'de "hazır tutuluyor" —
+-- admin_cache tablosunda cache'leniyor. admin_language_breakdown() okuması
+-- artık anında (<50ms); yavaş hesaplama sadece admin_refresh_language_breakdown()
+-- çağrıldığında (admin.html arka planda, saatlerde bir, otomatik tetikler).
+--
 -- v4: Analytics sayfası için isteğe bağlı filtre parametreleri eklendi
 -- (p_teams, p_date_from, p_date_to). Parametresiz çağrı (admin.html'deki
 -- ana KPI/rozet paneli) eskisiyle birebir aynı davranır — filtre YOKSA hiç
@@ -139,23 +144,80 @@ $$;
 
 grant execute on function public.admin_deal_summary(text[], date, date) to anon, authenticated;
 
--- Ayrı, tembel-çağrılan fonksiyon: sadece dil dağılımı (raw JSONB'ye dokunan
--- tek yer burası). Analytics sekmesi açılınca bir kez çağrılır, ana özeti
--- bloklamaz. Bu da yavaşsa (TOAST maliyeti) sorun değil — arka planda döner.
-create or replace function public.admin_language_breakdown()
+-- ============================================================
+-- DİL DAĞILIMI — Supabase'de HAZIR TUTULAN (cache'lenmiş) sonuç
+-- ============================================================
+-- `raw->>'Language'` her satırda büyük bir JSONB'yi (TOAST) açmayı
+-- gerektirdiği için bu sorgu tek başına ~10 saniye sürüyor. Her admin
+-- Analytics'i her açtığında bu hesabı BAŞTAN yapmak yerine, sonucu küçük bir
+-- tabloda (admin_cache) saklıyoruz: okuma anında (<50ms), hesaplama sadece
+-- arka planda, seyrek olarak (admin.html'den saatlerde bir tetiklenir) çalışır.
+create table if not exists public.admin_cache (
+  key        text primary key,
+  value      jsonb not null,
+  updated_at timestamptz not null default now()
+);
+alter table public.admin_cache enable row level security;
+do $$ begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public' and tablename = 'admin_cache' and policyname = 'admin_cache_read'
+  ) then
+    create policy admin_cache_read on public.admin_cache for select using (true);
+  end if;
+end $$;
+-- Not: kasıtlı olarak insert/update policy YOK — anon/authenticated rolleri
+-- tabloya doğrudan yazamaz, sadece aşağıdaki security definer fonksiyon
+-- (tablo sahibi olarak RLS'i bypass eder) yazabilir.
+
+-- Gerçek (yavaş) hesaplamayı yapıp admin_cache'e yazan fonksiyon.
+create or replace function public.admin_refresh_language_breakdown()
 returns jsonb
-language sql
-stable
+language plpgsql
 security definer
 set search_path = public
 set statement_timeout to '20000'
 as $$
+declare
+  result jsonb;
+begin
   select coalesce(jsonb_agg(jsonb_build_object('lang', lang, 'cnt', cnt) order by cnt desc), '[]'::jsonb)
+  into result
   from (
     select coalesce(nullif(raw->>'Language',''), 'Unknown') as lang, count(*) as cnt
     from public.deals
     group by 1
   ) a;
+
+  insert into public.admin_cache(key, value, updated_at)
+  values ('language_breakdown', result, now())
+  on conflict (key) do update set value = excluded.value, updated_at = excluded.updated_at;
+
+  return result;
+end;
+$$;
+
+grant execute on function public.admin_refresh_language_breakdown() to anon, authenticated;
+
+-- Frontend'in çağırdığı fonksiyon (isim/imza AYNI kaldı, admin.html'de
+-- değişiklik gerekmiyor). Cache'te veri varsa ANINDA döner; hiç yoksa
+-- (ilk kurulum) bu seferlik yavaş hesaplayıp cache'i doldurur.
+create or replace function public.admin_language_breakdown()
+returns jsonb
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  cached jsonb;
+begin
+  select value into cached from public.admin_cache where key = 'language_breakdown';
+  if cached is not null then
+    return cached;
+  end if;
+  return public.admin_refresh_language_breakdown();
+end;
 $$;
 
 grant execute on function public.admin_language_breakdown() to anon, authenticated;
@@ -198,5 +260,7 @@ grant execute on function public.admin_deal_summary_debug() to anon, authenticat
 -- Test:
 -- select public.admin_deal_summary();
 -- select public.admin_deal_summary(array['Askif Team'], '2026-01-01', '2026-12-31');
--- select public.admin_language_breakdown();
+-- select public.admin_language_breakdown();          -- cache'ten anında döner
+-- select public.admin_refresh_language_breakdown();  -- yavaş, cache'i tazeler
 -- select public.admin_deal_summary_debug();
+-- select * from public.admin_cache;
