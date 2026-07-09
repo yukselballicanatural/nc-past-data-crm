@@ -5,9 +5,17 @@
 --
 -- Amaç: admin paneli 49K+ deal satırının tamamını tarayıcıya indirip
 -- toplamları JavaScript'te hesaplıyordu (yavaş + rakamlar sonradan gelip
--- "0"dan zıplıyordu). Bu fonksiyon tüm toplamları Postgres'te (milisaniyeler)
--- hesaplayıp sadece birkaç KB'lık özet döndürür. Yeni deal geldiğinde otomatik
--- yansır — bakım/trigger gerektirmez, drift olmaz.
+-- "0"dan zıplıyordu). Bu fonksiyon tüm toplamları Postgres'te hesaplayıp
+-- sadece birkaç KB'lık özet döndürür. Yeni deal geldiğinde otomatik yansır —
+-- bakım/trigger gerektirmez, drift olmaz.
+--
+-- v3: `raw->>'Language'` alan ayıklaması ANA fonksiyondan çıkarıldı. Sebep:
+-- `raw` her satırda ~169 alanlı büyük bir JSONB (TOAST'lanmış, ayrı diskte
+-- saklanıyor); sadece "Language" almak için bile Postgres'in 49K satırın
+-- TAMAMINI diskten açıp (detoast) parse etmesi gerekiyordu — bu tek başına
+-- ~10-15 saniye sürüyordu. Language dağılımı ayrı, tembel-çağrılan bir
+-- fonksiyona (admin_language_breakdown) taşındı; Analytics sekmesi açılınca
+-- bir kez çekilir, ana KPI/rozet rakamlarını bloklamaz.
 --
 -- Not: Cutoff tarihi (2026-06-15) admin.html'deki isBeforeCutoff ile birebir
 -- aynıdır. Değiştirirsen iki yeri birlikte güncelle.
@@ -19,11 +27,11 @@ language sql
 stable
 security definer
 set search_path = public
-set statement_timeout to '30000'   -- 30 sn: tek geçişli olsa da anon rolünün 8 sn'lik sınırına takılmasın
+set statement_timeout to '15000'
 as $$
-  -- ÖNEMLİ: 'materialized' → deals tablosu 49K satır SADECE BİR KEZ taranır ve
-  -- jsonb (raw->>'Language') bir kez parse edilir. Aksi halde CTE inline edilip
-  -- her alt-sorguda tekrar taranıyor ve statement timeout'a (57014) düşüyordu.
+  -- 'materialized' → deals tablosu SADECE BİR KEZ taranır (aksi halde CTE
+  -- inline edilip her alt-sorguda tekrar taranır ve timeout'a düşer).
+  -- `raw` kolonuna HİÇ dokunulmuyor — TOAST detoast maliyeti yok.
   with flags as materialized (
     select
       coalesce(amount, 0)::numeric             as amount,
@@ -38,7 +46,6 @@ as $$
       visit_date_3                             as v3,
       created_time::date                       as created_d,
       nullif(result_codes, '')                 as rc,
-      coalesce(nullif(raw->>'Language',''), 'Unknown') as lang,
       (lower(coalesce(stage,'')) like '%won%')    as is_won,
       (lower(coalesce(stage,'')) like '%cancel%') as is_cancel,
       case
@@ -49,7 +56,6 @@ as $$
       (visit_date_1 is not null or visit_date_2 is not null or visit_date_3 is not null) as visited
     from public.deals
   ),
-  -- Tüm skaler toplam/sayımlar TEK geçişte (FILTER ile)
   scalars as (
     select
       count(*)                                                    as total,
@@ -108,13 +114,34 @@ as $$
                      from (select owner, count(*) deals, sum(paid) paid, sum(unpaid) unpaid,
                                   count(*) filter (where is_won) won,
                                   count(*) filter (where rc is not null) results
-                             from flags group by owner) a),
-    'by_language',(select coalesce(jsonb_agg(jsonb_build_object('lang',lang,'cnt',cnt) order by cnt desc),'[]'::jsonb)
-                     from (select lang, count(*) cnt from flags group by lang) a)
+                             from flags group by owner) a)
   )
   from scalars sc;
 $$;
 
 grant execute on function public.admin_deal_summary() to anon, authenticated;
 
--- Test: select public.admin_deal_summary();
+-- Ayrı, tembel-çağrılan fonksiyon: sadece dil dağılımı (raw JSONB'ye dokunan
+-- tek yer burası). Analytics sekmesi açılınca bir kez çağrılır, ana özeti
+-- bloklamaz. Bu da yavaşsa (TOAST maliyeti) sorun değil — arka planda döner.
+create or replace function public.admin_language_breakdown()
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+set statement_timeout to '20000'
+as $$
+  select coalesce(jsonb_agg(jsonb_build_object('lang', lang, 'cnt', cnt) order by cnt desc), '[]'::jsonb)
+  from (
+    select coalesce(nullif(raw->>'Language',''), 'Unknown') as lang, count(*) as cnt
+    from public.deals
+    group by 1
+  ) a;
+$$;
+
+grant execute on function public.admin_language_breakdown() to anon, authenticated;
+
+-- Test:
+-- select public.admin_deal_summary();
+-- select public.admin_language_breakdown();

@@ -2807,6 +2807,23 @@
       } catch(e) { return null; }
     }
 
+    // Dil dağılımı ayrı fonksiyonda — raw JSONB'ye dokunduğu için yavaş
+    // olabilir (TOAST maliyeti), bu yüzden ana özeti bloklamadan arka planda
+    // çekilir. Sadece Analytics açıkken tetiklenir.
+    let _langBreakdownFetched = false;
+    async function _fetchLanguageBreakdown() {
+      try {
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_language_breakdown`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+          body: '{}'
+        });
+        if (!r.ok) return null;
+        const j = await r.json();
+        return Array.isArray(j) ? j : null;
+      } catch(e) { return null; }
+    }
+
     function renderKpisFromSummary(s) {
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
       set('k1', s.total); set('k2', fmtCompact(s.sum_amount)); set('k3', fmtCompact(s.sum_paid)); set('k4', fmtCompact(s.sum_unpaid));
@@ -2946,13 +2963,30 @@
             <td class="py-1 text-right text-indigo-400">${o.results}</td>
           </tr>`).join('');
 
-      // Languages
-      document.getElementById('langChart').innerHTML =
-        (s.by_language||[]).slice().sort((a,b) => b.cnt-a.cnt).map(l => `
-          <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${l.lang}: ${(l.cnt/total*100).toFixed(1)}%">
-            <div class="text-lg font-bold text-indigo-400">${l.cnt}</div>
-            <div class="text-xs text-slate-400 mt-1">${l.lang}</div>
-          </div>`).join('');
+      // Languages — ayrı, tembel çekilen veri (admin_language_breakdown).
+      // Henüz gelmediyse bloklamadan bir "yükleniyor" durumu göster.
+      const langChartEl = document.getElementById('langChart');
+      if (!s.by_language) {
+        langChartEl.innerHTML = '<div class="text-xs text-slate-600 py-8 mx-auto">Yükleniyor...</div>';
+        _loadLanguageBreakdownIfNeeded();
+      } else {
+        langChartEl.innerHTML = s.by_language.slice().sort((a,b) => b.cnt-a.cnt).map(l => `
+            <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${l.lang}: ${(l.cnt/total*100).toFixed(1)}%">
+              <div class="text-lg font-bold text-indigo-400">${l.cnt}</div>
+              <div class="text-xs text-slate-400 mt-1">${l.lang}</div>
+            </div>`).join('');
+      }
+    }
+
+    async function _loadLanguageBreakdownIfNeeded() {
+      if (_langBreakdownFetched || !dealSummary) return;
+      _langBreakdownFetched = true;
+      const langs = await _fetchLanguageBreakdown();
+      if (!langs) { _langBreakdownFetched = false; return; }
+      dealSummary.by_language = langs;
+      populateFiltersFromSummary(dealSummary);
+      const av = document.getElementById('view-summary');
+      if (av && !av.classList.contains('hidden')) renderSummaryFromRPC(dealSummary);
     }
 
     // RPC özeti geldiğinde: KPI kartları + rozetler + Analytics + filtre
@@ -2962,6 +2996,7 @@
       renderKpisFromSummary(s);
       renderBadgesFromSummary(s);
       populateFiltersFromSummary(s);
+      _loadLanguageBreakdownIfNeeded();
       // Analytics görünümü açıksa hemen yenile (kapalıysa açılınca renderSummary çağrılır)
       const av = document.getElementById('view-summary');
       if (av && !av.classList.contains('hidden')) renderSummaryFromRPC(s);
