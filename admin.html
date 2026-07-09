@@ -157,6 +157,8 @@
     #adminAlarmModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
     #adminAlarmModal.open { display:flex; }
     #cancelledDealModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
+    #wonAlarmModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
+    #wonAlarmModal.open { display:flex; }
     #engineSettingsModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
     #engineSettingsModal.open { display:flex; }
     .am-icon-btn { width:34px; height:34px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#94a3b8; transition:all .15s; cursor:pointer; font-size:15px; }
@@ -231,6 +233,11 @@
         <button onclick="switchView('cancelled-alarms')" class="nav-btn" id="nav-cancelled-alarms">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
           İptal Alarmları
+        </button>
+        <button onclick="switchView('won-alarms')" class="nav-btn" id="nav-won-alarms">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75l6-6m0 0l-6-6m6 6H3m14.25 12.75a9 9 0 100-18 9 9 0 000 18z"/></svg>
+          Won Alarmı
+          <span id="wonAlarmBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:800;padding:1px 6px;min-width:20px;text-align:center">0</span>
         </button>
       </div>
 
@@ -973,6 +980,44 @@
     <div id="cancelledAlarmEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">İptal edilmiş alarm bulunamadı.</div>
   </div>
 
+  <!-- ===== WON ALARMI ===== -->
+  <div id="view-won-alarms" class="hidden">
+    <div class="mb-4">
+      <h2 class="text-xl font-bold text-white">Won Alarmı</h2>
+      <p class="text-xs text-slate-400 mt-0.5">Stage'i "Won" olup ödenen tutar paket tutarına eşit olmayan (eksik veya fazla ödenmiş) dealler</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      <input id="waFilterSearch" type="text" placeholder="Deal adı, danışman ara..." oninput="renderAdminWonAlarms()" class="filter-select" style="flex:1;min-width:200px">
+      <select id="waFilterRegion" onchange="renderAdminWonAlarms()" class="filter-select">
+        <option value="">Tüm Bölgeler</option>
+        <option value="Istanbul">Istanbul Bölgesi</option>
+        <option value="Morocco">Morocco Bölgesi</option>
+      </select>
+      <select id="waFilterTeam" onchange="renderAdminWonAlarms()" class="filter-select">
+        <option value="">Tüm Takımlar</option>
+      </select>
+      <select id="waFilterDir" onchange="renderAdminWonAlarms()" class="filter-select">
+        <option value="">Tümü (Eksik + Fazla)</option>
+        <option value="under">Sadece Eksik Ödenen</option>
+        <option value="over">Sadece Fazla Ödenen</option>
+      </select>
+    </div>
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="tbl w-full">
+          <thead>
+            <tr class="text-slate-400 text-[10px]">
+              <th>#</th><th>Hasta / Danışman</th><th>Deal ID</th><th>Bölge</th><th>Takım</th><th>Arrival</th>
+              <th class="text-right">Tutar</th><th class="text-right">Ödenen</th><th class="text-right">Fark</th>
+            </tr>
+          </thead>
+          <tbody id="wonAlarmTbody"></tbody>
+        </table>
+      </div>
+      <div id="wonAlarmEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">Ödeme uyuşmazlığı olan Won deal bulunamadı.</div>
+    </div>
+  </div>
+
   </main>
 
   <!-- Admin Alarm Detail/Action Modal -->
@@ -1090,6 +1135,35 @@
       <div style="display:flex;gap:10px">
         <a id="cdmZohoLink" href="#" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#818cf8;font-size:12px;font-weight:700;text-decoration:none">Zoho'da Aç ↗</a>
         <button onclick="closeCancelledDealModal()" style="flex:1;padding:11px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Won Alarmı — deal detay modalı -->
+  <div id="wonAlarmModal">
+    <div class="modal-backdrop" onclick="closeWonAlarmModal()"></div>
+    <div class="modal-panel">
+      <div class="flex items-start justify-between mb-5">
+        <div>
+          <h3 class="text-base font-bold text-white" id="wamDealName">—</h3>
+          <div class="text-[10px] text-slate-500 mt-1" id="wamDealOwner">—</div>
+        </div>
+        <button onclick="closeWonAlarmModal()" class="text-slate-500 hover:text-white ml-4 shrink-0 transition-colors">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="aam-info-grid mb-5">
+        <div class="aam-info-card"><div class="aam-info-label">Bölge</div><div class="aam-info-val" id="wamRegion">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Takım</div><div class="aam-info-val" id="wamTeam">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Stage</div><div class="aam-info-val" id="wamStage">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Arrival Date</div><div class="aam-info-val" id="wamArrival">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Tutar</div><div class="aam-info-val" id="wamAmount">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Ödenen</div><div class="aam-info-val" id="wamPaid">—</div></div>
+        <div class="aam-info-card" style="grid-column:span 2"><div class="aam-info-label">Fark</div><div class="aam-info-val" id="wamDiff">—</div></div>
+      </div>
+      <div style="display:flex;gap:10px">
+        <a id="wamZohoLink" href="#" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#818cf8;font-size:12px;font-weight:700;text-decoration:none">Zoho'da Aç ↗</a>
+        <button onclick="closeWonAlarmModal()" style="flex:1;padding:11px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kapat</button>
       </div>
     </div>
   </div>
@@ -1583,6 +1657,125 @@
       document.body.style.overflow = '';
     }
 
+    // ── Won Alarmı ────────────────────────────────────────────────────
+    // Stage'i Won olup ödenen tutar paket tutarına eşit olmayan (eksik veya
+    // fazla ödenmiş) dealleri canlı olarak deals tablosundan tarar. Var olan
+    // alarm motoruna bağlı değil — Won + tutar uyuşmazlığı her zaman burada görünür.
+    let adminWonMismatchDeals = null;
+    async function loadAdminWonAlarms() {
+      const tbody = document.getElementById('wonAlarmTbody');
+      const empty = document.getElementById('wonAlarmEmpty');
+      empty.style.display = 'none';
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const stageParam = encodeURIComponent('ilike.*won*');
+        let all = [], offset = 0;
+        while (true) {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}` +
+            `&select=id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,raw&order=deal_name.asc&limit=1000&offset=${offset}`, { headers: H });
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          const batch = await r.json();
+          if (!Array.isArray(batch) || !batch.length) break;
+          all.push(...batch);
+          if (batch.length < 1000) break;
+          offset += 1000;
+        }
+        adminWonMismatchDeals = all.map(d => {
+          const raw = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw || {});
+          const total = d.amount ?? raw.Amount ?? raw.Grand_Total_2 ?? null;
+          const paid = Number(d.total_paid_amount ?? raw.Total_Paid_Amount ?? 0) || 0;
+          const diff = total !== null ? Math.round((paid - total) * 100) / 100 : null;
+          return { ...d, _total: total, _paid: paid, _diff: diff };
+        }).filter(d => d._total !== null && d._diff !== 0);
+        adminWonMismatchDeals.sort((a, b) => Math.abs(b._diff) - Math.abs(a._diff));
+        const badge = document.getElementById('wonAlarmBadge');
+        if (badge) {
+          if (adminWonMismatchDeals.length) { badge.textContent = adminWonMismatchDeals.length; badge.style.display = ''; }
+          else badge.style.display = 'none';
+        }
+        _waPopulateTeamFilter();
+        renderAdminWonAlarms();
+      } catch(e) {
+        tbody.innerHTML = '';
+        empty.textContent = I18N.t('Yükleme hatası: ') + e.message;
+        empty.style.display = 'block';
+      }
+    }
+
+    function _waPopulateTeamFilter() {
+      const sel = document.getElementById('waFilterTeam');
+      if (!sel) return;
+      const cur = sel.value;
+      const teams = [...new Set((adminWonMismatchDeals || []).map(d => (window.TeamMap && TeamMap.normalize(d.team)) || d.team).filter(Boolean))].sort();
+      sel.innerHTML = `<option value="">${I18N.t('Tüm Takımlar')}</option>` + teams.map(t => `<option value="${t}">${t}</option>`).join('');
+      if (teams.includes(cur)) sel.value = cur;
+    }
+
+    function renderAdminWonAlarms() {
+      let data = adminWonMismatchDeals || [];
+      const search = (document.getElementById('waFilterSearch')?.value || '').toLowerCase().trim();
+      const regionF = document.getElementById('waFilterRegion')?.value || '';
+      const teamF   = document.getElementById('waFilterTeam')?.value || '';
+      const dirF    = document.getElementById('waFilterDir')?.value || '';
+      data = data.map(d => ({ ...d, _region: (typeof AlarmEngine !== 'undefined') ? AlarmEngine.getRegion(d.team) : '' }));
+      if (search) data = data.filter(d => [d.deal_name, d.deal_owner, d.team].join(' ').toLowerCase().includes(search));
+      if (regionF) data = data.filter(d => d._region === regionF);
+      if (teamF) data = data.filter(d => ((window.TeamMap && TeamMap.normalize(d.team)) || d.team) === teamF);
+      if (dirF === 'under') data = data.filter(d => d._diff < 0);
+      else if (dirF === 'over') data = data.filter(d => d._diff > 0);
+
+      const tbody = document.getElementById('wonAlarmTbody');
+      const empty = document.getElementById('wonAlarmEmpty');
+      if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      tbody.innerHTML = data.map((d, i) => {
+        const diffColor = d._diff < 0 ? '#f87171' : '#4ade80';
+        const diffSign = d._diff > 0 ? '+' : '';
+        return `<tr style="cursor:pointer" onclick="openWonAlarmModal('${d.id}')">
+          <td style="color:#475569;font-size:10px">${i+1}</td>
+          <td>
+            <div style="font-weight:600;color:#f1f5f9;font-size:12px">${fmt(d.deal_name)}</div>
+            <div style="font-size:10px;color:#0d9488;font-weight:600">${fmt(d.deal_owner)}</div>
+          </td>
+          <td style="font-size:10px;font-family:monospace;color:#64748b"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted">${fmt(d.deal_id)}</a></td>
+          <td style="font-size:11px;color:#94a3b8">${fmt(d._region)}</td>
+          <td style="font-size:11px;color:#94a3b8;white-space:nowrap">${fmt(d.team)}</td>
+          <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.arrival_date ? _amFmtDate(d.arrival_date) : '—'}</td>
+          <td style="text-align:right;font-size:11px;color:#60a5fa;white-space:nowrap">${fmtMoney(d._total)}</td>
+          <td style="text-align:right;font-size:11px;color:#4ade80;white-space:nowrap">${fmtMoney(d._paid)}</td>
+          <td style="text-align:right;font-size:11px;font-weight:700;color:${diffColor};white-space:nowrap">${diffSign}${fmtMoney(d._diff)}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function openWonAlarmModal(id) {
+      const d = (adminWonMismatchDeals || []).find(x => String(x.id) === String(id));
+      if (!d) return;
+      const region = (typeof AlarmEngine !== 'undefined') ? AlarmEngine.getRegion(d.team) : '—';
+      document.getElementById('wamDealName').textContent  = d.deal_name || '—';
+      document.getElementById('wamDealOwner').textContent = d.deal_owner || '—';
+      document.getElementById('wamRegion').textContent    = region || '—';
+      document.getElementById('wamTeam').textContent      = d.team || '—';
+      document.getElementById('wamStage').textContent     = d.stage || '—';
+      document.getElementById('wamArrival').textContent   = d.arrival_date ? _amFmtDate(d.arrival_date) : '—';
+      document.getElementById('wamAmount').textContent    = fmtMoney(d._total);
+      document.getElementById('wamPaid').textContent      = fmtMoney(d._paid);
+      const diffEl = document.getElementById('wamDiff');
+      diffEl.textContent = (d._diff > 0 ? '+' : '') + fmtMoney(d._diff) + (d._diff < 0 ? ' (' + I18N.t('eksik ödenmiş') + ')' : ' (' + I18N.t('fazla ödenmiş') + ')');
+      diffEl.style.color = d._diff < 0 ? '#f87171' : '#4ade80';
+      const zohoLink = document.getElementById('wamZohoLink');
+      if (d.id) { zohoLink.href = `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}`; zohoLink.style.display = ''; }
+      else zohoLink.style.display = 'none';
+      document.getElementById('wonAlarmModal').classList.add('open');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeWonAlarmModal() {
+      document.getElementById('wonAlarmModal').classList.remove('open');
+      document.body.style.overflow = '';
+    }
+
     // Ortak filtre — tablo render ve export aynı mantığı kullanır
     function filterAdminAlarms() {
       const region = document.getElementById('amFilterRegion').value;
@@ -1877,13 +2070,14 @@
         if (statusEl) statusEl.textContent = `${I18N.t('Tamamlandı:')} ${result.deals} ${I18N.t('deal,')} ${result.generated} alarm, ${result.cancelled || 0} ${I18N.t('İptal')}`;
         await loadAdminAlarms();
         // O an açık olan alarm-bağımlı görünümü de tazele
-        const curView = ['today','noshow','cancelled-alarms'].find(v => {
+        const curView = ['today','noshow','cancelled-alarms','won-alarms'].find(v => {
           const el = document.getElementById('view-' + v);
           return el && !el.classList.contains('hidden');
         });
         if (curView === 'today') renderAdminToday();
         else if (curView === 'noshow') renderAdminNoshow();
         else if (curView === 'cancelled-alarms') loadAdminCancelledDeals();
+        else if (curView === 'won-alarms') loadAdminWonAlarms();
       } catch(e) {
         if (statusEl) statusEl.textContent = I18N.t('Hata: ') + e.message;
       } finally {
@@ -2299,7 +2493,7 @@
     }
 
     function switchView(v) {
-      ['deals','summary','users','logs','alarms-monitor','today','noshow','cancelled-alarms'].forEach(name => {
+      ['deals','summary','users','logs','alarms-monitor','today','noshow','cancelled-alarms','won-alarms'].forEach(name => {
         document.getElementById('view-' + name).classList.toggle('hidden', name !== v);
         document.getElementById('nav-' + name).classList.toggle('active', name === v);
       });
@@ -2312,6 +2506,7 @@
 else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       else if (v === 'noshow') loadAdminAlarms().then(renderAdminNoshow);
       else if (v === 'cancelled-alarms') loadAdminCancelledDeals();
+      else if (v === 'won-alarms') loadAdminWonAlarms();
     }
 
     // ── Alarm Monitoring: canlı saat + dakika başı otomatik yenileme ──
