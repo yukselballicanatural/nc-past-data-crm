@@ -183,11 +183,7 @@
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
           System Logs
         </button>
-        <button onclick="switchView('transfer')" class="nav-btn" id="nav-transfer">
-          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-          Transfer Leads
-        </button>
-        <button onclick="switchView('alarms-monitor')" class="nav-btn" id="nav-alarms-monitor">
+<button onclick="switchView('alarms-monitor')" class="nav-btn" id="nav-alarms-monitor">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
           Alarm Monitoring
           <span id="adminAlarmBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:800;padding:1px 6px;min-width:20px;text-align:center">0</span>
@@ -659,93 +655,6 @@
       <div id="logsEmpty" class="hidden text-center py-16 text-slate-500 text-sm">Log bulunamadı.</div>
     </div>
 
-    <!-- TRANSFER VIEW -->
-    <div id="view-transfer" class="hidden">
-      <div class="flex items-center gap-3 mb-6">
-        <div class="w-10 h-10 rounded-xl bg-indigo-900/40 border border-indigo-700/40 flex items-center justify-center">
-          <svg class="h-5 w-5 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-        </div>
-        <div>
-          <h2 class="text-xl font-bold text-white">Transfer Leads</h2>
-          <p class="text-xs text-slate-400">Transfer all leads from one agent to another</p>
-        </div>
-      </div>
-
-      <div class="grid gap-5" style="grid-template-columns:360px 1fr;align-items:start">
-
-        <!-- LEFT: Form -->
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl p-6 space-y-5">
-          <div>
-            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1.5">From <span class="text-rose-500">*</span></label>
-            <select id="trFromAgent" onchange="onTransferFromChange()" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
-              <option value="">— Select Agent —</option>
-            </select>
-            <div id="trFromInfo" class="mt-2 text-xs text-slate-400 hidden"></div>
-          </div>
-
-          <div class="flex justify-center">
-            <div class="w-8 h-8 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center">
-              <svg class="h-4 w-4 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3"/></svg>
-            </div>
-          </div>
-
-          <div>
-            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1.5">To <span class="text-rose-500">*</span></label>
-            <select id="trToAgent" onchange="updateTransferPreview()" class="w-full bg-gray-800 border border-gray-700 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-indigo-500">
-              <option value="">— Select Agent —</option>
-            </select>
-          </div>
-
-          <div id="trPreview" class="hidden bg-gray-800/60 border border-indigo-800/40 rounded-xl p-4">
-            <div class="text-[10px] text-slate-500 uppercase font-semibold mb-2">Transfer Preview</div>
-            <div class="flex items-center gap-3 text-sm">
-              <div class="text-white font-semibold" id="trPreviewFrom">—</div>
-              <svg class="h-4 w-4 text-indigo-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-              <div class="text-white font-semibold" id="trPreviewTo">—</div>
-              <div class="ml-auto text-indigo-300 font-bold text-base" id="trPreviewCount">0 leads</div>
-            </div>
-          </div>
-
-          <div id="trError" style="display:none;color:#f87171;font-size:0.75rem;font-weight:600;padding:8px 12px;background:#450a0a;border:1px solid #7f1d1d;border-radius:8px"></div>
-
-          <button onclick="doTransfer()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-bold text-sm rounded-xl transition-all flex items-center justify-center gap-2">
-            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/></svg>
-            Transfer Leads
-          </button>
-        </div>
-
-        <!-- RIGHT: Lead List -->
-        <div class="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden" style="min-height:420px">
-          <div class="p-4 border-b border-gray-800 flex items-center justify-between">
-            <div>
-              <div class="text-sm font-bold text-slate-100" id="trLeadListTitle">Leads to Transfer</div>
-              <div class="text-[10px] text-slate-500 mt-0.5" id="trLeadListSub">Select an agent from the left</div>
-            </div>
-            <span id="trLeadListBadge" style="display:none" class="bg-indigo-900/60 text-indigo-300 text-[11px] font-bold px-2.5 py-0.5 rounded-full border border-indigo-800"></span>
-          </div>
-          <div id="trLeadListEmpty" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 20px;color:#334155;text-align:center">
-            <svg class="h-10 w-10 mb-3 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
-            <div class="text-xs font-semibold text-slate-600">No agent selected</div>
-            <div class="text-[11px] mt-1 text-slate-700">Select an agent from the "From" dropdown to see their leads here</div>
-          </div>
-          <div id="trLeadListTable" style="display:none;max-height:calc(100vh - 320px);overflow-y:auto">
-            <table class="w-full border-collapse text-[11px]">
-              <thead class="sticky top-0 bg-gray-900 z-10">
-                <tr class="border-b border-gray-800">
-                  <th class="text-left py-2.5 pl-4 pr-2 text-[9px] text-slate-500 uppercase tracking-wider font-bold">#</th>
-                  <th class="text-left py-2.5 px-2 text-[9px] text-slate-500 uppercase tracking-wider font-bold">Deal Name</th>
-                  <th class="text-left py-2.5 px-2 text-[9px] text-slate-500 uppercase tracking-wider font-bold">Stage</th>
-                  <th class="text-right py-2.5 px-2 text-[9px] text-slate-500 uppercase tracking-wider font-bold">Amount</th>
-                  <th class="text-left py-2.5 px-2 pr-4 text-[9px] text-slate-500 uppercase tracking-wider font-bold">Status</th>
-                </tr>
-              </thead>
-              <tbody id="trLeadListBody"></tbody>
-            </table>
-          </div>
-        </div>
-
-      </div>
-    </div>
 
   <!-- User Edit / Add Modal -->
   <div id="userModal" onclick="if(event.target===this)closeUserModal()">
@@ -2272,7 +2181,7 @@
     }
 
     function switchView(v) {
-      ['deals','summary','users','logs','transfer','alarms-monitor','today','noshow','cancelled-alarms'].forEach(name => {
+      ['deals','summary','users','logs','alarms-monitor','today','noshow','cancelled-alarms'].forEach(name => {
         document.getElementById('view-' + name).classList.toggle('hidden', name !== v);
         document.getElementById('nav-' + name).classList.toggle('active', name === v);
       });
@@ -2282,8 +2191,7 @@
       else _stopAlarmMonitorAutoRefresh();
       if (v === 'users') loadUsers();
       else if (v === 'logs') loadLogs();
-      else if (v === 'transfer') initTransferView();
-      else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
+else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       else if (v === 'noshow') loadAdminAlarms().then(renderAdminNoshow);
       else if (v === 'cancelled-alarms') loadAdminCancelledDeals();
     }
@@ -3588,120 +3496,6 @@
       if (box && dd && !box.contains(e.target) && !dd.contains(e.target)) closeTeamDropdown();
     });
 
-    // ── LEAD TRANSFER ─────────────────────────────────────────────
-    function initTransferView() {
-      const agents = [...new Set(allDeals.map(d => d['Deal Owner Name']).filter(Boolean))].sort();
-      const opts   = agents.map(a => `<option value="${a}">${a}</option>`).join('');
-      document.getElementById('trFromAgent').innerHTML = '<option value="">— Select Agent —</option>' + opts;
-      document.getElementById('trToAgent').innerHTML   = '<option value="">— Select Agent —</option>' + opts;
-      document.getElementById('trFromInfo').classList.add('hidden');
-      document.getElementById('trPreview').classList.add('hidden');
-      document.getElementById('trError').style.display = 'none';
-      renderTransferLeadList([]);
-    }
-
-    function renderTransferLeadList(deals, agentName) {
-      const empty = document.getElementById('trLeadListEmpty');
-      const table = document.getElementById('trLeadListTable');
-      const title = document.getElementById('trLeadListTitle');
-      const sub   = document.getElementById('trLeadListSub');
-      const badge = document.getElementById('trLeadListBadge');
-      if (!deals || deals.length === 0) {
-        empty.style.display = 'flex'; table.style.display = 'none'; badge.style.display = 'none';
-        title.textContent = 'Leads to Transfer';
-        sub.textContent   = 'Select an agent from the left';
-        return;
-      }
-      title.textContent = (agentName || '') + ' — Leads';
-      sub.textContent   = deals.length + ' leads to transfer';
-      badge.textContent = deals.length + ' leads';
-      badge.style.display = 'inline-block';
-      empty.style.display = 'none'; table.style.display = 'block';
-      const stageColor = s => {
-        s = (s||'').toLowerCase();
-        if (s.includes('won')) return '#4ade80';
-        if (s.includes('cancel')) return '#f87171';
-        if (s.includes('pending')) return '#fb923c';
-        if (s.includes('confirm')) return '#34d399';
-        return '#94a3b8';
-      };
-      const statusLabel = s => s === 'locked' ? 'Locked' : s === 'not_reached' ? 'Not Reached' : 'Pending';
-      const statusColor = s => s === 'locked' ? '#818cf8' : s === 'not_reached' ? '#a8a29e' : '#64748b';
-      const statusBg    = s => s === 'locked' ? '#1e1b4b' : s === 'not_reached' ? '#1c1917' : '#1e293b';
-      document.getElementById('trLeadListBody').innerHTML = deals.map((d, i) => `
-        <tr style="border-bottom:1px solid #1f2937;transition:background 0.1s" onmouseover="this.style.background='#1f2937'" onmouseout="this.style.background='transparent'">
-          <td style="padding:8px 8px 8px 16px;color:#475569;font-size:10px">${i+1}</td>
-          <td style="padding:8px;color:#f1f5f9;font-weight:600;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${d['Deal Name']||'—'}</td>
-          <td style="padding:8px"><span style="font-size:10px;font-weight:600;color:${stageColor(d['Stage'])}">${d['Stage']||'—'}</span></td>
-          <td style="padding:8px;text-align:right;color:#60a5fa;font-weight:600">€${Number(d['Deal Amount']||0).toLocaleString()}</td>
-          <td style="padding:8px"><span style="font-size:10px;padding:2px 8px;border-radius:10px;font-weight:600;background:${statusBg(d.status)};color:${statusColor(d.status)}">${statusLabel(d.status)}</span></td>
-        </tr>`).join('');
-    }
-
-    function onTransferFromChange() {
-      const from = document.getElementById('trFromAgent').value;
-      const infoEl = document.getElementById('trFromInfo');
-      document.getElementById('trPreview').classList.add('hidden');
-      if (!from) { infoEl.classList.add('hidden'); renderTransferLeadList([]); return; }
-      const deals = allDeals.filter(d => d['Deal Owner Name'] === from);
-      infoEl.textContent = `${deals.length} leads from this agent`;
-      infoEl.classList.remove('hidden');
-      renderTransferLeadList(deals, from);
-      updateTransferPreview();
-    }
-
-    function updateTransferPreview() {
-      const from = document.getElementById('trFromAgent').value;
-      const to   = document.getElementById('trToAgent').value;
-      const preview = document.getElementById('trPreview');
-      if (!from || !to || from === to) { preview.classList.add('hidden'); return; }
-      const count = allDeals.filter(d => d['Deal Owner Name'] === from).length;
-      document.getElementById('trPreviewFrom').textContent  = from;
-      document.getElementById('trPreviewTo').textContent    = to;
-      document.getElementById('trPreviewCount').textContent = count + ' lead';
-      preview.classList.remove('hidden');
-    }
-
-    async function doTransfer() {
-      const from  = document.getElementById('trFromAgent').value;
-      const to    = document.getElementById('trToAgent').value;
-      const errEl = document.getElementById('trError');
-      errEl.style.display = 'none';
-      if (!from) { errEl.textContent = 'Please select the source agent.'; errEl.style.display = 'block'; return; }
-      if (!to)   { errEl.textContent = 'Please select the target agent.';  errEl.style.display = 'block'; return; }
-      if (from === to) { errEl.textContent = 'Source and target agent cannot be the same.'; errEl.style.display = 'block'; return; }
-      const deals = allDeals.filter(d => d['Deal Owner Name'] === from);
-      if (deals.length === 0) { errEl.textContent = `Agent "${from}" has no leads to transfer.`; errEl.style.display = 'block'; return; }
-
-      showSiteConfirm(
-        'Confirm Lead Transfer',
-        `<strong style="color:#fca5a5">${from}</strong>'s <strong style="color:#a5f3fc">${deals.length} leads</strong> will be transferred to <strong style="color:#86efac">${to}</strong>.<br><br>This action can be undone.`,
-        'Transfer', '#4f46e5',
-        async () => {
-          try {
-            const resp = await fetch(
-              `${SUPABASE_URL}/rest/v1/deals?deal_owner=eq.${encodeURIComponent(from)}`,
-              {
-                method: 'PATCH',
-                headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', Prefer: 'return=minimal' },
-                body: JSON.stringify({ deal_owner: to })
-              }
-            );
-            if (!resp.ok) throw new Error(await resp.text());
-            addLog('LEAD_TRANSFER', `${deals.length} leads transferred: ${from} → ${to}`);
-            allDeals.forEach(d => { if (d['Deal Owner Name'] === from) d['Deal Owner Name'] = to; });
-            showSiteNotice(`✓ ${deals.length} leads transferred successfully.`, 'success', 5000);
-            document.getElementById('trFromAgent').value = '';
-            document.getElementById('trToAgent').value   = '';
-            document.getElementById('trFromInfo').classList.add('hidden');
-            document.getElementById('trPreview').classList.add('hidden');
-          } catch(e) {
-            showSiteNotice('Transfer failed: ' + e.message, 'error');
-          }
-        }
-      );
-    }
-    // ──────────────────────────────────────────────────────────────
 
     function rollbackLog(logId) {
       const l = allLogs.find(x => x.id === logId);
