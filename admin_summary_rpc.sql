@@ -202,12 +202,18 @@ grant execute on function public.admin_refresh_language_breakdown() to anon, aut
 -- Frontend'in çağırdığı fonksiyon (isim/imza AYNI kaldı, admin.html'de
 -- değişiklik gerekmiyor). Cache'te veri varsa ANINDA döner; hiç yoksa
 -- (ilk kurulum) bu seferlik yavaş hesaplayıp cache'i doldurur.
+-- 'set statement_timeout' burada da (admin_refresh_language_breakdown içindeki
+-- ile aynı) gerekiyor: PostgREST çağrısının GERÇEK giriş noktası bu fonksiyon,
+-- anon rolünün varsayılan (kısa) zaman aşımı önce buraya uygulanıyor — içerideki
+-- nested fonksiyonun kendi SET'i bu dıştaki sınırı geçersiz kılmaya yetmiyordu,
+-- bu yüzden cache hiç dolmadan (57014) kesiliyordu.
 create or replace function public.admin_language_breakdown()
 returns jsonb
 language plpgsql
 stable
 security definer
 set search_path = public
+set statement_timeout to '25000'
 as $$
 declare
   cached jsonb;
