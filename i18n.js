@@ -239,6 +239,7 @@
     'Son çalıştırma:': 'Last run:',
     'deal gösteriliyor': 'deals shown',
     'alarm gösteriliyor': 'alarms shown',
+    'hasta gösteriliyor': 'patients shown',
     'kayıt': 'records',
     'takımı alarmları': "team's alarms",
     'bölgesi alarmları': 'region alarms',

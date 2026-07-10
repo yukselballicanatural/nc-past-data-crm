@@ -938,8 +938,26 @@
         <option value="Flight Ticket">Flight Ticket</option>
       </select>
     </div>
-    <div id="todayGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
-    <div id="todayEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">Bugün için programlanmış hasta bulunamadı.</div>
+    <div class="am-table-wrap" style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:#0f172a">
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">#</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Hasta</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Bölge / Takım</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">P / FT</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:right;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Tutar</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:right;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Ödenen</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Durum</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Not</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Aksiyon</th>
+          </tr>
+        </thead>
+        <tbody id="todayTbody"></tbody>
+      </table>
+      <div id="todayEmpty" style="display:none;text-align:center;padding:40px 16px;color:#475569;font-size:13px">Bugün için programlanmış hasta bulunamadı.</div>
+    </div>
+    <div class="mt-2 text-xs text-slate-500" id="todayCount"></div>
   </div>
 
   <!-- ════════════════ NO-SHOW VIEW ════════════════ -->
@@ -1526,32 +1544,36 @@
       const pftSel = document.getElementById('todayPftFilter');
       if (pftSel && pftSel.value) data = data.filter(a => a.payment_or_flight_ticket === pftSel.value);
 
-      const grid  = document.getElementById('todayGrid');
+      const tbody = document.getElementById('todayTbody');
       const empty = document.getElementById('todayEmpty');
-      if (!data.length) { grid.innerHTML = ''; empty.style.display = 'block'; return; }
+      document.getElementById('todayCount').textContent = `${data.length} ${I18N.t('hasta gösteriliyor')}`;
+      if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
       empty.style.display = 'none';
 
-      grid.innerHTML = data.map(a => {
+      tbody.innerHTML = data.map((a, i) => {
         const sm = _amStatusMeta(a.status);
         const pftDisplay = a.payment_or_flight_ticket === 'Payment'
           ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#2e1065;color:#c084fc;border:1px solid #4c1d95">Payment</span>'
           : a.payment_or_flight_ticket === 'Flight Ticket'
             ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#1e3a5f;color:#60a5fa;border:1px solid #1e40af">Flight Ticket</span>'
-            : '';
-        return `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px;cursor:pointer" onclick="openAdminAlarmModal('${a.id}')">
-          <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px;gap:8px">
-            <div style="min-width:0;flex:1">
-              <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmt(a.deal_name)}</div>
-              <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600">${fmt(a.deal_owner)}</div>
-              <div style="font-size:9px;color:#64748b;margin-top:1px">${fmt(a.team)} · ${fmt(a.region)}</div>
-            </div>
-            <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-              ${pftDisplay}
-              <span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.color}22;color:${sm.color}">${sm.label}</span>
-            </div>
-          </div>
-          ${a.note ? `<div style="font-size:10px;color:#64748b;background:#1e293b;padding:7px 10px;border-radius:8px;border:1px solid #334155;margin-top:8px">${fmt(a.note)}</div>` : ''}
-        </div>`;
+            : '—';
+        const fin = _amDealAmountFor(a.deal_id);
+        return `<tr style="cursor:pointer" onclick="openAdminAlarmModal('${a.id}')">
+          <td style="padding:8px 10px;font-size:10px;color:#475569;border-bottom:1px solid #0f172a">${i+1}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a">
+            <div style="font-size:12px;font-weight:600;color:#f1f5f9;white-space:nowrap">${fmt(a.deal_name)}${a.deal_id ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="am-zoho-link" title="Zoho'da Aç">↗</a>` : ''}</div>
+            <div style="font-size:10px;color:#0d9488;font-weight:600">${fmt(a.deal_owner)}</div>
+          </td>
+          <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a;white-space:nowrap">${fmt(a.team)}<br><span style="color:#64748b">${fmt(a.region)}</span></td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">${pftDisplay}</td>
+          <td style="padding:8px 10px;font-size:11px;color:#60a5fa;border-bottom:1px solid #0f172a;text-align:right;white-space:nowrap">${fin ? fmtMoney(fin.amount) : '—'}</td>
+          <td style="padding:8px 10px;font-size:11px;color:#4ade80;border-bottom:1px solid #0f172a;text-align:right;white-space:nowrap">${fin ? fmtMoney(fin.paid) : '—'}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap"><span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.color}22;color:${sm.color}">${sm.label}</span></td>
+          <td style="padding:8px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b;border-bottom:1px solid #0f172a">${a.note ? fmt(a.note) : '—'}</td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">
+            <button onclick="event.stopPropagation();openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
+          </td>
+        </tr>`;
       }).join('');
     }
 
