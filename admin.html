@@ -2145,9 +2145,11 @@
         if (pft    && a.payment_or_flight_ticket !== pft) return false;
         if (thresh) {
           // "Ng" filtresi: kalan gün <= N olan alarmları göster (gecikmişler dahil,
-          // en aciller de görünsün). Statik threshold_days DEĞİL, canlı hesaplanan
-          // kalan gün kullanılıyor — tabloda "Kalan" sütununda görünenle birebir aynı.
-          const dr = a.days_remaining !== null && a.days_remaining !== undefined ? a.days_remaining : _amDaysUntil(a.reference_date);
+          // en aciller de görünsün). alarms.days_remaining alarm OLUŞTURULDUĞU ANDA
+          // yazılan statik bir değer, sonradan hiç güncellenmiyor — o yüzden BURADA
+          // KULLANILMAZ, her zaman reference_date'ten canlı hesaplanır (tabloda
+          // "Kalan" sütununda görünenle birebir aynı olsun diye).
+          const dr = _amDaysUntil(a.reference_date);
           if (dr === null || dr > Number(thresh)) return false;
         }
         if (dFrom  && (!a.reference_date || a.reference_date < dFrom)) return false;
@@ -2194,7 +2196,7 @@
       tbody.innerHTML = data.map((a, i) => {
         const tm  = _amTypeMeta(a.alarm_type);
         const sm  = _amStatusMeta(a.status);
-        const days = a.days_remaining !== null ? a.days_remaining : _amDaysUntil(a.reference_date);
+        const days = _amDaysUntil(a.reference_date);
         const overdue = _amIsOverdue(a);
         const daysTxt = days === null ? '—' : days < 0 ? `<span style="color:#f87171;font-weight:700">${Math.abs(days)}g ${I18N.t('GEÇ')}</span>` : days === 0 ? `<span style="color:#4ade80;font-weight:800">${I18N.t('BUGÜN')}</span>` : days <= 3 ? `<span style="color:#f87171">${days}g</span>` : days <= 7 ? `<span style="color:#fb923c">${days}g</span>` : `<span style="color:#60a5fa">${days}g</span>`;
         const rowBg = overdue ? 'rgba(127,29,29,0.12)' : '';
@@ -2247,7 +2249,7 @@
       document.getElementById('aamRefField').textContent  = a.reference_field || '—';
       document.getElementById('aamRefDate').textContent   = _amFmtDate(a.reference_date);
       document.getElementById('aamCreatedAt').textContent = _amFmtDateTime(a.created_at);
-      const days = a.days_remaining !== null ? a.days_remaining : _amDaysUntil(a.reference_date);
+      const days = _amDaysUntil(a.reference_date);
       document.getElementById('aamDaysLeft').innerHTML = days === null ? '—'
         : days < 0  ? `<span style="color:#f87171;font-weight:700">${Math.abs(days)} gün GECİKMİŞ</span>`
         : days === 0 ? `<span style="color:#4ade80;font-weight:800">BUGÜN</span>`
