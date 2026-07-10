@@ -349,6 +349,8 @@
               <option value="">All</option><option value="pending">No Result</option><option value="locked">Has Result</option><option value="unlock">Unlock Req.</option></select></div>
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Search</label>
             <input id="fSearch" class="filter-input" placeholder="Name, ID, result..." oninput="applyFilters()"></div>
+        </div>
+        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;padding-top:8px">
           <div>
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date</label>
             <div style="display:flex;align-items:center;gap:6px">
@@ -357,7 +359,7 @@
               <input type="date" id="dealDateTo" onchange="applyFilters()">
             </div>
           </div>
-          <div>
+          <div style="border-left:1px solid #1e293b;padding-left:16px">
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created Time</label>
             <div style="display:flex;align-items:center;gap:6px">
               <input type="date" id="createdDateFrom" onchange="applyFilters()">
@@ -478,7 +480,7 @@
 
       <!-- Analytics Filtreleri -->
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-4">
-        <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end">
+        <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end">
           <div>
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Bölge</label>
             <select id="anFilterRegion" onchange="_anOnRegionChange();loadAnalyticsSummary()" class="filter-select">
@@ -493,7 +495,7 @@
               <option value="">Tüm Takım Liderleri</option>
             </select>
           </div>
-          <div>
+          <div style="border-left:1px solid #1e293b;padding-left:16px">
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date</label>
             <div style="display:flex;align-items:center;gap:6px">
               <input id="anFilterDateFrom" type="date" onchange="loadAnalyticsSummary()" title="Arrival Date başlangıç">
@@ -501,7 +503,7 @@
               <input id="anFilterDateTo" type="date" onchange="loadAnalyticsSummary()" title="Arrival Date bitiş">
             </div>
           </div>
-          <div>
+          <div style="border-left:1px solid #1e293b;padding-left:16px">
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created Time</label>
             <div style="display:flex;align-items:center;gap:6px">
               <input id="anFilterCreatedFrom" type="date" onchange="loadAnalyticsSummary()" title="Created Time başlangıç">
