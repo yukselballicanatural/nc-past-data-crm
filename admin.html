@@ -3092,10 +3092,11 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
         const v = trendMap[m];
         const h = Math.max(6, (v.count/maxCount*130));
         return `
-          <div class="group flex flex-col items-center gap-1 flex-shrink-0 cursor-default" style="width:56px" title="${m}: ${v.count} deal · ${fmtMoney(v.amount)}">
+          <div class="group flex flex-col items-center gap-1 flex-shrink-0 cursor-default" style="width:64px" title="${m}: ${v.count} deal · ${fmtMoney(v.amount)}">
             <div class="text-[10px] text-slate-400 group-hover:text-white transition-colors">${v.count}</div>
             <div class="w-6 bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t transition-all duration-700 ease-out group-hover:from-indigo-500 group-hover:to-indigo-300 group-hover:scale-x-125" style="height:${h.toFixed(0)}px"></div>
             <div class="text-[9px] text-slate-500 group-hover:text-slate-300 transition-colors">${m}</div>
+            <div class="text-[9px] font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">${fmtCompact(v.amount)}</div>
           </div>`;
       }).join('') : '<div class="text-xs text-slate-600 py-8 mx-auto">Arrival date verisi yok.</div>';
 
@@ -3317,10 +3318,11 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       document.getElementById('trendChart').innerHTML = months.length ? months.map(m => {
         const h = Math.max(6, (m.cnt/maxCount*130));
         return `
-          <div class="group flex flex-col items-center gap-1 flex-shrink-0 cursor-default" style="width:56px" title="${m.ym}: ${m.cnt} deal · ${fmtMoney(m.amount)}">
+          <div class="group flex flex-col items-center gap-1 flex-shrink-0 cursor-default" style="width:64px" title="${m.ym}: ${m.cnt} deal · ${fmtMoney(m.amount)}">
             <div class="text-[10px] text-slate-400 group-hover:text-white transition-colors">${m.cnt}</div>
             <div class="w-6 bg-gradient-to-t from-indigo-600 to-indigo-400 rounded-t transition-all duration-700 ease-out group-hover:from-indigo-500 group-hover:to-indigo-300 group-hover:scale-x-125" style="height:${h.toFixed(0)}px"></div>
             <div class="text-[9px] text-slate-500 group-hover:text-slate-300 transition-colors">${m.ym}</div>
+            <div class="text-[9px] font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">${fmtCompact(m.amount)}</div>
           </div>`;
       }).join('') : '<div class="text-xs text-slate-600 py-8 mx-auto">Arrival date verisi yok.</div>';
 
