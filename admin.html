@@ -480,6 +480,9 @@
         <input id="anFilterDateFrom" type="date" onchange="loadAnalyticsSummary()" class="filter-select" title="Arrival Date başlangıç">
         <span class="text-slate-500 text-xs">—</span>
         <input id="anFilterDateTo" type="date" onchange="loadAnalyticsSummary()" class="filter-select" title="Arrival Date bitiş">
+        <input id="anFilterCreatedFrom" type="date" onchange="loadAnalyticsSummary()" class="filter-select" title="Created Time başlangıç">
+        <span class="text-slate-500 text-xs">—</span>
+        <input id="anFilterCreatedTo" type="date" onchange="loadAnalyticsSummary()" class="filter-select" title="Created Time bitiş">
         <button onclick="_anResetFilters()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700">Temizle</button>
         <span id="anFilterLoading" style="display:none;font-size:11px;color:#818cf8">Yükleniyor…</span>
       </div>
@@ -3052,8 +3055,41 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       document.getElementById('anFilterTeam').value = '';
       document.getElementById('anFilterDateFrom').value = '';
       document.getElementById('anFilterDateTo').value = '';
+      document.getElementById('anFilterCreatedFrom').value = '';
+      document.getElementById('anFilterCreatedTo').value = '';
       _anPopulateTeamOptions();
       loadAnalyticsSummary();
+    }
+    // Analytics filtrelerini (Bölge/Takım Lideri/Arrival/Created) istemci
+    // tarafında bir deal listesine uygular — RPC yokken veya Created Time
+    // filtresi aktifken (RPC bunu desteklemiyor) kullanılır.
+    function _anFilterDealsClientSide(list) {
+      const teams  = _anResolveTeams();
+      const dFrom  = document.getElementById('anFilterDateFrom')?.value || '';
+      const dTo    = document.getElementById('anFilterDateTo')?.value || '';
+      const cFrom  = document.getElementById('anFilterCreatedFrom')?.value || '';
+      const cTo    = document.getElementById('anFilterCreatedTo')?.value || '';
+      let data = list;
+      if (teams) { const set = new Set(teams); data = data.filter(d => set.has(d['Team Group'])); }
+      if (dFrom || dTo) {
+        data = data.filter(d => {
+          const dt = parseDateString(d['Arrival Date']);
+          if (!dt) return false;
+          if (dFrom && dt < parseDateString(dFrom)) return false;
+          if (dTo && dt > parseDateString(dTo)) return false;
+          return true;
+        });
+      }
+      if (cFrom || cTo) {
+        data = data.filter(d => {
+          const dt = parseDateString(d['Created Time']);
+          if (!dt) return false;
+          if (cFrom && dt < parseDateString(cFrom)) return false;
+          if (cTo && dt > parseDateString(cTo)) return false;
+          return true;
+        });
+      }
+      return data;
     }
     function _anResolveTeams() {
       if (!window.TeamMap) return null;
@@ -3068,8 +3104,14 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       const teams  = _anResolveTeams();
       const dFrom  = document.getElementById('anFilterDateFrom')?.value || '';
       const dTo    = document.getElementById('anFilterDateTo')?.value || '';
-      analyticsFilterActive = !!(teams || dFrom || dTo);
-      if (!dealSummary) { renderSummary(); return; } // RPC yok — eski istemci-tarafı hesaplamaya düş
+      const cFrom  = document.getElementById('anFilterCreatedFrom')?.value || '';
+      const cTo    = document.getElementById('anFilterCreatedTo')?.value || '';
+      analyticsFilterActive = !!(teams || dFrom || dTo || cFrom || cTo);
+      // Created Time filtresi RPC'de desteklenmiyor (RPC sadece Arrival Date
+      // alır) — aktifse ya da RPC hiç yoksa dogrudan client-side (allDeals,
+      // zaten tarayıcıda tam yüklü) hesaplamaya düş. Bu yol Bölge/Takım
+      // Lideri/Arrival filtrelerini de kapsar, RPC yoksa onları da atlamaz.
+      if (cFrom || cTo || !dealSummary) { _renderSummaryClientSide(); return; }
       if (!analyticsFilterActive) { renderSummaryFromRPC(dealSummary); return; }
       const loadingEl = document.getElementById('anFilterLoading');
       if (loadingEl) loadingEl.style.display = '';
@@ -3078,15 +3120,20 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       if (s) renderSummaryFromRPC(s);
     }
 
-    function renderSummary() {
-      if (dealSummary) { loadAnalyticsSummary(); return; }
+    // Analytics açıldığında / dealler yüklendiğinde çağrılan giriş noktası —
+    // RPC varsa ve Created Time filtresi aktif değilse hızlı RPC yoluna
+    // (loadAnalyticsSummary) yönlendirir; aksi halde client-side hesaplar.
+    function renderSummary() { loadAnalyticsSummary(); }
+
+    function _renderSummaryClientSide() {
+      const data = _anFilterDealsClientSide(allDeals);
       // ── KPI Strip ────────────────────────────────────────────
-      const total = allDeals.length;
-      const totalAmount = allDeals.reduce((s,d) => s + (Number(d['Deal Amount'])||0), 0);
-      const totalPaid   = allDeals.reduce((s,d) => s + (Number(d['Paid Amount'])||0), 0);
-      const totalUnpaid = allDeals.reduce((s,d) => s + (Number(d['Unpaid Amount'])||0), 0);
-      const visited     = allDeals.filter(d => d['Visit Status'] === 'Visited').length;
-      const won         = allDeals.filter(d => (d['Stage']||'').toLowerCase().includes('won')).length;
+      const total = data.length;
+      const totalAmount = data.reduce((s,d) => s + (Number(d['Deal Amount'])||0), 0);
+      const totalPaid   = data.reduce((s,d) => s + (Number(d['Paid Amount'])||0), 0);
+      const totalUnpaid = data.reduce((s,d) => s + (Number(d['Unpaid Amount'])||0), 0);
+      const visited     = data.filter(d => d['Visit Status'] === 'Visited').length;
+      const won         = data.filter(d => (d['Stage']||'').toLowerCase().includes('won')).length;
       const kpis = [
         { label: 'Toplam Deal', value: total.toLocaleString('tr-TR'), color: 'text-indigo-400' },
         { label: 'Toplam Ciro', value: fmtMoney(totalAmount), color: 'text-emerald-400' },
@@ -3105,7 +3152,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
 
       // Payment status
       const payMap = {};
-      allDeals.forEach(d => { const p = d['Payment Status']||'Bilinmiyor'; payMap[p] = (payMap[p]||0)+1; });
+      data.forEach(d => { const p = d['Payment Status']||'Bilinmiyor'; payMap[p] = (payMap[p]||0)+1; });
       const maxPay = Math.max(...Object.values(payMap), 1);
       const payColors = { Paid:'bg-emerald-500', Partial:'bg-amber-500', Unpaid:'bg-rose-500' };
       document.getElementById('paymentChart').innerHTML =
@@ -3117,7 +3164,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
 
       // Region distribution
       const regionMap = {};
-      allDeals.forEach(d => { const r = d['Region']||'Bilinmiyor'; regionMap[r] = (regionMap[r]||0)+1; });
+      data.forEach(d => { const r = d['Region']||'Bilinmiyor'; regionMap[r] = (regionMap[r]||0)+1; });
       const maxR = Math.max(...Object.values(regionMap), 1);
       document.getElementById('regionChart').innerHTML =
         Object.entries(regionMap).sort((a,b) => b[1]-a[1]).map(([r,c]) => `
@@ -3128,7 +3175,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
 
       // Monthly trend (by Arrival Date)
       const trendMap = {};
-      allDeals.forEach(d => {
+      data.forEach(d => {
         const dt = d['Arrival Date'];
         if (!dt) return;
         const ym = dt.slice(0,7);
@@ -3152,7 +3199,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
 
       // Result codes breakdown
       const rcMap = {};
-      allDeals.filter(d => d.result_code).forEach(d => {
+      data.filter(d => d.result_code).forEach(d => {
         const key = (d.result_code||'') + '|||' + (d.sub_code||'—');
         if (!rcMap[key]) rcMap[key] = { code: d.result_code, sub: d.sub_code||'—', count: 0, agents: new Set() };
         rcMap[key].count++;
@@ -3169,7 +3216,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
 
       // Teams
       const teamMap = {};
-      allDeals.forEach(d => {
+      data.forEach(d => {
         const t = d['Team Group'] || 'Bilinmiyor';
         if (!teamMap[t]) teamMap[t] = { deals:0, paid:0, unpaid:0, won:0 };
         teamMap[t].deals++;
@@ -3182,7 +3229,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
 
       // Stages
       const stageMap = {};
-      allDeals.forEach(d => { const s = d['Stage']||'Bilinmiyor'; stageMap[s] = (stageMap[s]||0)+1; });
+      data.forEach(d => { const s = d['Stage']||'Bilinmiyor'; stageMap[s] = (stageMap[s]||0)+1; });
       const maxS = Math.max(...Object.values(stageMap), 1);
       document.getElementById('stageChart').innerHTML =
         Object.entries(stageMap).sort((a,b) => b[1]-a[1]).map(([s,c]) => `
@@ -3193,7 +3240,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
 
       // Agents
       const agentMap = {};
-      allDeals.forEach(d => {
+      data.forEach(d => {
         const a = d['Deal Owner Name']||'Bilinmiyor';
         if (!agentMap[a]) agentMap[a] = { deals:0, paid:0, results:0 };
         agentMap[a].deals++;
@@ -3205,7 +3252,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
 
       // Languages
       const langMap = {};
-      allDeals.forEach(d => { const l = d['Language']||'Bilinmiyor'; langMap[l] = (langMap[l]||0)+1; });
+      data.forEach(d => { const l = d['Language']||'Bilinmiyor'; langMap[l] = (langMap[l]||0)+1; });
       document.getElementById('langChart').innerHTML =
         Object.entries(langMap).sort((a,b) => b[1]-a[1]).map(([l,c]) => `
           <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${languageLabel(l)}: ${(c/total*100).toFixed(1)}%">
@@ -4214,7 +4261,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
         }
         addLog('LOGIN', 'Admin panele giriş yapıldı');
         document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
-        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'anFilterDateFrom', 'anFilterDateTo'].forEach(id => NCDatePicker.attach(id));
+        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo'].forEach(id => NCDatePicker.attach(id));
         _anPopulateTeamOptions();
         loadDeals();
         loadAdminAlarms();
