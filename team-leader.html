@@ -623,8 +623,8 @@
       </div>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-      <input id="wonFilterSearch" type="text" placeholder="Hasta veya danışman ara..." oninput="renderWonAlarms()" class="filter-select" style="flex:1;min-width:200px">
-      <select id="wonFilterDir" onchange="renderWonAlarms()" class="filter-select">
+      <input id="wonFilterSearch" type="text" placeholder="Hasta veya danışman ara..." oninput="_waApplyFilters()" class="filter-select" style="flex:1;min-width:200px">
+      <select id="wonFilterDir" onchange="_waApplyFilters()" class="filter-select">
         <option value="">Tümü (Eksik + Fazla)</option>
         <option value="under">Sadece Eksik Ödenen</option>
         <option value="over">Sadece Fazla Ödenen</option>
@@ -645,6 +645,13 @@
       <div id="wonEmpty" style="display:none;text-align:center;padding:60px 16px">
         <div style="font-size:36px;margin-bottom:12px">✅</div>
         <p style="color:#475569;font-size:14px">Ödeme uyuşmazlığı olan Won deal bulunamadı.</p>
+      </div>
+      <div id="wonPager" style="display:none;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-top:1px solid #1e293b">
+        <span style="font-size:11px;color:#64748b" id="wonPageInfo"></span>
+        <div style="display:flex;gap:6px">
+          <button onclick="_waChangePage(-1)" id="wonPrevBtn" style="padding:6px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">← Önceki</button>
+          <button onclick="_waChangePage(1)" id="wonNextBtn" style="padding:6px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Sonraki →</button>
+        </div>
       </div>
     </div>
   </div>
@@ -2395,29 +2402,39 @@
     empty.style.display = 'none';
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
     try {
-      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+      // raw jsonb'ye DOKUNULMUYOR — 169 alanli TOAST'li jsonb'yi binlerce Won
+      // satirinda acmak eskiden Language dagilimini 10-15 sn'ye kadar
+      // yavaslatmisti. amount/total_paid_amount zaten gercek kolon oldugu
+      // icin raw fallback'ine ihtiyac yok. Sayfalar paralel cekilir.
       const isRM = currentUser.role === 'regional-manager';
       const stageParam = encodeURIComponent('ilike.*won*');
-      let all = [], offset = 0;
-      while (true) {
-        let url = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}` +
-          `&select=id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,raw&order=deal_name.asc&limit=1000&offset=${offset}`;
-        if (!isRM && currentUser.team) url += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
-        else if (isRM) url += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
-        const r = await fetch(url, { headers: H });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const batch = await r.json();
-        if (!Array.isArray(batch) || !batch.length) break;
-        all.push(...batch);
-        if (batch.length < 1000) break;
-        offset += 1000;
+      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount';
+      const PAGE = 1000;
+      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
+      if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+      else if (isRM) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
+
+      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'count=exact' };
+      const first = await fetch(`${baseUrl}&offset=0`, { headers: H });
+      if (!first.ok) throw new Error('HTTP ' + first.status);
+      const firstRows = await first.json();
+      const range = first.headers.get('content-range');
+      const total = range && range.includes('/') ? Number(range.split('/')[1]) : firstRows.length;
+      let all = firstRows.slice();
+      const pages = Math.max(1, Math.ceil(total / PAGE));
+      if (pages > 1) {
+        const H2 = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const rest = await Promise.all(Array.from({ length: pages - 1 }, (_, i) => {
+          const offset = (i + 1) * PAGE;
+          return fetch(`${baseUrl}&offset=${offset}`, { headers: H2 }).then(r => r.ok ? r.json() : []);
+        }));
+        rest.forEach(batch => { if (Array.isArray(batch)) all.push(...batch); });
       }
       wonMismatchDeals = all.map(d => {
-        const raw = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw || {});
-        const total = d.amount ?? raw.Amount ?? raw.Grand_Total_2 ?? null;
-        const paid = Number(d.total_paid_amount ?? raw.Total_Paid_Amount ?? 0) || 0;
+        const total = d.amount ?? null;
+        const paid = Number(d.total_paid_amount) || 0;
         const diff = total !== null ? Math.round((paid - total) * 100) / 100 : null;
-        return { ...d, raw, _total: total, _paid: paid, _diff: diff };
+        return { ...d, _total: total, _paid: paid, _diff: diff };
       }).filter(d => d._total !== null && d._diff !== 0);
       wonMismatchDeals.sort((a, b) => Math.abs(b._diff) - Math.abs(a._diff));
       const badge = document.getElementById('navBadgeWon');
@@ -2425,12 +2442,27 @@
         if (wonMismatchDeals.length) { badge.textContent = wonMismatchDeals.length; badge.style.display = ''; }
         else badge.style.display = 'none';
       }
+      _waCurrentPage = 1;
       renderWonAlarms();
     } catch(e) {
       tbody.innerHTML = '';
       empty.querySelector('p').textContent = I18N.t('Yükleme hatası: ') + e.message;
       empty.style.display = 'block';
     }
+  }
+
+  // Filtrelenmiş sonuçlar 50'şer kayıtlık sayfalara bölünür.
+  const WA_PAGE_SIZE = 50;
+  let _waCurrentPage = 1;
+  let _waLastFiltered = [];
+  function _waChangePage(dir) {
+    const maxPage = Math.max(1, Math.ceil(_waLastFiltered.length / WA_PAGE_SIZE));
+    _waCurrentPage = Math.max(1, Math.min(maxPage, _waCurrentPage + dir));
+    renderWonAlarms();
+  }
+  function _waApplyFilters() {
+    _waCurrentPage = 1;
+    renderWonAlarms();
   }
 
   function renderWonAlarms() {
@@ -2440,16 +2472,24 @@
     if (search) data = data.filter(d => [d.deal_name, d.deal_owner, d.team].join(' ').toLowerCase().includes(search));
     if (dirF === 'under') data = data.filter(d => d._diff < 0);
     else if (dirF === 'over') data = data.filter(d => d._diff > 0);
+    _waLastFiltered = data;
 
     const tbody = document.getElementById('wonTbody');
     const empty = document.getElementById('wonEmpty');
-    if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+    const pager = document.getElementById('wonPager');
+    if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; pager.style.display = 'none'; return; }
     empty.style.display = 'none';
-    tbody.innerHTML = data.map((d, i) => {
+
+    const maxPage = Math.max(1, Math.ceil(data.length / WA_PAGE_SIZE));
+    _waCurrentPage = Math.min(_waCurrentPage, maxPage);
+    const pageStart = (_waCurrentPage - 1) * WA_PAGE_SIZE;
+    const pageData = data.slice(pageStart, pageStart + WA_PAGE_SIZE);
+
+    tbody.innerHTML = pageData.map((d, i) => {
       const diffColor = d._diff < 0 ? '#f87171' : '#4ade80';
       const diffSign = d._diff > 0 ? '+' : '';
-      return `<tr style="cursor:pointer" onclick='openDealModal(wonMismatchDeals[${i}])'>
-        <td style="color:#475569;font-size:10px">${i+1}</td>
+      return `<tr style="cursor:pointer" onclick='openDealModal(wonMismatchDeals.find(x=>String(x.id)==="${d.id}"))'>
+        <td style="color:#475569;font-size:10px">${pageStart + i + 1}</td>
         <td style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap">${fmt(d.deal_name)}</td>
         <td style="font-size:10px;font-family:monospace;white-space:nowrap"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted">${fmt(d.deal_id)}</a></td>
         <td style="color:#94a3b8;font-size:11px;white-space:nowrap">${fmt(d.deal_owner)}</td>
@@ -2460,6 +2500,18 @@
       </tr>`;
     }).join('');
     I18N.translateDOM(tbody);
+
+    pager.style.display = data.length > WA_PAGE_SIZE ? 'flex' : 'none';
+    document.getElementById('wonPageInfo').textContent =
+      `${pageStart + 1}–${Math.min(pageStart + WA_PAGE_SIZE, data.length)} / ${data.length} ${I18N.t('kayıt')} — ${I18N.t('Sayfa')} ${_waCurrentPage}/${maxPage}`;
+    const prevBtn = document.getElementById('wonPrevBtn');
+    const nextBtn = document.getElementById('wonNextBtn');
+    prevBtn.disabled = _waCurrentPage === 1;
+    prevBtn.style.opacity = prevBtn.disabled ? '0.4' : '1';
+    prevBtn.style.cursor = prevBtn.disabled ? 'default' : 'pointer';
+    nextBtn.disabled = _waCurrentPage >= maxPage;
+    nextBtn.style.opacity = nextBtn.disabled ? '0.4' : '1';
+    nextBtn.style.cursor = nextBtn.disabled ? 'default' : 'pointer';
   }
 
   // ── View geçişi ──────────────────────────────────────────────────
