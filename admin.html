@@ -349,14 +349,22 @@
               <option value="">All</option><option value="pending">No Result</option><option value="locked">Has Result</option><option value="unlock">Unlock Req.</option></select></div>
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Search</label>
             <input id="fSearch" class="filter-input" placeholder="Name, ID, result..." oninput="applyFilters()"></div>
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date From</label>
-            <input type="date" id="dealDateFrom" onchange="applyFilters()"></div>
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date To</label>
-            <input type="date" id="dealDateTo" onchange="applyFilters()"></div>
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created Time From</label>
-            <input type="date" id="createdDateFrom" onchange="applyFilters()"></div>
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created Time To</label>
-            <input type="date" id="createdDateTo" onchange="applyFilters()"></div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="date" id="dealDateFrom" onchange="applyFilters()" style="min-width:0">
+              <span class="text-slate-500 text-xs">—</span>
+              <input type="date" id="dealDateTo" onchange="applyFilters()" style="min-width:0">
+            </div>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created Time</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="date" id="createdDateFrom" onchange="applyFilters()" style="min-width:0">
+              <span class="text-slate-500 text-xs">—</span>
+              <input type="date" id="createdDateTo" onchange="applyFilters()" style="min-width:0">
+            </div>
+          </div>
         </div>
       </div>
 
