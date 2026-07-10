@@ -316,9 +316,9 @@
       <!-- KPI Row -->
       <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-4" id="dealKpiRow">
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Total</div><div class="text-xl font-bold text-white" id="k1">0</div></div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Deal Amt</div><div class="text-sm font-bold text-blue-400" id="k2">€0</div></div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Paid</div><div class="text-sm font-bold text-emerald-400" id="k3">€0</div></div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Unpaid</div><div class="text-sm font-bold text-red-400" id="k4">€0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Deal Amt</div><div class="text-xs font-bold text-blue-400 whitespace-nowrap" id="k2">€0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Paid</div><div class="text-xs font-bold text-emerald-400 whitespace-nowrap" id="k3">€0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Unpaid</div><div class="text-xs font-bold text-red-400 whitespace-nowrap" id="k4">€0</div></div>
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Won</div><div class="text-xl font-bold text-emerald-300" id="k5">0</div></div>
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Cancelled</div><div class="text-xl font-bold text-red-400" id="k6">0</div></div>
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Unlock Req.</div><div class="text-xl font-bold text-amber-400" id="k7">0</div></div>
@@ -2540,7 +2540,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       const payRate = deal > 0 ? ((paid/deal)*100).toFixed(1) : 0;
 
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      set('k1', total); set('k2', fmtCompact(deal)); set('k3', fmtCompact(paid)); set('k4', fmtCompact(unpaid));
+      set('k1', total); set('k2', fmtMoney(deal)); set('k3', fmtMoney(paid)); set('k4', fmtMoney(unpaid));
       set('k5', won); set('k6', cancel); set('k7', unlockR); set('k8', noRes);
       set('sKpi1', total); set('sKpi2', fmtCompact(deal)); set('sKpi3', fmtCompact(paid)); set('sKpi4', fmtCompact(unpaid));
     }
@@ -3261,7 +3261,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
 
     function renderKpisFromSummary(s) {
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      set('k1', s.total); set('k2', fmtCompact(s.sum_amount)); set('k3', fmtCompact(s.sum_paid)); set('k4', fmtCompact(s.sum_unpaid));
+      set('k1', s.total); set('k2', fmtMoney(s.sum_amount)); set('k3', fmtMoney(s.sum_paid)); set('k4', fmtMoney(s.sum_unpaid));
       set('k5', s.won); set('k6', s.cancel); set('k7', s.unlock_requested); set('k8', s.no_result);
       set('sKpi1', s.total); set('sKpi2', fmtCompact(s.sum_amount)); set('sKpi3', fmtCompact(s.sum_paid)); set('sKpi4', fmtCompact(s.sum_unpaid));
     }
