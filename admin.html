@@ -993,18 +993,36 @@
       <p class="text-xs text-slate-400 mt-0.5">Stage'i "Cancelled" olan tüm dealler — alarm durumu veya tarihi fark etmeksizin</p>
     </div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-      <input id="caFilterSearch" type="text" placeholder="Deal adı, danışman ara..." oninput="renderAdminCancelledAlarms()" class="filter-select" style="flex:1;min-width:200px">
-      <select id="caFilterRegion" onchange="renderAdminCancelledAlarms()" class="filter-select">
+      <input id="caFilterSearch" type="text" placeholder="Deal adı, danışman ara..." oninput="_caApplyFilters()" class="filter-select" style="flex:1;min-width:200px">
+      <select id="caFilterRegion" onchange="_caApplyFilters()" class="filter-select">
         <option value="">Tüm Bölgeler</option>
         <option value="Istanbul">Istanbul Bölgesi</option>
         <option value="Morocco">Morocco Bölgesi</option>
       </select>
-      <select id="caFilterTeam" onchange="renderAdminCancelledAlarms()" class="filter-select">
+      <select id="caFilterTeam" onchange="_caApplyFilters()" class="filter-select">
         <option value="">Tüm Takımlar</option>
       </select>
     </div>
-    <div id="cancelledAlarmGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
-    <div id="cancelledAlarmEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">İptal edilmiş alarm bulunamadı.</div>
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="tbl w-full">
+          <thead>
+            <tr class="text-slate-400 text-[10px]">
+              <th>#</th><th>Hasta / Danışman</th><th>Bölge</th><th>Takım</th><th>Stage</th><th>Arrival</th>
+            </tr>
+          </thead>
+          <tbody id="cancelledAlarmTbody"></tbody>
+        </table>
+      </div>
+      <div id="cancelledAlarmEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">İptal edilmiş alarm bulunamadı.</div>
+      <div id="cancelledAlarmPager" style="display:none;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-top:1px solid #1e293b">
+        <span class="text-xs text-slate-500" id="cancelledAlarmPageInfo"></span>
+        <div style="display:flex;gap:6px">
+          <button onclick="_caChangePage(-1)" id="cancelledAlarmPrevBtn" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700 disabled:opacity-40" style="cursor:pointer">← Önceki</button>
+          <button onclick="_caChangePage(1)" id="cancelledAlarmNextBtn" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700 disabled:opacity-40" style="cursor:pointer">Sonraki →</button>
+        </div>
+      </div>
+    </div>
   </div>
 
   <!-- ===== WON ALARMI ===== -->
@@ -1165,6 +1183,12 @@
         <div class="aam-info-card"><div class="aam-info-label">Takım</div><div class="aam-info-val" id="cdmTeam">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Stage</div><div class="aam-info-val" id="cdmStage">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Arrival Date</div><div class="aam-info-val" id="cdmArrival">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Tutar</div><div class="aam-info-val" id="cdmAmount">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Ödenen</div><div class="aam-info-val" id="cdmPaid">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Kalan</div><div class="aam-info-val" id="cdmRemaining">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Payment Status</div><div class="aam-info-val" id="cdmPaymentStatus">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Dil</div><div class="aam-info-val" id="cdmLanguage">—</div></div>
+        <div class="aam-info-card" style="grid-column:span 2"><div class="aam-info-label">1. / 2. / 3. Vizit</div><div class="aam-info-val" id="cdmVisits">—</div></div>
       </div>
       <div style="display:flex;gap:10px">
         <a id="cdmZohoLink" href="#" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#818cf8;font-size:12px;font-weight:700;text-decoration:none">Zoho'da Aç ↗</a>
@@ -1612,26 +1636,34 @@
     // ── İptal Alarmları ──────────────────────────────────────────────
     let adminCancelledDeals = null;
     async function loadAdminCancelledDeals() {
-      const grid  = document.getElementById('cancelledAlarmGrid');
+      const tbody = document.getElementById('cancelledAlarmTbody');
       const empty = document.getElementById('cancelledAlarmEmpty');
       empty.style.display = 'none';
-      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</div>`;
+      tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
       try {
-        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
         const stageParam = encodeURIComponent('ilike.*cancel*');
-        let all = [], offset = 0;
-        while (true) {
-          const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}` +
-            `&select=id,deal_id,deal_name,deal_owner,team,stage,arrival_date&order=deal_name.asc&limit=1000&offset=${offset}`, { headers: H });
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          const batch = await r.json();
-          if (!Array.isArray(batch) || !batch.length) break;
-          all.push(...batch);
-          if (batch.length < 1000) break;
-          offset += 1000;
+        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date';
+        const PAGE = 1000;
+        const baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'count=exact' };
+        const first = await fetch(`${baseUrl}&offset=0`, { headers: H });
+        if (!first.ok) throw new Error('HTTP ' + first.status);
+        const firstRows = await first.json();
+        const range = first.headers.get('content-range');
+        const total = range && range.includes('/') ? Number(range.split('/')[1]) : firstRows.length;
+        let all = firstRows.slice();
+        const pages = Math.max(1, Math.ceil(total / PAGE));
+        if (pages > 1) {
+          const H2 = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+          const rest = await Promise.all(Array.from({ length: pages - 1 }, (_, i) => {
+            const offset = (i + 1) * PAGE;
+            return fetch(`${baseUrl}&offset=${offset}`, { headers: H2 }).then(r => r.ok ? r.json() : []);
+          }));
+          rest.forEach(batch => { if (Array.isArray(batch)) all.push(...batch); });
         }
         adminCancelledDeals = all;
         _caPopulateTeamFilter();
+        _caCurrentPage = 1;
         renderAdminCancelledAlarms();
         const badge = document.getElementById('cancelledAlarmBadge');
         if (badge) {
@@ -1639,7 +1671,7 @@
           else badge.style.display = 'none';
         }
       } catch(e) {
-        grid.innerHTML = '';
+        tbody.innerHTML = '';
         empty.textContent = I18N.t('Yükleme hatası: ') + e.message;
         empty.style.display = 'block';
       }
@@ -1654,6 +1686,20 @@
       if (teams.includes(cur)) sel.value = cur;
     }
 
+    // Filtrelenmiş sonuçlar 50'şer kayıtlık sayfalara bölünür (Won Alarmı'yla aynı desen).
+    const CA_PAGE_SIZE = 50;
+    let _caCurrentPage = 1;
+    let _caLastFiltered = [];
+    function _caChangePage(dir) {
+      const maxPage = Math.max(1, Math.ceil(_caLastFiltered.length / CA_PAGE_SIZE));
+      _caCurrentPage = Math.max(1, Math.min(maxPage, _caCurrentPage + dir));
+      renderAdminCancelledAlarms();
+    }
+    function _caApplyFilters() {
+      _caCurrentPage = 1;
+      renderAdminCancelledAlarms();
+    }
+
     function renderAdminCancelledAlarms() {
       let data = adminCancelledDeals || [];
       const search = (document.getElementById('caFilterSearch')?.value || '').toLowerCase().trim();
@@ -1663,24 +1709,45 @@
       if (search) data = data.filter(d => [d.deal_name, d.deal_owner, d.team].join(' ').toLowerCase().includes(search));
       if (regionF) data = data.filter(d => d._region === regionF);
       if (teamF) data = data.filter(d => ((window.TeamMap && TeamMap.normalize(d.team)) || d.team) === teamF);
+      _caLastFiltered = data;
 
-      const grid  = document.getElementById('cancelledAlarmGrid');
+      const tbody = document.getElementById('cancelledAlarmTbody');
       const empty = document.getElementById('cancelledAlarmEmpty');
-      if (!data.length) { grid.innerHTML = ''; empty.textContent = I18N.t('İptal edilmiş alarm bulunamadı.'); empty.style.display = 'block'; return; }
+      const pager = document.getElementById('cancelledAlarmPager');
+      if (!data.length) { tbody.innerHTML = ''; empty.textContent = I18N.t('İptal edilmiş alarm bulunamadı.'); empty.style.display = 'block'; pager.style.display = 'none'; return; }
       empty.style.display = 'none';
-      grid.innerHTML = data.map(d => {
-        return `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px;cursor:pointer" onclick="openCancelledDealModal('${d.id}')">
-        <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${fmt(d.deal_name)}</div>
-        <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600">${fmt(d.deal_owner)}</div>
-        <div style="font-size:9px;color:#64748b;margin-top:1px">${fmt(d.team)} · ${fmt(d._region)}</div>
-        <div style="font-size:10px;color:#94a3b8;margin-top:8px">${fmt(d.stage)}${d.arrival_date ? ' — ' + _amFmtDate(d.arrival_date) : ''}</div>
-      </div>`;
+
+      const maxPage = Math.max(1, Math.ceil(data.length / CA_PAGE_SIZE));
+      _caCurrentPage = Math.min(_caCurrentPage, maxPage);
+      const pageStart = (_caCurrentPage - 1) * CA_PAGE_SIZE;
+      const pageData = data.slice(pageStart, pageStart + CA_PAGE_SIZE);
+
+      tbody.innerHTML = pageData.map((d, i) => {
+        return `<tr style="cursor:pointer" onclick="openCancelledDealModal('${d.id}')">
+          <td style="color:#475569;font-size:10px">${pageStart + i + 1}</td>
+          <td>
+            <div style="font-weight:600;color:#f1f5f9;font-size:12px">${fmt(d.deal_name)}<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="am-zoho-link" title="Zoho'da Aç">↗</a></div>
+            <div style="font-size:10px;color:#0d9488;font-weight:600">${fmt(d.deal_owner)}</div>
+          </td>
+          <td style="font-size:11px;color:#94a3b8">${fmt(d._region)}</td>
+          <td style="font-size:11px;color:#94a3b8;white-space:nowrap">${fmt(d.team)}</td>
+          <td style="font-size:11px;color:#94a3b8;white-space:nowrap">${fmt(d.stage)}</td>
+          <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.arrival_date ? _amFmtDate(d.arrival_date) : '—'}</td>
+        </tr>`;
       }).join('');
+
+      pager.style.display = data.length > CA_PAGE_SIZE ? 'flex' : 'none';
+      document.getElementById('cancelledAlarmPageInfo').textContent =
+        `${pageStart + 1}–${Math.min(pageStart + CA_PAGE_SIZE, data.length)} / ${data.length} ${I18N.t('kayıt')} — ${I18N.t('Sayfa')} ${_caCurrentPage}/${maxPage}`;
+      document.getElementById('cancelledAlarmPrevBtn').disabled = _caCurrentPage === 1;
+      document.getElementById('cancelledAlarmNextBtn').disabled = _caCurrentPage >= maxPage;
     }
 
+    let currentCancelledDealId = null;
     function openCancelledDealModal(id) {
       const d = (adminCancelledDeals || []).find(x => String(x.id) === String(id));
       if (!d) return;
+      currentCancelledDealId = String(d.id);
       const region = (typeof AlarmEngine !== 'undefined') ? AlarmEngine.getRegion(d.team) : '—';
       document.getElementById('cdmDealName').textContent  = d.deal_name || '—';
       document.getElementById('cdmDealOwner').textContent = d.deal_owner || '—';
@@ -1695,6 +1762,7 @@
       } else {
         zohoLink.style.display = 'none';
       }
+      loadCancelledDealDetails(d.id);
       document.getElementById('cancelledDealModal').classList.add('open');
       document.body.style.overflow = 'hidden';
     }
@@ -1702,6 +1770,34 @@
     function closeCancelledDealModal() {
       document.getElementById('cancelledDealModal').classList.remove('open');
       document.body.style.overflow = '';
+    }
+
+    // İptal Alarmları listesi performans için tutar/ödeme/dil/vizit alanlarını
+    // çekmiyor (bkz. Won Alarmı'ndaki yavaş yükleme fix'iyle aynı gerekçe) —
+    // modal açılınca sadece o tek deal için canlı çekilir.
+    async function loadCancelledDealDetails(dealId) {
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('cdmAmount', '…'); set('cdmPaid', '…'); set('cdmRemaining', '…');
+      set('cdmPaymentStatus', '…'); set('cdmLanguage', '…'); set('cdmVisits', '…');
+      if (!dealId) return;
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const sel = 'id,amount,total_paid_amount,remaining_amount,visit_date_1,visit_date_2,visit_date_3,rawLang:raw->>Language';
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(dealId)}&select=${sel}&limit=1`, { headers: H });
+        if (!r.ok) return;
+        const rows = await r.json();
+        const d = rows && rows[0];
+        if (!d || currentCancelledDealId !== String(dealId)) return;
+        const paid = Number(d.total_paid_amount) || 0, unpaid = Number(d.remaining_amount) || 0;
+        set('cdmAmount', fmtMoney(d.amount));
+        set('cdmPaid', fmtMoney(paid));
+        set('cdmRemaining', fmtMoney(unpaid));
+        const payStatus = paid <= 0 ? 'Unpaid' : (Number(d.amount) > 0 && paid >= Number(d.amount)) ? 'Paid' : 'Partial';
+        set('cdmPaymentStatus', payStatusLabel(payStatus));
+        set('cdmLanguage', languageLabel(d.rawLang || 'Bilinmiyor'));
+        const visits = [d.visit_date_1, d.visit_date_2, d.visit_date_3].map(v => v ? _amFmtDate(v) : '—').join(' / ');
+        set('cdmVisits', visits);
+      } catch(e) { /* sessiz — alanlar "…" placeholder'da kalır */ }
     }
 
     // ── Won Alarmı ────────────────────────────────────────────────────
