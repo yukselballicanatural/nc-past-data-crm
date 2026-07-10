@@ -891,6 +891,8 @@
           </select>
           <input type="date" id="amDateFrom" onchange="renderAdminAlarmTable()" title="Referans tarih başlangıç" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
           <input type="date" id="amDateTo" onchange="renderAdminAlarmTable()" title="Referans tarih bitiş" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
+          <input type="date" id="amCreatedFrom" onchange="renderAdminAlarmTable()" title="Deal Created Time başlangıç" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
+          <input type="date" id="amCreatedTo" onchange="renderAdminAlarmTable()" title="Deal Created Time bitiş" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
           <input id="amSearch" placeholder="Hasta, danışman..." oninput="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;width:160px">
         </div>
       </div>
@@ -1777,6 +1779,22 @@
     }
 
     // Ortak filtre — tablo render ve export aynı mantığı kullanır
+    // alarms tablosunda deal'in Created Time'ı yok (sadece alarmların kendi
+    // created_at'ı var) — deal_id üzerinden allDeals'tan (zaten tarayıcıda tam
+    // yüklü) tek seferlik bir lookup haritası kurup Created Time filtresini
+    // ona göre uyguluyoruz. allDeals değişirse (yeniden yüklenirse) harita tazelenir.
+    let _amDealCreatedMapCache = null;
+    let _amDealCreatedMapLen = -1;
+    function _amDealCreatedTimeFor(dealId) {
+      if (!dealId) return null;
+      if (!_amDealCreatedMapCache || _amDealCreatedMapLen !== allDeals.length) {
+        _amDealCreatedMapCache = new Map();
+        allDeals.forEach(d => { if (d.id !== undefined && d.id !== null) _amDealCreatedMapCache.set(String(d.id), d['Created Time']); });
+        _amDealCreatedMapLen = allDeals.length;
+      }
+      return _amDealCreatedMapCache.get(String(dealId)) || null;
+    }
+
     function filterAdminAlarms() {
       const region = document.getElementById('amFilterRegion').value;
       const team   = document.getElementById('amFilterTeam')?.value || '';
@@ -1787,6 +1805,8 @@
       const thresh = document.getElementById('amFilterThresh')?.value || '';
       const dFrom  = document.getElementById('amDateFrom')?.value || '';
       const dTo    = document.getElementById('amDateTo')?.value || '';
+      const cFrom  = document.getElementById('amCreatedFrom')?.value || '';
+      const cTo    = document.getElementById('amCreatedTo')?.value || '';
       const search = (document.getElementById('amSearch').value || '').toLowerCase();
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
 
@@ -1810,6 +1830,12 @@
         }
         if (dFrom  && (!a.reference_date || a.reference_date < dFrom)) return false;
         if (dTo    && (!a.reference_date || a.reference_date > dTo)) return false;
+        if (cFrom || cTo) {
+          const ct = parseDateString(_amDealCreatedTimeFor(a.deal_id));
+          if (!ct) return false;
+          if (cFrom && ct < parseDateString(cFrom)) return false;
+          if (cTo && ct > parseDateString(cTo)) return false;
+        }
         if (search) {
           const txt = [a.deal_name,a.deal_owner,a.team,a.region].join(' ').toLowerCase();
           if (!txt.includes(search)) return false;
@@ -4261,7 +4287,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
         }
         addLog('LOGIN', 'Admin panele giriş yapıldı');
         document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
-        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo'].forEach(id => NCDatePicker.attach(id));
+        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo'].forEach(id => NCDatePicker.attach(id));
         _anPopulateTeamOptions();
         loadDeals();
         loadAdminAlarms();
