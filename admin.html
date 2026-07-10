@@ -352,6 +352,10 @@
             <input type="date" id="dealDateFrom" onchange="applyFilters()"></div>
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date To</label>
             <input type="date" id="dealDateTo" onchange="applyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created Time From</label>
+            <input type="date" id="createdDateFrom" onchange="applyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created Time To</label>
+            <input type="date" id="createdDateTo" onchange="applyFilters()"></div>
         </div>
       </div>
 
@@ -2471,7 +2475,10 @@
       return { attach, refreshTrigger, setValue };
     })();
 
-    function ncClearDealDates() { NCDatePicker.setValue('dealDateFrom', ''); NCDatePicker.setValue('dealDateTo', ''); }
+    function ncClearDealDates() {
+      NCDatePicker.setValue('dealDateFrom', ''); NCDatePicker.setValue('dealDateTo', '');
+      NCDatePicker.setValue('createdDateFrom', ''); NCDatePicker.setValue('createdDateTo', '');
+    }
 
     function stagePill(stage) {
       if (!stage) return '<span class="stage-pill stage-default">—</span>';
@@ -2521,7 +2528,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
     }
 
     function _hasActiveDealFilter() {
-      const ids = ['fTeam','fAgent','fStage','fPayment','fLang','fResult','fSearch','dealDateFrom','dealDateTo'];
+      const ids = ['fTeam','fAgent','fStage','fPayment','fLang','fResult','fSearch','dealDateFrom','dealDateTo','createdDateFrom','createdDateTo'];
       return ids.some(id => { const el = document.getElementById(id); return el && el.value; });
     }
 
@@ -2591,7 +2598,8 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
     function _dealDropdownFiltersActive() {
       const val = id => (document.getElementById(id) || {}).value || '';
       return !!(val('fTeam') || val('fAgent') || val('fStage') || val('fPayment') || val('fLang') ||
-        val('fResult') || val('fSearch') || val('dealDateFrom') || val('dealDateTo'));
+        val('fResult') || val('fSearch') || val('dealDateFrom') || val('dealDateTo') ||
+        val('createdDateFrom') || val('createdDateTo'));
     }
 
     // Tab mantığı hariç, geçerli dropdown/arama/tarih filtrelerini allDeals'a
@@ -2607,6 +2615,8 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       const search  = document.getElementById('fSearch').value.toLowerCase();
       const dFrom   = document.getElementById('dealDateFrom').value;
       const dTo     = document.getElementById('dealDateTo').value;
+      const cFrom   = document.getElementById('createdDateFrom').value;
+      const cTo     = document.getElementById('createdDateTo').value;
       return allDeals.filter(d => {
         if (team   && d['Team Group']      !== team)   return false;
         if (agent  && d['Deal Owner Name'] !== agent)  return false;
@@ -2621,6 +2631,12 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
           if (!dt) return false;
           if (dFrom && dt < parseDateString(dFrom)) return false;
           if (dTo && dt > parseDateString(dTo)) return false;
+        }
+        if (cFrom || cTo) {
+          const ct = parseDateString(d['Created Time']);
+          if (!ct) return false;
+          if (cFrom && ct < parseDateString(cFrom)) return false;
+          if (cTo && ct > parseDateString(cTo)) return false;
         }
         if (search) {
           const t = [d['Deal Name'],d['DealID'],d['Deal Owner Name'],d['Team Group'],d['Stage'],d.result_code,d.sub_code,d.agent_note].join(' ').toLowerCase();
@@ -2665,6 +2681,8 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       const search  = document.getElementById('fSearch').value.toLowerCase();
       const dFrom   = document.getElementById('dealDateFrom').value;
       const dTo     = document.getElementById('dealDateTo').value;
+      const cFrom   = document.getElementById('createdDateFrom').value;
+      const cTo     = document.getElementById('createdDateTo').value;
 
       if (!_dealsLoadInProgress) updateTabBadges();
 
@@ -2706,6 +2724,12 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
           if (!dt) return false;
           if (dFrom && dt < parseDateString(dFrom)) return false;
           if (dTo && dt > parseDateString(dTo)) return false;
+        }
+        if (cFrom || cTo) {
+          const ct = parseDateString(d['Created Time']);
+          if (!ct) return false;
+          if (cFrom && ct < parseDateString(cFrom)) return false;
+          if (cTo && ct > parseDateString(cTo)) return false;
         }
         if (search) {
           const t = [d['Deal Name'],d['DealID'],d['Deal Owner Name'],d['Team Group'],d['Stage'],d.result_code,d.sub_code,d.agent_note].join(' ').toLowerCase();
@@ -4190,7 +4214,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
         }
         addLog('LOGIN', 'Admin panele giriş yapıldı');
         document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
-        ['dealDateFrom', 'dealDateTo', 'amDateFrom', 'amDateTo', 'anFilterDateFrom', 'anFilterDateTo'].forEach(id => NCDatePicker.attach(id));
+        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'anFilterDateFrom', 'anFilterDateTo'].forEach(id => NCDatePicker.attach(id));
         _anPopulateTeamOptions();
         loadDeals();
         loadAdminAlarms();
