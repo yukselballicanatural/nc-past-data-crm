@@ -353,13 +353,6 @@
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date To</label>
             <input type="date" id="dealDateTo" onchange="applyFilters()"></div>
         </div>
-        <div class="flex flex-wrap gap-2">
-          <button onclick="setPreset('noResult')" class="px-3 py-1 bg-rose-900/40 border border-rose-800/40 text-rose-300 text-[10px] rounded-lg font-bold">No Result Entered</button>
-          <button onclick="setPreset('unlockPending')" class="px-3 py-1 bg-amber-900/40 border border-amber-800/40 text-amber-300 text-[10px] rounded-lg font-bold">Unlock Requests</button>
-          <button onclick="setPreset('noPayment')" class="px-3 py-1 bg-orange-900/40 border border-orange-800/40 text-orange-300 text-[10px] rounded-lg font-bold">No Payment</button>
-          <button onclick="setPreset('wonOnly')" class="px-3 py-1 bg-emerald-900/40 border border-emerald-800/40 text-emerald-300 text-[10px] rounded-lg font-bold">Won Only</button>
-          <button onclick="setPreset('cancelledOnly')" class="px-3 py-1 bg-red-900/50 border border-red-800/50 text-red-300 text-[10px] rounded-lg font-bold">Cancelled Only</button>
-        </div>
       </div>
 
       <!-- Summary Stats Bar -->
@@ -2683,20 +2676,6 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       document.getElementById('fSearch').value = '';
       ncClearDealDates();
       applyFilters();
-    }
-
-    function setPreset(type) {
-      resetFilters();
-      if (type === 'noResult')      { document.getElementById('fResult').value = 'pending'; applyFilters(); }
-      else if (type === 'unlockPending') { document.getElementById('fResult').value = 'unlock'; applyFilters(); }
-      else if (type === 'noPayment') { document.getElementById('fPayment').value = 'Unpaid'; applyFilters(); }
-      else if (type === 'wonOnly')   {
-        filteredDeals = allDeals.filter(d => (d['Stage']||'').toLowerCase().includes('won'));
-        updateKPIs(filteredDeals); applySortAndRender();
-      } else if (type === 'cancelledOnly') {
-        filteredDeals = allDeals.filter(d => (d['Stage']||'').toLowerCase().includes('cancel'));
-        updateKPIs(filteredDeals); applySortAndRender();
-      }
     }
 
     function dealChangePage(dir) {
