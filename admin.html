@@ -2586,11 +2586,58 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       applyFilters();
     }
 
+    // Dropdown/arama/tarih filtreleri (tab hariç) aktif mi? — badge'lerin
+    // filtreli mi yoksa genel toplam mı göstereceğine karar vermek için.
+    function _dealDropdownFiltersActive() {
+      const val = id => (document.getElementById(id) || {}).value || '';
+      return !!(val('fTeam') || val('fAgent') || val('fStage') || val('fPayment') || val('fLang') ||
+        val('fResult') || val('fSearch') || val('dealDateFrom') || val('dealDateTo'));
+    }
+
+    // Tab mantığı hariç, geçerli dropdown/arama/tarih filtrelerini allDeals'a
+    // uygular — badge sayıları bu sette hesaplanır ki filtre uygulanınca
+    // gerçekten o filtreye ait rakamlar görünsün (genel toplam değil).
+    function _baseFilteredForBadges() {
+      const team    = document.getElementById('fTeam').value;
+      const agent   = document.getElementById('fAgent').value;
+      const stage   = document.getElementById('fStage').value;
+      const pay     = document.getElementById('fPayment').value;
+      const lang    = document.getElementById('fLang').value;
+      const result  = document.getElementById('fResult').value;
+      const search  = document.getElementById('fSearch').value.toLowerCase();
+      const dFrom   = document.getElementById('dealDateFrom').value;
+      const dTo     = document.getElementById('dealDateTo').value;
+      return allDeals.filter(d => {
+        if (team   && d['Team Group']      !== team)   return false;
+        if (agent  && d['Deal Owner Name'] !== agent)  return false;
+        if (stage  && d['Stage']           !== stage)  return false;
+        if (pay    && d['Payment Status']  !== pay)    return false;
+        if (lang   && d['Language']        !== lang)   return false;
+        if (result === 'pending' && d.status === 'locked') return false;
+        if (result === 'locked'  && d.status !== 'locked') return false;
+        if (result === 'unlock'  && !d.lock_approval_requested) return false;
+        if (dFrom || dTo) {
+          const dt = parseDateString(d['Arrival Date']);
+          if (!dt) return false;
+          if (dFrom && dt < parseDateString(dFrom)) return false;
+          if (dTo && dt > parseDateString(dTo)) return false;
+        }
+        if (search) {
+          const t = [d['Deal Name'],d['DealID'],d['Deal Owner Name'],d['Team Group'],d['Stage'],d.result_code,d.sub_code,d.agent_note].join(' ').toLowerCase();
+          if (!t.includes(search)) return false;
+        }
+        return true;
+      });
+    }
+
     function updateTabBadges() {
-      if (dealSummary) { renderBadgesFromSummary(dealSummary); return; }
-      const nw = allDeals.filter(d => !(d['Stage']||'').toLowerCase().includes('won'));
+      // Hiçbir dropdown/arama/tarih filtresi seçili değilse, hızlı yol: RPC'den
+      // gelen genel toplamları göster. Filtre varsa client-side filtreli sete göre hesapla.
+      if (dealSummary && !_dealDropdownFiltersActive()) { renderBadgesFromSummary(dealSummary); return; }
+      const base = _dealDropdownFiltersActive() ? _baseFilteredForBadges() : allDeals;
+      const nw = base.filter(d => !(d['Stage']||'').toLowerCase().includes('won'));
       const nc = d => !(d['Stage']||'').toLowerCase().includes('cancel');
-      const allC = allDeals.length;
+      const allC = base.length;
       const a  = nw.filter(d => nc(d) && isBeforeCutoff(d['Arrival Date'])).length;
       const v1 = nw.filter(d => nc(d) && isBeforeCutoff(d['1. Visit Date'])).length;
       const v2 = nw.filter(d => nc(d) && isBeforeCutoff(d['2. Visit Date'])).length;
@@ -2599,7 +2646,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
         (isBeforeCutoff(d['Arrival Date'])||isBeforeCutoff(d['1. Visit Date'])||
          isBeforeCutoff(d['2. Visit Date'])||isBeforeCutoff(d['3. Visit Date'])||
          isBeforeCutoff(d['Created Time']))).length;
-      const unlockR = allDeals.filter(d => d.lock_approval_requested).length;
+      const unlockR = base.filter(d => d.lock_approval_requested).length;
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
       set('badge-all', allC); set('badge-arrival', a); set('badge-visit1', v1);
       set('badge-visit2', v2); set('badge-visit3', v3); set('badge-cancelled', ca);
