@@ -622,13 +622,25 @@
         <p style="font-size:11px;color:#64748b;margin:3px 0 0">Stage'i "Won" olup ödenen tutar paket tutarına eşit olmayan (eksik veya fazla ödenmiş) dealler</p>
       </div>
     </div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
-      <input id="wonFilterSearch" type="text" placeholder="Hasta veya danışman ara..." oninput="_waApplyFilters()" class="filter-select" style="flex:1;min-width:200px">
-      <select id="wonFilterDir" onchange="_waApplyFilters()" class="filter-select">
-        <option value="">Tümü (Eksik + Fazla)</option>
-        <option value="under">Sadece Eksik Ödenen</option>
-        <option value="over">Sadece Fazla Ödenen</option>
-      </select>
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:14px 16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">Filtreler</span>
+        <button onclick="_waResetFilters()" style="font-size:10px;font-weight:700;color:#818cf8;background:none;border:none;cursor:pointer">Temizle</button>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+        <div>
+          <label style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px">Ara</label>
+          <input id="wonFilterSearch" type="text" placeholder="Hasta veya danışman ara..." oninput="_waApplyFilters()" class="filter-inp">
+        </div>
+        <div>
+          <label style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px">Yön</label>
+          <select id="wonFilterDir" onchange="_waApplyFilters()" class="filter-sel">
+            <option value="">Tümü (Eksik + Fazla)</option>
+            <option value="under">Sadece Eksik Ödenen</option>
+            <option value="over">Sadece Fazla Ödenen</option>
+          </select>
+        </div>
+      </div>
     </div>
     <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;overflow:hidden">
       <div style="overflow-x:auto">
@@ -2463,6 +2475,11 @@
   function _waApplyFilters() {
     _waCurrentPage = 1;
     renderWonAlarms();
+  }
+  function _waResetFilters() {
+    document.getElementById('wonFilterSearch').value = '';
+    document.getElementById('wonFilterDir').value = '';
+    _waApplyFilters();
   }
 
   // Won Alarmı listesi performans için raw'ı çekmiyor (bkz. yavaş yükleme
