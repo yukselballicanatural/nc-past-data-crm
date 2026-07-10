@@ -31,7 +31,7 @@
     input.filter-input:focus { outline:none; border-color:#6366F1; }
 
     /* ── Özel takvim (date picker) ─────────────────────────────────── */
-    .nc-date-field { position:relative; display:inline-block; }
+    .nc-date-field { position:relative; display:inline-block; flex-shrink:0; }
     .nc-date-trigger { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:135px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:border-color .15s,box-shadow .15s; user-select:none; }
     .nc-date-trigger:hover { border-color:#4b5f7a; }
     .nc-date-trigger.active { border-color:#0d9488; box-shadow:0 0 0 3px rgba(13,148,136,0.12); }
@@ -352,17 +352,17 @@
           <div>
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date</label>
             <div style="display:flex;align-items:center;gap:6px">
-              <input type="date" id="dealDateFrom" onchange="applyFilters()" style="min-width:0">
+              <input type="date" id="dealDateFrom" onchange="applyFilters()">
               <span class="text-slate-500 text-xs">—</span>
-              <input type="date" id="dealDateTo" onchange="applyFilters()" style="min-width:0">
+              <input type="date" id="dealDateTo" onchange="applyFilters()">
             </div>
           </div>
           <div>
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created Time</label>
             <div style="display:flex;align-items:center;gap:6px">
-              <input type="date" id="createdDateFrom" onchange="applyFilters()" style="min-width:0">
+              <input type="date" id="createdDateFrom" onchange="applyFilters()">
               <span class="text-slate-500 text-xs">—</span>
-              <input type="date" id="createdDateTo" onchange="applyFilters()" style="min-width:0">
+              <input type="date" id="createdDateTo" onchange="applyFilters()">
             </div>
           </div>
         </div>
@@ -496,17 +496,17 @@
           <div>
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date</label>
             <div style="display:flex;align-items:center;gap:6px">
-              <input id="anFilterDateFrom" type="date" onchange="loadAnalyticsSummary()" class="filter-select" title="Arrival Date başlangıç">
+              <input id="anFilterDateFrom" type="date" onchange="loadAnalyticsSummary()" title="Arrival Date başlangıç">
               <span class="text-slate-500 text-xs">—</span>
-              <input id="anFilterDateTo" type="date" onchange="loadAnalyticsSummary()" class="filter-select" title="Arrival Date bitiş">
+              <input id="anFilterDateTo" type="date" onchange="loadAnalyticsSummary()" title="Arrival Date bitiş">
             </div>
           </div>
           <div>
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created Time</label>
             <div style="display:flex;align-items:center;gap:6px">
-              <input id="anFilterCreatedFrom" type="date" onchange="loadAnalyticsSummary()" class="filter-select" title="Created Time başlangıç">
+              <input id="anFilterCreatedFrom" type="date" onchange="loadAnalyticsSummary()" title="Created Time başlangıç">
               <span class="text-slate-500 text-xs">—</span>
-              <input id="anFilterCreatedTo" type="date" onchange="loadAnalyticsSummary()" class="filter-select" title="Created Time bitiş">
+              <input id="anFilterCreatedTo" type="date" onchange="loadAnalyticsSummary()" title="Created Time bitiş">
             </div>
           </div>
           <button onclick="_anResetFilters()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700">Temizle</button>
