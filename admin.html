@@ -915,7 +915,13 @@
         </table>
         <div id="adminAlarmEmpty" style="display:none;text-align:center;padding:40px 16px;color:#475569;font-size:13px">Alarm bulunamadı.</div>
       </div>
-      <div class="mt-2 text-xs text-slate-500" id="adminAlarmCount"></div>
+      <div class="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-xs text-slate-500">
+        <span id="adminAlarmCount"></span>
+        <span class="text-gray-700">|</span>
+        <span>Toplam Tutar: <strong class="text-blue-400 font-bold" id="amTotalAmount">€0</strong></span>
+        <span>Toplam Ödenen: <strong class="text-emerald-400 font-bold" id="amTotalPaid">€0</strong></span>
+        <span>Toplam Kalan: <strong class="text-red-400 font-bold" id="amTotalRemaining">€0</strong></span>
+      </div>
     </div>
   </div>
 
@@ -1795,6 +1801,39 @@
       return _amDealCreatedMapCache.get(String(dealId)) || null;
     }
 
+    // deal_id -> {amount, paid} lookup haritası (allDeals'tan, aynı cache
+    // deseniyle) — filtrelenmiş alarm listesinin altında Toplam Tutar/Ödenen/
+    // Kalan göstermek için kullanılır.
+    let _amDealAmountMapCache = null;
+    let _amDealAmountMapLen = -1;
+    function _amDealAmountFor(dealId) {
+      if (!dealId) return null;
+      if (!_amDealAmountMapCache || _amDealAmountMapLen !== allDeals.length) {
+        _amDealAmountMapCache = new Map();
+        allDeals.forEach(d => { if (d.id !== undefined && d.id !== null) _amDealAmountMapCache.set(String(d.id), { amount: Number(d['Deal Amount'])||0, paid: Number(d['Paid Amount'])||0 }); });
+        _amDealAmountMapLen = allDeals.length;
+      }
+      return _amDealAmountMapCache.get(String(dealId)) || null;
+    }
+
+    // Filtrelenmiş alarm listesinin ARKASINDAKİ dealler üzerinden toplamları
+    // hesaplar — aynı deal'e ait birden fazla alarm varsa tutar bir kez sayılır.
+    function _amRenderAlarmTotals(data) {
+      const seen = new Set();
+      let sumAmount = 0, sumPaid = 0;
+      data.forEach(a => {
+        const key = a.deal_id ? String(a.deal_id) : null;
+        if (!key || seen.has(key)) return;
+        seen.add(key);
+        const fin = _amDealAmountFor(a.deal_id);
+        if (fin) { sumAmount += fin.amount; sumPaid += fin.paid; }
+      });
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
+      set('amTotalAmount', fmtMoney(sumAmount));
+      set('amTotalPaid', fmtMoney(sumPaid));
+      set('amTotalRemaining', fmtMoney(sumAmount - sumPaid));
+    }
+
     function filterAdminAlarms() {
       const region = document.getElementById('amFilterRegion').value;
       const team   = document.getElementById('amFilterTeam')?.value || '';
@@ -1865,6 +1904,7 @@
       const tbody = document.getElementById('adminAlarmTbody');
       const empty = document.getElementById('adminAlarmEmpty');
       document.getElementById('adminAlarmCount').textContent = `${data.length} ${I18N.t('alarm gösteriliyor')}`;
+      _amRenderAlarmTotals(data);
       if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
       empty.style.display = 'none';
 
