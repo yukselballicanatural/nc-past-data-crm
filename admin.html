@@ -233,6 +233,7 @@
         <button onclick="switchView('cancelled-alarms')" class="nav-btn" id="nav-cancelled-alarms">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
           İptal Alarmları
+          <span id="cancelledAlarmBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:800;padding:1px 6px;min-width:20px;text-align:center">0</span>
         </button>
         <button onclick="switchView('won-alarms')" class="nav-btn" id="nav-won-alarms">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75l6-6m0 0l-6-6m6 6H3m14.25 12.75a9 9 0 100-18 9 9 0 000 18z"/></svg>
@@ -1621,6 +1622,11 @@
         adminCancelledDeals = all;
         _caPopulateTeamFilter();
         renderAdminCancelledAlarms();
+        const badge = document.getElementById('cancelledAlarmBadge');
+        if (badge) {
+          if (all.length > 0) { badge.textContent = all.length; badge.style.display = 'inline-block'; }
+          else badge.style.display = 'none';
+        }
       } catch(e) {
         grid.innerHTML = '';
         empty.textContent = I18N.t('Yükleme hatası: ') + e.message;
@@ -4353,6 +4359,7 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
         _anPopulateTeamOptions();
         loadDeals();
         loadAdminAlarms();
+        loadAdminCancelledDeals();
         adminRunEngine(false);
       } catch(e) { sessionStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
     })();
