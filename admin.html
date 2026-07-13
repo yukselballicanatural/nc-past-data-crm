@@ -1530,9 +1530,11 @@
       if (!silent) document.getElementById('adminEngineStatus').textContent = I18N.t('Alarmlar yükleniyor...');
       try {
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        // RM ise alarmlar da sunucu tarafında bölgeye kısıtlanır
+        const regionQ = window.isRM ? `&region=eq.${encodeURIComponent(window.rmRegion)}` : '';
         let all = [], offset = 0;
         while (true) {
-          const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc&limit=1000&offset=${offset}`, { headers: H });
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc${regionQ}&limit=1000&offset=${offset}`, { headers: H });
           if (!r.ok) throw new Error('HTTP ' + r.status);
           const batch = await r.json();
           if (!Array.isArray(batch) || !batch.length) break;
@@ -1724,7 +1726,8 @@
         const stageParam = encodeURIComponent('ilike.*cancel*');
         const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date';
         const PAGE = 1000;
-        const baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
+        const teamQ = window.rmTeams ? `&team=${TeamMap.inFilter(window.rmTeams)}` : '';
+        const baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}${teamQ}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'count=exact' };
         const first = await fetch(`${baseUrl}&offset=0`, { headers: H });
         if (!first.ok) throw new Error('HTTP ' + first.status);
@@ -1781,7 +1784,7 @@
     }
     function _caResetFilters() {
       document.getElementById('caFilterSearch').value = '';
-      document.getElementById('caFilterRegion').value = '';
+      document.getElementById('caFilterRegion').value = window.isRM ? window.rmRegion : '';
       document.getElementById('caFilterTeam').value = '';
       _caApplyFilters();
     }
@@ -1907,7 +1910,8 @@
         const stageParam = encodeURIComponent('ilike.*won*');
         const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount';
         const PAGE = 1000;
-        const baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
+        const teamQ = window.rmTeams ? `&team=${TeamMap.inFilter(window.rmTeams)}` : '';
+        const baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}${teamQ}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
         const first = await fetch(`${baseUrl}&offset=0`, { headers: H });
         if (!first.ok) throw new Error('HTTP ' + first.status);
         const firstRows = await first.json();
@@ -1973,7 +1977,7 @@
     }
     function _waResetFilters() {
       document.getElementById('waFilterSearch').value = '';
-      document.getElementById('waFilterRegion').value = '';
+      document.getElementById('waFilterRegion').value = window.isRM ? window.rmRegion : '';
       document.getElementById('waFilterTeam').value = '';
       document.getElementById('waFilterDir').value = '';
       _waApplyFilters();
@@ -2890,6 +2894,8 @@
     }
 
     function switchView(v) {
+      // Users ve System Logs admin'e özel — RM bu sayfalara geçemez
+      if (window.isRM && (v === 'users' || v === 'logs')) return;
       ['deals','summary','users','logs','alarms-monitor','today','noshow','cancelled-alarms','won-alarms'].forEach(name => {
         document.getElementById('view-' + name).classList.toggle('hidden', name !== v);
         document.getElementById('nav-' + name).classList.toggle('active', name === v);
@@ -3576,7 +3582,7 @@
     }
     function _anOnRegionChange() { _anPopulateTeamOptions(); }
     function _anResetFilters() {
-      document.getElementById('anFilterRegion').value = '';
+      document.getElementById('anFilterRegion').value = window.isRM ? window.rmRegion : '';
       document.getElementById('anFilterTeam').value = '';
       // NCDatePicker gerçek <input type="date">'i gizleyip yerine ayrı bir
       // görsel kutu (.nc-date-trigger) gösteriyor — sadece input.value='' set
@@ -3808,6 +3814,10 @@
           if (filters.createdFrom) body.p_created_from = filters.createdFrom;
           if (filters.createdTo) body.p_created_to = filters.createdTo;
         }
+        // RM: takım filtresi seçilmemişse bile özet HER ZAMAN bölgenin
+        // takımlarına kısıtlanır (seçili takım filtresi zaten bölgeye ait —
+        // dropdown bölgeye kısıtlı veriden doluyor, daraltmak güvenli).
+        if (window.rmTeams && !body.p_teams) body.p_teams = window.rmTeams;
         const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_deal_summary`, {
           method: 'POST',
           headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
@@ -4582,7 +4592,13 @@
     // yenilemede sıfırdan 49K+ satırı parça parça çekmesine yol açıyordu.
     // IndexedDB'nin kotası çok daha yüksek (yüzlerce MB) olduğu için veri
     // gerçekten kalıcı tutuluyor ve arka planda sessizce tazeleniyor.
-    const _DEALS_CACHE = 'nc_admin_deals_v1';
+    // RM'in bölgeye kısıtlı verisi ile admin'in tam verisi AYNI cache
+    // anahtarını paylaşmamalı — yoksa RM'in dar verisi admin'e (veya tersi)
+    // servis edilir. Anahtar role/bölgeye göre ayrışır.
+    const _DEALS_CACHE_BASE = 'nc_admin_deals_v1';
+    function _dealsCacheKey() {
+      return _DEALS_CACHE_BASE + (window.isRM ? '_rm_' + window.rmRegion : '');
+    }
     const _DEALS_TTL   = 20 * 60 * 1000; // 20 dk
     const _IDB_NAME = 'nc_admin_cache';
     const _IDB_STORE = 'kv';
@@ -4601,7 +4617,7 @@
         const db = await _idbOpen();
         const c = await new Promise((resolve, reject) => {
           const tx = db.transaction(_IDB_STORE, 'readonly');
-          const rq = tx.objectStore(_IDB_STORE).get(_DEALS_CACHE);
+          const rq = tx.objectStore(_IDB_STORE).get(_dealsCacheKey());
           rq.onsuccess = () => resolve(rq.result);
           rq.onerror = () => reject(rq.error);
         });
@@ -4614,7 +4630,7 @@
         const db = await _idbOpen();
         await new Promise((resolve, reject) => {
           const tx = db.transaction(_IDB_STORE, 'readwrite');
-          tx.objectStore(_IDB_STORE).put({ ts: Date.now(), deals }, _DEALS_CACHE);
+          tx.objectStore(_IDB_STORE).put({ ts: Date.now(), deals }, _dealsCacheKey());
           tx.oncomplete = resolve;
           tx.onerror = () => reject(tx.error);
         });
@@ -4642,6 +4658,8 @@
     async function _fetchAllRaw(onBatch) {
       const h = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
       const sleep = ms => new Promise(res => setTimeout(res, ms));
+      // RM ise tüm deal sorguları sunucu tarafında bölgenin takımlarına kısıtlanır
+      const teamQ = window.rmTeams ? `&team=${TeamMap.inFilter(window.rmTeams)}` : '';
 
       // 500'ler çoğunlukla Postgres statement_timeout (57014) altında, yoğun
       // eşzamanlı sayfa isteklerinden kaynaklanıyor — geçici. Önceden 3
@@ -4650,7 +4668,7 @@
       // ve daha uzun aralıklı deneme yapılıyor; bir sayfa gerçekten tükenirse
       // (5 deneme sonrası) o sayfa boş döner, tüm yükleme iptal edilmez.
       async function fetchRange(offset, limit, attempt) {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=${_DEALS_SELECT}&limit=${limit}&offset=${offset}`, { headers: h });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=${_DEALS_SELECT}${teamQ}&limit=${limit}&offset=${offset}`, { headers: h });
         if (!r.ok) {
           if (r.status >= 500 && attempt < 5) { await sleep(600 * attempt); return fetchRange(offset, limit, attempt + 1); }
           throw new Error('HTTP ' + r.status);
@@ -4659,7 +4677,7 @@
       }
 
       // 1. Toplam satır sayısını al (veri indirme yok)
-      const cr = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=id&limit=1`, {
+      const cr = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=id${teamQ}&limit=1`, {
         headers: { ...h, Prefer: 'count=exact' }
       });
       if (!cr.ok) throw new Error('HTTP ' + cr.status);
@@ -4807,18 +4825,63 @@
       }
     }
 
+    // ── Regional Manager desteği ─────────────────────────────────────
+    // RM'ler admin panelinin AYNISINI kullanır ama tüm veri kaynakları
+    // (deals, alarmlar, RPC özet, İptal/Won listeleri, cache) kendi
+    // bölgesine kısıtlanır; Users ve System Logs sayfaları gizlenir.
+    function _rmGetRegion(user) {
+      const n = (user.fullName || user.username || '').toLowerCase();
+      if (n.includes('benmamar') || n.includes('abderrahim')) return 'Istanbul';
+      if (n.includes('gazzini') || n.includes('yassin')) return 'Morocco';
+      // İsimden eşleşmezse takım adından bak
+      return (typeof AlarmEngine !== 'undefined' && AlarmEngine.getRegion(user.team || '')) ||
+             (window.TeamMap ? TeamMap.regionForTeam(user.team || '') : 'Istanbul');
+    }
+
+    function _applyRmUi() {
+      // Admin'e özel sayfalar RM'de yok
+      ['nav-users', 'nav-logs'].forEach(id => { const el = document.getElementById(id); if (el) el.style.display = 'none'; });
+      // Bölge seçici dropdown'ları RM'in bölgesine sabitle — veri zaten
+      // sunucu tarafında bölgeye kısıtlı, bu sadece arayüzü netleştirir.
+      ['amFilterRegion', 'anFilterRegion', 'caFilterRegion', 'waFilterRegion'].forEach(id => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        sel.innerHTML = `<option value="${window.rmRegion}">${window.rmRegion}</option>`;
+        sel.value = window.rmRegion;
+        sel.disabled = true;
+        sel.style.opacity = '0.7';
+      });
+      // Alarm Monitoring'deki diğer bölgenin paneli gizlenir
+      const otherPrefix = window.rmRegion === 'Istanbul' ? 'mor' : 'ist';
+      const otherPanel = document.getElementById(otherPrefix + 'Open')?.closest('.am-region-card');
+      if (otherPanel) otherPanel.style.display = 'none';
+      const ownPanel = document.getElementById((window.rmRegion === 'Istanbul' ? 'ist' : 'mor') + 'Open')?.closest('.am-region-card');
+      if (ownPanel) ownPanel.style.gridColumn = '1 / -1';
+      // İsim yanına bölge rozeti
+      const chip = document.createElement('span');
+      chip.textContent = `Regional Manager — ${window.rmRegion}`;
+      chip.style.cssText = 'display:inline-block;margin-left:6px;padding:1px 7px;font-size:9px;font-weight:700;border-radius:10px;background:#0c4a6e;color:#7dd3fc;border:1px solid #0369a1;vertical-align:middle';
+      const nameEl = document.getElementById('sidebarName');
+      nameEl.parentElement.insertBefore(chip, nameEl.nextSibling);
+    }
+
     (async function init() {
       try {
         await _cfg;
         const session = JSON.parse(sessionStorage.getItem('nc_current_user') || 'null');
         if (!session) { window.location.href = 'index.html'; return; }
-        if (session.role !== 'admin' && session.role !== 'super-admin') {
+        if (session.role !== 'admin' && session.role !== 'super-admin' && session.role !== 'regional-manager') {
           if (session.role === 'agent') window.location.href = 'agent.html';
           else window.location.href = 'team-leader.html';
           return;
         }
         window.isSuperAdmin = session.role === 'super-admin';
+        window.isRM = session.role === 'regional-manager';
         currentUser = session;
+        if (window.isRM) {
+          window.rmRegion = _rmGetRegion(session);
+          window.rmTeams  = TeamMap.aliasesForRegion(window.rmRegion);
+        }
         document.getElementById('sidebarName').textContent = fixTR(session.fullName || session.username || 'Admin');
         document.getElementById('userAvatar').textContent = (session.fullName || 'A')[0].toUpperCase();
         if (window.isSuperAdmin) {
@@ -4828,7 +4891,8 @@
           const nameEl = document.getElementById('sidebarName');
           nameEl.parentElement.insertBefore(saChip, nameEl.nextSibling);
         }
-        addLog('LOGIN', 'Admin panele giriş yapıldı');
+        if (window.isRM) _applyRmUi();
+        addLog('LOGIN', window.isRM ? `Regional Manager panele giriş yaptı (${window.rmRegion})` : 'Admin panele giriş yapıldı');
         document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
         ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo', 'logDateFrom', 'logDateTo'].forEach(id => NCDatePicker.attach(id));
         _anPopulateTeamOptions();

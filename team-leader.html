@@ -2986,7 +2986,8 @@
       const session = JSON.parse(sessionStorage.getItem('nc_current_user') || 'null');
       if (!session) { window.location.href = 'index.html'; return; }
       if (session.role === 'agent') { window.location.href = 'agent.html'; return; }
-      if (session.role === 'admin') { window.location.href = 'admin.html'; return; }
+      // RM'ler artık admin panelinin bölgeye kısıtlı halini kullanıyor
+      if (session.role === 'admin' || session.role === 'super-admin' || session.role === 'regional-manager') { window.location.href = 'admin.html'; return; }
       currentUser = session;
       const isRM = session.role === 'regional-manager';
       addLog('LOGIN', `Giriş yapıldı — ${isRM ? 'Regional Manager' : 'Team Leader'}`);
