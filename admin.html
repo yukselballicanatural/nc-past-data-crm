@@ -196,7 +196,7 @@
         <div class="w-9 h-9 rounded-full bg-indigo-600 text-white font-bold flex items-center justify-center text-sm" id="userAvatar">A</div>
         <div>
           <div class="text-xs font-bold text-white" id="sidebarName">Admin</div>
-          <div class="text-[10px] text-indigo-300">System Administrator</div>
+          <div class="text-[10px] text-indigo-300" id="sidebarRoleLabel">System Administrator</div>
         </div>
       </div>
 
@@ -4857,10 +4857,14 @@
       if (otherPanel) otherPanel.style.display = 'none';
       const ownPanel = document.getElementById((window.rmRegion === 'Istanbul' ? 'ist' : 'mor') + 'Open')?.closest('.am-region-card');
       if (ownPanel) ownPanel.style.gridColumn = '1 / -1';
+      // "System Administrator" sabit metni RM için yanlış — rozet zaten
+      // rolü + bölgeyi gösteriyor, altındaki satırı gereksiz kılıyor.
+      const roleLabel = document.getElementById('sidebarRoleLabel');
+      if (roleLabel) roleLabel.style.display = 'none';
       // İsim yanına bölge rozeti
       const chip = document.createElement('span');
       chip.textContent = `Regional Manager — ${window.rmRegion}`;
-      chip.style.cssText = 'display:inline-block;margin-left:6px;padding:1px 7px;font-size:9px;font-weight:700;border-radius:10px;background:#0c4a6e;color:#7dd3fc;border:1px solid #0369a1;vertical-align:middle';
+      chip.style.cssText = 'display:inline-block;margin-top:3px;padding:1px 7px;font-size:9px;font-weight:700;border-radius:10px;background:#0c4a6e;color:#7dd3fc;border:1px solid #0369a1;vertical-align:middle';
       const nameEl = document.getElementById('sidebarName');
       nameEl.parentElement.insertBefore(chip, nameEl.nextSibling);
     }
