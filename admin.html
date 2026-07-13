@@ -175,6 +175,7 @@
     .aam-info-card { background:#111827; border:1px solid #1e293b; border-radius:10px; padding:10px 12px; }
     .aam-info-label { font-size:9px; color:#475569; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:3px; }
     .aam-info-val { font-size:12px; color:#e2e8f0; font-weight:500; }
+    .aam-info-section { grid-column:1/-1; font-size:10px; font-weight:700; color:#818cf8; text-transform:uppercase; letter-spacing:0.08em; }
     textarea.aam-note { background:#111827; border:1px solid #374151; color:#e2e8f0; border-radius:10px; padding:10px 12px; font-size:12px; width:100%; resize:vertical; min-height:80px; box-sizing:border-box; }
     textarea.aam-note:focus { outline:none; border-color:#0d9488; }
   </style>
@@ -1333,7 +1334,7 @@
   <!-- Deal Modal -->
   <div id="dealModal">
     <div class="modal-backdrop" onclick="closeModal()"></div>
-    <div class="modal-panel">
+    <div class="modal-panel" style="max-width:760px">
       <div class="flex items-start justify-between mb-5">
         <div>
           <h3 class="text-base font-bold text-white" id="modalDealName">—</h3>
@@ -1344,30 +1345,9 @@
         </button>
       </div>
 
-      <div class="grid grid-cols-2 gap-2 mb-5 text-xs">
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Stage</div><div id="modalStage">—</div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Arrival Date</div><div class="text-slate-200" id="modalArrival">—</div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Agent</div><div class="text-indigo-400" id="modalAgent">—</div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Team</div><div class="text-slate-200" id="modalTeam">—</div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Deal Amount</div><div class="text-blue-400 font-bold" id="modalDealAmt">—</div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Paid / Unpaid</div><div><span class="text-emerald-400 font-bold" id="modalPaid">—</span> / <span class="text-red-400 font-bold" id="modalUnpaid">—</span></div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Language</div><div class="text-slate-200" id="modalLanguage">—</div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Payment Status</div><div class="text-slate-200" id="modalPayment">—</div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">1st Visit</div><div class="text-slate-200" id="modalV1">—</div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">2nd Visit</div><div class="text-slate-200" id="modalV2">—</div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">3rd Visit</div><div class="text-slate-200" id="modalV3">—</div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Visit Status</div><div class="text-slate-200" id="modalVisit">—</div></div>
-      </div>
+      <div class="aam-info-grid mb-5" id="modalFieldsGrid"></div>
 
       <div id="modalResultSection" class="border-t border-gray-800 pt-4"></div>
-
-      <div class="border-t border-gray-800 pt-4 mt-4">
-        <div class="flex items-center justify-between mb-2">
-          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tüm Deal Bilgileri</div>
-          <div class="text-[10px] text-slate-600" id="modalFullDetailsStatus"></div>
-        </div>
-        <div id="modalFullDetailsBody" class="grid grid-cols-2 gap-2 text-xs max-h-72 overflow-y-auto pr-1"></div>
-      </div>
     </div>
   </div>
 
@@ -3200,69 +3180,119 @@
       currentModalDeal = d;
       addLog('VIEW_DEAL', `Admin deal görüntüledi: ${d['Deal Name']}`, String(d['Deal Id']), d['Deal Name']);
       currentModalIndex = index;
-      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
       document.getElementById('modalDealName').textContent = d['Deal Name'] || '—';
       const zohoId = d['Deal Id'] || '';
       document.getElementById('modalDealId').innerHTML = `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${zohoId}" target="_blank" rel="noopener" style="text-decoration:underline;text-decoration-style:dotted;color:inherit" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${d['DealID'] || zohoId}${zohoId ? ' ↗' : ''}</a>`;
-      document.getElementById('modalStage').innerHTML = stagePill(d['Stage']);
-      set('modalArrival', formatDate(d['Arrival Date']));
-      set('modalAgent', fmt(d['Deal Owner Name']));
-      set('modalTeam', fmt(d['Team Group']));
-      set('modalDealAmt', fmtMoney(d['Deal Amount']));
-      set('modalPaid', fmtMoney(d['Paid Amount']));
-      set('modalUnpaid', fmtMoney(d['Unpaid Amount']));
-      set('modalLanguage', fmt(d['Language']));
-      set('modalPayment', fmt(d['Payment Status']));
-      set('modalV1', formatDate(d['1. Visit Date']));
-      set('modalV2', formatDate(d['2. Visit Date']));
-      set('modalV3', formatDate(d['3. Visit Date']));
-      set('modalVisit', fmt(d['Visit Status']));
+      // İlk render, elde zaten olan (allDeals'tan) alanlarla anında olur —
+      // "Yükleniyor" beklemek yok. raw jsonb'den gelen ek alanlar (kişi/otel/
+      // ekip/not bilgileri) o tek deal için arka planda çekilip gelince ikinci
+      // bir render ile eklenir (bkz. loadModalDealRaw).
+      document.getElementById('modalFieldsGrid').innerHTML = renderAdminDealFieldsHtml(buildAdminDealFields(d, null));
       renderModalResult(d);
-      loadModalFullDetails(d['Deal Id']);
+      loadModalDealRaw(d);
       document.getElementById('dealModal').classList.add('open');
       document.body.style.overflow = 'hidden';
     }
 
-    function _escHtml(s) {
-      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    // Team Leader panelindeki deal detay popup'ıyla BİREBİR aynı desen:
+    // kategori kategori (Durum / Kişi Bilgileri / Tarihler / Seyahat-Otel /
+    // Finans / Ekip / Notlar) gruplanmış, açıklayıcı kart görünümü.
+    function buildAdminDealFields(d, raw) {
+      raw = raw || {};
+      return [
+        ['__section__', 'Durum'],
+        ['Stage', d['Stage']],
+        ['Sonuç Kodu', d.result_code || raw.Result_Codes],
+        ['Sub Kod', d.sub_code],
+        ['Onay Durumu', raw.Approval],
+        ['Payment / Ticket', d['Payment Or Flight Ticket'] || raw.Payment_Or_Flight_Ticket],
+
+        ['__section__', 'Kişi Bilgileri'],
+        ['İletişim', raw.Contact_Name],
+        ['E-posta', raw.Email],
+        ['Pasaport', raw.Passport],
+        ['Ülke', raw.Country_Name],
+        ['Dil', d['Language'] || raw.Language],
+        ['Yetişkin / Çocuk', (raw.Adults || raw.Children) ? `${raw.Adults ?? 0} / ${raw.Children ?? 0}` : null],
+        ['Yolcu Sayısı', raw.No_of_Passengers],
+
+        ['__section__', 'Tarihler'],
+        ['Arrival Date',   formatDate(d['Arrival Date'])],
+        ['Eklenme Tarihi', formatDate(d['Created Time'])],
+        ['1. Vizit', formatDate(d['1. Visit Date'])],
+        ['2. Vizit', formatDate(d['2. Visit Date'])],
+        ['3. Vizit', formatDate(d['3. Visit Date'])],
+        ['Son Aktivite', formatDate(raw.Last_Activity_Time)],
+
+        ['__section__', 'Seyahat / Otel'],
+        ['Otel', raw.Hotel === 'Yes' ? (raw.Hotel_Name || 'Var') : (raw.Hotel === 'No' ? 'Yok' : null)],
+        ['Oda Tipi', raw.Room_type],
+        ['Check-in / Check-out', (raw.Check_in || raw.Check_out) ? `${formatDate(raw.Check_in)} — ${formatDate(raw.Check_out)}` : null],
+        ['Varış Uçuşu', raw.Arrival_Flight_No],
+        ['Dönüş Uçuşu', raw.Return_Flight_No],
+        ['Varış Havalimanı', raw.Arrival_Airport],
+        ['Dönüş Havalimanı', raw.Return_Airport],
+        ['Transfer Tipi', raw.Transfer_Type],
+        ['Doktor', raw.Doctor],
+        ['Booking Service', raw.Booking_Service],
+        ['Booking ID', raw.Booking_ID],
+        ['Invoice ID', raw.Invoice_ID],
+
+        ['__section__', 'Finans'],
+        ['Tutar',  fmtMoney(d['Deal Amount'])],
+        ['Ödenen', fmtMoney(d['Paid Amount'])],
+        ['Kalan',  fmtMoney(d['Unpaid Amount'])],
+        ['Ödeme Durumu', d['Payment Status']],
+
+        ['__section__', 'Ekip'],
+        ['Bölge', d['Region'] || d['Region Derived']],
+        ['Takım', d['Team Group']],
+        ['Danışman', d['Deal Owner Name']],
+        ['Süpervizör', raw.Supervisor],
+        ['Tercüman', raw.Translator || raw.Translation_Group],
+
+        ['__section__', 'Notlar'],
+        ['Danışman Notu', d.agent_note || raw.Description],
+        ['Lead Kaynağı', raw.Lead_Source],
+      ];
+    }
+
+    function renderAdminDealFieldsHtml(fields) {
+      return fields.map(([l, v], idx) => {
+        if (l === '__section__') {
+          return `<div class="aam-info-section"${idx === 0 ? '' : ' style="margin-top:8px;padding-top:8px;border-top:1px solid #1e293b"'}>${I18N.t(v)}</div>`;
+        }
+        return `
+          <div class="aam-info-card">
+            <div class="aam-info-label">${I18N.t(l)}</div>
+            <div class="aam-info-val">${fmt(v)}</div>
+          </div>`;
+      }).join('');
     }
 
     // Deal listesi (allDeals) performans için sadece belirli kolonları çeker
     // (bkz. _DEALS_SELECT) — `raw` jsonb (169 alanli, TOAST'li) HİÇ çekilmiyor.
-    // Modal açılınca SADECE o tek deal için raw'ı canlı çekip TÜM alanlarını
-    // gösteriyoruz — tek satır olduğu için ucuz, 49K satırda yapılan bulk
-    // sorguda ise (bkz. admin_deal_summary/admin_language_breakdown geçmişi)
-    // aynı şey ~10-15 saniyeye mal oluyordu.
-    let _modalFullDetailsReqId = 0;
-    async function loadModalFullDetails(dealId) {
-      const body = document.getElementById('modalFullDetailsBody');
-      const status = document.getElementById('modalFullDetailsStatus');
-      const reqId = ++_modalFullDetailsReqId;
-      body.innerHTML = '';
-      status.textContent = I18N.t('Yükleniyor...');
-      if (!dealId) { status.textContent = ''; return; }
+    // Modal açılınca SADECE o tek deal için raw'ı canlı çekip Kişi/Otel/Ekip/
+    // Not gibi ek kategorileri dolduruyoruz — tek satır olduğu için ucuz,
+    // 49K satırlık bulk sorguda ise (bkz. admin_deal_summary/
+    // admin_language_breakdown geçmişi) aynı şey ~10-15 saniyeye mal oluyordu.
+    let _modalDealRawReqId = 0;
+    async function loadModalDealRaw(d) {
+      const dealId = d['Deal Id'];
+      const reqId = ++_modalDealRawReqId;
+      if (!dealId) return;
       try {
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
         const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(String(dealId))}&select=raw&limit=1`, { headers: H });
-        if (!r.ok) throw new Error('HTTP ' + r.status);
+        if (!r.ok) return;
         const rows = await r.json();
-        if (reqId !== _modalFullDetailsReqId) return; // modal kapandı veya başka deal açıldı — cevap eskidi
+        // reqId eskiyse (modal kapatılıp başka deal açılmışsa) ya da kullanıcı
+        // zaten farklı bir deal'e geçmişse bu cevabı sessizce yok say.
+        if (reqId !== _modalDealRawReqId || currentModalDeal !== d) return;
         const raw = rows && rows[0] && rows[0].raw;
-        if (!raw || typeof raw !== 'object') { status.textContent = I18N.t('Ek veri yok.'); return; }
-        const entries = Object.entries(raw)
-          .filter(([k, v]) => v !== null && v !== '' && v !== undefined && typeof v !== 'object')
-          .sort((a, b) => a[0].localeCompare(b[0]));
-        if (!entries.length) { status.textContent = I18N.t('Ek veri yok.'); return; }
-        status.textContent = `${entries.length} ${I18N.t('alan')}`;
-        body.innerHTML = entries.map(([k, v]) => `
-          <div class="bg-gray-900/60 rounded-lg px-2.5 py-1.5 overflow-hidden">
-            <div class="text-[9px] text-slate-500 font-semibold truncate" title="${_escHtml(k)}">${_escHtml(k)}</div>
-            <div class="text-slate-200 truncate" title="${_escHtml(String(v))}">${_escHtml(String(v))}</div>
-          </div>`).join('');
-      } catch(e) {
-        if (reqId !== _modalFullDetailsReqId) return;
-        status.textContent = I18N.t('Yükleme hatası');
-      }
+        if (!raw || typeof raw !== 'object') return;
+        document.getElementById('modalFieldsGrid').innerHTML = renderAdminDealFieldsHtml(buildAdminDealFields(d, raw));
+      } catch(e) { /* sessiz — kart zaten temel alanlarla dolu kalır */ }
     }
 
     function renderModalResult(d) {
