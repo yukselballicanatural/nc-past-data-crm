@@ -693,6 +693,17 @@
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arama</label>
           <input id="logSearch" class="filter-input" style="width:180px" placeholder="Deal adı, detay..." oninput="renderLogs()">
         </div>
+        <div class="flex items-end gap-2">
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Tarih (başlangıç)</label>
+            <input type="date" id="logDateFrom" onchange="renderLogs()">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Tarih (bitiş)</label>
+            <input type="date" id="logDateTo" onchange="renderLogs()">
+          </div>
+          <button onclick="NCDatePicker.setValue('logDateFrom','');NCDatePicker.setValue('logDateTo','')" class="px-2.5 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-400 text-[10px] rounded-lg font-semibold border border-gray-700">Temizle</button>
+        </div>
         <div style="margin-left:auto">
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Toplam</label>
           <span id="logCount" class="text-white font-bold text-sm">—</span>
@@ -4309,12 +4320,20 @@
       const pageFilter   = document.getElementById('logPage').value;
       const roleFilter   = document.getElementById('logRole').value;
       const search       = (document.getElementById('logSearch').value || '').toLowerCase();
+      const dateFrom     = document.getElementById('logDateFrom').value || '';
+      const dateTo       = document.getElementById('logDateTo').value || '';
       const logs = allLogs.filter(l => {
         if (actionFilter && (l.action_type||'') !== actionFilter) return false;
         if (userFilter   && !(l.username||'').toLowerCase().includes(userFilter)) return false;
         if (pageFilter   && (l.page||'') !== pageFilter) return false;
         if (roleFilter   && (l.role||'') !== roleFilter) return false;
         if (search && ![(l.details||''),(l.deal_name||''),(l.username||''),(l.full_name||'')].join(' ').toLowerCase().includes(search)) return false;
+        if (dateFrom || dateTo) {
+          const logDate = l.created_at ? String(l.created_at).slice(0, 10) : '';
+          if (!logDate) return false;
+          if (dateFrom && logDate < dateFrom) return false;
+          if (dateTo   && logDate > dateTo) return false;
+        }
         return true;
       });
       document.getElementById('logCount').textContent = logs.length + ' / ' + allLogs.length;
@@ -4777,7 +4796,7 @@
         }
         addLog('LOGIN', 'Admin panele giriş yapıldı');
         document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
-        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo'].forEach(id => NCDatePicker.attach(id));
+        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo', 'logDateFrom', 'logDateTo'].forEach(id => NCDatePicker.attach(id));
         _anPopulateTeamOptions();
         loadDeals();
         loadAdminAlarms();
