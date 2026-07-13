@@ -3404,10 +3404,15 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
     function _anResetFilters() {
       document.getElementById('anFilterRegion').value = '';
       document.getElementById('anFilterTeam').value = '';
-      document.getElementById('anFilterDateFrom').value = '';
-      document.getElementById('anFilterDateTo').value = '';
-      document.getElementById('anFilterCreatedFrom').value = '';
-      document.getElementById('anFilterCreatedTo').value = '';
+      // NCDatePicker gerçek <input type="date">'i gizleyip yerine ayrı bir
+      // görsel kutu (.nc-date-trigger) gösteriyor — sadece input.value='' set
+      // etmek gizli inputu temizler ama görsel kutudaki seçili tarih metnini
+      // GÜNCELLEMEZ, kullanıcı tarihlerin hala seçili göründüğünü görür.
+      // NCDatePicker.setValue() ikisini de senkron temizler.
+      NCDatePicker.setValue('anFilterDateFrom', '');
+      NCDatePicker.setValue('anFilterDateTo', '');
+      NCDatePicker.setValue('anFilterCreatedFrom', '');
+      NCDatePicker.setValue('anFilterCreatedTo', '');
       _anPopulateTeamOptions();
       loadAnalyticsSummary();
     }
