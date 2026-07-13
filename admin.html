@@ -828,7 +828,7 @@
           <div class="am-kpi-icon" style="margin:0;--am-glow:#22d3ee">📆</div>
           <div>
             <h3 class="text-sm font-bold text-white">Gün Filtresi</h3>
-            <p class="text-[10px] text-slate-500 mt-0.5">Bir gün seçince aşağıdaki Alarm Listesi o kadar veya daha az gün kalanları gösterir</p>
+            <p class="text-[10px] text-slate-500 mt-0.5">Bir gün seçince tüm sayfa (KPI kartları, bölge panelleri ve Alarm Listesi) sadece son N gün + önümüzdeki N gün içindeki alarmları gösterir</p>
           </div>
         </div>
         <div id="amDayFilterChips" class="flex items-center gap-1.5 flex-wrap"></div>
@@ -923,13 +923,13 @@
             <option value="Payment">Payment</option>
             <option value="Flight Ticket">Flight Ticket</option>
           </select>
-          <select id="amFilterThresh" onchange="_amRenderDayFilterChips();renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
-            <option value="">Kalan Gün: Tümü</option>
-            <option value="45">45 gün ve altı</option>
-            <option value="30">30 gün ve altı</option>
-            <option value="15">15 gün ve altı</option>
-            <option value="7">7 gün ve altı</option>
-            <option value="3">3 gün ve altı</option>
+          <select id="amFilterThresh" onchange="_amApplyDayFilter()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
+            <option value="">Gün Filtresi: Tümü</option>
+            <option value="45">±45 gün</option>
+            <option value="30">±30 gün</option>
+            <option value="15">±15 gün</option>
+            <option value="7">±7 gün</option>
+            <option value="3">±3 gün</option>
           </select>
           <input type="date" id="amDateFrom" onchange="renderAdminAlarmTable()" title="Referans tarih başlangıç" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
           <input type="date" id="amDateTo" onchange="renderAdminAlarmTable()" title="Referans tarih bitiş" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
@@ -1568,7 +1568,9 @@
     }
 
     function updateAdminAlarmKPIs() {
-      const a = adminAllAlarms;
+      // Gün filtresi aktifse KPI kartları da o pencereye göre hesaplanır —
+      // chip'e basınca sadece tablo değil üstteki rakamlar da değişir.
+      const a = _amDayWindowAlarms();
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
       document.getElementById('mk1').textContent = a.filter(x => x.status === 'open' || x.status === 'seen').length;
       document.getElementById('mk2').textContent = a.filter(x => _amIsToday(x) && active.has(x.status)).length;
@@ -1580,19 +1582,25 @@
       document.getElementById('mk7').textContent = a.filter(x => ['arrival_approaching','visit_approaching'].includes(x.alarm_type) && active.has(x.status)).length;
       document.getElementById('mk8').textContent = a.filter(x => x.payment_or_flight_ticket === 'Flight Ticket' && ['arrival_approaching','visit_approaching','arrival_missing','today_patient'].includes(x.alarm_type) && active.has(x.status)).length;
 
+      // Sol menüdeki sistem KPI'ları her sayfada görünür — sayfa-yerel gün
+      // filtresini DEĞİL her zaman tüm alarm listesini yansıtır.
       const sOpen = document.getElementById('sAlarmOpen');
       if (sOpen) {
-        sOpen.textContent    = a.filter(x => x.status === 'open' || x.status === 'seen').length;
-        document.getElementById('sAlarmToday').textContent   = a.filter(x => _amIsToday(x) && active.has(x.status)).length;
-        document.getElementById('sAlarmOverdue').textContent = a.filter(x => _amIsOverdue(x)).length;
-        document.getElementById('sAlarmMissing').textContent = a.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
+        const all = adminAllAlarms;
+        sOpen.textContent    = all.filter(x => x.status === 'open' || x.status === 'seen').length;
+        document.getElementById('sAlarmToday').textContent   = all.filter(x => _amIsToday(x) && active.has(x.status)).length;
+        document.getElementById('sAlarmOverdue').textContent = all.filter(x => _amIsOverdue(x)).length;
+        document.getElementById('sAlarmMissing').textContent = all.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
       }
     }
 
     function renderRegionPanels() {
+      // Gün filtresi aktifse bölge panelleri de o pencereye göre hesaplanır
+      // (KPI kartlarıyla aynı davranış — sayfadaki tüm rakamlar tutarlı kalır).
+      const source = _amDayWindowAlarms();
       ['Istanbul','Morocco'].forEach(region => {
         const prefix = region === 'Istanbul' ? 'ist' : 'mor';
-        const ra = adminAllAlarms.filter(a => a.region === region);
+        const ra = source.filter(a => a.region === region);
         const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
         const openCount    = ra.filter(a => active.has(a.status) && a.status !== 'arrived' && a.status !== 'examined').length;
         const overdueCount = ra.filter(a => _amIsOverdue(a)).length;
@@ -2152,15 +2160,7 @@
         if (status === 'no_show' && a.status !== 'no_show') return false;
         if (status === 'closed'  && a.status !== 'closed') return false;
         if (pft    && a.payment_or_flight_ticket !== pft) return false;
-        if (thresh) {
-          // "Ng" filtresi: kalan gün <= N olan alarmları göster (gecikmişler dahil,
-          // en aciller de görünsün). alarms.days_remaining alarm OLUŞTURULDUĞU ANDA
-          // yazılan statik bir değer, sonradan hiç güncellenmiyor — o yüzden BURADA
-          // KULLANILMAZ, her zaman reference_date'ten canlı hesaplanır (tabloda
-          // "Kalan" sütununda görünenle birebir aynı olsun diye).
-          const dr = _amDaysUntil(a.reference_date);
-          if (dr === null || dr > Number(thresh)) return false;
-        }
+        if (thresh && !_amInDayWindow(a, Number(thresh))) return false;
         if (dFrom  && (!a.reference_date || a.reference_date < dFrom)) return false;
         if (dTo    && (!a.reference_date || a.reference_date > dTo)) return false;
         if (cFrom || cTo) {
@@ -2505,10 +2505,43 @@
       _csvDownload(rows, `region_performans_${new Date().toISOString().slice(0,10)}.csv`);
     }
 
-    // ── Gün Filtresi (Alarm Listesi'ni CANLI kalan güne göre filtreler) ──
-    // "Ng" = kalan gün <= N (gecikmişler dahil, en acil olanlar da görünür).
-    // Aynı amFilterThresh <select>'i sürüyor; chip'ler sadece görsel kısayol.
+    // ── Gün Filtresi — TÜM sayfayı (KPI kartları + bölge panelleri + Alarm
+    // Listesi) ±N günlük pencereye göre filtreler.
+    //
+    // Neden ±N pencere ("kalan gün <= N" değil)? Bu sistemdeki alarmların
+    // büyük çoğunluğu GEÇMİŞ tarihli (kalan gün negatif). "<= N" mantığında
+    // gecikmiş bir alarm 45'in de 3'ün de altında sayılır — hangi chip'e
+    // basılırsa basılsın neredeyse aynı liste gelir ve filtre "hiç
+    // çalışmıyor" gibi görünür. ±N penceresi ("son N gün + önümüzdeki N
+    // gün") ise her chip'te gerçekten farklı bir kesit gösterir.
+    //
+    // Kalan gün HER ZAMAN reference_date'ten canlı hesaplanır —
+    // alarms.days_remaining kolonu alarm oluşturulduğu anda yazılıp bir daha
+    // güncellenmediği için burada asla kullanılmaz.
     const _AM_DAY_FILTER_PRESETS = [45, 30, 15, 7, 3];
+
+    function _amInDayWindow(a, n) {
+      const dr = _amDaysUntil(a.reference_date);
+      return dr !== null && Math.abs(dr) <= n;
+    }
+
+    // Aktif gün filtresine göre daraltılmış alarm listesi — KPI kartları ve
+    // bölge panelleri bunun üzerinden hesaplanır ki chip'e basınca üstteki
+    // rakamlar da değişsin. Filtre boşsa tüm liste döner.
+    function _amDayWindowAlarms() {
+      const thresh = document.getElementById('amFilterThresh')?.value || '';
+      if (!thresh) return adminAllAlarms;
+      const n = Number(thresh);
+      return adminAllAlarms.filter(a => _amInDayWindow(a, n));
+    }
+
+    // Gün filtresi değişince tabloyla birlikte dashboard rakamlarını da yenile.
+    function _amApplyDayFilter() {
+      _amRenderDayFilterChips();
+      updateAdminAlarmKPIs();
+      renderRegionPanels();
+      renderAdminAlarmTable();
+    }
 
     function _amRenderDayFilterChips() {
       const sel = document.getElementById('amFilterThresh');
@@ -2521,8 +2554,7 @@
     function _amSetDayFilter(val) {
       const sel = document.getElementById('amFilterThresh');
       if (sel) sel.value = val;
-      _amRenderDayFilterChips();
-      renderAdminAlarmTable();
+      _amApplyDayFilter();
     }
 
     // ── Motor Ayarları modalı (eskiden ana sayfada açık duran, kafa karıştıran
