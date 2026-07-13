@@ -1572,7 +1572,9 @@
       // chip'e basınca sadece tablo değil üstteki rakamlar da değişir.
       const a = _amDayWindowAlarms();
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
-      document.getElementById('mk1').textContent = a.filter(x => x.status === 'open' || x.status === 'seen').length;
+      // "Açık Alarm" = kapatılmamış TOPLAM alarm sayısı — sadece open/seen değil,
+      // henüz closed/cancelled/no_show olmamış tüm durumlar (active seti).
+      document.getElementById('mk1').textContent = a.filter(x => active.has(x.status)).length;
       document.getElementById('mk2').textContent = a.filter(x => _amIsToday(x) && active.has(x.status)).length;
       document.getElementById('mk3').textContent = a.filter(x => _amIsOverdue(x)).length;
       document.getElementById('mk4').textContent = a.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
@@ -1587,7 +1589,7 @@
       const sOpen = document.getElementById('sAlarmOpen');
       if (sOpen) {
         const all = adminAllAlarms;
-        sOpen.textContent    = all.filter(x => x.status === 'open' || x.status === 'seen').length;
+        sOpen.textContent    = all.filter(x => active.has(x.status)).length;
         document.getElementById('sAlarmToday').textContent   = all.filter(x => _amIsToday(x) && active.has(x.status)).length;
         document.getElementById('sAlarmOverdue').textContent = all.filter(x => _amIsOverdue(x)).length;
         document.getElementById('sAlarmMissing').textContent = all.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
