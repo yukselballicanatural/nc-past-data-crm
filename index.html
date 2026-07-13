@@ -566,37 +566,27 @@
       setLoading(true);
 
       try {
-        if (username.toLowerCase() === 'admin' && password === 'admin123') {
-          sessionStorage.setItem('nc_current_user', JSON.stringify({
-            fullName: 'System Admin', username: 'admin', role: 'admin', team: 'All Teams'
-          }));
-          showToast('System Admin');
-          setTimeout(() => { window.location.href = 'admin.html'; }, 700);
-          return;
+        // Kimlik doğrulama artık tarayıcıda değil, sunucuda (api/login.js,
+        // service_role key ile) yapılıyor — tarayıcı Users tablosuna hiç
+        // dokunmuyor, Password alanı istemciye asla gönderilmiyor. Önceden
+        // burada sabit kodlu bir "admin/admin123" arka kapı şifresi vardı,
+        // güvenlik açığı olduğu için kaldırıldı.
+        const loginResp = await fetch('/api/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username, password })
+        });
+        const loginData = await loginResp.json().catch(() => ({}));
+        if (!loginResp.ok) {
+          showAlert(loginData.error || 'Login failed.', 'error');
+          setLoading(false); return;
         }
+
+        const user = loginData.user;
 
         const _c = await fetch('/api/config').then(r => r.json());
         const SUPABASE_URL = _c.url;
         const SUPABASE_KEY = _c.key;
-
-        const resp = await fetch(
-          `${SUPABASE_URL}/rest/v1/Users?Username=eq.${encodeURIComponent(username)}&select=*`,
-          { headers: { 'apikey': SUPABASE_KEY, 'Authorization': 'Bearer ' + SUPABASE_KEY } }
-        );
-        if (!resp.ok) throw new Error(`Database error: ${resp.status}`);
-
-        const users = await resp.json();
-        if (!users || users.length === 0) {
-          showAlert('User not found. Check your username.', 'error');
-          setLoading(false); return;
-        }
-
-        const user = users[0];
-        const dbPassword = String(user['Password'] || '').trim();
-        if (dbPassword !== password.trim()) {
-          showAlert('Wrong password. Please try again.', 'error');
-          setLoading(false); return;
-        }
 
         let rawRole = String(user['Role'] || 'agent').toLowerCase().trim();
         let role = 'agent';

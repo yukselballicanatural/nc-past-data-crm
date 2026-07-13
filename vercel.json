@@ -2,6 +2,7 @@
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/api/config", "destination": "/api/config.js" }
+    { "source": "/api/config", "destination": "/api/config.js" },
+    { "source": "/api/login", "destination": "/api/login.js" }
   ]
 }
