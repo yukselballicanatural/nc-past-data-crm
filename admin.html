@@ -225,6 +225,7 @@
         <button onclick="switchView('today')" class="nav-btn" id="nav-today">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
           Bugün Gelecekler
+          <span id="todayAlarmBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:800;padding:1px 6px;min-width:20px;text-align:center">0</span>
         </button>
         <button onclick="switchView('noshow')" class="nav-btn" id="nav-noshow">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
@@ -1359,6 +1360,14 @@
       </div>
 
       <div id="modalResultSection" class="border-t border-gray-800 pt-4"></div>
+
+      <div class="border-t border-gray-800 pt-4 mt-4">
+        <div class="flex items-center justify-between mb-2">
+          <div class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Tüm Deal Bilgileri</div>
+          <div class="text-[10px] text-slate-600" id="modalFullDetailsStatus"></div>
+        </div>
+        <div id="modalFullDetailsBody" class="grid grid-cols-2 gap-2 text-xs max-h-72 overflow-y-auto pr-1"></div>
+      </div>
     </div>
   </div>
 
@@ -1553,6 +1562,15 @@
         const badge = document.getElementById('adminAlarmBadge');
         const overdue = all.filter(a => _amIsOverdue(a)).length;
         if (overdue > 0) { badge.textContent = overdue; badge.style.display = 'inline-block'; }
+        // "Bugün Gelecekler" menü rozeti — renderAdminToday() ile BİREBİR aynı
+        // filtre (aktif statüler + no_show), sayfaya hiç girilmeden de doğru sayı görünsün.
+        const todayBadge = document.getElementById('todayAlarmBadge');
+        if (todayBadge) {
+          const activeSet = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+          const todayCount = all.filter(a => _amIsToday(a) && (activeSet.has(a.status) || a.status === 'no_show')).length;
+          if (todayCount > 0) { todayBadge.textContent = todayCount; todayBadge.style.display = 'inline-block'; }
+          else todayBadge.style.display = 'none';
+        }
       } catch(e) {
         document.getElementById('adminEngineStatus').textContent = I18N.t('Yükleme hatası: ') + e.message;
       }
@@ -2857,10 +2875,14 @@
       else _stopAlarmMonitorAutoRefresh();
       if (v === 'users') loadUsers();
       else if (v === 'logs') loadLogs();
-else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
-      else if (v === 'noshow') loadAdminAlarms().then(renderAdminNoshow);
-      else if (v === 'cancelled-alarms') loadAdminCancelledDeals();
-      else if (v === 'won-alarms') loadAdminWonAlarms();
+      // Bu dört sayfanın verisi girişte (init) arka planda önceden yükleniyor
+      // (bkz. loadAdminAlarms/loadAdminCancelledDeals/loadAdminWonAlarms init
+      // çağrıları) — sayfaya girer girmez ELDEKİ veriyle ANINDA render edilir
+      // (kullanıcı "Yükleniyor" görmez), sonra arka planda sessizce tazelenir.
+      else if (v === 'today') { renderAdminToday(); loadAdminAlarms(true).then(renderAdminToday); }
+      else if (v === 'noshow') { renderAdminNoshow(); loadAdminAlarms(true).then(renderAdminNoshow); }
+      else if (v === 'cancelled-alarms') { renderAdminCancelledAlarms(); loadAdminCancelledDeals(); }
+      else if (v === 'won-alarms') { renderAdminWonAlarms(); loadAdminWonAlarms(); }
     }
 
     // ── Alarm Monitoring: canlı saat + dakika başı otomatik yenileme ──
@@ -3196,8 +3218,51 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
       set('modalV3', formatDate(d['3. Visit Date']));
       set('modalVisit', fmt(d['Visit Status']));
       renderModalResult(d);
+      loadModalFullDetails(d['Deal Id']);
       document.getElementById('dealModal').classList.add('open');
       document.body.style.overflow = 'hidden';
+    }
+
+    function _escHtml(s) {
+      return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    // Deal listesi (allDeals) performans için sadece belirli kolonları çeker
+    // (bkz. _DEALS_SELECT) — `raw` jsonb (169 alanli, TOAST'li) HİÇ çekilmiyor.
+    // Modal açılınca SADECE o tek deal için raw'ı canlı çekip TÜM alanlarını
+    // gösteriyoruz — tek satır olduğu için ucuz, 49K satırda yapılan bulk
+    // sorguda ise (bkz. admin_deal_summary/admin_language_breakdown geçmişi)
+    // aynı şey ~10-15 saniyeye mal oluyordu.
+    let _modalFullDetailsReqId = 0;
+    async function loadModalFullDetails(dealId) {
+      const body = document.getElementById('modalFullDetailsBody');
+      const status = document.getElementById('modalFullDetailsStatus');
+      const reqId = ++_modalFullDetailsReqId;
+      body.innerHTML = '';
+      status.textContent = I18N.t('Yükleniyor...');
+      if (!dealId) { status.textContent = ''; return; }
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(String(dealId))}&select=raw&limit=1`, { headers: H });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const rows = await r.json();
+        if (reqId !== _modalFullDetailsReqId) return; // modal kapandı veya başka deal açıldı — cevap eskidi
+        const raw = rows && rows[0] && rows[0].raw;
+        if (!raw || typeof raw !== 'object') { status.textContent = I18N.t('Ek veri yok.'); return; }
+        const entries = Object.entries(raw)
+          .filter(([k, v]) => v !== null && v !== '' && v !== undefined && typeof v !== 'object')
+          .sort((a, b) => a[0].localeCompare(b[0]));
+        if (!entries.length) { status.textContent = I18N.t('Ek veri yok.'); return; }
+        status.textContent = `${entries.length} ${I18N.t('alan')}`;
+        body.innerHTML = entries.map(([k, v]) => `
+          <div class="bg-gray-900/60 rounded-lg px-2.5 py-1.5 overflow-hidden">
+            <div class="text-[9px] text-slate-500 font-semibold truncate" title="${_escHtml(k)}">${_escHtml(k)}</div>
+            <div class="text-slate-200 truncate" title="${_escHtml(String(v))}">${_escHtml(String(v))}</div>
+          </div>`).join('');
+      } catch(e) {
+        if (reqId !== _modalFullDetailsReqId) return;
+        status.textContent = I18N.t('Yükleme hatası');
+      }
     }
 
     function renderModalResult(d) {
@@ -4653,6 +4718,10 @@ else if (v === 'today') loadAdminAlarms().then(renderAdminToday);
         loadDeals();
         loadAdminAlarms();
         loadAdminCancelledDeals();
+        // Won Alarmı da diğer alarm sayfaları gibi girişte arka planda önceden
+        // yüklenir — kullanıcı menüden tıkladığında "Yükleniyor" beklemeden,
+        // rozet sayısı da menüde daha ilk açılışta hazır görünür.
+        loadAdminWonAlarms();
         adminRunEngine(false);
       } catch(e) { sessionStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
     })();
