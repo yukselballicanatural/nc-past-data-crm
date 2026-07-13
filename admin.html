@@ -2893,17 +2893,18 @@
       return `<span class="stage-pill ${cls}">${stage}</span>`;
     }
 
+    let _currentView = 'deals';
     function switchView(v) {
       // Users ve System Logs admin'e özel — RM bu sayfalara geçemez
       if (window.isRM && (v === 'users' || v === 'logs')) return;
+      _currentView = v;
       ['deals','summary','users','logs','alarms-monitor','today','noshow','cancelled-alarms','won-alarms'].forEach(name => {
         document.getElementById('view-' + name).classList.toggle('hidden', name !== v);
         document.getElementById('nav-' + name).classList.toggle('active', name === v);
       });
       if (v === 'summary') { renderSummary(); _startAnalyticsAutoRefresh(); }
       else _stopAnalyticsAutoRefresh();
-      if (v === 'alarms-monitor') { loadAdminAlarms(); _amRenderDayFilterChips(); _startAlarmMonitorAutoRefresh(); }
-      else _stopAlarmMonitorAutoRefresh();
+      if (v === 'alarms-monitor') { loadAdminAlarms(); _amRenderDayFilterChips(); }
       if (v === 'users') loadUsers();
       else if (v === 'logs') loadLogs();
       // Bu dört sayfanın verisi girişte (init) arka planda önceden yükleniyor
@@ -2914,24 +2915,41 @@
       else if (v === 'noshow') { renderAdminNoshow(); loadAdminAlarms(true).then(renderAdminNoshow); }
       else if (v === 'cancelled-alarms') { renderAdminCancelledAlarms(); loadAdminCancelledDeals(); }
       else if (v === 'won-alarms') { renderAdminWonAlarms(); loadAdminWonAlarms(); }
+      // Alarm-bağımlı bir sayfadaysak canlı yenileme çalışsın (bkz. altta) —
+      // takım liderinin aksiyonları (sonuç girme, Gelemedi/İptal işaretleme
+      // vb.) admin tarafında sayfayı terk edip geri dönmeye gerek kalmadan
+      // görünsün. Deals/Analytics/Users/Logs bunun dışında.
+      const alarmDependentViews = new Set(['alarms-monitor','today','noshow','cancelled-alarms','won-alarms']);
+      if (alarmDependentViews.has(v)) _startLiveAlarmRefresh(); else _stopLiveAlarmRefresh();
     }
 
-    // ── Alarm Monitoring: canlı saat + dakika başı otomatik yenileme ──
+    // ── Alarm Monitoring: canlı saat ──
     setInterval(() => {
       const el = document.getElementById('amClock');
       if (el) el.textContent = new Date().toLocaleTimeString('tr-TR');
     }, 1000);
 
-    let _alarmMonitorTimer = null;
-    function _startAlarmMonitorAutoRefresh() {
-      if (_alarmMonitorTimer) return;
-      _alarmMonitorTimer = setInterval(() => {
-        if (document.getElementById('view-alarms-monitor').classList.contains('hidden')) return;
-        loadAdminAlarms(true);
+    // ── Takım liderlerinin/RM'lerin alarmlar üzerinde yaptığı aksiyonlar
+    // (sonuç girme, Hasta Geldi/Gelemedi/İşlemlerde, İptal Edildi vb.) aynı
+    // `alarms`/`deals` tablolarına yazılıyor — admin panelinde görünmesi için
+    // sadece o veriyi periyodik olarak yeniden çekmek yeterli. Alarm-bağımlı
+    // 5 sayfadan biri açıkken dakikada bir sessizce tazelenir; filtre
+    // dropdown'ları (populateAdminAlarmFilters) KASITLI olarak yeniden
+    // kurulmuyor — açık bir select menüsü varken DOM'un altından çekilip
+    // kullanıcının seçimini bozmasın diye.
+    let _liveAlarmTimer = null;
+    function _startLiveAlarmRefresh() {
+      if (_liveAlarmTimer) return;
+      _liveAlarmTimer = setInterval(async () => {
+        if (_currentView === 'alarms-monitor') { await loadAdminAlarms(true); renderAdminAlarmTable(); }
+        else if (_currentView === 'today')     { await loadAdminAlarms(true); renderAdminToday(); }
+        else if (_currentView === 'noshow')    { await loadAdminAlarms(true); renderAdminNoshow(); }
+        else if (_currentView === 'cancelled-alarms') await loadAdminCancelledDeals();
+        else if (_currentView === 'won-alarms')       await loadAdminWonAlarms();
       }, 60000);
     }
-    function _stopAlarmMonitorAutoRefresh() {
-      if (_alarmMonitorTimer) { clearInterval(_alarmMonitorTimer); _alarmMonitorTimer = null; }
+    function _stopLiveAlarmRefresh() {
+      if (_liveAlarmTimer) { clearInterval(_liveAlarmTimer); _liveAlarmTimer = null; }
     }
 
     function _hasActiveDealFilter() {
