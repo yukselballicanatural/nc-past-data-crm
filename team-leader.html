@@ -1670,9 +1670,9 @@
       // çalışır — tabloyu ilk göstermek için bunları beklemeye gerek yok,
       // hazır olunca ilgili kolon/kartlar kendini günceller (performans)
       loadDealFinance(all.map(a => a.deal_id))
-        .then(() => { renderAlarms(); if (activeView === 'today') renderToday(); })
+        .then(() => { renderAlarms(); if (activeView === 'today') renderToday(); if (activeView === 'noshow') renderNoshow(); })
         .then(() => applyPaymentAutoRules())
-        .then(() => { updateTabCounts(); renderAlarms(); if (activeView === 'today') renderToday(); })
+        .then(() => { updateTabCounts(); renderAlarms(); if (activeView === 'today') renderToday(); if (activeView === 'noshow') renderNoshow(); })
         .catch(() => {});
     } catch(e) {
       document.getElementById('alarmLoading').style.display = 'none';
@@ -1712,7 +1712,11 @@
     const cacheKey = 'nc_engine_global';
     const lastRun  = Number(localStorage.getItem(cacheKey) || 0);
     const elapsed  = Date.now() - lastRun;
-    if (!manual && elapsed < 60 * 60 * 1000) return; // Otomatik: 1 saatte bir
+    // Otomatik: 15 dakikada bir (öncesinde 1 saatti). Motor, Zoho'dan
+    // senkronize olan deal değişikliklerini (ör. stage Cancelled olunca açık
+    // alarmları otomatik kapatma) alarms tablosuna işleyen asıl adımdır —
+    // bu tetiklenmeden veriyi yeniden çeksek bile DB'deki durum bayat kalır.
+    if (!manual && elapsed < 15 * 60 * 1000) return;
 
     const btn = document.getElementById('btnRunEngine');
     const statusEl = document.getElementById('engineStatus');
@@ -3016,13 +3020,34 @@
         switchView('rm-overview');
       }
 
-      // Alarm motorunu arka planda çalıştır (1 saatte bir otomatik)
+      // Alarm motorunu arka planda çalıştır (15 dakikada bir otomatik)
       runEngine(false);
+      // Sekme uzun süre açık kalırsa tek seferlik init çağrısı yetmiyordu —
+      // motoru periyodik olarak yeniden tetikle (kendi 15 dakikalık dahili
+      // eşiğini yukarıdaki runEngine zaten kendisi kontrol ediyor).
+      setInterval(() => runEngine(false), 15 * 60 * 1000);
+      _startLiveRefresh();
     } catch(e) {
       sessionStorage.removeItem('nc_current_user');
       window.location.href = 'index.html';
     }
   })();
+
+  // ── Canlı veri yenileme ────────────────────────────────────────────
+  // Başka bir takım lideri/RM/agent bir deal'e sonuç girdiğinde veya bir
+  // alarmı kapattığında, bu değişiklik aynı Supabase tablolarına yazılıyor —
+  // ama sayfa sadece ilk açılışta veri çekiyordu, sonrasında hiç
+  // yenilenmiyordu. Açık kalan sekme artık dakikada bir, o an görüntülenen
+  // sekmeye uygun veriyi sessizce tazeler.
+  let _liveRefreshTimer = null;
+  function _startLiveRefresh() {
+    if (_liveRefreshTimer) return;
+    _liveRefreshTimer = setInterval(() => {
+      if (['alarms','today','noshow'].includes(activeView)) loadAlarms();
+      else if (activeView === 'cancelled') loadCancelledDeals();
+      else if (activeView === 'won')       loadWonAlarms();
+    }, 60000);
+  }
 </script>
 </body>
 </html>

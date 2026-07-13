@@ -2422,7 +2422,15 @@
       const cacheKey = 'nc_engine_global';
       if (!manual) {
         const lastRun = Number(localStorage.getItem(cacheKey) || 0);
-        if (Date.now() - lastRun < 60 * 60 * 1000) return; // Otomatik: saatte bir
+        // Otomatik: 15 dakikada bir. Motor, Zoho'dan senkronize olan deal
+        // değişikliklerini (ör. stage Cancelled olunca açık alarmları kapatma
+        // — bkz. AlarmEngine.closeAlarmsForCancelledDeals) alarms tablosuna
+        // işleyen asıl adım. Bu tetiklenmeden alarm verisi tazelense bile
+        // (bkz. _startLiveAlarmRefresh) DB'deki durum bayat kalır. Önceden
+        // saatte birdi ve sadece sayfa ilk açıldığında bir kez çağrılıyordu —
+        // uzun süre açık kalan sekmelerde bir sonraki değişiklik saatlerce
+        // görünmeyebiliyordu.
+        if (Date.now() - lastRun < 15 * 60 * 1000) return;
       }
       const btn = document.getElementById('adminBtnEngine');
       const statusEl = document.getElementById('adminEngineStatus');
@@ -4926,6 +4934,11 @@
         // rozet sayısı da menüde daha ilk açılışta hazır görünür.
         loadAdminWonAlarms();
         adminRunEngine(false);
+        // Sekme uzun süre açık kalırsa (tek seferlik init çağrısı yeterli
+        // olmuyordu) motoru periyodik olarak yeniden tetikle — kendi 15
+        // dakikalık dahili eşiğini (yukarıdaki adminRunEngine) zaten
+        // kendisi kontrol ediyor, burada sadece "hatırlatan" bir zamanlayıcı.
+        setInterval(() => adminRunEngine(false), 15 * 60 * 1000);
       } catch(e) { sessionStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
     })();
   </script>
