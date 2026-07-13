@@ -32,15 +32,25 @@
 -- aynıdır. Değiştirirsen iki yeri birlikte güncelle.
 -- ============================================================
 
--- Önceki (parametresiz) sürümü düşür — parametre listesi değiştiği için
--- "create or replace" aynı isimde YENİ bir overload yaratır ve PostgREST
--- "ambiguous function" hatası verir. Önce eskisini temizlemek gerekiyor.
+-- Önceki sürümleri düşür — parametre listesi değiştiği için "create or
+-- replace" aynı isimde YENİ bir overload yaratır ve PostgREST
+-- "ambiguous function" hatası verir. Önce eskilerini temizlemek gerekiyor.
 drop function if exists public.admin_deal_summary();
+drop function if exists public.admin_deal_summary(text[], date, date);
 
+-- v6: Created Time filtresi de RPC'ye eklendi (p_created_from/p_created_to).
+-- Önceden Analytics'te Created Time filtresi seçilince RPC hiç
+-- desteklemediği için istemci tamamen client-side hesaplamaya (49K satırın
+-- tamamı tarayıcıda, 8-9 ayrı reduce/filter geçişi) düşüyordu — bu da
+-- "filtre uygulayınca çok yavaş" hissine yol açıyordu. Artık Created Time
+-- filtresi de sunucuda (created_time::date üzerinden) hesaplanıyor, RPC
+-- her zaman anında dönüyor.
 create or replace function public.admin_deal_summary(
-  p_teams      text[] default null,   -- doluysa: sadece bu takım adı varyantlarına (deals.team) sahip dealler
-  p_date_from  date   default null,   -- doluysa: arrival_date >= bu tarih
-  p_date_to    date   default null    -- doluysa: arrival_date <= bu tarih
+  p_teams        text[] default null,   -- doluysa: sadece bu takım adı varyantlarına (deals.team) sahip dealler
+  p_date_from    date   default null,   -- doluysa: arrival_date >= bu tarih
+  p_date_to      date   default null,   -- doluysa: arrival_date <= bu tarih
+  p_created_from date   default null,   -- doluysa: created_time::date >= bu tarih
+  p_created_to   date   default null    -- doluysa: created_time::date <= bu tarih
 )
 returns jsonb
 language sql
@@ -78,6 +88,8 @@ as $$
     where (p_teams is null or team = any(p_teams))
       and (p_date_from is null or arrival_date >= p_date_from)
       and (p_date_to   is null or arrival_date <= p_date_to)
+      and (p_created_from is null or created_time::date >= p_created_from)
+      and (p_created_to   is null or created_time::date <= p_created_to)
   ),
   scalars as (
     select
@@ -142,7 +154,7 @@ as $$
   from scalars sc;
 $$;
 
-grant execute on function public.admin_deal_summary(text[], date, date) to anon, authenticated;
+grant execute on function public.admin_deal_summary(text[], date, date, date, date) to anon, authenticated;
 
 -- ============================================================
 -- DİL DAĞILIMI — Supabase'de HAZIR TUTULAN (cache'lenmiş) sonuç
