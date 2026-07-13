@@ -3222,7 +3222,6 @@
         ['1. Vizit', formatDate(d['1. Visit Date'])],
         ['2. Vizit', formatDate(d['2. Visit Date'])],
         ['3. Vizit', formatDate(d['3. Visit Date'])],
-        ['Son Aktivite', formatDate(raw.Last_Activity_Time)],
 
         ['__section__', 'Seyahat / Otel'],
         ['Otel', raw.Hotel === 'Yes' ? (raw.Hotel_Name || 'Var') : (raw.Hotel === 'No' ? 'Yok' : null)],
@@ -3254,7 +3253,42 @@
         ['__section__', 'Notlar'],
         ['Danışman Notu', d.agent_note || raw.Description],
         ['Lead Kaynağı', raw.Lead_Source],
+
+        // Zoho'nun kendi log/audit alanları — "ne zaman eklendi, ne zaman
+        // ödeme yapıldı, en son kim ne değiştirdi" gibi geçmiş bilgisi.
+        // Zoho'da satır satır bir işlem geçmişi tutulmuyor (sadece son
+        // durumun anlık görüntüsü senkronize ediliyor), o yüzden gerçek bir
+        // "log" yerine deal'in kendi audit alanlarından bir zaman çizelgesi
+        // kuruyoruz — elimizde olan en yakın karşılığı bu.
+        ['__section__', 'Geçmiş / Zaman Çizelgesi'],
+        ['Oluşturuldu', _zTimelineEntry(raw.Created_Time, raw.Created_By)],
+        ['Son Güncelleme', _zTimelineEntry(raw.Modified_Time, raw.Modified_By)],
+        ['Son Aktivite', formatDateTime(raw.Last_Activity_Time)],
+        ['Stage Değişimi', raw.Old_Stage ? `${raw.Old_Stage} → ${d['Stage'] || '—'}` : null],
+        ['Stage Değişim Tarihi', formatDateTime(raw.Stage_Modified_Time)],
+        ['Onay', raw.Approval_Time ? _zTimelineEntry(raw.Approval_Time, raw.Approved_By) : null],
+        ['Kapanış Tarihi', formatDate(raw.Closing_Date)],
+        ['Son Ödeme Tutarı', raw.Last_Payment_Amount ? fmtMoney(raw.Last_Payment_Amount) : null],
+        ['Memnuniyet Maili', formatDate(raw.Satisfactory_Mail_Sent_Date)],
       ];
+    }
+
+    // Zoho lookup alanları ({id,name,...} nesnesi) için: "tarih — kişi adı" biçimi.
+    function _zTimelineEntry(dateStr, userObj) {
+      if (!dateStr) return null;
+      const who = (userObj && typeof userObj === 'object' && userObj.name) ? userObj.name : null;
+      return formatDateTime(dateStr) + (who ? ` — ${who}` : '');
+    }
+
+    // Zoho tarih alanları saat/saat dilimi içerebiliyor (ör. "2026-07-03T05:19:51+03:00")
+    // — formatDate()'in kullandığı basit parseDateString bunu doğru ayrıştırmaz.
+    // Native Date bu ISO 8601 formatını doğru anlıyor.
+    function formatDateTime(str) {
+      if (!str) return '—';
+      const d = new Date(str);
+      if (isNaN(d.getTime())) return String(str);
+      return d.toLocaleDateString('tr-TR', { day:'2-digit', month:'2-digit', year:'numeric' }) +
+        ' ' + d.toLocaleTimeString('tr-TR', { hour:'2-digit', minute:'2-digit' });
     }
 
     function renderAdminDealFieldsHtml(fields) {
