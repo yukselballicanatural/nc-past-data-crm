@@ -1127,8 +1127,15 @@
         <table class="tbl w-full">
           <thead>
             <tr class="text-slate-400 text-[10px]">
-              <th>#</th><th>Hasta / Danışman</th><th>Deal ID</th><th>Bölge</th><th>Takım</th><th>Arrival</th>
-              <th class="text-right">Tutar</th><th class="text-right">Ödenen</th><th class="text-right">Fark</th>
+              <th>#</th>
+              <th data-sort="wa-name" onclick="_waSortBy('name')" style="cursor:pointer;user-select:none">Hasta / Danışman<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="wa-dealId" onclick="_waSortBy('dealId')" style="cursor:pointer;user-select:none">Deal ID<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="wa-region" onclick="_waSortBy('region')" style="cursor:pointer;user-select:none">Bölge<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="wa-team" onclick="_waSortBy('team')" style="cursor:pointer;user-select:none">Takım<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="wa-arrival" onclick="_waSortBy('arrival')" style="cursor:pointer;user-select:none">Arrival<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th class="text-right" data-sort="wa-amount" onclick="_waSortBy('amount')" style="cursor:pointer;user-select:none">Tutar<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th class="text-right" data-sort="wa-paid" onclick="_waSortBy('paid')" style="cursor:pointer;user-select:none">Ödenen<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th class="text-right" data-sort="wa-diff" onclick="_waSortBy('diff')" style="cursor:pointer;user-select:none">Fark<span class="sarrow" style="color:#475569"> ↕</span></th>
             </tr>
           </thead>
           <tbody id="wonAlarmTbody"></tbody>
@@ -1970,6 +1977,34 @@
       _waCurrentPage = Math.max(1, Math.min(maxPage, _waCurrentPage + dir));
       renderAdminWonAlarms();
     }
+
+    // Sütun başlığına tıklayınca sıralama — All Deals tablosundaki sortBy()
+    // ile aynı desen (data-sort + .sarrow oku).
+    let _waSortCol = null, _waSortDir = 1;
+    function _waSortVal(d, col) {
+      switch (col) {
+        case 'name':   return (d.deal_name || '').toLowerCase();
+        case 'dealId': return (d.deal_id || '').toLowerCase();
+        case 'region': return (d._region || '').toLowerCase();
+        case 'team':   return (d.team || '').toLowerCase();
+        case 'arrival': return d.arrival_date || '';
+        case 'amount': return d._total || 0;
+        case 'paid':   return d._paid || 0;
+        case 'diff':   return d._diff || 0;
+        default: return '';
+      }
+    }
+    function _waSortBy(col) {
+      if (_waSortCol === col) _waSortDir = -_waSortDir; else { _waSortCol = col; _waSortDir = 1; }
+      renderAdminWonAlarms();
+      document.querySelectorAll('#view-won-alarms th[data-sort]').forEach(th => {
+        const arrow = th.querySelector('.sarrow');
+        if (!arrow) return;
+        const active = th.dataset.sort === 'wa-' + _waSortCol;
+        arrow.textContent = active ? (_waSortDir === 1 ? ' ↑' : ' ↓') : ' ↕';
+        arrow.style.color = active ? '#38bdf8' : '#475569';
+      });
+    }
     // Filtre degisince 1. sayfaya don — yoksa eski sayfa numarasinda kalip
     // az sonuclu bir filtrede bos bir sayfada kalinabilir.
     function _waApplyFilters() {
@@ -1996,6 +2031,10 @@
       if (teamF) data = data.filter(d => ((window.TeamMap && TeamMap.normalize(d.team)) || d.team) === teamF);
       if (dirF === 'under') data = data.filter(d => d._diff < 0);
       else if (dirF === 'over') data = data.filter(d => d._diff > 0);
+      if (_waSortCol) data.sort((a, b) => {
+        const av = _waSortVal(a, _waSortCol), bv = _waSortVal(b, _waSortCol);
+        return av < bv ? -_waSortDir : av > bv ? _waSortDir : 0;
+      });
       _waLastFiltered = data;
 
       const tbody = document.getElementById('wonAlarmTbody');
