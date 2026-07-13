@@ -648,8 +648,14 @@
         <table class="alarm-tbl" style="width:100%">
           <thead>
             <tr>
-              <th>#</th><th>Hasta / Danışman</th><th>Deal ID</th><th>Danışman</th><th>Arrival</th>
-              <th style="text-align:right">Tutar</th><th style="text-align:right">Ödenen</th><th style="text-align:right">Fark</th>
+              <th>#</th>
+              <th onclick="wonSortBy('name')" style="cursor:pointer;user-select:none">Hasta / Danışman<span id="wsort-name" class="sarrow"></span></th>
+              <th onclick="wonSortBy('dealId')" style="cursor:pointer;user-select:none">Deal ID<span id="wsort-dealId" class="sarrow"></span></th>
+              <th onclick="wonSortBy('owner')" style="cursor:pointer;user-select:none">Danışman<span id="wsort-owner" class="sarrow"></span></th>
+              <th onclick="wonSortBy('arrival')" style="cursor:pointer;user-select:none">Arrival<span id="wsort-arrival" class="sarrow"></span></th>
+              <th style="text-align:right;cursor:pointer;user-select:none" onclick="wonSortBy('amount')">Tutar<span id="wsort-amount" class="sarrow"></span></th>
+              <th style="text-align:right;cursor:pointer;user-select:none" onclick="wonSortBy('paid')">Ödenen<span id="wsort-paid" class="sarrow"></span></th>
+              <th style="text-align:right;cursor:pointer;user-select:none" onclick="wonSortBy('diff')">Fark<span id="wsort-diff" class="sarrow"></span></th>
             </tr>
           </thead>
           <tbody id="wonTbody"></tbody>
@@ -2532,6 +2538,40 @@
   const WA_PAGE_SIZE = 50;
   let _waCurrentPage = 1;
   let _waLastFiltered = [];
+
+  // Sütun başlığına tıklayınca sıralama — alarmSortBy/updateAlarmSortArrows
+  // ile aynı desen (id="wsort-COL" span, .sarrow/.sarrow.active).
+  let waSortCol = null, waSortDir = 'asc';
+  function wonSortValue(d, col) {
+    switch (col) {
+      case 'name':    return (d.deal_name || '').toLowerCase();
+      case 'dealId':  return (d.deal_id || '').toLowerCase();
+      case 'owner':   return (d.deal_owner || '').toLowerCase();
+      case 'arrival': return d.arrival_date || '';
+      case 'amount':  return d._total || 0;
+      case 'paid':    return d._paid || 0;
+      case 'diff':    return d._diff || 0;
+      default: return '';
+    }
+  }
+  function wonSortBy(col) {
+    if (waSortCol === col) waSortDir = waSortDir === 'asc' ? 'desc' : 'asc';
+    else { waSortCol = col; waSortDir = 'asc'; }
+    renderWonAlarms();
+  }
+  function updateWonSortArrows() {
+    ['name','dealId','owner','arrival','amount','paid','diff'].forEach(col => {
+      const el = document.getElementById('wsort-' + col);
+      if (!el) return;
+      if (col === waSortCol) {
+        el.textContent = waSortDir === 'asc' ? ' ▲' : ' ▼';
+        el.classList.add('active');
+      } else {
+        el.textContent = '';
+        el.classList.remove('active');
+      }
+    });
+  }
   function _waChangePage(dir) {
     const maxPage = Math.max(1, Math.ceil(_waLastFiltered.length / WA_PAGE_SIZE));
     _waCurrentPage = Math.max(1, Math.min(maxPage, _waCurrentPage + dir));
@@ -2571,11 +2611,19 @@
     if (search) data = data.filter(d => [d.deal_name, d.deal_owner, d.team].join(' ').toLowerCase().includes(search));
     if (dirF === 'under') data = data.filter(d => d._diff < 0);
     else if (dirF === 'over') data = data.filter(d => d._diff > 0);
+    if (waSortCol) {
+      const dir = waSortDir === 'asc' ? 1 : -1;
+      data.sort((a, b) => {
+        const av = wonSortValue(a, waSortCol), bv = wonSortValue(b, waSortCol);
+        return av < bv ? -dir : av > bv ? dir : 0;
+      });
+    }
     _waLastFiltered = data;
 
     const tbody = document.getElementById('wonTbody');
     const empty = document.getElementById('wonEmpty');
     const pager = document.getElementById('wonPager');
+    updateWonSortArrows();
     if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; pager.style.display = 'none'; return; }
     empty.style.display = 'none';
 
