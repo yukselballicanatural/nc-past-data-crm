@@ -944,6 +944,7 @@
             <tr style="background:#0f172a">
               <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">#</th>
               <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Hasta</th>
+              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Deal ID</th>
               <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Bölge / Takım</th>
               <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Alarm Tipi</th>
               <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Tarih</th>
@@ -2215,12 +2216,17 @@
         const overdue = _amIsOverdue(a);
         const daysTxt = days === null ? '—' : days < 0 ? `<span style="color:#f87171;font-weight:700">${Math.abs(days)}g ${I18N.t('GEÇ')}</span>` : days === 0 ? `<span style="color:#4ade80;font-weight:800">${I18N.t('BUGÜN')}</span>` : days <= 3 ? `<span style="color:#f87171">${days}g</span>` : days <= 7 ? `<span style="color:#fb923c">${days}g</span>` : `<span style="color:#60a5fa">${days}g</span>`;
         const rowBg = overdue ? 'rgba(127,29,29,0.12)' : '';
-        return `<tr style="${rowBg?'background:'+rowBg:''}">
+        // İsim uzun olunca aynı hücredeki Zoho ok ikonu (↗) ellipsis/overflow
+        // yüzünden görünmez/tıklanamaz oluyordu. Artık Deal ID kendi ayrı
+        // sütununda — isim uzunluğundan bağımsız her zaman tıklanabilir.
+        // Satırın tamamı da tıklanır (isme basınca da detay açılır).
+        return `<tr style="cursor:pointer;${rowBg?'background:'+rowBg:''}" onclick="openAdminAlarmModal('${a.id}')">
           <td style="padding:8px 10px;font-size:10px;color:#475569;border-bottom:1px solid #0f172a">${i+1}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #0f172a">
-            <div style="font-size:11px;font-weight:600;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${a.deal_name||'—'}${a.deal_id ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="am-zoho-link" title="Zoho'da Aç">↗</a>` : ''}</div>
+            <div style="font-size:11px;font-weight:600;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${a.deal_name||'—'}</div>
             <div style="font-size:9px;color:#64748b">${a.deal_owner||'—'}</div>
           </td>
+          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;font-size:10px;font-family:monospace;white-space:nowrap">${a.deal_id ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted" title="Zoho'da Aç">${a.deal_id} ↗</a>` : '—'}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #0f172a">
             <div style="font-size:10px;font-weight:600;color:#94a3b8;white-space:nowrap">${a.region||'—'}</div>
             <div style="font-size:9px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${a.team||'—'}</div>
@@ -2231,7 +2237,7 @@
           <td style="padding:8px 10px;border-bottom:1px solid #0f172a"><span style="font-size:9px;font-weight:700;color:${sm.color};white-space:nowrap">${sm.label}</span></td>
           <td style="padding:8px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b;border-bottom:1px solid #0f172a">${a.note||'—'}</td>
           <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">
-            <button onclick="openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
+            <button onclick="event.stopPropagation();openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
           </td>
         </tr>`;
       }).join('');
