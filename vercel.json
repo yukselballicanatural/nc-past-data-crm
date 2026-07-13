@@ -3,6 +3,7 @@
   "trailingSlash": false,
   "rewrites": [
     { "source": "/api/config", "destination": "/api/config.js" },
-    { "source": "/api/login", "destination": "/api/login.js" }
+    { "source": "/api/login", "destination": "/api/login.js" },
+    { "source": "/api/admin-users", "destination": "/api/admin-users.js" }
   ]
 }

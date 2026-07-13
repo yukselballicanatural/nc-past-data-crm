@@ -4152,11 +4152,9 @@
             loadEl.classList.add('hidden');
             document.getElementById('usersContent').classList.remove('hidden');
             // Arka planda güncelle
-            fetch(`${SUPABASE_URL}/rest/v1/Users?select=*&order=id.asc&limit=1000`, {
-              headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
-            }).then(r => r.json()).then(data => {
-              try { sessionStorage.setItem(_USERS_CACHE, JSON.stringify({ ts: Date.now(), users: data })); } catch(e) {}
-              allUsers = data; buildTeamFilterBar(); renderUsersTable();
+            fetch('/api/admin-users').then(r => r.json()).then(({ users }) => {
+              try { sessionStorage.setItem(_USERS_CACHE, JSON.stringify({ ts: Date.now(), users })); } catch(e) {}
+              allUsers = users || []; buildTeamFilterBar(); renderUsersTable();
             }).catch(() => {});
             return;
           }
@@ -4166,10 +4164,12 @@
       document.getElementById('usersContent').classList.add('hidden');
       document.getElementById('usersEmpty').classList.add('hidden');
       try {
-        const resp = await fetch(`${SUPABASE_URL}/rest/v1/Users?select=*&order=id.asc&limit=1000`, {
-          headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY }
-        });
-        allUsers = await resp.json();
+        // Users tablosu artık tarayıcıdan doğrudan erişilemiyor (RLS anon'a
+        // kapalı) — liste api/admin-users.js üzerinden (service_role ile)
+        // sunucu tarafında çekiliyor.
+        const resp = await fetch('/api/admin-users');
+        const respBody = await resp.json();
+        allUsers = respBody.users || [];
         try { sessionStorage.setItem(_USERS_CACHE, JSON.stringify({ ts: Date.now(), users: allUsers })); } catch(e) {}
         buildTeamFilterBar(); renderUsersTable();
         loadEl.classList.add('hidden');
@@ -4220,13 +4220,15 @@
       empty.classList.add('hidden');
       tbody.innerHTML = list.map((u, i) => {
         const id = uId(u);
-        const pw = u['Password'] || u['password'] || '—';
+        // Şifreler artık hashlenmiş tutuluyor ve API'den hiç dönmüyor — burada
+        // gösterilecek gerçek bir değer yok, düz metin şifre göstermek zaten
+        // güvenli değildi.
         return `
           <tr class="border-b border-gray-800/40 hover:bg-gray-800/30 cursor-pointer" onclick="openUserModal('${id}')">
             <td class="py-2 text-slate-500 text-center text-xs">${i+1}</td>
             <td class="py-2 text-white font-semibold">${uName(u)||'—'}</td>
             <td class="py-2 text-indigo-400 font-mono text-sm">${fmt(u['Username'])}</td>
-            <td class="py-2 font-mono text-sm text-slate-400">${pw}</td>
+            <td class="py-2 font-mono text-sm text-slate-600">••••••••</td>
             <td class="py-2 text-xs" style="${roleStyle(u['Role'])}">${fmt(u['Role'])}</td>
             <td class="py-2 text-slate-300 text-sm">${fmt(uTeam(u))}</td>
             <td class="py-2 text-center">
@@ -4263,14 +4265,15 @@
           try {
             const u = allUsers.find(x => uId(x) === String(userId));
             const originalUsername = u ? (u['Username'] || '') : '';
-            const filterKey = originalUsername
-              ? `Username=eq.${encodeURIComponent(originalUsername)}`
-              : `id=eq.${encodeURIComponent(userId)}`;
-            const resp = await fetch(`${SUPABASE_URL}/rest/v1/Users?${filterKey}`, {
+            // Users tablosu artık tarayıcıdan doğrudan silinemiyor (RLS anon'a
+            // kapalı) — api/admin-users.js üzerinden (service_role ile) siliniyor.
+            const resp = await fetch('/api/admin-users', {
               method: 'DELETE',
-              headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Prefer': 'return=minimal' }
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ id: userId, username: originalUsername })
             });
-            if (!resp.ok) throw new Error(await resp.text());
+            const respBody = await resp.json().catch(() => ({}));
+            if (!resp.ok || respBody.error) throw new Error(respBody.error || ('HTTP ' + resp.status));
             addLog('DELETE_USER', `Kullanıcı silindi: ${userName} (${originalUsername})`);
             await loadUsers();
             showSiteNotice(`"${userName}" ${I18N.t('silindi.')}`, 'success');
@@ -4288,7 +4291,10 @@
       document.getElementById('umOriginalUsername').value = u ? (u['Username'] || '') : '';
       document.getElementById('umFullName').value = u ? uName(u) : '';
       document.getElementById('umUsername').value = u ? (u['Username'] || '') : '';
-      document.getElementById('umPassword').value = u ? (u['Password'] || u['password'] || '') : '';
+      // Şifreler artık hashleniyor ve API'den hiç dönmüyor — düzenlerken alan
+      // boş başlar; boş bırakılırsa mevcut şifre değişmeden kalır (bkz. saveUser).
+      document.getElementById('umPassword').value = '';
+      document.getElementById('umPassword').placeholder = u ? 'Leave blank to keep current password' : 'Password';
       document.getElementById('umRole').value     = u ? (u['Role'] || 'Agent') : 'Agent';
       document.getElementById('umError').style.display = 'none';
       // Super Admin seçeneğini sadece super-admin görebilir
@@ -4322,7 +4328,11 @@
       const role     = document.getElementById('umRole').value;
       const team     = document.getElementById('umTeam').value.trim();
       const errEl    = document.getElementById('umError');
-      if (!fullName || !username || !password) {
+      const isEdit   = !!(id || originalUsername);
+      // Yeni kullanıcıda şifre zorunlu; düzenlemede boş bırakılırsa mevcut
+      // şifre değişmeden kalır (bkz. api/admin-users.js PATCH — boş Password
+      // alanı hiç gönderilmiyor).
+      if (!fullName || !username || (!isEdit && !password)) {
         errEl.textContent = 'Full name, username and password are required.';
         errEl.style.display = 'block'; return;
       }
@@ -4330,31 +4340,32 @@
       const btn = document.getElementById('umSaveBtn');
       btn.textContent = 'Saving…'; btn.disabled = true;
       try {
+        // Users tablosu artık tarayıcıdan doğrudan yazılamıyor (RLS anon'a
+        // kapalı) — ekleme/düzenleme api/admin-users.js üzerinden (service_role
+        // ile, şifre orada hashlenerek) yapılıyor.
         const payload = {
           'Deal Owner Name': fullName,
           'Username': username,
-          'Password': password,
           'Role': role,
           'Takim Adi': team
         };
+        if (password) payload['Password'] = password;
         let resp;
-        if (id || originalUsername) {
-          const filterKey = originalUsername
-            ? `Username=eq.${encodeURIComponent(originalUsername)}`
-            : `id=eq.${encodeURIComponent(id)}`;
-          resp = await fetch(`${SUPABASE_URL}/rest/v1/Users?${filterKey}`, {
+        if (isEdit) {
+          resp = await fetch('/api/admin-users', {
             method: 'PATCH',
-            headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', Prefer: 'return=minimal' },
-            body: JSON.stringify(payload)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id, username: originalUsername, payload })
           });
         } else {
-          resp = await fetch(`${SUPABASE_URL}/rest/v1/Users`, {
+          resp = await fetch('/api/admin-users', {
             method: 'POST',
-            headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json; charset=utf-8', Prefer: 'return=representation' },
-            body: JSON.stringify(payload)
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ payload })
           });
         }
-        if (!resp.ok) throw new Error(await resp.text());
+        const respBody = await resp.json().catch(() => ({}));
+        if (!resp.ok || respBody.error) throw new Error(respBody.error || ('HTTP ' + resp.status));
         closeUserModal();
         await loadUsers();
         showSiteNotice(id ? 'User updated successfully.' : 'User added successfully.', 'success');
