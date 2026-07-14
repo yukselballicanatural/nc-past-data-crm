@@ -943,10 +943,12 @@
             <option value="7">±7 gün</option>
             <option value="3">±3 gün</option>
           </select>
-          <input type="date" id="amDateFrom" onchange="renderAdminAlarmTable()" title="Referans tarih başlangıç" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
-          <input type="date" id="amDateTo" onchange="renderAdminAlarmTable()" title="Referans tarih bitiş" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
-          <input type="date" id="amCreatedFrom" onchange="renderAdminAlarmTable()" title="Deal Created Time başlangıç" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
-          <input type="date" id="amCreatedTo" onchange="renderAdminAlarmTable()" title="Deal Created Time bitiş" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
+          <span style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;align-self:center;margin-left:4px">Arrival:</span>
+          <input type="date" id="amDateFrom" onchange="renderAdminAlarmTable()" title="Arrival Date başlangıç" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
+          <input type="date" id="amDateTo" onchange="renderAdminAlarmTable()" title="Arrival Date bitiş" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
+          <span style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;align-self:center;margin-left:4px">Created:</span>
+          <input type="date" id="amCreatedFrom" onchange="renderAdminAlarmTable()" title="Created Time başlangıç" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
+          <input type="date" id="amCreatedTo" onchange="renderAdminAlarmTable()" title="Created Time bitiş" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
           <input id="amSearch" placeholder="Hasta, danışman..." oninput="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;width:160px">
         </div>
       </div>
@@ -1659,6 +1661,7 @@
           populateAdminAlarmFilters();
           renderAdminAlarmTable();
         }
+        _amEnsureShortRefMap(all);
         document.getElementById('adminEngineStatus').textContent = `${all.length} ${I18N.t('alarm yüklendi')}`;
         const lr = document.getElementById('amLastRefresh');
         if (lr) lr.textContent = new Date().toLocaleTimeString('tr-TR');
@@ -2478,7 +2481,38 @@
         });
         _amDealInfoMapLen = allDeals.length;
       }
-      return _amDealInfoMapCache.get(String(dealId)) || null;
+      const found = _amDealInfoMapCache.get(String(dealId));
+      if (found) return found;
+      // allDeals SADECE aktif stage'leri içerir (performans için) — kapatılmış/
+      // iptal/won bir deal'in alarmı Alarm Listesi'nde görünüyorsa burada
+      // bulunamaz ve önceden a.deal_id (UZUN Zoho id) ekrana Deal ID diye
+      // yazılıyordu. _amShortRefMap (bkz. _amEnsureShortRefMap) bu deal_id'ler
+      // için ayrıca çekilen KISA referansı sağlar.
+      const fb = _amShortRefMap.get(String(dealId));
+      return fb ? { amount: null, paid: null, unpaid: null, ref: fb.ref, stage: fb.stage, resultCode: '', paymentStatus: '' } : null;
+    }
+
+    // Alarm Listesi'ndeki (aktif olmayan stage'ler dahil) tüm deal_id'ler için
+    // kısa referans + stage haritası — allDeals'ın kapsamadığı (kapalı/iptal/
+    // won) dealleri kapsar. Sadece EKSİK olanlar için, chunk'lar hâlinde çekilir.
+    let _amShortRefMap = new Map();
+    async function _amEnsureShortRefMap(alarms) {
+      const ids = [...new Set((alarms || []).map(a => a.deal_id).filter(Boolean))]
+        .filter(id => !_amShortRefMap.has(String(id)));
+      if (!ids.length) return;
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const CH = 150;
+        for (let i = 0; i < ids.length; i += CH) {
+          const chunk = ids.slice(i, i + CH);
+          const filter = encodeURIComponent('in.(' + chunk.join(',') + ')');
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=${filter}&select=id,deal_id,stage`, { headers: H });
+          if (!r.ok) continue;
+          const rows = await r.json();
+          rows.forEach(d => _amShortRefMap.set(String(d.id), { ref: d.deal_id || '', stage: d.stage || '' }));
+        }
+        if (_currentView === 'alarms-monitor') renderAdminAlarmTable();
+      } catch(e) { /* sessiz — Deal ID sütunu uzun id ile kalır */ }
     }
     // Geriye dönük uyum: eski çağrılar {amount, paid} bekliyor
     function _amDealAmountFor(dealId) {

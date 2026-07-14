@@ -181,7 +181,11 @@ window.AlarmEngine = (function () {
           reference_date:  dateStr,
           threshold_days:  0,
           days_remaining:  0,
-          dedup_key:       `${deal.id}_${field}_today_${dateStr}`,
+          // "Yaklaşıyor" (days>0) alarmıyla AYNI dedup_key kullanılır — aksi
+          // halde hasta günü geldiğinde eski "Xg yaklaşıyor" alarmı kapanmadan
+          // yeni bir "Bugün" alarmı daha açılıyor, aynı hasta için 2 kart
+          // birden görünüyordu (bkz. ekran görüntüsü şikayeti).
+          dedup_key:       `${deal.id}_${field}_${dateStr}`,
         });
       } else if (days > 0) {
         for (const { t, min, max } of THRESHOLDS) {
