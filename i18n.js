@@ -417,6 +417,34 @@
     'AÇIK': 'OPEN',
     'EKSİK': 'MISSING',
     'TAKİP': 'TRACKING',
+
+    // ── Aktivite sayfası + yeni filtre kartları (İptal/Won/Aktivite) ────
+    // Eksik kaldıkları için EN'e geçince bu sayfalar TR görünüyordu.
+    'Aktivite': 'Activity',
+    'Aktivite / İşlem Geçmişi': 'Activity / Action History',
+    'Filtreler': 'Filters',
+    'Ara': 'Search',
+    'Kim': 'Who',
+    'Kayıtlı aksiyon bulunamadı.': 'No recorded actions found.',
+    'Arrival (baş.)': 'Arrival (from)',
+    'Arrival (bit.)': 'Arrival (to)',
+    'Created (baş.)': 'Created (from)',
+    'Created (bit.)': 'Created (to)',
+    'Tarih (baş.)': 'Date (from)',
+    'Tarih (bit.)': 'Date (to)',
+    'Tarih (başlangıç)': 'Date (start)',
+    'Tarih (bitiş)': 'Date (end)',
+    'Gün Filtresi': 'Day Filter',
+    'Takım Lideri': 'Team Leader',
+    'Yön': 'Direction',
+    'Deal adı, danışman ara...': 'Search deal name, agent...',
+    'Hasta, kişi, not...': 'Patient, contact, note...',
+    'Hasta durumu, arama sonucu, notlar... (en fazla 100 karakter)': 'Patient status, call outcome, notes... (max 100 characters)',
+    'Stage\'i "Cancelled" olan tüm dealler — alarm durumu veya tarihi fark etmeksizin': 'All deals with stage "Cancelled" — regardless of alarm status or date',
+    'Stage\'i "Won" olup ödenen tutar paket tutarına eşit olmayan (eksik veya fazla ödenmiş) dealler': 'Deals with stage "Won" where the paid amount doesn\'t match the package price (under- or overpaid)',
+    'Stage\'i Cancelled olan dealler': 'Deals with stage Cancelled',
+    'Takım liderlerinin ve yöneticilerin alarmlar üzerinde yaptığı tüm aksiyonlar (Hasta Geldi, Muayene, İşlemlerde, Gelmedi, Kapatma, Not vb.)': 'All actions taken by team leaders and admins on alarms (Arrived, Examined, In Progress, No-show, Closed, Note, etc.)',
+    'Takımındaki alarmlar üzerinde yapılan tüm aksiyonlar (Hasta Geldi, Muayene, İşlemlerde, Gelmedi, Kapatma, Not vb.) — kim, ne zaman, hangi durum': 'All actions taken on your team\'s alarms (Arrived, Examined, In Progress, No-show, Closed, Note, etc.) — who, when, what status',
   };
 
   function getLang() {
