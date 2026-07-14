@@ -1042,17 +1042,17 @@
     <div class="am-table-wrap" style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b;max-height:calc(100vh - 260px)">
       <table style="width:100%;border-collapse:collapse">
         <thead>
-          <tr style="background:#0f172a">
+          <tr style="background:#0f172a" id="todayHead">
             <th class="am-th">#</th>
-            <th class="am-th">Hasta</th>
-            <th class="am-th">Deal ID</th>
-            <th class="am-th">Stage</th>
-            <th class="am-th">Bölge / Takım</th>
-            <th class="am-th">P / FT</th>
-            <th class="am-th" style="text-align:right">Tutar</th>
-            <th class="am-th" style="text-align:right">Ödenen</th>
-            <th class="am-th" style="text-align:right">Kalan</th>
-            <th class="am-th">Durum</th>
+            <th class="am-th am-sort" data-col="name"   onclick="_tdSortBy('name')">Hasta<span class="am-sarrow"></span></th>
+            <th class="am-th am-sort" data-col="ref"    onclick="_tdSortBy('ref')">Deal ID<span class="am-sarrow"></span></th>
+            <th class="am-th am-sort" data-col="stage"  onclick="_tdSortBy('stage')">Stage<span class="am-sarrow"></span></th>
+            <th class="am-th am-sort" data-col="team"   onclick="_tdSortBy('team')">Bölge / Takım<span class="am-sarrow"></span></th>
+            <th class="am-th am-sort" data-col="pft"    onclick="_tdSortBy('pft')">P / FT<span class="am-sarrow"></span></th>
+            <th class="am-th am-sort" style="text-align:right" data-col="amount"    onclick="_tdSortBy('amount')">Tutar<span class="am-sarrow"></span></th>
+            <th class="am-th am-sort" style="text-align:right" data-col="paid"      onclick="_tdSortBy('paid')">Ödenen<span class="am-sarrow"></span></th>
+            <th class="am-th am-sort" style="text-align:right" data-col="remaining" onclick="_tdSortBy('remaining')">Kalan<span class="am-sarrow"></span></th>
+            <th class="am-th am-sort" data-col="status" onclick="_tdSortBy('status')">Durum<span class="am-sarrow"></span></th>
             <th class="am-th">Not</th>
             <th class="am-th">Aksiyon</th>
           </tr>
@@ -1804,11 +1804,44 @@
     }
 
     // ── Bugün Gelecekler ──────────────────────────────────────────────
+    // Bugün Gelecekler tablosu sıralama — Alarm Listesi'ndeki desenle aynı
+    let _tdSortCol = null, _tdSortDir = 1;
+    function _tdSortVal(a, col) {
+      const info = _amDealInfoFor(a.deal_id) || {};
+      switch (col) {
+        case 'name':      return (a.deal_name || '').toLowerCase();
+        case 'ref':       return (info.ref || String(a.deal_id || '')).toLowerCase();
+        case 'stage':     return (info.stage || '').toLowerCase();
+        case 'team':      return `${a.region || ''} ${a.team || ''}`.toLowerCase();
+        case 'pft':       return a.payment_or_flight_ticket || '';
+        case 'amount':    return Number(info.amount) || 0;
+        case 'paid':      return Number(info.paid) || 0;
+        case 'remaining': return Number(info.unpaid) || 0;
+        case 'status':    return a.status || '';
+        default: return '';
+      }
+    }
+    function _tdSortBy(col) {
+      if (_tdSortCol === col) _tdSortDir = -_tdSortDir; else { _tdSortCol = col; _tdSortDir = 1; }
+      renderAdminToday();
+      document.querySelectorAll('#todayHead .am-sort').forEach(th => {
+        const arrow = th.querySelector('.am-sarrow');
+        if (!arrow) return;
+        const isActive = th.dataset.col === _tdSortCol;
+        arrow.textContent = isActive ? (_tdSortDir === 1 ? ' ↑' : ' ↓') : ' ↕';
+        arrow.classList.toggle('active', isActive);
+      });
+    }
+
     function renderAdminToday() {
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
       let data = adminAllAlarms.filter(a => _amIsToday(a) && (active.has(a.status) || a.status === 'no_show'));
       const pftSel = document.getElementById('todayPftFilter');
       if (pftSel && pftSel.value) data = data.filter(a => a.payment_or_flight_ticket === pftSel.value);
+      if (_tdSortCol) data.sort((x, y) => {
+        const a = _tdSortVal(x, _tdSortCol), b = _tdSortVal(y, _tdSortCol);
+        return a < b ? -_tdSortDir : a > b ? _tdSortDir : 0;
+      });
 
       const tbody = document.getElementById('todayTbody');
       const empty = document.getElementById('todayEmpty');
