@@ -1,0 +1,16 @@
+# Bu dosyalar Vercel'e DEPLOY EDİLMEZ — public URL'den erişilemezler.
+# api/ altındaki serverless fonksiyonlar ve gerçekten kullanılan HTML/JS/PNG
+# dosyaları burada YOK, yani normal şekilde deploy olmaya devam ederler.
+
+# Veritabanı şeması / kurulum SQL'leri — tablo isimleri, RLS mantığı,
+# service_role by-pass detayları içeriyor. Internetten okunabilir olması
+# bir saldırgana doğrudan yol haritası verir.
+*.sql
+
+# İç dokümantasyon
+projetanitim.md
+CLAUDE.md
+
+# Kullanılmayan / eski dosyalar (hiçbir HTML bunları yüklemiyor)
+app.js
+deal_dashboard_kapsamli (1).html

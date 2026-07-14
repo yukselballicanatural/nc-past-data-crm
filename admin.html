@@ -965,6 +965,11 @@
         <span>Toplam Ödenen: <strong class="text-emerald-400 font-bold" id="amTotalPaid">€0</strong></span>
         <span>Toplam Kalan: <strong class="text-red-400 font-bold" id="amTotalRemaining">€0</strong></span>
       </div>
+      <div id="adminAlarmPager" style="display:none;align-items:center;justify-content:center;gap:12px;margin-top:10px">
+        <button id="adminAlarmPrevBtn" onclick="_aaChangePage(-1)" class="am-btn" style="padding:4px 14px">‹ Önceki</button>
+        <span id="adminAlarmPageInfo" class="text-xs text-slate-400"></span>
+        <button id="adminAlarmNextBtn" onclick="_aaChangePage(1)" class="am-btn" style="padding:4px 14px">Sonraki ›</button>
+      </div>
     </div>
   </div>
 
@@ -1540,15 +1545,24 @@
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
         // RM ise alarmlar da sunucu tarafında bölgeye kısıtlanır
         const regionQ = window.isRM ? `&region=eq.${encodeURIComponent(window.rmRegion)}` : '';
-        let all = [], offset = 0;
-        while (true) {
-          const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc${regionQ}&limit=1000&offset=${offset}`, { headers: H });
-          if (!r.ok) throw new Error('HTTP ' + r.status);
-          const batch = await r.json();
-          if (!Array.isArray(batch) || !batch.length) break;
-          all.push(...batch);
-          if (batch.length < 1000) break;
-          offset += 1000;
+        // İlk sayfa toplam sayıyla (content-range) çekilir, kalan sayfalar
+        // PARALEL iner — eski sıralı while-döngüsünde toplam süre sayfa
+        // sayısıyla çarpılıyordu (5K alarm = 5 ardışık istek), şimdi tek
+        // istek süresine iner. Won/İptal loader'larıyla aynı desen.
+        const PAGE = 1000;
+        const baseUrl = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc${regionQ}&limit=${PAGE}`;
+        const first = await fetch(`${baseUrl}&offset=0`, { headers: { ...H, Prefer: 'count=exact' } });
+        if (!first.ok) throw new Error('HTTP ' + first.status);
+        let all = await first.json();
+        const range = first.headers.get('content-range');
+        const total = range && range.includes('/') ? Number(range.split('/')[1]) : all.length;
+        if (total > all.length) {
+          const offsets = [];
+          for (let off = PAGE; off < total; off += PAGE) offsets.push(off);
+          const rest = await Promise.all(offsets.map(off =>
+            fetch(`${baseUrl}&offset=${off}`, { headers: H }).then(r => r.ok ? r.json() : [])
+          ));
+          rest.forEach(p => { if (Array.isArray(p)) all.push(...p); });
         }
         adminAllAlarms = all;
         updateAdminAlarmKPIs();
@@ -2238,6 +2252,21 @@
       fill('amFilterOwner', owners, "Tüm Deal Owner'lar");
     }
 
+    // Alarm Listesi sayfalaması — binlerce filtrelenmiş satırı tek seferde
+    // DOM'a basmak sayfayı donduruyordu (Alarm Monitoring en çok kullanılan
+    // sayfa). Won Alarmı'ndaki desenle 100'erlik sayfalara bölündü. Filtre
+    // değişince (imza değişimi) otomatik 1. sayfaya dönülür. CSV export ve
+    // alt toplamlar SAYFALANMAMIŞ tam filtrelenmiş veri üzerinden hesaplanır.
+    const AA_PAGE_SIZE = 100;
+    let _aaPage = 1;
+    let _aaLastFilterSig = '';
+    let _aaLastFilteredLen = 0;
+    function _aaChangePage(dir) {
+      const maxPage = Math.max(1, Math.ceil(_aaLastFilteredLen / AA_PAGE_SIZE));
+      _aaPage = Math.max(1, Math.min(maxPage, _aaPage + dir));
+      renderAdminAlarmTable();
+    }
+
     function renderAdminAlarmTable() {
       const data = filterAdminAlarms();
 
@@ -2245,10 +2274,30 @@
       const empty = document.getElementById('adminAlarmEmpty');
       document.getElementById('adminAlarmCount').textContent = `${data.length} ${I18N.t('alarm gösteriliyor')}`;
       _amRenderAlarmTotals(data);
-      if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+      const pager = document.getElementById('adminAlarmPager');
+      if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; if (pager) pager.style.display = 'none'; return; }
       empty.style.display = 'none';
 
-      tbody.innerHTML = data.map((a, i) => {
+      // Filtre imzası değiştiyse 1. sayfaya dön
+      const sig = ['amFilterRegion','amFilterTeam','amFilterOwner','amFilterType','amFilterStatus','amFilterPft','amFilterThresh','amDateFrom','amDateTo','amCreatedFrom','amCreatedTo','amSearch']
+        .map(id => document.getElementById(id)?.value || '').join('|');
+      if (sig !== _aaLastFilterSig) { _aaLastFilterSig = sig; _aaPage = 1; }
+      _aaLastFilteredLen = data.length;
+
+      const maxPage = Math.max(1, Math.ceil(data.length / AA_PAGE_SIZE));
+      _aaPage = Math.min(_aaPage, maxPage);
+      const pageStart = (_aaPage - 1) * AA_PAGE_SIZE;
+      const pageData = data.slice(pageStart, pageStart + AA_PAGE_SIZE);
+      if (pager) {
+        pager.style.display = data.length > AA_PAGE_SIZE ? 'flex' : 'none';
+        document.getElementById('adminAlarmPageInfo').textContent =
+          `${pageStart + 1}–${Math.min(pageStart + AA_PAGE_SIZE, data.length)} / ${data.length} ${I18N.t('kayıt')} — ${I18N.t('Sayfa')} ${_aaPage}/${maxPage}`;
+        document.getElementById('adminAlarmPrevBtn').disabled = _aaPage === 1;
+        document.getElementById('adminAlarmNextBtn').disabled = _aaPage >= maxPage;
+      }
+
+      tbody.innerHTML = pageData.map((a, _pi) => {
+        const i = pageStart + _pi;
         const tm  = _amTypeMeta(a.alarm_type);
         const sm  = _amStatusMeta(a.status);
         const days = _amDaysUntil(a.reference_date);

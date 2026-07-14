@@ -30,11 +30,26 @@ export default async function handler(req, res) {
 
   const H = { apikey: SERVICE_KEY, Authorization: 'Bearer ' + SERVICE_KEY };
 
+  // Kullanıcı adı/şifre hataları AYNI genel mesajı döner — saldırganın "bu
+  // kullanıcı var mı" bilgisini (username enumeration) sızdırmamak için.
+  const GENERIC = 'Kullanıcı adı veya şifre hatalı.';
+  // Kullanıcı bulunamayınca da bir bcrypt.compare çalıştırılır: aksi halde
+  // "kullanıcı yok" yolu hiç hash karşılaştırmadan anında dönüp, cevap
+  // süresinden hangi kullanıcıların var olduğu anlaşılabilirdi (timing oracle).
+  // Geçerli bir bcrypt hash (herkese açık kanonik test vektörü — gizli değil).
+  // Amaç: compare her zaman false döner ama tam bcrypt maliyetini harcar,
+  // böylece "kullanıcı yok" yolu da "şifre yanlış" yoluyla aynı sürede döner.
+  const DUMMY_HASH = '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/Users?Username=eq.${encodeURIComponent(username)}&select=*`, { headers: H });
     if (!r.ok) { res.status(502).json({ error: 'Veritabanı hatası.' }); return; }
     const rows = await r.json();
-    if (!rows.length) { res.status(401).json({ error: 'Kullanıcı bulunamadı.' }); return; }
+    if (!rows.length) {
+      await bcrypt.compare(password, DUMMY_HASH); // zamanlamayı eşitle
+      res.status(401).json({ error: GENERIC });
+      return;
+    }
 
     const user = rows[0];
     const stored = String(user['Password'] || '');
@@ -56,7 +71,7 @@ export default async function handler(req, res) {
       }
     }
 
-    if (!ok) { res.status(401).json({ error: 'Şifre hatalı.' }); return; }
+    if (!ok) { res.status(401).json({ error: GENERIC }); return; }
 
     delete user.Password; // Client'a asla şifre/hash dönmez
     res.status(200).json({ ok: true, user });
