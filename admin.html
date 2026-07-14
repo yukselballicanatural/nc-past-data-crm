@@ -1298,7 +1298,10 @@
       </div>
 
       <div id="aamExistingNoteWrap" style="display:none;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;margin-bottom:14px">
-        <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;margin-bottom:4px">Mevcut Not</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+          <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Mevcut Not</div>
+          <button onclick="deleteAdminAlarmNote()" style="padding:2px 8px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:9px;font-weight:700;cursor:pointer">Notu Sil</button>
+        </div>
         <div style="font-size:12px;color:#cbd5e1" id="aamExistingNote"></div>
       </div>
 
@@ -1813,7 +1816,7 @@
           <td style="padding:8px 10px;font-size:11px;color:#4ade80;${bd};text-align:right;white-space:nowrap">${info.paid || info.paid === 0 ? fmtMoney(info.paid) : '—'}</td>
           <td style="padding:8px 10px;font-size:11px;color:#f87171;${bd};text-align:right;white-space:nowrap">${info.unpaid || info.unpaid === 0 ? fmtMoney(info.unpaid) : '—'}</td>
           <td style="padding:8px 10px;${bd};white-space:nowrap"><span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.color}22;color:${sm.color}">${sm.label}</span></td>
-          <td style="padding:8px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b;${bd}">${a.note ? fmt(a.note) : '—'}</td>
+          <td style="padding:8px 10px;${bd};text-align:center">${_noteBtn(a.note)}</td>
           <td style="padding:8px 10px;${bd};white-space:nowrap">
             <button onclick="event.stopPropagation();openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
           </td>
@@ -1834,7 +1837,7 @@
         <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.team)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.region)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#cbd5e1;border-bottom:1px solid #0f172a;white-space:nowrap">${_amFmtDate(a.reference_date)}</td>
-        <td style="padding:8px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b;border-bottom:1px solid #0f172a">${fmt(a.note)}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #0f172a;text-align:center">${_noteBtn(a.note)}</td>
         <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">
           <button onclick="openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
         </td>
@@ -2593,7 +2596,7 @@
           <td style="${td};font-size:10px;color:#4ade80;text-align:right;white-space:nowrap">${paidTxt}</td>
           <td style="${td};white-space:nowrap">${resultTxt}</td>
           <td style="${td}"><span style="font-size:9px;font-weight:700;color:${sm.color};white-space:nowrap">${sm.label}</span></td>
-          <td style="${td};max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b">${a.note||'—'}</td>
+          <td style="${td};text-align:center">${_noteBtn(a.note)}</td>
           <td style="${td};white-space:nowrap">
             <button onclick="event.stopPropagation();openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
           </td>
@@ -2758,6 +2761,31 @@
           </div>`).join('');
         wrap.style.display = 'block';
       } catch(e) { /* sessiz */ }
+    }
+
+    // Admin: mevcut notu sil (yanlışlıkla eklenen/test notlarını temizlemek için)
+    async function deleteAdminAlarmNote() {
+      const a = currentAdminAlarm;
+      if (!a || !a.note) return;
+      if (!confirm('Bu notu silmek istediğine emin misin? Bu işlem geri alınamaz.')) return;
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${a.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ note: null }) });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const adminName = (currentUser && (currentUser.fullName || currentUser.username)) || 'Admin';
+        fetch(`${SUPABASE_URL}/rest/v1/alarm_logs`, {
+          method: 'POST', headers: H,
+          body: JSON.stringify({
+            alarm_id: a.id, deal_id: a.deal_id || null,
+            action_type: 'note_deleted', old_status: a.status, new_status: a.status,
+            note: null, action_by: adminName, action_role: currentUser.role,
+          }),
+        }).catch(() => {});
+        addLog('ALARM_UPDATE', `Admin not sildi (önceki not: ${a.note})`, a.deal_id, a.deal_name);
+        a.note = null;
+        document.getElementById('aamExistingNoteWrap').style.display = 'none';
+        renderAdminAlarmTable();
+      } catch(e) { alert('Not silinemedi: ' + e.message); }
     }
 
     // Admin: alarm durum/not güncelle — aksiyon alarm_logs'a ve Logs'a yazılır
@@ -3053,6 +3081,10 @@
         .replace(/Ã¢/g,'â').replace(/Ã‚/g,'Â').replace(/Ã¡/g,'á').replace(/Ã©/g,'é');
     }
     function fmt(v) { return (v === null || v === undefined || v === '') ? '—' : fixTR(String(v)); }
+    function _escAttr(v) { return String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+    function _noteBtn(note) {
+      return note ? `<button onclick="showNoteTip(event, this.dataset.note)" data-note="${_escAttr(note)}" style="padding:2px 8px;background:#1e293b;border:1px solid #f59e0b;border-radius:6px;color:#f59e0b;font-size:10px;font-weight:800;cursor:pointer" title="Notu görüntüle">!</button>` : '—';
+    }
     function fmtMoney(v) {
       if (!v && v !== 0) return '€0';
       // tr-TR: binlik ayırıcı nokta (.), ondalık ayırıcı virgül (,) — örn. 78.000,78
@@ -5377,6 +5409,26 @@
   </script>
 
   <div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:0.85rem;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);white-space:nowrap"></div>
+  <div id="notePopup" style="display:none;position:fixed;z-index:10001;max-width:280px;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;font-size:12px;color:#cbd5e1;box-shadow:0 8px 30px rgba(0,0,0,0.5)"></div>
+  <script>
+    function showNoteTip(ev, text) {
+      ev.stopPropagation();
+      const el = document.getElementById('notePopup');
+      if (el.style.display === 'block' && el._src === ev.currentTarget) { el.style.display = 'none'; el._src = null; return; }
+      el.textContent = text;
+      el._src = ev.currentTarget;
+      const r = ev.currentTarget.getBoundingClientRect();
+      el.style.display = 'block';
+      el.style.top = (r.bottom + 6) + 'px';
+      let left = r.left;
+      if (left + 280 > window.innerWidth) left = window.innerWidth - 290;
+      el.style.left = Math.max(8, left) + 'px';
+    }
+    document.addEventListener('click', (ev) => {
+      const el = document.getElementById('notePopup');
+      if (el.style.display === 'block' && ev.target !== el && !el.contains(ev.target)) { el.style.display = 'none'; el._src = null; }
+    });
+  </script>
   <div id="siteConfirm" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center">
     <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;max-width:440px;width:95%;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
       <div id="scTitle" style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:10px"></div>

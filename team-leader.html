@@ -850,7 +850,10 @@
 
     <!-- Mevcut Not (varsa) -->
     <div id="modalExistingNoteWrap" style="display:none;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;margin-bottom:14px">
-      <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;margin-bottom:4px">Mevcut Not</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Mevcut Not</div>
+        <button onclick="deleteAlarmNote()" style="padding:2px 8px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:9px;font-weight:700;cursor:pointer">Notu Sil</button>
+      </div>
       <div style="font-size:12px;color:#cbd5e1" id="modalExistingNote"></div>
     </div>
 
@@ -928,6 +931,26 @@
 
 <!-- Bildirim -->
 <div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);white-space:nowrap"></div>
+<div id="notePopup" style="display:none;position:fixed;z-index:10001;max-width:280px;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;font-size:12px;color:#cbd5e1;box-shadow:0 8px 30px rgba(0,0,0,0.5)"></div>
+<script>
+  function showNoteTip(ev, text) {
+    ev.stopPropagation();
+    const el = document.getElementById('notePopup');
+    if (el.style.display === 'block' && el._src === ev.currentTarget) { el.style.display = 'none'; el._src = null; return; }
+    el.textContent = text;
+    el._src = ev.currentTarget;
+    const r = ev.currentTarget.getBoundingClientRect();
+    el.style.display = 'block';
+    el.style.top = (r.bottom + 6) + 'px';
+    let left = r.left;
+    if (left + 280 > window.innerWidth) left = window.innerWidth - 290;
+    el.style.left = Math.max(8, left) + 'px';
+  }
+  document.addEventListener('click', (ev) => {
+    const el = document.getElementById('notePopup');
+    if (el.style.display === 'block' && ev.target !== el && !el.contains(ev.target)) { el.style.display = 'none'; el._src = null; }
+  });
+</script>
 
 <script src="i18n.js"></script>
 <script src="team-map.js"></script>
@@ -948,6 +971,10 @@
 
   // ── Helpers ─────────────────────────────────────────────────────
   function fmt(v) { return (v === null || v === undefined || v === '') ? '—' : String(v); }
+  function _escAttr(v) { return String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function _noteBtn(note) {
+    return note ? `<button onclick="showNoteTip(event, this.dataset.note)" data-note="${_escAttr(note)}" style="padding:2px 8px;background:#1e293b;border:1px solid #f59e0b;border-radius:6px;color:#f59e0b;font-size:10px;font-weight:800;cursor:pointer" title="Notu görüntüle">!</button>` : '—';
+  }
   function fmtMoney(v) { return v ? '€' + Number(v).toLocaleString('en-US', {maximumFractionDigits: 0}) : '€0'; }
 
   // ── Özel takvim (date picker) — input[type=date]'i gizleyip yerine
@@ -1676,7 +1703,7 @@
         <td><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color};white-space:nowrap">${sm.label}</span></td>
         <td style="font-size:10px;white-space:nowrap">${pftBadge}</td>
         <td>${paymentCellHtml(a.deal_id)}${paymentMismatchBadge(a)}</td>
-        <td style="max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b" title="${a.note ? a.note.replace(/"/g,'&quot;') : ''}">${a.note ? fmt(a.note).substring(0,50) : '—'}</td>
+        <td style="text-align:center">${_noteBtn(a.note)}</td>
         <td>
           <button onclick="event.stopPropagation();openAlarmById('${a.id}')" style="padding:4px 10px;background:#0d9488;border:none;border-radius:7px;color:#fff;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Güncelle</button>
         </td>
@@ -2083,6 +2110,27 @@
         }),
       }).catch(() => {});
     } catch(e) { /* loglama ana akışı bozmasın */ }
+  }
+
+  // Mevcut notu sil (yanlışlıkla eklenen/test notlarını temizlemek için)
+  async function deleteAlarmNote() {
+    if (!currentAlarm || !currentAlarm.note) return;
+    if (!confirm('Bu notu silmek istediğine emin misin? Bu işlem geri alınamaz.')) return;
+    try {
+      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${currentAlarm.id}`, { method: 'PATCH', headers: H, body: JSON.stringify({ note: null }) });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      logAlarmAction(currentAlarm, 'note_deleted', currentAlarm.status, currentAlarm.status, null);
+      addLog('ALARM_UPDATE', `Not silindi (önceki not: ${currentAlarm.note})`, currentAlarm.deal_id, currentAlarm.deal_name);
+      const idx = allAlarms.findIndex(x => x.id === currentAlarm.id);
+      if (idx >= 0) allAlarms[idx] = { ...allAlarms[idx], note: null };
+      currentAlarm.note = null;
+      document.getElementById('modalExistingNoteWrap').style.display = 'none';
+      renderAlarms();
+      if (activeView === 'today')     renderToday();
+      if (activeView === 'cancelled') renderCancelledReport();
+      showNotice('Not silindi.', 'success');
+    } catch(e) { showNotice('Not silinemedi: ' + e.message, 'error'); }
   }
 
   async function saveAlarmAction() {
@@ -2569,7 +2617,7 @@
       <td style="color:#f87171;font-size:11px;white-space:nowrap">${formatDate(a.reference_date)}</td>
       <td style="color:#64748b;font-size:11px;white-space:nowrap">${formatDateTime(a.closed_at)}</td>
       <td>${paymentCellHtml(a.deal_id)}</td>
-      <td style="max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b">${a.note ? fmt(a.note) : '—'}</td>
+      <td style="text-align:center">${_noteBtn(a.note)}</td>
     </tr>`).join('');
     I18N.translateDOM(tbody);
   }
