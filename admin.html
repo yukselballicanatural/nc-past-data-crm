@@ -247,6 +247,10 @@
           Won Alarmı
           <span id="wonAlarmBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:800;padding:1px 6px;min-width:20px;text-align:center">0</span>
         </button>
+        <button onclick="switchView('activity')" class="nav-btn" id="nav-activity">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+          Aktivite
+        </button>
       </div>
 
       <div class="space-y-2 pt-3 border-t border-gray-800">
@@ -1197,6 +1201,55 @@
     </div>
   </div>
 
+  <!-- ═══════════════ AKTİVİTE (İşlem Geçmişi) VIEW ═══════════════ -->
+  <div id="view-activity" class="hidden">
+    <div class="mb-4">
+      <h2 class="text-xl font-bold text-white">Aktivite / İşlem Geçmişi</h2>
+      <p class="text-xs text-slate-400 mt-0.5">Takım liderlerinin ve yöneticilerin alarmlar üzerinde yaptığı tüm aksiyonlar (Hasta Geldi, Muayene, İşlemlerde, Gelmedi, Kapatma, Not vb.)</p>
+    </div>
+    <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
+      <div class="flex items-center justify-between mb-3">
+        <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Filters</span>
+        <button onclick="_actReset()" class="text-[10px] text-indigo-400 font-semibold hover:text-indigo-300">Clear All</button>
+      </div>
+      <div class="flex flex-wrap gap-3 items-end">
+        <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Ara</label><input id="actSearch" type="text" placeholder="Hasta, kişi, not..." oninput="renderAdminActivity()" class="filter-select" style="width:200px"></div>
+        <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Aksiyon</label>
+          <select id="actType" onchange="renderAdminActivity()" class="filter-select" style="width:170px">
+            <option value="">Tümü</option>
+            <option value="status_change">Durum Değişti</option>
+            <option value="closed">Kapatıldı</option>
+            <option value="reopened">Yeniden Açıldı</option>
+            <option value="note">Not Eklendi</option>
+            <option value="auto_closed">Otomatik Kapatıldı</option>
+          </select>
+        </div>
+        <div class="flex items-end gap-2">
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Tarih (baş.)</label><input type="date" id="actDateFrom" onchange="renderAdminActivity()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Tarih (bit.)</label><input type="date" id="actDateTo" onchange="renderAdminActivity()"></div>
+        </div>
+        <div style="margin-left:auto" class="flex items-end gap-3">
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Toplam</label><span id="actCount" class="text-white font-bold text-sm">—</span></div>
+          <button onclick="loadAdminActivity()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-lg font-semibold">↻ Yenile</button>
+        </div>
+      </div>
+    </div>
+    <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
+      <div class="overflow-x-auto">
+        <table class="tbl w-full">
+          <thead>
+            <tr class="text-slate-400 text-[10px]">
+              <th>Zaman</th><th>Kim</th><th>Rol</th><th>Hasta</th><th>Aksiyon</th><th>Not</th>
+            </tr>
+          </thead>
+          <tbody id="activityBody"></tbody>
+        </table>
+      </div>
+      <div id="activityLoading" style="text-align:center;padding:40px 16px;color:#475569;font-size:13px">Yükleniyor...</div>
+      <div id="activityEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">Kayıtlı aksiyon bulunamadı.</div>
+    </div>
+  </div>
+
   </main>
 
   <!-- Admin Alarm Detail/Action Modal -->
@@ -1786,6 +1839,80 @@
           <button onclick="openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
         </td>
       </tr>`).join('');
+    }
+
+    // ── Aktivite / İşlem Geçmişi (G8) ─────────────────────────────────
+    // alarm_logs tablosundaki tüm aksiyonları (durum değişimi/kapatma/not)
+    // gösterir — takım liderleri "Hasta Geldi/Muayene/İşlemlerde/Gelmedi"
+    // seçtiğinde buraya düşer. Hasta adı alarm_logs'ta yok; adminAllAlarms'tan
+    // deal_id ile eşlenir. RM ise sadece kendi bölgesinin dealleri gösterilir.
+    let _adminActivityRows = [];
+    async function loadAdminActivity() {
+      const loading = document.getElementById('activityLoading');
+      const empty = document.getElementById('activityEmpty');
+      const tbody = document.getElementById('activityBody');
+      loading.style.display = 'block'; empty.style.display = 'none'; tbody.innerHTML = '';
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/alarm_logs?order=created_at.desc&limit=1000`, { headers: H });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        let rows = await r.json();
+        if (!Array.isArray(rows)) rows = [];
+        // deal_id -> {name, region, team} eşlemesi (adminAllAlarms'tan)
+        const dealMap = new Map();
+        (adminAllAlarms || []).forEach(a => { if (a.deal_id) dealMap.set(String(a.deal_id), { name: a.deal_name, region: a.region, team: a.team }); });
+        // RM: sadece kendi bölgesinin dealleri (adminAllAlarms zaten bölgeye kısıtlı)
+        if (window.isRM) rows = rows.filter(l => l.deal_id && dealMap.has(String(l.deal_id)));
+        _adminActivityRows = rows.map(l => {
+          const d = dealMap.get(String(l.deal_id)) || {};
+          return { ...l, _name: d.name || '', _region: d.region || '', _team: d.team || '' };
+        });
+        loading.style.display = 'none';
+        renderAdminActivity();
+      } catch(e) {
+        loading.style.display = 'none';
+        tbody.innerHTML = '';
+        empty.textContent = I18N.t('Yükleme hatası: ') + e.message;
+        empty.style.display = 'block';
+      }
+    }
+    function _actReset() {
+      document.getElementById('actSearch').value = '';
+      document.getElementById('actType').value = '';
+      ['actDateFrom','actDateTo'].forEach(id => NCDatePicker.setValue(id, ''));
+      renderAdminActivity();
+    }
+    function renderAdminActivity() {
+      const tbody = document.getElementById('activityBody');
+      const empty = document.getElementById('activityEmpty');
+      if (!tbody) return;
+      const search = (document.getElementById('actSearch')?.value || '').toLowerCase().trim();
+      const typeF  = document.getElementById('actType')?.value || '';
+      const dFrom  = document.getElementById('actDateFrom')?.value || '';
+      const dTo    = document.getElementById('actDateTo')?.value || '';
+      let data = _adminActivityRows.slice();
+      if (typeF) data = data.filter(l => l.action_type === typeF);
+      if (search) data = data.filter(l => [l._name, l.action_by, l.note, l._team].join(' ').toLowerCase().includes(search));
+      if (dFrom || dTo) data = data.filter(l => { const d = l.created_at ? String(l.created_at).slice(0,10) : ''; if (!d) return false; if (dFrom && d < dFrom) return false; if (dTo && d > dTo) return false; return true; });
+      document.getElementById('actCount').textContent = data.length;
+      if (!data.length) { tbody.innerHTML = ''; empty.textContent = I18N.t('Kayıtlı aksiyon bulunamadı.'); empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      const actionLabels = { status_change:'Durum Değişti', note:'Not Eklendi', closed:'Kapatıldı', reopened:'Yeniden Açıldı', created:'Oluşturuldu', auto_closed:'Otomatik Kapatıldı' };
+      tbody.innerHTML = data.slice(0, 500).map(l => {
+        const act = actionLabels[l.action_type] || l.action_type;
+        const transition = (l.new_status && l.new_status !== l.old_status)
+          ? `${_amStatusMeta(l.old_status).label || l.old_status || '—'} → <strong style="color:${_amStatusMeta(l.new_status).color}">${_amStatusMeta(l.new_status).label || l.new_status}</strong>`
+          : '';
+        return `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+          <td class="py-1.5 text-slate-400 text-[11px] whitespace-nowrap">${_amFmtDateTime(l.created_at)}</td>
+          <td class="py-1.5 text-white text-[11px] whitespace-nowrap">${fmt(l.action_by)}</td>
+          <td class="py-1.5 text-slate-400 text-[10px] whitespace-nowrap">${fmt(l.action_role)}</td>
+          <td class="py-1.5 text-slate-200 text-[11px]">${l._name ? fmt(l._name) : (l.deal_id ? `<span style="color:#475569;font-family:monospace">${l.deal_id}</span>` : '—')}</td>
+          <td class="py-1.5 text-[11px]"><span style="color:#2dd4bf;font-weight:700">${act}</span>${transition ? ' · ' + transition : ''}</td>
+          <td class="py-1.5 text-slate-400 text-[10px]" style="max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.note ? fmt(l.note) : '—'}</td>
+        </tr>`;
+      }).join('');
+      I18N.translateDOM(tbody);
     }
 
     // ── İptal Alarmları ──────────────────────────────────────────────
@@ -3175,9 +3302,9 @@
       // Users ve System Logs admin'e özel — RM bu sayfalara geçemez
       if (window.isRM && (v === 'users' || v === 'logs')) return;
       _currentView = v;
-      ['deals','summary','users','logs','alarms-monitor','today','noshow','cancelled-alarms','won-alarms'].forEach(name => {
+      ['deals','summary','users','logs','alarms-monitor','today','noshow','cancelled-alarms','won-alarms','activity'].forEach(name => {
         document.getElementById('view-' + name).classList.toggle('hidden', name !== v);
-        document.getElementById('nav-' + name).classList.toggle('active', name === v);
+        const nb = document.getElementById('nav-' + name); if (nb) nb.classList.toggle('active', name === v);
       });
       if (v === 'summary') { renderSummary(); _startAnalyticsAutoRefresh(); }
       else _stopAnalyticsAutoRefresh();
@@ -3192,6 +3319,7 @@
       else if (v === 'noshow') { renderAdminNoshow(); loadAdminAlarms(true).then(renderAdminNoshow); }
       else if (v === 'cancelled-alarms') { renderAdminCancelledAlarms(); loadAdminCancelledDeals(); }
       else if (v === 'won-alarms') { renderAdminWonAlarms(); loadAdminWonAlarms(); }
+      else if (v === 'activity') loadAdminActivity();
       // Alarm-bağımlı bir sayfadaysak canlı yenileme çalışsın (bkz. altta) —
       // takım liderinin aksiyonları (sonuç girme, Gelemedi/İptal işaretleme
       // vb.) admin tarafında sayfayı terk edip geri dönmeye gerek kalmadan
@@ -5229,7 +5357,7 @@
         if (window.isRM) _applyRmUi();
         addLog('LOGIN', window.isRM ? `Regional Manager panele giriş yaptı (${window.rmRegion})` : 'Admin panele giriş yapıldı');
         document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
-        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo', 'logDateFrom', 'logDateTo', 'caArrFrom', 'caArrTo', 'caCreatedFrom', 'caCreatedTo', 'waArrFrom', 'waArrTo', 'waCreatedFrom', 'waCreatedTo'].forEach(id => NCDatePicker.attach(id));
+        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo', 'logDateFrom', 'logDateTo', 'caArrFrom', 'caArrTo', 'caCreatedFrom', 'caCreatedTo', 'waArrFrom', 'waArrTo', 'waCreatedFrom', 'waCreatedTo', 'actDateFrom', 'actDateTo'].forEach(id => NCDatePicker.attach(id));
         _anPopulateTeamOptions();
         loadDeals();
         loadAdminAlarms();
