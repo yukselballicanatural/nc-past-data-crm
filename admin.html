@@ -2516,6 +2516,8 @@
     let _aaPage = 1;
     let _aaLastFilterSig = '';
     let _aaLastFilteredLen = 0;
+    let _aaTotalsSig = null;
+    let _aaTotalsDealsLen = -1;
     function _aaChangePage(dir) {
       const maxPage = Math.max(1, Math.ceil(_aaLastFilteredLen / AA_PAGE_SIZE));
       _aaPage = Math.max(1, Math.min(maxPage, _aaPage + dir));
@@ -2532,14 +2534,26 @@
       const tbody = document.getElementById('adminAlarmTbody');
       const empty = document.getElementById('adminAlarmEmpty');
       document.getElementById('adminAlarmCount').textContent = `${data.length} ${I18N.t('alarm gösteriliyor')}`;
-      _amRenderAlarmTotals(data);
+
+      // Filtre imzası — alttaki toplamlar SADECE filtre değişince ya da
+      // deal verisi (allDeals) gerçekten değişince yeniden hesaplanır.
+      // Sayfa geçişi (_aaChangePage) ve periyodik canlı yenileme (60sn)
+      // aynı filtre + aynı deal verisiyle tekrar çağırır — o durumda
+      // toplamlar SABİT kalır (önceden sayfa değiştikçe/zaman geçtikçe
+      // anlamsızca zıplıyordu, çünkü allDeals arka planda parça parça
+      // yükleniyordu ve her render'da yeniden toplanıyordu).
+      const sig = ['amFilterRegion','amFilterTeam','amFilterOwner','amFilterType','amFilterStatus','amFilterPft','amFilterThresh','amDateFrom','amDateTo','amCreatedFrom','amCreatedTo','amSearch']
+        .map(id => document.getElementById(id)?.value || '').join('|');
+      if (!_dealsLoadInProgress && (sig !== _aaTotalsSig || allDeals.length !== _aaTotalsDealsLen)) {
+        _amRenderAlarmTotals(data);
+        _aaTotalsSig = sig;
+        _aaTotalsDealsLen = allDeals.length;
+      }
       const pager = document.getElementById('adminAlarmPager');
       if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; if (pager) pager.style.display = 'none'; return; }
       empty.style.display = 'none';
 
       // Filtre imzası değiştiyse 1. sayfaya dön
-      const sig = ['amFilterRegion','amFilterTeam','amFilterOwner','amFilterType','amFilterStatus','amFilterPft','amFilterThresh','amDateFrom','amDateTo','amCreatedFrom','amCreatedTo','amSearch']
-        .map(id => document.getElementById(id)?.value || '').join('|');
       if (sig !== _aaLastFilterSig) { _aaLastFilterSig = sig; _aaPage = 1; }
       _aaLastFilteredLen = data.length;
 
