@@ -1078,14 +1078,31 @@
             <option value="">Tüm Takımlar</option>
           </select>
         </div>
+        <div class="flex items-end gap-2">
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (baş.)</label><input type="date" id="caArrFrom" onchange="_caApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (bit.)</label><input type="date" id="caArrTo" onchange="_caApplyFilters()"></div>
+        </div>
+        <div class="flex items-end gap-2">
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (baş.)</label><input type="date" id="caCreatedFrom" onchange="_caApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (bit.)</label><input type="date" id="caCreatedTo" onchange="_caApplyFilters()"></div>
+        </div>
       </div>
     </div>
     <div class="bg-gray-900 border border-gray-800 rounded-xl overflow-hidden">
       <div class="overflow-x-auto">
         <table class="tbl w-full">
           <thead>
-            <tr class="text-slate-400 text-[10px]">
-              <th>#</th><th>Hasta / Danışman</th><th>Bölge</th><th>Takım</th><th>Stage</th><th>Arrival</th>
+            <tr class="text-slate-400 text-[10px]" id="cancelledAlarmHead">
+              <th>#</th>
+              <th class="am-sort" data-col="name" onclick="_caSortBy('name')">Hasta / Danışman<span class="am-sarrow"></span></th>
+              <th class="am-sort" data-col="ref" onclick="_caSortBy('ref')">Deal ID<span class="am-sarrow"></span></th>
+              <th class="am-sort" data-col="region" onclick="_caSortBy('region')">Bölge<span class="am-sarrow"></span></th>
+              <th class="am-sort" data-col="team" onclick="_caSortBy('team')">Takım<span class="am-sarrow"></span></th>
+              <th class="am-sort" data-col="stage" onclick="_caSortBy('stage')">Stage<span class="am-sarrow"></span></th>
+              <th class="am-sort" style="text-align:right" data-col="amount" onclick="_caSortBy('amount')">Tutar<span class="am-sarrow"></span></th>
+              <th class="am-sort" style="text-align:right" data-col="paid" onclick="_caSortBy('paid')">Ödenen<span class="am-sarrow"></span></th>
+              <th class="am-sort" data-col="created" onclick="_caSortBy('created')">Created<span class="am-sarrow"></span></th>
+              <th class="am-sort" data-col="arrival" onclick="_caSortBy('arrival')">Arrival<span class="am-sarrow"></span></th>
             </tr>
           </thead>
           <tbody id="cancelledAlarmTbody"></tbody>
@@ -1139,6 +1156,14 @@
             <option value="under">Sadece Eksik Ödenen</option>
             <option value="over">Sadece Fazla Ödenen</option>
           </select>
+        </div>
+        <div class="flex items-end gap-2">
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (baş.)</label><input type="date" id="waArrFrom" onchange="_waApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (bit.)</label><input type="date" id="waArrTo" onchange="_waApplyFilters()"></div>
+        </div>
+        <div class="flex items-end gap-2">
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (baş.)</label><input type="date" id="waCreatedFrom" onchange="_waApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (bit.)</label><input type="date" id="waCreatedTo" onchange="_waApplyFilters()"></div>
         </div>
       </div>
     </div>
@@ -1772,7 +1797,7 @@
       tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
       try {
         const stageParam = encodeURIComponent('ilike.*cancel*');
-        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date';
+        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,created_time';
         const PAGE = 1000;
         const teamQ = window.rmTeams ? `&team=${TeamMap.inFilter(window.rmTeams)}` : '';
         const baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}${teamQ}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
@@ -1834,18 +1859,54 @@
       document.getElementById('caFilterSearch').value = '';
       document.getElementById('caFilterRegion').value = window.isRM ? window.rmRegion : '';
       document.getElementById('caFilterTeam').value = '';
+      ['caArrFrom','caArrTo','caCreatedFrom','caCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
       _caApplyFilters();
     }
 
+    let _caSortCol = null, _caSortDir = 1;
+    function _caSortBy(col) {
+      if (_caSortCol === col) _caSortDir = -_caSortDir; else { _caSortCol = col; _caSortDir = 1; }
+      renderAdminCancelledAlarms();
+      document.querySelectorAll('#cancelledAlarmHead .am-sort').forEach(th => {
+        const arrow = th.querySelector('.am-sarrow');
+        const on = th.dataset.col === _caSortCol;
+        arrow.textContent = on ? (_caSortDir === 1 ? ' ▲' : ' ▼') : '';
+        arrow.classList.toggle('active', on);
+      });
+    }
     function renderAdminCancelledAlarms() {
       let data = adminCancelledDeals || [];
       const search = (document.getElementById('caFilterSearch')?.value || '').toLowerCase().trim();
       const regionF = document.getElementById('caFilterRegion')?.value || '';
       const teamF   = document.getElementById('caFilterTeam')?.value || '';
+      const arrFrom = document.getElementById('caArrFrom')?.value || '';
+      const arrTo   = document.getElementById('caArrTo')?.value || '';
+      const crFrom  = document.getElementById('caCreatedFrom')?.value || '';
+      const crTo    = document.getElementById('caCreatedTo')?.value || '';
+      const dOnly = v => v ? String(v).split('T')[0] : '';
       data = data.map(d => ({ ...d, _region: (typeof AlarmEngine !== 'undefined') ? AlarmEngine.getRegion(d.team) : '' }));
       if (search) data = data.filter(d => [d.deal_name, d.deal_owner, d.team].join(' ').toLowerCase().includes(search));
       if (regionF) data = data.filter(d => d._region === regionF);
       if (teamF) data = data.filter(d => ((window.TeamMap && TeamMap.normalize(d.team)) || d.team) === teamF);
+      if (arrFrom || arrTo) data = data.filter(d => { const a = dOnly(d.arrival_date); if (!a) return false; if (arrFrom && a < arrFrom) return false; if (arrTo && a > arrTo) return false; return true; });
+      if (crFrom || crTo) data = data.filter(d => { const c = dOnly(d.created_time); if (!c) return false; if (crFrom && c < crFrom) return false; if (crTo && c > crTo) return false; return true; });
+      if (_caSortCol) {
+        const val = (d) => {
+          switch (_caSortCol) {
+            case 'name': return (d.deal_name||'').toLowerCase();
+            case 'ref': return (d.deal_id||'').toLowerCase();
+            case 'region': return (d._region||'').toLowerCase();
+            case 'team': return (d.team||'').toLowerCase();
+            case 'stage': return (d.stage||'').toLowerCase();
+            case 'amount': return Number(d.amount)||0;
+            case 'paid': return Number(d.total_paid_amount)||0;
+            case 'created': return dOnly(d.created_time);
+            case 'arrival': return dOnly(d.arrival_date);
+            default: return '';
+          }
+        };
+        data.sort((a,b) => { const x=val(a),y=val(b); return x<y?-_caSortDir:x>y?_caSortDir:0; });
+      }
       _caLastFiltered = data;
 
       const tbody = document.getElementById('cancelledAlarmTbody');
@@ -1860,15 +1921,22 @@
       const pageData = data.slice(pageStart, pageStart + CA_PAGE_SIZE);
 
       tbody.innerHTML = pageData.map((d, i) => {
+        const dealIdCell = d.id
+          ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted;font-family:monospace;font-size:10px" title="Zoho'da Aç">${fmt(d.deal_id) || d.id} ↗</a>`
+          : '—';
         return `<tr style="cursor:pointer" onclick="openCancelledDealModal('${d.id}')">
           <td style="color:#475569;font-size:10px">${pageStart + i + 1}</td>
           <td>
-            <div style="font-weight:600;color:#f1f5f9;font-size:12px">${fmt(d.deal_name)}<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="am-zoho-link" title="Zoho'da Aç">↗</a></div>
+            <div style="font-weight:600;color:#f1f5f9;font-size:12px">${fmt(d.deal_name)}</div>
             <div style="font-size:10px;color:#0d9488;font-weight:600">${fmt(d.deal_owner)}</div>
           </td>
+          <td style="white-space:nowrap">${dealIdCell}</td>
           <td style="font-size:11px;color:#94a3b8">${fmt(d._region)}</td>
           <td style="font-size:11px;color:#94a3b8;white-space:nowrap">${fmt(d.team)}</td>
           <td style="font-size:11px;color:#94a3b8;white-space:nowrap">${fmt(d.stage)}</td>
+          <td style="font-size:11px;color:#60a5fa;text-align:right;white-space:nowrap">${(d.amount||d.amount===0)?fmtMoney(d.amount):'—'}</td>
+          <td style="font-size:11px;color:#4ade80;text-align:right;white-space:nowrap">${(d.total_paid_amount||d.total_paid_amount===0)?fmtMoney(d.total_paid_amount):'—'}</td>
+          <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.created_time ? _amFmtDate(d.created_time) : '—'}</td>
           <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.arrival_date ? _amFmtDate(d.arrival_date) : '—'}</td>
         </tr>`;
       }).join('');
@@ -1956,7 +2024,7 @@
         // (sayfa sayisi x tek istek suresi) yerine tek bir istek suresine iner.
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'count=exact' };
         const stageParam = encodeURIComponent('ilike.*won*');
-        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount';
+        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,created_time';
         const PAGE = 1000;
         const teamQ = window.rmTeams ? `&team=${TeamMap.inFilter(window.rmTeams)}` : '';
         const baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}${teamQ}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
@@ -2056,6 +2124,7 @@
       document.getElementById('waFilterRegion').value = window.isRM ? window.rmRegion : '';
       document.getElementById('waFilterTeam').value = '';
       document.getElementById('waFilterDir').value = '';
+      ['waArrFrom','waArrTo','waCreatedFrom','waCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
       _waApplyFilters();
     }
 
@@ -2071,6 +2140,14 @@
       if (teamF) data = data.filter(d => ((window.TeamMap && TeamMap.normalize(d.team)) || d.team) === teamF);
       if (dirF === 'under') data = data.filter(d => d._diff < 0);
       else if (dirF === 'over') data = data.filter(d => d._diff > 0);
+      // Arrival / Created tarih aralığı filtreleri (G10)
+      const dOnly = v => v ? String(v).split('T')[0] : '';
+      const arrFrom = document.getElementById('waArrFrom')?.value || '';
+      const arrTo   = document.getElementById('waArrTo')?.value || '';
+      const crFrom  = document.getElementById('waCreatedFrom')?.value || '';
+      const crTo    = document.getElementById('waCreatedTo')?.value || '';
+      if (arrFrom || arrTo) data = data.filter(d => { const a = dOnly(d.arrival_date); if (!a) return false; if (arrFrom && a < arrFrom) return false; if (arrTo && a > arrTo) return false; return true; });
+      if (crFrom || crTo) data = data.filter(d => { const c = dOnly(d.created_time); if (!c) return false; if (crFrom && c < crFrom) return false; if (crTo && c > crTo) return false; return true; });
       if (_waSortCol) data.sort((a, b) => {
         const av = _waSortVal(a, _waSortCol), bv = _waSortVal(b, _waSortCol);
         return av < bv ? -_waSortDir : av > bv ? _waSortDir : 0;
@@ -5152,7 +5229,7 @@
         if (window.isRM) _applyRmUi();
         addLog('LOGIN', window.isRM ? `Regional Manager panele giriş yaptı (${window.rmRegion})` : 'Admin panele giriş yapıldı');
         document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
-        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo', 'logDateFrom', 'logDateTo'].forEach(id => NCDatePicker.attach(id));
+        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo', 'logDateFrom', 'logDateTo', 'caArrFrom', 'caArrTo', 'caCreatedFrom', 'caCreatedTo', 'waArrFrom', 'waArrTo', 'waCreatedFrom', 'waCreatedTo'].forEach(id => NCDatePicker.attach(id));
         _anPopulateTeamOptions();
         loadDeals();
         loadAdminAlarms();
