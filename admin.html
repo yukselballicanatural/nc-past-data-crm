@@ -901,55 +901,90 @@
     <div class="bg-gray-900 border border-gray-800 rounded-2xl p-5">
       <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h3 class="text-sm font-bold text-white">Alarm Listesi</h3>
-        <div class="flex gap-2 flex-wrap">
-          <select id="amFilterRegion" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
-            <option value="">Tüm Bölgeler</option>
-            <option value="Istanbul">Istanbul</option>
-            <option value="Morocco">Morocco</option>
-          </select>
-          <select id="amFilterTeam" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;max-width:160px">
-            <option value="">Tüm Team Leader'lar</option>
-          </select>
-          <select id="amFilterOwner" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;max-width:150px">
-            <option value="">Tüm Deal Owner'lar</option>
-          </select>
-          <select id="amFilterType" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
-            <option value="">Tüm Tipler</option>
-            <option value="arrival_approaching">Arrival Yaklaşıyor</option>
-            <option value="visit_approaching">Vizit Yaklaşıyor</option>
-            <option value="arrival_missing">Tarih Eksik</option>
-            <option value="today_patient">Bugün Gelecek</option>
-            <option value="payment_tracking">Payment Takip</option>
-            <option value="no_show">No-show</option>
-          </select>
-          <select id="amFilterStatus" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
-            <option value="active">Aktif (kapalı hariç)</option>
-            <option value="all">Tümü</option>
-            <option value="open">Açık</option>
-            <option value="overdue">Gecikmiş</option>
-            <option value="no_show">No-show</option>
-            <option value="closed">Kapatıldı</option>
-          </select>
-          <select id="amFilterPft" onchange="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
-            <option value="">P / FT: Tümü</option>
-            <option value="Payment">Payment</option>
-            <option value="Flight Ticket">Flight Ticket</option>
-          </select>
-          <select id="amFilterThresh" onchange="_amApplyDayFilter()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px">
-            <option value="">Gün Filtresi: Tümü</option>
-            <option value="45">±45 gün</option>
-            <option value="30">±30 gün</option>
-            <option value="15">±15 gün</option>
-            <option value="7">±7 gün</option>
-            <option value="3">±3 gün</option>
-          </select>
-          <span style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;align-self:center;margin-left:4px">Arrival:</span>
-          <input type="date" id="amDateFrom" onchange="renderAdminAlarmTable()" title="Arrival Date başlangıç" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
-          <input type="date" id="amDateTo" onchange="renderAdminAlarmTable()" title="Arrival Date bitiş" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
-          <span style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;align-self:center;margin-left:4px">Created:</span>
-          <input type="date" id="amCreatedFrom" onchange="renderAdminAlarmTable()" title="Created Time başlangıç" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
-          <input type="date" id="amCreatedTo" onchange="renderAdminAlarmTable()" title="Created Time bitiş" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:4px 8px;font-size:11px">
-          <input id="amSearch" placeholder="Hasta, danışman..." oninput="renderAdminAlarmTable()" style="background:#111827;border:1px solid #374151;color:#E2E8F0;border-radius:8px;padding:5px 10px;font-size:11px;width:160px">
+      </div>
+
+      <div class="bg-gray-950/60 border border-gray-800 rounded-xl p-4 mb-4">
+        <div class="flex items-center justify-between mb-3">
+          <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Filtreler</span>
+          <button onclick="_amResetFilters()" class="text-[10px] text-indigo-400 font-semibold hover:text-indigo-300">Tümünü Temizle</button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Ara</label>
+            <input id="amSearch" type="text" placeholder="Hasta, danışman..." oninput="renderAdminAlarmTable()" class="filter-select">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Bölge</label>
+            <select id="amFilterRegion" onchange="renderAdminAlarmTable()" class="filter-select">
+              <option value="">Tüm Bölgeler</option>
+              <option value="Istanbul">Istanbul</option>
+              <option value="Morocco">Morocco</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Team Leader</label>
+            <select id="amFilterTeam" onchange="renderAdminAlarmTable()" class="filter-select">
+              <option value="">Tüm Team Leader'lar</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Deal Owner</label>
+            <select id="amFilterOwner" onchange="renderAdminAlarmTable()" class="filter-select">
+              <option value="">Tüm Deal Owner'lar</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Alarm Tipi</label>
+            <select id="amFilterType" onchange="renderAdminAlarmTable()" class="filter-select">
+              <option value="">Tüm Tipler</option>
+              <option value="arrival_approaching">Arrival Yaklaşıyor</option>
+              <option value="visit_approaching">Vizit Yaklaşıyor</option>
+              <option value="arrival_missing">Tarih Eksik</option>
+              <option value="today_patient">Bugün Gelecek</option>
+              <option value="payment_tracking">Payment Takip</option>
+              <option value="no_show">No-show</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Durum</label>
+            <select id="amFilterStatus" onchange="renderAdminAlarmTable()" class="filter-select">
+              <option value="active">Aktif (kapalı hariç)</option>
+              <option value="all">Tümü</option>
+              <option value="open">Açık</option>
+              <option value="overdue">Gecikmiş</option>
+              <option value="no_show">No-show</option>
+              <option value="closed">Kapatıldı</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Payment / Ticket</label>
+            <select id="amFilterPft" onchange="renderAdminAlarmTable()" class="filter-select">
+              <option value="">Tümü</option>
+              <option value="Payment">Payment</option>
+              <option value="Flight Ticket">Flight Ticket</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Gün Filtresi</label>
+            <select id="amFilterThresh" onchange="_amApplyDayFilter()" class="filter-select">
+              <option value="">Tümü</option>
+              <option value="45">±45 gün</option>
+              <option value="30">±30 gün</option>
+              <option value="15">±15 gün</option>
+              <option value="7">±7 gün</option>
+              <option value="3">±3 gün</option>
+            </select>
+          </div>
+          <div class="flex items-end gap-2 col-span-2">
+            <div class="flex-1"><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (baş.)</label><input type="date" id="amDateFrom" onchange="renderAdminAlarmTable()" class="filter-select"></div>
+            <div class="flex-1"><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (bit.)</label><input type="date" id="amDateTo" onchange="renderAdminAlarmTable()" class="filter-select"></div>
+          </div>
+          <div class="flex items-end gap-2 col-span-2">
+            <div class="flex-1"><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (baş.)</label><input type="date" id="amCreatedFrom" onchange="renderAdminAlarmTable()" class="filter-select"></div>
+            <div class="flex-1"><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (bit.)</label><input type="date" id="amCreatedTo" onchange="renderAdminAlarmTable()" class="filter-select"></div>
+          </div>
         </div>
       </div>
       <div class="am-table-wrap" style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b">
@@ -3082,6 +3117,20 @@
     }
 
     // Gün filtresi değişince tabloyla birlikte dashboard rakamlarını da yenile.
+    function _amResetFilters() {
+      document.getElementById('amSearch').value = '';
+      document.getElementById('amFilterRegion').value = window.isRM ? window.rmRegion : '';
+      document.getElementById('amFilterTeam').value = '';
+      document.getElementById('amFilterOwner').value = '';
+      document.getElementById('amFilterType').value = '';
+      document.getElementById('amFilterStatus').value = 'active';
+      document.getElementById('amFilterPft').value = '';
+      document.getElementById('amFilterThresh').value = '';
+      ['amDateFrom','amDateTo','amCreatedFrom','amCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
+      _amRenderDayFilterChips();
+      renderAdminAlarmTable();
+    }
+
     function _amApplyDayFilter() {
       _amRenderDayFilterChips();
       updateAdminAlarmKPIs();
