@@ -624,10 +624,50 @@
       </div>
       <button onclick="exportCancelled()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Export CSV</button>
     </div>
-    <div id="cancelledGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px"></div>
-    <div id="cancelledEmpty" style="display:none;text-align:center;padding:60px 16px">
-      <div style="font-size:36px;margin-bottom:12px">🚫</div>
-      <p style="color:#475569;font-size:14px">İptal edilmiş kayıt bulunamadı.</p>
+    <!-- Filtreler -->
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:14px 16px;margin-bottom:14px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <span style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">Filtreler</span>
+        <button onclick="_tlcaReset()" style="font-size:10px;font-weight:700;color:#818cf8;background:none;border:none;cursor:pointer">Temizle</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
+        <div><label style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;display:block;margin-bottom:4px">Ara</label><input id="tlcaSearch" type="text" placeholder="Hasta, danışman..." oninput="renderCancelledReport()" class="filter-inp" style="width:200px"></div>
+        <div style="display:flex;align-items:center;gap:5px">
+          <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Arrival</span>
+          <input type="date" id="tlcaArrFrom" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
+          <span style="color:#475569">–</span>
+          <input type="date" id="tlcaArrTo" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
+        </div>
+        <div style="display:flex;align-items:center;gap:5px">
+          <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Created</span>
+          <input type="date" id="tlcaCreatedFrom" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
+          <span style="color:#475569">–</span>
+          <input type="date" id="tlcaCreatedTo" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
+        </div>
+      </div>
+    </div>
+    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table class="alarm-tbl" style="width:100%">
+          <thead>
+            <tr id="tlcaHead">
+              <th>#</th>
+              <th onclick="_tlcaSort('name')" style="cursor:pointer;user-select:none">Hasta / Danışman<span id="tlcasort-name" class="sarrow"></span></th>
+              <th onclick="_tlcaSort('ref')" style="cursor:pointer;user-select:none">Deal ID<span id="tlcasort-ref" class="sarrow"></span></th>
+              <th onclick="_tlcaSort('stage')" style="cursor:pointer;user-select:none">Stage<span id="tlcasort-stage" class="sarrow"></span></th>
+              <th style="text-align:right;cursor:pointer;user-select:none" onclick="_tlcaSort('amount')">Tutar<span id="tlcasort-amount" class="sarrow"></span></th>
+              <th style="text-align:right;cursor:pointer;user-select:none" onclick="_tlcaSort('paid')">Ödenen<span id="tlcasort-paid" class="sarrow"></span></th>
+              <th onclick="_tlcaSort('created')" style="cursor:pointer;user-select:none">Created<span id="tlcasort-created" class="sarrow"></span></th>
+              <th onclick="_tlcaSort('arrival')" style="cursor:pointer;user-select:none">Arrival<span id="tlcasort-arrival" class="sarrow"></span></th>
+            </tr>
+          </thead>
+          <tbody id="cancelledTbody"></tbody>
+        </table>
+      </div>
+      <div id="cancelledEmpty" style="display:none;text-align:center;padding:60px 16px">
+        <div style="font-size:36px;margin-bottom:12px">🚫</div>
+        <p style="color:#475569;font-size:14px">İptal edilmiş kayıt bulunamadı.</p>
+      </div>
     </div>
   </div>
 
@@ -656,6 +696,22 @@
             <option value="under">Sadece Eksik Ödenen</option>
             <option value="over">Sadece Fazla Ödenen</option>
           </select>
+        </div>
+        <div>
+          <label style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px">Arrival Date</label>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="date" id="tlwaArrFrom" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
+            <span style="color:#475569">–</span>
+            <input type="date" id="tlwaArrTo" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
+          </div>
+        </div>
+        <div>
+          <label style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px">Created Time</label>
+          <div style="display:flex;align-items:center;gap:4px">
+            <input type="date" id="tlwaCreatedFrom" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
+            <span style="color:#475569">–</span>
+            <input type="date" id="tlwaCreatedTo" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
+          </div>
         </div>
       </div>
     </div>
@@ -784,8 +840,11 @@
 
     <!-- Not -->
     <div style="margin-bottom:18px">
-      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Not <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></label>
-      <textarea id="noteInput" class="modal-note" placeholder="Hasta durumu, arama sonucu, notlar..."></textarea>
+      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:flex;justify-content:space-between;margin-bottom:6px">
+        <span>Not <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></span>
+        <span id="noteCount" style="color:#475569;font-weight:400;font-size:10px">0 / 100</span>
+      </label>
+      <textarea id="noteInput" class="modal-note" maxlength="100" placeholder="Hasta durumu, arama sonucu, notlar... (en fazla 100 karakter)" oninput="document.getElementById('noteCount').textContent=this.value.length+' / 100'"></textarea>
     </div>
 
     <!-- Aksiyon Geçmişi -->
@@ -1039,7 +1098,7 @@
   function ncClearAlarmDates() { NCDatePicker.setValue('alarmDateFrom', ''); NCDatePicker.setValue('alarmDateTo', ''); }
   function ncClearDealDates()  { NCDatePicker.setValue('dealDateFrom', '');  NCDatePicker.setValue('dealDateTo', ''); }
 
-  ['alarmDateFrom', 'alarmDateTo', 'alarmArrFrom', 'alarmArrTo', 'alarmCreatedFrom', 'alarmCreatedTo', 'dealDateFrom', 'dealDateTo'].forEach(id => NCDatePicker.attach(id));
+  ['alarmDateFrom', 'alarmDateTo', 'alarmArrFrom', 'alarmArrTo', 'alarmCreatedFrom', 'alarmCreatedTo', 'dealDateFrom', 'dealDateTo', 'tlcaArrFrom', 'tlcaArrTo', 'tlcaCreatedFrom', 'tlcaCreatedTo', 'tlwaArrFrom', 'tlwaArrTo', 'tlwaCreatedFrom', 'tlwaCreatedTo'].forEach(id => NCDatePicker.attach(id));
 
   // ── Deal finans bilgisi (Ödenen / Toplam / Kalan / Won durumu) ────
   // alarms tablosunda amount/paid/stage kolonu yok, bu yüzden deal_id
@@ -1917,6 +1976,7 @@
     }
     document.getElementById('newStatus').value = '';
     document.getElementById('noteInput').value = '';
+    const _nc = document.getElementById('noteCount'); if (_nc) _nc.textContent = '0 / 100';
     document.getElementById('closeReasonWrap').style.display = 'none';
     // Eskale seçeneği sadece RM'ye görünür
     document.getElementById('optEscalated').style.display =
@@ -2481,15 +2541,14 @@
   // değildir. Team leader kendi takımını, regional manager kendi bölgesini görür.
   let cancelledDealsList = [];
   async function loadCancelledDeals() {
-    const grid  = document.getElementById('cancelledGrid');
+    const tbody = document.getElementById('cancelledTbody');
     const empty = document.getElementById('cancelledEmpty');
     empty.style.display = 'none';
-    grid.style.display = 'grid';
-    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</div>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
     try {
       const isRM = currentUser.role === 'regional-manager';
       const stageParam = encodeURIComponent('ilike.*cancel*');
-      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,payment_or_flight_ticket';
+      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,payment_or_flight_ticket,created_time';
       const PAGE = 1000;
       let baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
       if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
@@ -2519,10 +2578,29 @@
       }
       renderCancelledReport();
     } catch(e) {
-      grid.innerHTML = '';
+      tbody.innerHTML = '';
       empty.querySelector('p').textContent = I18N.t('Yükleme hatası: ') + e.message;
       empty.style.display = 'block';
     }
+  }
+
+  // İptal Edilenler — filtre + sıralama durumu
+  let _tlcaSortCol = null, _tlcaSortDir = 1;
+  function _tlcaSort(col) {
+    if (_tlcaSortCol === col) _tlcaSortDir = -_tlcaSortDir; else { _tlcaSortCol = col; _tlcaSortDir = 1; }
+    renderCancelledReport();
+    ['name','ref','stage','amount','paid','created','arrival'].forEach(c => {
+      const el = document.getElementById('tlcasort-' + c);
+      if (!el) return;
+      const on = c === _tlcaSortCol;
+      el.textContent = on ? (_tlcaSortDir === 1 ? ' ▲' : ' ▼') : '';
+      el.classList.toggle('active', on);
+    });
+  }
+  function _tlcaReset() {
+    document.getElementById('tlcaSearch').value = '';
+    ['tlcaArrFrom','tlcaArrTo','tlcaCreatedFrom','tlcaCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
+    renderCancelledReport();
   }
 
   async function _caOpenDealModal(id) {
@@ -2540,39 +2618,58 @@
   }
 
   function renderCancelledReport() {
-    const data = (cancelledDealsList || []).slice().sort((a,b) => (b.arrival_date||'').localeCompare(a.arrival_date||''));
-    const grid  = document.getElementById('cancelledGrid');
+    const tbody = document.getElementById('cancelledTbody');
     const empty = document.getElementById('cancelledEmpty');
-    if (!data.length) { grid.innerHTML = ''; grid.style.display = 'none'; empty.style.display = 'block'; return; }
+    if (!tbody) return;
+    const dOnly = v => v ? String(v).split('T')[0] : '';
+    const search = (document.getElementById('tlcaSearch')?.value || '').toLowerCase().trim();
+    const arrFrom = document.getElementById('tlcaArrFrom')?.value || '';
+    const arrTo   = document.getElementById('tlcaArrTo')?.value || '';
+    const crFrom  = document.getElementById('tlcaCreatedFrom')?.value || '';
+    const crTo    = document.getElementById('tlcaCreatedTo')?.value || '';
+    let data = (cancelledDealsList || []).slice();
+    if (search) data = data.filter(d => [d.deal_name, d.deal_owner, d.team, d.deal_id].join(' ').toLowerCase().includes(search));
+    if (arrFrom || arrTo) data = data.filter(d => { const a = dOnly(d.arrival_date); if (!a) return false; if (arrFrom && a < arrFrom) return false; if (arrTo && a > arrTo) return false; return true; });
+    if (crFrom || crTo) data = data.filter(d => { const c = dOnly(d.created_time); if (!c) return false; if (crFrom && c < crFrom) return false; if (crTo && c > crTo) return false; return true; });
+    if (_tlcaSortCol) {
+      const val = (d) => {
+        switch (_tlcaSortCol) {
+          case 'name': return (d.deal_name||'').toLowerCase();
+          case 'ref': return (d.deal_id||'').toLowerCase();
+          case 'stage': return (d.stage||'').toLowerCase();
+          case 'amount': return Number(d.amount)||0;
+          case 'paid': return Number(d.total_paid_amount)||0;
+          case 'created': return dOnly(d.created_time);
+          case 'arrival': return dOnly(d.arrival_date);
+          default: return '';
+        }
+      };
+      data.sort((a,b) => { const x=val(a),y=val(b); return x<y?-_tlcaSortDir:x>y?_tlcaSortDir:0; });
+    } else {
+      data.sort((a,b) => (b.arrival_date||'').localeCompare(a.arrival_date||''));
+    }
+
+    if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
-    grid.style.display = 'grid';
-    grid.innerHTML = data.map(d => {
-      const pftDisplay = d.payment_or_flight_ticket === 'Payment'
-        ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#2e1065;color:#c084fc;border:1px solid #4c1d95">Payment</span>'
-        : d.payment_or_flight_ticket === 'Flight Ticket'
-          ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#1e3a5f;color:#60a5fa;border:1px solid #1e40af">Flight Ticket</span>'
-          : '';
-      return `<div class="today-card" style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px;cursor:pointer" onclick="_caOpenDealModal('${d.id}')">
-        <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px">
-          <div style="min-width:0;flex:1">
-            <div style="font-size:13px;font-weight:700;color:#f1f5f9;overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(d.deal_name)}</a></div>
-            <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600">${fmt(d.deal_owner)}</div>
-          </div>
-          <div style="display:flex;align-items:center;gap:5px;flex-shrink:0">
-            ${pftDisplay}
-            <span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:#1e293b;color:#94a3b8">${fmt(d.stage)}</span>
-          </div>
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:#94a3b8;font-weight:600;margin-bottom:8px">
-          <svg style="width:12px;height:12px;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-          ${fmt(d.team)} · ${I18N.t('Arrival Date')}: ${d.arrival_date ? formatDate(d.arrival_date) : '—'}
-        </div>
-        <div style="font-size:10px;color:#94a3b8;background:#111827;padding:7px 10px;border-radius:8px;border:1px solid #1e293b">
-          <span style="color:#60a5fa">${fmtMoney(d.amount)}</span> · ${I18N.t('Ödenen')}: <span style="color:#4ade80">${fmtMoney(d.total_paid_amount)}</span>
-        </div>
-      </div>`;
+    tbody.innerHTML = data.map((d, i) => {
+      const dealIdCell = d.id
+        ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted;font-family:monospace;font-size:10px" title="Zoho'da Aç">${fmt(d.deal_id) || d.id} ↗</a>`
+        : '—';
+      return `<tr style="cursor:pointer" onclick="_caOpenDealModal('${d.id}')">
+        <td style="color:#475569;font-size:10px">${i+1}</td>
+        <td>
+          <div style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap">${fmt(d.deal_name)}</div>
+          <div style="font-size:10px;color:#0d9488;font-weight:600">${fmt(d.deal_owner)}</div>
+        </td>
+        <td style="white-space:nowrap">${dealIdCell}</td>
+        <td style="font-size:11px;color:#94a3b8;white-space:nowrap">${fmt(d.stage)}</td>
+        <td style="text-align:right;font-size:11px;color:#60a5fa;white-space:nowrap">${fmtMoney(d.amount)}</td>
+        <td style="text-align:right;font-size:11px;color:#4ade80;white-space:nowrap">${fmtMoney(d.total_paid_amount)}</td>
+        <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.created_time ? formatDate(d.created_time) : '—'}</td>
+        <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.arrival_date ? formatDate(d.arrival_date) : '—'}</td>
+      </tr>`;
     }).join('');
-    I18N.translateDOM(grid);
+    I18N.translateDOM(tbody);
   }
 
   // ── Won Alarmı ────────────────────────────────────────────────────
@@ -2592,7 +2689,7 @@
       // icin raw fallback'ine ihtiyac yok. Sayfalar paralel cekilir.
       const isRM = currentUser.role === 'regional-manager';
       const stageParam = encodeURIComponent('ilike.*won*');
-      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount';
+      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,created_time';
       const PAGE = 1000;
       let baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
       if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
@@ -2685,6 +2782,7 @@
   function _waResetFilters() {
     document.getElementById('wonFilterSearch').value = '';
     document.getElementById('wonFilterDir').value = '';
+    ['tlwaArrFrom','tlwaArrTo','tlwaCreatedFrom','tlwaCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
     _waApplyFilters();
   }
 
@@ -2712,6 +2810,14 @@
     if (search) data = data.filter(d => [d.deal_name, d.deal_owner, d.team].join(' ').toLowerCase().includes(search));
     if (dirF === 'under') data = data.filter(d => d._diff < 0);
     else if (dirF === 'over') data = data.filter(d => d._diff > 0);
+    // Arrival / Created tarih aralığı filtreleri (G14)
+    const dOnly = v => v ? String(v).split('T')[0] : '';
+    const arrFrom = document.getElementById('tlwaArrFrom')?.value || '';
+    const arrTo   = document.getElementById('tlwaArrTo')?.value || '';
+    const crFrom  = document.getElementById('tlwaCreatedFrom')?.value || '';
+    const crTo    = document.getElementById('tlwaCreatedTo')?.value || '';
+    if (arrFrom || arrTo) data = data.filter(d => { const a = dOnly(d.arrival_date); if (!a) return false; if (arrFrom && a < arrFrom) return false; if (arrTo && a > arrTo) return false; return true; });
+    if (crFrom || crTo) data = data.filter(d => { const c = dOnly(d.created_time); if (!c) return false; if (crFrom && c < crFrom) return false; if (crTo && c > crTo) return false; return true; });
     if (waSortCol) {
       const dir = waSortDir === 'asc' ? 1 : -1;
       data.sort((a, b) => {
