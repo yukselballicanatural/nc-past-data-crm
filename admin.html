@@ -134,6 +134,11 @@
     .am-table-wrap tbody tr:hover { background:rgba(255,255,255,.035) !important; }
     .am-zoho-link { color:#818cf8; text-decoration:none; opacity:.75; font-size:10px; margin-left:5px; transition:opacity .15s; }
     .am-zoho-link:hover { opacity:1; text-decoration:underline; }
+    .am-th { padding:8px 10px; font-size:9px; text-align:left; color:#475569; font-weight:700; text-transform:uppercase; border-bottom:1px solid #1e293b; white-space:nowrap; }
+    .am-sort { cursor:pointer; user-select:none; }
+    .am-sort:hover { color:#94a3b8; }
+    .am-sarrow { margin-left:3px; color:#475569; font-size:8px; }
+    .am-sarrow.active { color:#38bdf8; }
     .nc-project-name { font-family:'Cormorant Garamond', serif; font-style:italic; font-weight:500; font-size:13px; letter-spacing:.03em; line-height:1.35; color:#a5b4d6; text-align:center; margin-top:8px; }
     .nav-btn { width:100%; padding:8px 14px; font-size:11px; font-weight:700; border-radius:10px; display:flex; align-items:center; gap:8px; transition:all 0.15s; cursor:pointer; text-align:left; }
     .nav-btn.active { background:#4F46E5; color:#fff; }
@@ -941,17 +946,21 @@
       <div class="am-table-wrap" style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b">
         <table style="width:100%;border-collapse:collapse">
           <thead>
-            <tr style="background:#0f172a">
-              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">#</th>
-              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Hasta</th>
-              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Deal ID</th>
-              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Bölge / Takım</th>
-              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Alarm Tipi</th>
-              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Tarih</th>
-              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Kalan</th>
-              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Durum</th>
-              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">TL Notu</th>
-              <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Aksiyon</th>
+            <tr style="background:#0f172a" id="adminAlarmHead">
+              <th class="am-th">#</th>
+              <th class="am-th am-sort" data-col="name"   onclick="_aaSortBy('name')">Hasta<span class="am-sarrow"></span></th>
+              <th class="am-th am-sort" data-col="ref"    onclick="_aaSortBy('ref')">Deal ID<span class="am-sarrow"></span></th>
+              <th class="am-th am-sort" data-col="stage"  onclick="_aaSortBy('stage')">Stage<span class="am-sarrow"></span></th>
+              <th class="am-th am-sort" data-col="team"   onclick="_aaSortBy('team')">Bölge / Takım<span class="am-sarrow"></span></th>
+              <th class="am-th am-sort" data-col="type"   onclick="_aaSortBy('type')">Alarm Tipi<span class="am-sarrow"></span></th>
+              <th class="am-th am-sort" data-col="date"   onclick="_aaSortBy('date')">Tarih<span class="am-sarrow"></span></th>
+              <th class="am-th am-sort" data-col="days"   onclick="_aaSortBy('days')">Kalan<span class="am-sarrow"></span></th>
+              <th class="am-th am-sort" style="text-align:right" data-col="amount" onclick="_aaSortBy('amount')">Tutar<span class="am-sarrow"></span></th>
+              <th class="am-th am-sort" style="text-align:right" data-col="paid"   onclick="_aaSortBy('paid')">Ödenen<span class="am-sarrow"></span></th>
+              <th class="am-th am-sort" data-col="result" onclick="_aaSortBy('result')">Sonuç Kodu<span class="am-sarrow"></span></th>
+              <th class="am-th am-sort" data-col="status" onclick="_aaSortBy('status')">Durum<span class="am-sarrow"></span></th>
+              <th class="am-th">TL Notu</th>
+              <th class="am-th">Aksiyon</th>
             </tr>
           </thead>
           <tbody id="adminAlarmTbody"></tbody>
@@ -2149,31 +2158,53 @@
     // created_at'ı var) — deal_id üzerinden allDeals'tan (zaten tarayıcıda tam
     // yüklü) tek seferlik bir lookup haritası kurup Created Time filtresini
     // ona göre uyguluyoruz. allDeals değişirse (yeniden yüklenirse) harita tazelenir.
+    // NOT: mapDeals çıktısında deal'in uzun sayısal id'si 'Deal Id' (boşluklu)
+    // anahtarında, kısa referansı (ör. 0626-52509) 'DealID' anahtarında.
+    // Bu haritalar EskiDEN d.id (boşluksuz, HİÇ VAROLMAYAN) anahtarıyla
+    // kuruluyordu → harita tamamen boş kalıyor, alarm listesindeki Toplam
+    // Tutar/Ödenen/Kalan hep 0 çıkıyor ve Created Time filtresi hiç
+    // eşleşmiyordu. Doğru anahtar 'Deal Id'.
     let _amDealCreatedMapCache = null;
     let _amDealCreatedMapLen = -1;
     function _amDealCreatedTimeFor(dealId) {
       if (!dealId) return null;
       if (!_amDealCreatedMapCache || _amDealCreatedMapLen !== allDeals.length) {
         _amDealCreatedMapCache = new Map();
-        allDeals.forEach(d => { if (d.id !== undefined && d.id !== null) _amDealCreatedMapCache.set(String(d.id), d['Created Time']); });
+        allDeals.forEach(d => { const k = d['Deal Id']; if (k) _amDealCreatedMapCache.set(String(k), d['Created Time']); });
         _amDealCreatedMapLen = allDeals.length;
       }
       return _amDealCreatedMapCache.get(String(dealId)) || null;
     }
 
-    // deal_id -> {amount, paid} lookup haritası (allDeals'tan, aynı cache
-    // deseniyle) — filtrelenmiş alarm listesinin altında Toplam Tutar/Ödenen/
-    // Kalan göstermek için kullanılır.
-    let _amDealAmountMapCache = null;
-    let _amDealAmountMapLen = -1;
-    function _amDealAmountFor(dealId) {
+    // deal_id (uzun) -> zengin bilgi haritası: kısa referans, tutar, ödenen,
+    // stage, sonuç kodu. Alarm listesinde sütun göstermek + alt toplamlar için.
+    let _amDealInfoMapCache = null;
+    let _amDealInfoMapLen = -1;
+    function _amDealInfoFor(dealId) {
       if (!dealId) return null;
-      if (!_amDealAmountMapCache || _amDealAmountMapLen !== allDeals.length) {
-        _amDealAmountMapCache = new Map();
-        allDeals.forEach(d => { if (d.id !== undefined && d.id !== null) _amDealAmountMapCache.set(String(d.id), { amount: Number(d['Deal Amount'])||0, paid: Number(d['Paid Amount'])||0 }); });
-        _amDealAmountMapLen = allDeals.length;
+      if (!_amDealInfoMapCache || _amDealInfoMapLen !== allDeals.length) {
+        _amDealInfoMapCache = new Map();
+        allDeals.forEach(d => {
+          const k = d['Deal Id']; if (!k) return;
+          const amount = Number(d['Deal Amount']) || 0;
+          const paid   = Number(d['Paid Amount']) || 0;
+          _amDealInfoMapCache.set(String(k), {
+            amount, paid,
+            unpaid: Number(d['Unpaid Amount']) || Math.max(0, amount - paid),
+            ref:    d['DealID'] || '',
+            stage:  d['Stage'] || '',
+            resultCode: d.result_code || '',
+            paymentStatus: d['Payment Status'] || '',
+          });
+        });
+        _amDealInfoMapLen = allDeals.length;
       }
-      return _amDealAmountMapCache.get(String(dealId)) || null;
+      return _amDealInfoMapCache.get(String(dealId)) || null;
+    }
+    // Geriye dönük uyum: eski çağrılar {amount, paid} bekliyor
+    function _amDealAmountFor(dealId) {
+      const i = _amDealInfoFor(dealId);
+      return i ? { amount: i.amount, paid: i.paid } : null;
     }
 
     // Filtrelenmiş alarm listesinin ARKASINDAKİ dealler üzerinden toplamları
@@ -2269,6 +2300,10 @@
 
     function renderAdminAlarmTable() {
       const data = filterAdminAlarms();
+      if (_aaSortCol) data.sort((x, y) => {
+        const a = _aaSortVal(x, _aaSortCol), b = _aaSortVal(y, _aaSortCol);
+        return a < b ? -_aaSortDir : a > b ? _aaSortDir : 0;
+      });
 
       const tbody = document.getElementById('adminAlarmTbody');
       const empty = document.getElementById('adminAlarmEmpty');
@@ -2296,6 +2331,7 @@
         document.getElementById('adminAlarmNextBtn').disabled = _aaPage >= maxPage;
       }
 
+      const td = 'padding:8px 10px;border-bottom:1px solid #0f172a';
       tbody.innerHTML = pageData.map((a, _pi) => {
         const i = pageStart + _pi;
         const tm  = _amTypeMeta(a.alarm_type);
@@ -2304,32 +2340,76 @@
         const overdue = _amIsOverdue(a);
         const daysTxt = days === null ? '—' : days < 0 ? `<span style="color:#f87171;font-weight:700">${Math.abs(days)}g ${I18N.t('GEÇ')}</span>` : days === 0 ? `<span style="color:#4ade80;font-weight:800">${I18N.t('BUGÜN')}</span>` : days <= 3 ? `<span style="color:#f87171">${days}g</span>` : days <= 7 ? `<span style="color:#fb923c">${days}g</span>` : `<span style="color:#60a5fa">${days}g</span>`;
         const rowBg = overdue ? 'rgba(127,29,29,0.12)' : '';
-        // İsim uzun olunca aynı hücredeki Zoho ok ikonu (↗) ellipsis/overflow
-        // yüzünden görünmez/tıklanamaz oluyordu. Artık Deal ID kendi ayrı
-        // sütununda — isim uzunluğundan bağımsız her zaman tıklanabilir.
-        // Satırın tamamı da tıklanır (isme basınca da detay açılır).
+        // Alarmın deal'inin gerçek verisi (kısa Deal ID referansı, stage,
+        // tutar, ödenen, sonuç kodu) allDeals'tan lookup — a.deal_id UZUN
+        // sayısal id (Zoho linkinde bu kullanılır), gösterilen kısa ref ise
+        // info.ref (ör. 0626-52509).
+        const info = _amDealInfoFor(a.deal_id) || {};
+        const shortRef = info.ref || a.deal_id || '';
+        const dealIdCell = a.deal_id
+          ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted" title="Zoho'da Aç">${shortRef} ↗</a>`
+          : '—';
+        const stageCell = info.stage ? `<span style="font-size:9px;color:#cbd5e1">${info.stage}</span>` : '<span style="color:#334155">—</span>';
+        const amountTxt = (info.amount || info.amount === 0) ? fmtMoney(info.amount) : '—';
+        const paidTxt   = (info.paid || info.paid === 0) ? fmtMoney(info.paid) : '—';
+        const resultTxt = info.resultCode ? `<span style="font-size:9px;color:#a5b4fc">${info.resultCode}</span>` : '<span style="color:#334155">—</span>';
         return `<tr style="cursor:pointer;${rowBg?'background:'+rowBg:''}" onclick="openAdminAlarmModal('${a.id}')">
-          <td style="padding:8px 10px;font-size:10px;color:#475569;border-bottom:1px solid #0f172a">${i+1}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a">
+          <td style="${td};font-size:10px;color:#475569">${i+1}</td>
+          <td style="${td}">
             <div style="font-size:11px;font-weight:600;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px">${a.deal_name||'—'}</div>
             <div style="font-size:9px;color:#64748b">${a.deal_owner||'—'}</div>
           </td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;font-size:10px;font-family:monospace;white-space:nowrap">${a.deal_id ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted" title="Zoho'da Aç">${a.deal_id} ↗</a>` : '—'}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a">
+          <td style="${td};font-size:10px;font-family:monospace;white-space:nowrap">${dealIdCell}</td>
+          <td style="${td};white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis">${stageCell}</td>
+          <td style="${td}">
             <div style="font-size:10px;font-weight:600;color:#94a3b8;white-space:nowrap">${a.region||'—'}</div>
             <div style="font-size:9px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:120px">${a.team||'—'}</div>
           </td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a"><span style="font-size:9px;font-weight:700;color:${tm.color};white-space:nowrap">${tm.label}</span></td>
-          <td style="padding:8px 10px;font-size:10px;color:#cbd5e1;border-bottom:1px solid #0f172a;white-space:nowrap">${_amFmtDate(a.reference_date)}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">${daysTxt}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a"><span style="font-size:9px;font-weight:700;color:${sm.color};white-space:nowrap">${sm.label}</span></td>
-          <td style="padding:8px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b;border-bottom:1px solid #0f172a">${a.note||'—'}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">
+          <td style="${td}"><span style="font-size:9px;font-weight:700;color:${tm.color};white-space:nowrap">${tm.label}</span></td>
+          <td style="${td};font-size:10px;color:#cbd5e1;white-space:nowrap">${_amFmtDate(a.reference_date)}</td>
+          <td style="${td};white-space:nowrap">${daysTxt}</td>
+          <td style="${td};font-size:10px;color:#60a5fa;text-align:right;white-space:nowrap">${amountTxt}</td>
+          <td style="${td};font-size:10px;color:#4ade80;text-align:right;white-space:nowrap">${paidTxt}</td>
+          <td style="${td};white-space:nowrap">${resultTxt}</td>
+          <td style="${td}"><span style="font-size:9px;font-weight:700;color:${sm.color};white-space:nowrap">${sm.label}</span></td>
+          <td style="${td};max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b">${a.note||'—'}</td>
+          <td style="${td};white-space:nowrap">
             <button onclick="event.stopPropagation();openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
           </td>
         </tr>`;
       }).join('');
       I18N.translateDOM(tbody);
+    }
+
+    // ── Alarm Listesi sütun sıralaması ────────────────────────────────
+    let _aaSortCol = null, _aaSortDir = 1;
+    function _aaSortVal(a, col) {
+      const info = _amDealInfoFor(a.deal_id) || {};
+      switch (col) {
+        case 'name':   return (a.deal_name || '').toLowerCase();
+        case 'ref':    return (info.ref || a.deal_id || '').toLowerCase();
+        case 'stage':  return (info.stage || '').toLowerCase();
+        case 'team':   return (a.team || '').toLowerCase();
+        case 'type':   return _amTypeMeta(a.alarm_type).label.toLowerCase();
+        case 'date':   return a.reference_date || '';
+        case 'days':   { const d = _amDaysUntil(a.reference_date); return d === null ? 999999 : d; }
+        case 'amount': return info.amount || 0;
+        case 'paid':   return info.paid || 0;
+        case 'result': return (info.resultCode || '').toLowerCase();
+        case 'status': return _amStatusMeta(a.status).label.toLowerCase();
+        default: return '';
+      }
+    }
+    function _aaSortBy(col) {
+      if (_aaSortCol === col) _aaSortDir = -_aaSortDir; else { _aaSortCol = col; _aaSortDir = 1; }
+      _aaPage = 1;
+      renderAdminAlarmTable();
+      document.querySelectorAll('#adminAlarmHead .am-sort').forEach(th => {
+        const arrow = th.querySelector('.am-sarrow');
+        const on = th.dataset.col === _aaSortCol;
+        arrow.textContent = on ? (_aaSortDir === 1 ? ' ▲' : ' ▼') : '';
+        arrow.classList.toggle('active', on);
+      });
     }
 
     // ── Admin alarm detay/aksiyon modalı ─────────────────────────────
@@ -4874,6 +4954,13 @@
       if (!_dealsLoadInProgress) updateTabBadges();
       applyFilters();
       if (!_dealsLoadInProgress) renderSummary();
+      // Deal verisi (tutar/stage/kısa ref) sonradan yüklenmişse ve Alarm
+      // Monitoring açıksa tabloyu tazele — böylece Tutar/Ödenen/Stage/Deal ID
+      // sütunları allDeals gelince dolar (önce boş görünüp sonra dolmasın).
+      if (!_dealsLoadInProgress && _currentView === 'alarms-monitor'
+          && typeof renderAdminAlarmTable === 'function' && adminAllAlarms.length) {
+        renderAdminAlarmTable();
+      }
     }
 
     // Ardı ardına gelen küçük parçalarda her seferinde tam yeniden render

@@ -306,10 +306,25 @@
         <option value="3">3 Gün</option>
       </select>
       <div style="display:flex;align-items:center;gap:5px">
+        <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Referans</span>
         <input type="date" id="alarmDateFrom" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Referans tarih — başlangıç">
         <span style="color:#475569;font-size:11px">–</span>
         <input type="date" id="alarmDateTo" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Referans tarih — bitiş">
-        <button onclick="ncClearAlarmDates()" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Tarih filtresini temizle">✕</button>
+        <button onclick="ncClearAlarmDates()" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Referans tarih filtresini temizle">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px">
+        <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Arrival</span>
+        <input type="date" id="alarmArrFrom" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Arrival Date — başlangıç">
+        <span style="color:#475569;font-size:11px">–</span>
+        <input type="date" id="alarmArrTo" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Arrival Date — bitiş">
+        <button onclick="NCDatePicker.setValue('alarmArrFrom','');NCDatePicker.setValue('alarmArrTo','')" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Arrival tarih filtresini temizle">✕</button>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px">
+        <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Created</span>
+        <input type="date" id="alarmCreatedFrom" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Created Time — başlangıç">
+        <span style="color:#475569;font-size:11px">–</span>
+        <input type="date" id="alarmCreatedTo" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Created Time — bitiş">
+        <button onclick="NCDatePicker.setValue('alarmCreatedFrom','');NCDatePicker.setValue('alarmCreatedTo','')" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Created tarih filtresini temizle">✕</button>
       </div>
     </div>
 
@@ -1024,7 +1039,7 @@
   function ncClearAlarmDates() { NCDatePicker.setValue('alarmDateFrom', ''); NCDatePicker.setValue('alarmDateTo', ''); }
   function ncClearDealDates()  { NCDatePicker.setValue('dealDateFrom', '');  NCDatePicker.setValue('dealDateTo', ''); }
 
-  ['alarmDateFrom', 'alarmDateTo', 'dealDateFrom', 'dealDateTo'].forEach(id => NCDatePicker.attach(id));
+  ['alarmDateFrom', 'alarmDateTo', 'alarmArrFrom', 'alarmArrTo', 'alarmCreatedFrom', 'alarmCreatedTo', 'dealDateFrom', 'dealDateTo'].forEach(id => NCDatePicker.attach(id));
 
   // ── Deal finans bilgisi (Ödenen / Toplam / Kalan / Won durumu) ────
   // alarms tablosunda amount/paid/stage kolonu yok, bu yüzden deal_id
@@ -1046,7 +1061,9 @@
     // (bkz. _tlFetchDealRaw), admin panelindeki desenin aynısı.
     await Promise.all(chunks.map(async chunk => {
       try {
-        const url = `${SUPABASE_URL}/rest/v1/deals?select=id,amount,total_paid_amount,stage&id=in.(${chunk.join(',')})`;
+        // arrival_date + created_time de çekiliyor — Alarmlar sayfasındaki
+        // Arrival Date / Created Time filtreleri (G2) bunları kullanır.
+        const url = `${SUPABASE_URL}/rest/v1/deals?select=id,amount,total_paid_amount,stage,arrival_date,created_time&id=in.(${chunk.join(',')})`;
         const r = await fetch(url, { headers: H });
         if (!r.ok) return;
         const rows = await r.json();
@@ -1056,8 +1073,10 @@
           const remaining = (total !== null) ? (total - paid) : null;
           const pct = (total && total > 0) ? (paid / total * 100) : null;
           const isWon = !!(d.stage && d.stage.toLowerCase().includes('won'));
+          const arrival = d.arrival_date ? String(d.arrival_date).split('T')[0] : null;
+          const created = d.created_time ? String(d.created_time).split('T')[0] : null;
           // raw alanını koru — modal daha önce çekip cache'lediyse silinmesin
-          dealFinanceMap[d.id] = { ...(dealFinanceMap[d.id] || {}), total, paid, remaining, pct, stage: d.stage, isWon };
+          dealFinanceMap[d.id] = { ...(dealFinanceMap[d.id] || {}), total, paid, remaining, pct, stage: d.stage, isWon, arrival, created };
         });
       } catch(e) { /* finans bilgisi opsiyonel, sessiz geç */ }
     }));
@@ -1452,6 +1471,28 @@
     const dateTo   = document.getElementById('alarmDateTo')?.value || '';
     if (dateFrom) data = data.filter(a => a.reference_date && a.reference_date >= dateFrom);
     if (dateTo)   data = data.filter(a => a.reference_date && a.reference_date <= dateTo);
+
+    // Arrival Date aralığı (G2) — deal'in gerçek arrival_date'i dealFinanceMap'ten
+    const arrFrom = document.getElementById('alarmArrFrom')?.value || '';
+    const arrTo   = document.getElementById('alarmArrTo')?.value || '';
+    if (arrFrom || arrTo) data = data.filter(a => {
+      const arr = dealFinanceMap[a.deal_id]?.arrival;
+      if (!arr) return false;
+      if (arrFrom && arr < arrFrom) return false;
+      if (arrTo && arr > arrTo) return false;
+      return true;
+    });
+
+    // Created Time aralığı (G2)
+    const crFrom = document.getElementById('alarmCreatedFrom')?.value || '';
+    const crTo   = document.getElementById('alarmCreatedTo')?.value || '';
+    if (crFrom || crTo) data = data.filter(a => {
+      const cr = dealFinanceMap[a.deal_id]?.created;
+      if (!cr) return false;
+      if (crFrom && cr < crFrom) return false;
+      if (crTo && cr > crTo) return false;
+      return true;
+    });
 
     return data;
   }

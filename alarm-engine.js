@@ -131,7 +131,12 @@ window.AlarmEngine = (function () {
             reference_date:  lastDate,
             threshold_days:  t,
             days_remaining:  -daysSince,
-            dedup_key:       `${deal.id}_last_activity_${t}_${lastDate}`,
+            // dedup_key'e ESIK (t) DAHIL EDILMEZ: aksi halde hasta eşikten
+            // eşiğe (15g→7g→3g) geçtikçe her seferinde YENI bir alarm satırı
+            // oluşup eskiler kapanmadan birikiyordu (tek hasta = 4 alarm).
+            // Eşiği çıkarınca on_conflict=dedup_key aynı satırı bulur; upsert
+            // merge-duplicates ile threshold/days_remaining güncellenir.
+            dedup_key:       `${deal.id}_last_activity_${lastDate}`,
           });
           break;
         }
@@ -188,7 +193,9 @@ window.AlarmEngine = (function () {
               reference_date:  dateStr,
               threshold_days:  t,
               days_remaining:  days,
-              dedup_key:       `${deal.id}_${field}_${t}_${dateStr}`,
+              // Eşik (t) dedup_key'e DAHIL EDILMEZ — bkz. yukarıdaki açıklama.
+              // Her hasta/tarih için tek alarm; hasta yaklaştıkça güncellenir.
+              dedup_key:       `${deal.id}_${field}_${dateStr}`,
             });
             break;
           }
