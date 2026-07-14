@@ -1297,12 +1297,12 @@
         <div id="aamTimelineBody"></div>
       </div>
 
-      <div id="aamExistingNoteWrap" style="display:none;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;margin-bottom:14px">
+      <div id="aamExistingNoteWrap" style="display:none;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;margin-bottom:14px;overflow:hidden">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
           <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Mevcut Not</div>
-          <button onclick="deleteAdminAlarmNote()" style="padding:2px 8px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:9px;font-weight:700;cursor:pointer">Notu Sil</button>
+          <button onclick="deleteAdminAlarmNote()" style="padding:2px 8px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:9px;font-weight:700;cursor:pointer;flex-shrink:0">Notu Sil</button>
         </div>
-        <div style="font-size:12px;color:#cbd5e1" id="aamExistingNote"></div>
+        <div style="font-size:12px;color:#cbd5e1;word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap" id="aamExistingNote"></div>
       </div>
 
       <div style="margin-bottom:12px">
@@ -2771,7 +2771,7 @@
               <span style="font-size:10px;font-weight:700;color:#2dd4bf">${actionLabels[l.action_type] || l.action_type}${l.new_status && l.new_status !== l.old_status ? ' → ' + (_amStatusMeta(l.new_status).label || l.new_status) : ''}</span>
               <span style="font-size:9px;color:#475569;white-space:nowrap">${_amFmtDateTime(l.created_at)}</span>
             </div>
-            <div style="font-size:10px;color:#64748b">${l.action_by || '—'}${l.note ? ' · ' + l.note : ''}</div>
+            <div style="font-size:10px;color:#64748b;word-break:break-word;overflow-wrap:anywhere">${l.action_by || '—'}${l.note ? ' · ' + l.note : ''}</div>
           </div>`).join('');
         wrap.style.display = 'block';
       } catch(e) { /* sessiz */ }
@@ -5423,7 +5423,7 @@
   </script>
 
   <div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:0.85rem;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);white-space:nowrap"></div>
-  <div id="notePopup" style="display:none;position:fixed;z-index:10001;max-width:280px;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;font-size:12px;color:#cbd5e1;box-shadow:0 8px 30px rgba(0,0,0,0.5)"></div>
+  <div id="notePopup" style="display:none;position:fixed;z-index:10001;max-width:280px;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;font-size:12px;color:#cbd5e1;box-shadow:0 8px 30px rgba(0,0,0,0.5);word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap"></div>
   <script>
     function showNoteTip(ev, text) {
       ev.stopPropagation();
