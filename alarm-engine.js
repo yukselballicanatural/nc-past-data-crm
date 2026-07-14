@@ -293,6 +293,68 @@ window.AlarmEngine = (function () {
     return closed;
   }
 
+  // Aynı (deal, alan, tarih) için birden fazla AKTİF alarm varsa fazlalıkları
+  // kapat. Eski motor sürümleri farklı dedup_key formatları kullandığı için
+  // (eşik dahil: "..._15_...", bugün ayrı: "..._today_...") geçmişte üretilen
+  // satırlar yeni formatla çakışmıyor ve aynı hasta 2+ kart görünüyordu.
+  // SQL ile tek seferlik temizlik yeterli olmadı çünkü eski satır dururken
+  // motor yeni formatta bir satır daha ekliyordu. Bu adım her motor
+  // çalışmasında dedup'u garanti eder: YENİ format anahtarlı satır tutulur
+  // (gelecek upsert'ler onunla çakışıp ignore edilir), diğerleri kapatılır.
+  async function closeDuplicateAlarms(BASE, KEY) {
+    const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+    const ACTIVE = 'in.(open,seen,in_progress,escalated,arrived,examined,processing)';
+    let rows = [], offset = 0;
+    while (true) {
+      const url = `${BASE}/rest/v1/alarms?status=${ACTIVE}&reference_date=not.is.null` +
+        `&select=id,deal_id,reference_field,reference_date,dedup_key,created_at&limit=1000&offset=${offset}`;
+      const r = await fetch(url, { headers: H });
+      if (!r.ok) break;
+      const batch = await r.json();
+      if (!Array.isArray(batch) || !batch.length) break;
+      rows.push(...batch);
+      if (batch.length < 1000) break;
+      offset += 1000;
+    }
+    if (!rows.length) return 0;
+
+    // Eski format anahtar: "..._today_..." veya eşik içeren "..._15_2026-…"
+    const isLegacyKey = (k) => !k || k.includes('_today_') || /_\d+_\d{4}-\d{2}-\d{2}$/.test(k);
+
+    const groups = new Map();
+    for (const a of rows) {
+      const g = `${a.deal_id}|${a.reference_field}|${a.reference_date}`;
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(a);
+    }
+
+    const toClose = [];
+    for (const list of groups.values()) {
+      if (list.length < 2) continue;
+      // Tutulacak satır: önce YENİ format anahtarlı olan (en yenisi),
+      // hiç yoksa en son oluşturulan.
+      const modern = list.filter(a => !isLegacyKey(a.dedup_key));
+      const pool = modern.length ? modern : list;
+      pool.sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+      const keepId = pool[0].id;
+      for (const a of list) if (a.id !== keepId) toClose.push(a.id);
+    }
+    if (!toClose.length) return 0;
+
+    const now = new Date().toISOString();
+    const PH = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+    let closed = 0;
+    for (let i = 0; i < toClose.length; i += 100) {
+      const idList = toClose.slice(i, i + 100).join(',');
+      const pr = await fetch(`${BASE}/rest/v1/alarms?id=in.(${idList})`, {
+        method: 'PATCH', headers: PH,
+        body: JSON.stringify({ status: 'closed', close_reason: 'duplicate', closed_at: now, closed_by: 'system' }),
+      });
+      if (pr.ok) closed += Math.min(100, toClose.length - i);
+    }
+    return closed;
+  }
+
   // Stage'i "Cancelled" (veya iptal anlamına gelen bir varyant) olan deallerin
   // hâlâ açık kalmış alarmlarını iptal et — deal iptal olunca alarm da iptal sayılır
   async function closeAlarmsForCancelledDeals(BASE, KEY) {
@@ -349,14 +411,17 @@ window.AlarmEngine = (function () {
     for (const deal of deals) newAlarms.push(...computeAlarms(deal));
     if (onProgress) onProgress(`${newAlarms.length} ${_t('alarm kaydediliyor (dedup aktif)...')}`);
     const result = await insertAlarms(BASE, KEY, newAlarms);
+    // Aynı hasta/tarih için birden fazla aktif alarm kalmışsa fazlalıkları kapat
+    if (onProgress) onProgress(_t('Kopya alarmlar temizleniyor...'));
+    const dedupCount = await closeDuplicateAlarms(BASE, KEY);
     // Arrival Date artık dolu olan deallerin eksik tarih alarmlarını kapat
     if (onProgress) onProgress(_t('Tarih girilen alarmlar kapatılıyor...'));
     const closedCount = await closeStaleArrivalMissing(BASE, KEY, deals);
     // Stage'i Cancelled olan deallerin açık kalan alarmlarını iptal et
     if (onProgress) onProgress(_t('İptal olan dealler için alarmlar kapatılıyor...'));
     const cancelledCount = await closeAlarmsForCancelledDeals(BASE, KEY);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, ...result };
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms };
 })();
