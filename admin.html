@@ -1002,15 +1002,18 @@
       <table style="width:100%;border-collapse:collapse">
         <thead>
           <tr style="background:#0f172a">
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">#</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Hasta</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Bölge / Takım</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">P / FT</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:right;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Tutar</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:right;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Ödenen</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Durum</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Not</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Aksiyon</th>
+            <th class="am-th">#</th>
+            <th class="am-th">Hasta</th>
+            <th class="am-th">Deal ID</th>
+            <th class="am-th">Stage</th>
+            <th class="am-th">Bölge / Takım</th>
+            <th class="am-th">P / FT</th>
+            <th class="am-th" style="text-align:right">Tutar</th>
+            <th class="am-th" style="text-align:right">Ödenen</th>
+            <th class="am-th" style="text-align:right">Kalan</th>
+            <th class="am-th">Durum</th>
+            <th class="am-th">Not</th>
+            <th class="am-th">Aksiyon</th>
           </tr>
         </thead>
         <tbody id="todayTbody"></tbody>
@@ -1248,8 +1251,11 @@
       </div>
 
       <div style="margin-bottom:18px">
-        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Not <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></label>
-        <textarea id="aamNoteInput" class="aam-note" placeholder="Hasta durumu, arama sonucu, notlar..."></textarea>
+        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:flex;justify-content:space-between;margin-bottom:6px">
+          <span>Not <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></span>
+          <span id="aamNoteCount" style="color:#475569;font-weight:400;font-size:10px">0 / 100</span>
+        </label>
+        <textarea id="aamNoteInput" class="aam-note" maxlength="100" placeholder="Hasta durumu, arama sonucu, notlar... (en fazla 100 karakter)" oninput="document.getElementById('aamNoteCount').textContent=this.value.length+' / 100'"></textarea>
       </div>
 
       <div id="aamHistoryWrap" style="display:none;margin-bottom:18px">
@@ -1709,20 +1715,28 @@
           : a.payment_or_flight_ticket === 'Flight Ticket'
             ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#1e3a5f;color:#60a5fa;border:1px solid #1e40af">Flight Ticket</span>'
             : '—';
-        const fin = _amDealAmountFor(a.deal_id);
+        const info = _amDealInfoFor(a.deal_id) || {};
+        const shortRef = info.ref || a.deal_id || '';
+        const bd = 'border-bottom:1px solid #0f172a';
+        const dealIdCell = a.deal_id
+          ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted" title="Zoho'da Aç">${shortRef} ↗</a>`
+          : '—';
         return `<tr style="cursor:pointer" onclick="openAdminAlarmModal('${a.id}')">
-          <td style="padding:8px 10px;font-size:10px;color:#475569;border-bottom:1px solid #0f172a">${i+1}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a">
-            <div style="font-size:12px;font-weight:600;color:#f1f5f9;white-space:nowrap">${fmt(a.deal_name)}${a.deal_id ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="am-zoho-link" title="Zoho'da Aç">↗</a>` : ''}</div>
+          <td style="padding:8px 10px;font-size:10px;color:#475569;${bd}">${i+1}</td>
+          <td style="padding:8px 10px;${bd}">
+            <div style="font-size:12px;font-weight:600;color:#f1f5f9;white-space:nowrap">${fmt(a.deal_name)}</div>
             <div style="font-size:10px;color:#0d9488;font-weight:600">${fmt(a.deal_owner)}</div>
           </td>
-          <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a;white-space:nowrap">${fmt(a.team)}<br><span style="color:#64748b">${fmt(a.region)}</span></td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">${pftDisplay}</td>
-          <td style="padding:8px 10px;font-size:11px;color:#60a5fa;border-bottom:1px solid #0f172a;text-align:right;white-space:nowrap">${fin ? fmtMoney(fin.amount) : '—'}</td>
-          <td style="padding:8px 10px;font-size:11px;color:#4ade80;border-bottom:1px solid #0f172a;text-align:right;white-space:nowrap">${fin ? fmtMoney(fin.paid) : '—'}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap"><span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.color}22;color:${sm.color}">${sm.label}</span></td>
-          <td style="padding:8px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b;border-bottom:1px solid #0f172a">${a.note ? fmt(a.note) : '—'}</td>
-          <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">
+          <td style="padding:8px 10px;font-size:10px;font-family:monospace;${bd};white-space:nowrap">${dealIdCell}</td>
+          <td style="padding:8px 10px;font-size:10px;color:#cbd5e1;${bd};white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis">${info.stage ? fmt(info.stage) : '—'}</td>
+          <td style="padding:8px 10px;font-size:10px;color:#94a3b8;${bd};white-space:nowrap">${fmt(a.team)}<br><span style="color:#64748b">${fmt(a.region)}</span></td>
+          <td style="padding:8px 10px;${bd};white-space:nowrap">${pftDisplay}</td>
+          <td style="padding:8px 10px;font-size:11px;color:#60a5fa;${bd};text-align:right;white-space:nowrap">${info.amount || info.amount === 0 ? fmtMoney(info.amount) : '—'}</td>
+          <td style="padding:8px 10px;font-size:11px;color:#4ade80;${bd};text-align:right;white-space:nowrap">${info.paid || info.paid === 0 ? fmtMoney(info.paid) : '—'}</td>
+          <td style="padding:8px 10px;font-size:11px;color:#f87171;${bd};text-align:right;white-space:nowrap">${info.unpaid || info.unpaid === 0 ? fmtMoney(info.unpaid) : '—'}</td>
+          <td style="padding:8px 10px;${bd};white-space:nowrap"><span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.color}22;color:${sm.color}">${sm.label}</span></td>
+          <td style="padding:8px 10px;max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:10px;color:#64748b;${bd}">${a.note ? fmt(a.note) : '—'}</td>
+          <td style="padding:8px 10px;${bd};white-space:nowrap">
             <button onclick="event.stopPropagation();openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
           </td>
         </tr>`;
@@ -2469,6 +2483,7 @@
       }
       document.getElementById('aamNewStatus').value = '';
       document.getElementById('aamNoteInput').value = '';
+      const aamNC = document.getElementById('aamNoteCount'); if (aamNC) aamNC.textContent = '0 / 100';
       document.getElementById('aamCloseReasonWrap').style.display = 'none';
       document.getElementById('adminAlarmModal').classList.add('open');
       document.body.style.overflow = 'hidden';
