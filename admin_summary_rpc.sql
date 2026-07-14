@@ -145,10 +145,12 @@ as $$
                                   count(*) filter (where is_won) won,
                                   count(*) filter (where rc is not null) results
                              from flags group by team) a),
-    'by_owner',   (select coalesce(jsonb_agg(jsonb_build_object('owner',owner,'deals',deals,'paid',paid,'unpaid',unpaid,'won',won,'results',results) order by deals desc),'[]'::jsonb)
+    'by_owner',   (select coalesce(jsonb_agg(jsonb_build_object('owner',owner,'deals',deals,'paid',paid,'unpaid',unpaid,'won',won,'results',results,'won_paid',won_paid) order by deals desc),'[]'::jsonb)
                      from (select owner, count(*) deals, sum(paid) paid, sum(unpaid) unpaid,
                                   count(*) filter (where is_won) won,
-                                  count(*) filter (where rc is not null) results
+                                  count(*) filter (where rc is not null) results,
+                                  -- won_paid: stage Won VE odeme %100+ (tamamlanan) deal sayisi (G3)
+                                  count(*) filter (where is_won and amount > 0 and paid >= amount) won_paid
                              from flags group by owner) a)
   )
   from scalars sc;

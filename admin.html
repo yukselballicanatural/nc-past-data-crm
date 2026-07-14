@@ -552,8 +552,11 @@
         <div class="overflow-x-auto">
           <table class="tbl w-full">
             <thead>
-              <tr class="text-slate-400 text-[10px]">
-                <th>Sonuç Kodu</th><th>Alt Kod</th><th class="text-right">Adet</th><th class="text-right">Danışman</th>
+              <tr class="text-slate-400 text-[10px]" id="resultCodeHead">
+                <th class="sortable-th" onclick="sortResultTable('code')">Sonuç Kodu<span class="sort-arrow" data-col="code"> ↕</span></th>
+                <th class="sortable-th" onclick="sortResultTable('sub')">Alt Kod<span class="sort-arrow" data-col="sub"> ↕</span></th>
+                <th class="sortable-th text-right" onclick="sortResultTable('count')">Adet<span class="sort-arrow" data-col="count"> ↕</span></th>
+                <th class="sortable-th text-right" onclick="sortResultTable('agents')">Danışman<span class="sort-arrow" data-col="agents"> ↕</span></th>
               </tr>
             </thead>
             <tbody id="resultCodeBody"></tbody>
@@ -586,7 +589,7 @@
                 <th class="sortable-th" onclick="sortAgentTable('agent')">Danışman</th>
                 <th class="sortable-th" onclick="sortAgentTable('deals')">Deal</th>
                 <th class="sortable-th" onclick="sortAgentTable('paid')">Ödenen</th>
-                <th class="sortable-th" onclick="sortAgentTable('results')">Sonuç</th>
+                <th class="sortable-th" onclick="sortAgentTable('wonPaid')" title="Stage'i Won VE ödemesi %100 tamamlanmış deal sayısı">Tamamlanan</th>
               </tr></thead>
               <tbody id="agentSummaryBody"></tbody>
             </table>
@@ -3753,17 +3756,44 @@
             <td class="py-1 text-slate-200">${fmt(v.agent)}</td>
             <td class="py-1 text-right text-slate-300">${v.deals}</td>
             <td class="py-1 text-right text-emerald-400">${fmtMoney(v.paid)}</td>
-            <td class="py-1 text-right text-indigo-400">${v.results}</td>
+            <td class="py-1 text-right text-indigo-400">${v.wonPaid || 0}</td>
           </tr>`).join('') || `<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">${I18N.t('Veri yok.')}</td></tr>`;
       const ths = document.querySelectorAll('#view-summary table')[2]?.querySelectorAll('th') || [];
       ths.forEach(th => { th.querySelectorAll('.sort-arrow').forEach(a=>a.remove()); });
-      const cols = ['agent','deals','paid','results'];
+      const cols = ['agent','deals','paid','wonPaid'];
       const idx = cols.indexOf(_agentSortCol);
       if (idx >= 0 && ths[idx]) ths[idx].insertAdjacentHTML('beforeend', _sortArrowHtml(_agentSortCol, _agentSortCol, _agentSortDir));
     }
     function sortAgentTable(col) {
       if (_agentSortCol === col) _agentSortDir = -_agentSortDir; else { _agentSortCol = col; _agentSortDir = col === 'agent' ? 1 : -1; }
       renderAgentSummaryTable();
+    }
+
+    // ── Sonuç Kodu Aktivitesi tablosu (G5 — sıralanabilir) ────────────
+    let _resultCodeRows = [];
+    let _resultSortCol = 'count', _resultSortDir = -1;
+    function renderResultCodeTable() {
+      const rows = _resultCodeRows.slice().sort((a, b) => {
+        const va = a[_resultSortCol], vb = b[_resultSortCol];
+        if (typeof va === 'string') return _resultSortDir * String(va).localeCompare(String(vb));
+        return _resultSortDir * ((va || 0) - (vb || 0));
+      });
+      document.getElementById('resultCodeBody').innerHTML = rows.map(r => `
+          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
+            <td class="py-1.5 text-slate-200">${fmt(r.code)}</td>
+            <td class="py-1.5 text-slate-400">${fmt(r.sub)}</td>
+            <td class="py-1.5 text-right text-indigo-400 font-bold">${r.count}</td>
+            <td class="py-1.5 text-right text-slate-400">${r.agents}</td>
+          </tr>`).join('') || `<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">${I18N.t('Henüz sonuç kodu girilmedi.')}</td></tr>`;
+      document.querySelectorAll('#resultCodeHead .sort-arrow').forEach(a => {
+        const on = a.dataset.col === _resultSortCol;
+        a.textContent = on ? (_resultSortDir === 1 ? ' ↑' : ' ↓') : ' ↕';
+        a.style.color = on ? '#38bdf8' : '#475569';
+      });
+    }
+    function sortResultTable(col) {
+      if (_resultSortCol === col) _resultSortDir = -_resultSortDir; else { _resultSortCol = col; _resultSortDir = (col === 'code' || col === 'sub') ? 1 : -1; }
+      renderResultCodeTable();
     }
 
     // ── Analytics filtreleri (Bölge / Takım Lideri / Tarih) ──────────────
@@ -3943,14 +3973,8 @@
         rcMap[key].count++;
         rcMap[key].agents.add(d['Deal Owner Name']||'');
       });
-      document.getElementById('resultCodeBody').innerHTML =
-        Object.values(rcMap).sort((a,b) => b.count - a.count).map(r => `
-          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
-            <td class="py-1.5 text-slate-200">${r.code}</td>
-            <td class="py-1.5 text-slate-400">${r.sub}</td>
-            <td class="py-1.5 text-right text-indigo-400 font-bold">${r.count}</td>
-            <td class="py-1.5 text-right text-slate-400">${r.agents.size}</td>
-          </tr>`).join('') || `<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">${I18N.t('Henüz sonuç kodu girilmedi.')}</td></tr>`;
+      _resultCodeRows = Object.values(rcMap).map(r => ({ code: r.code, sub: r.sub, count: r.count, agents: r.agents.size }));
+      renderResultCodeTable();
 
       // Teams
       const teamMap = {};
@@ -3980,12 +4004,15 @@
       const agentMap = {};
       data.forEach(d => {
         const a = d['Deal Owner Name']||'Bilinmiyor';
-        if (!agentMap[a]) agentMap[a] = { deals:0, paid:0, results:0 };
+        if (!agentMap[a]) agentMap[a] = { deals:0, paid:0, results:0, wonPaid:0 };
         agentMap[a].deals++;
         agentMap[a].paid += (Number(d['Paid Amount'])||0);
         if (d.result_code) agentMap[a].results++;
+        // Tamamlanan (G3): Stage Won VE ödeme %100+
+        const amt = Number(d['Deal Amount'])||0, pd = Number(d['Paid Amount'])||0;
+        if ((d['Stage']||'').toLowerCase().includes('won') && amt > 0 && pd >= amt) agentMap[a].wonPaid++;
       });
-      _agentSummaryRows = Object.entries(agentMap).map(([a,v]) => ({ agent:a, deals:v.deals, paid:v.paid, results:v.results }));
+      _agentSummaryRows = Object.entries(agentMap).map(([a,v]) => ({ agent:a, deals:v.deals, paid:v.paid, results:v.results, wonPaid:v.wonPaid }));
       renderAgentSummaryTable();
 
       // Languages
@@ -4168,14 +4195,8 @@
       }).join('') : '<div class="text-xs text-slate-600 py-8 mx-auto">Arrival date verisi yok.</div>';
 
       // Result codes breakdown
-      document.getElementById('resultCodeBody').innerHTML =
-        (s.by_result||[]).map(r => `
-          <tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
-            <td class="py-1.5 text-slate-200">${r.code}</td>
-            <td class="py-1.5 text-slate-400">—</td>
-            <td class="py-1.5 text-right text-indigo-400 font-bold">${r.cnt}</td>
-            <td class="py-1.5 text-right text-slate-400">${r.agents}</td>
-          </tr>`).join('') || `<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">${I18N.t('Henüz sonuç kodu girilmedi.')}</td></tr>`;
+      _resultCodeRows = (s.by_result||[]).map(r => ({ code: r.code, sub: '—', count: r.cnt, agents: r.agents }));
+      renderResultCodeTable();
 
       // Teams (ham takımı TeamMap ile normalize edip yeniden topla)
       const teamMap = {};
@@ -4198,7 +4219,7 @@
           </div>`).join('');
 
       // Agents (ham deal_owner)
-      _agentSummaryRows = (s.by_owner||[]).map(o => ({ agent: o.owner || 'Bilinmiyor', deals:o.deals, paid:o.paid, results:o.results }));
+      _agentSummaryRows = (s.by_owner||[]).map(o => ({ agent: o.owner || 'Bilinmiyor', deals:o.deals, paid:o.paid, results:o.results, wonPaid: o.won_paid || 0 }));
       renderAgentSummaryTable();
 
       // Languages — ayrı, tembel çekilen veri (admin_language_breakdown),
