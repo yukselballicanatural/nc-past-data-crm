@@ -158,7 +158,7 @@
     .deal-tbl tbody tr.row-red td { background:rgba(127,29,29,0.15); }
     .deal-tbl tbody tr.row-amber td { background:rgba(120,53,15,0.12); }
     .tab-badge { display:inline-flex; align-items:center; justify-content:center; min-width:26px; padding:1px 6px; border-radius:9999px; font-size:10px; font-weight:700; line-height:1.6; }
-    .kpi-val { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:clamp(12px, 3vw, 18px); cursor:default; }
+    .kpi-val { white-space:nowrap; overflow:hidden; display:block; }
     .tbl th { position:sticky; top:0; background:#111827; z-index:2; }
     .tbl td, .tbl th { padding:8px 10px; font-size:11px; text-align:left; border-bottom:1px solid #1f2937; white-space:nowrap; }
     .tbl tr:hover td { background:#12182b; }
@@ -3399,6 +3399,16 @@
     function _noteBtn(note) {
       return note ? `<button onclick="showNoteTip(event, this.dataset.note)" data-note="${_escAttr(note)}" style="padding:2px 8px;background:#1e293b;border:1px solid #f59e0b;border-radius:6px;color:#f59e0b;font-size:10px;font-weight:800;cursor:pointer" title="Notu görüntüle">!</button>` : '—';
     }
+    // KPI kutucuğundaki değer kutuya sığmıyorsa (uzun tutarlar) yazıyı
+    // adım adım küçültür — sayı asla kesilmez/kısaltılmaz, sadece küçülür.
+    function fitKpiText(el) {
+      el.style.fontSize = '';
+      let size = 18;
+      while (el.scrollWidth > el.clientWidth && size > 10) {
+        size -= 1;
+        el.style.fontSize = size + 'px';
+      }
+    }
     function fmtMoney(v) {
       if (!v && v !== 0) return '€0';
       // tr-TR: binlik ayırıcı nokta (.), ondalık ayırıcı virgül (,) — örn. 78.000,78
@@ -3652,6 +3662,7 @@
         document.getElementById('view-' + name).classList.toggle('hidden', name !== v);
         const nb = document.getElementById('nav-' + name); if (nb) nb.classList.toggle('active', name === v);
       });
+      if (v === 'deals') { ['k1','k2','k3','k4','k5','k6','k7','k8'].forEach(id => { const el = document.getElementById(id); if (el) fitKpiText(el); }); }
       if (v === 'summary') { renderSummary(); _startAnalyticsAutoRefresh(); }
       else _stopAnalyticsAutoRefresh();
       if (v === 'alarms-monitor') { loadAdminAlarms(); _amRenderDayFilterChips(); }
@@ -3722,8 +3733,8 @@
       const noRes   = data.filter(d => !d.result_code).length;
       const payRate = deal > 0 ? ((paid/deal)*100).toFixed(1) : 0;
 
-      const set = (id, v, title) => { const el = document.getElementById(id); if (el) { el.textContent = v; if (title) el.title = title; } };
-      set('k1', total); set('k2', fmtCompact(deal), fmtMoney(deal)); set('k3', fmtCompact(paid), fmtMoney(paid)); set('k4', fmtCompact(unpaid), fmtMoney(unpaid));
+      const set = (id, v) => { const el = document.getElementById(id); if (el) { el.textContent = v; fitKpiText(el); } };
+      set('k1', total); set('k2', fmtMoney(deal)); set('k3', fmtMoney(paid)); set('k4', fmtMoney(unpaid));
       set('k5', won); set('k6', cancel); set('k7', unlockR); set('k8', noRes);
       set('sKpi1', total); set('sKpi2', fmtCompact(deal)); set('sKpi3', fmtCompact(paid)); set('sKpi4', fmtCompact(unpaid));
     }
@@ -4741,8 +4752,8 @@
     }
 
     function renderKpisFromSummary(s) {
-      const set = (id, v, title) => { const el = document.getElementById(id); if (el) { el.textContent = v; if (title) el.title = title; } };
-      set('k1', s.total); set('k2', fmtCompact(s.sum_amount), fmtMoney(s.sum_amount)); set('k3', fmtCompact(s.sum_paid), fmtMoney(s.sum_paid)); set('k4', fmtCompact(s.sum_unpaid), fmtMoney(s.sum_unpaid));
+      const set = (id, v) => { const el = document.getElementById(id); if (el) { el.textContent = v; fitKpiText(el); } };
+      set('k1', s.total); set('k2', fmtMoney(s.sum_amount)); set('k3', fmtMoney(s.sum_paid)); set('k4', fmtMoney(s.sum_unpaid));
       set('k5', s.won); set('k6', s.cancel); set('k7', s.unlock_requested); set('k8', s.no_result);
       set('sKpi1', s.total); set('sKpi2', fmtCompact(s.sum_amount)); set('sKpi3', fmtCompact(s.sum_paid)); set('sKpi4', fmtCompact(s.sum_unpaid));
     }
