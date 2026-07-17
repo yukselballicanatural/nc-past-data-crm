@@ -2551,7 +2551,7 @@
       const nextBtn = document.getElementById('btnDealNext');
       const lbl     = document.getElementById('dealPageLabel');
       const maxPage = Math.ceil(dealTotalCount / DEAL_PAGE_SIZE);
-      if (pager) pager.style.display = maxPage > 1 ? 'flex' : 'none';
+      if (pager) pager.style.display = (maxPage > 1 && _dealsViewMode === 'table') ? 'flex' : 'none';
       if (lbl)   lbl.textContent     = `Sayfa ${dealCurrentPage + 1} / ${maxPage}`;
       if (prevBtn) prevBtn.disabled  = dealCurrentPage === 0;
       if (nextBtn) nextBtn.disabled  = dealCurrentPage >= maxPage - 1;

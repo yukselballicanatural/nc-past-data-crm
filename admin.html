@@ -3957,6 +3957,7 @@
       bT.style.background = mode === 'table'  ? '#4f46e5' : 'transparent'; bT.style.color = mode === 'table'  ? '#fff' : '#94a3b8';
       bK.style.background = mode === 'kanban' ? '#4f46e5' : 'transparent'; bK.style.color = mode === 'kanban' ? '#fff' : '#94a3b8';
       if (mode === 'kanban') renderKanban(filteredDeals);
+      else renderDeals(filteredDeals);
     }
 
     // Stage'lerin akış sırası — bilinmeyen bir stage gelirse sona eklenir
@@ -4035,7 +4036,7 @@
         ? `${pageStart+1}–${pageEnd} / ${data.length} deals shown`
         : '0 deals shown';
       if (pager) {
-        pager.style.display = data.length > dealPageSize ? 'flex' : 'none';
+        pager.style.display = (data.length > dealPageSize && _dealsViewMode === 'table') ? 'flex' : 'none';
         document.getElementById('dealPageLbl').textContent = `Sayfa ${dealCurrentPage+1} / ${maxPage+1}`;
         document.getElementById('btnDealPrev').disabled = dealCurrentPage === 0;
         document.getElementById('btnDealNext').disabled = dealCurrentPage >= maxPage;
