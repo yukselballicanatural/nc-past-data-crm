@@ -2109,7 +2109,9 @@
     currentAlarm = a;
     const tm = alarmTypeMeta(a.alarm_type);
     const sm = statusMeta(a.status);
-    document.getElementById('modalDealName').textContent  = a.deal_name || '—';
+    document.getElementById('modalDealName').innerHTML = a.deal_id
+      ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''" title="Zoho'da Aç">${fmt(a.deal_name) || '—'} ↗</a>`
+      : (a.deal_name || '—');
     document.getElementById('modalDealOwner').textContent = a.deal_owner || '—';
     document.getElementById('modalAlarmType').innerHTML   = `<span style="padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span>`;
     document.getElementById('modalAlarmStatus').innerHTML = `<span style="padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;background:${sm.bg};color:${sm.color}">${sm.label}</span>`;
