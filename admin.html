@@ -23,6 +23,12 @@
     .stage-Reservation { background:#451A03; color:#FB923C; }
     .stage-Waiting { background:#1C2A1C; color:#86EFAC; }
     .stage-default { background:#1e2536; color:#94A3B8; }
+    .kanban-col { flex:0 0 280px; background:#0d1526; border:1px solid #1e293b; border-radius:12px; max-height:75vh; display:flex; flex-direction:column; }
+    .kanban-col-head { padding:10px 12px; border-bottom:1px solid #1e293b; position:sticky; top:0; background:#0d1526; border-radius:12px 12px 0 0; z-index:1 }
+    .kanban-col-body { overflow-y:auto; padding:8px; display:flex; flex-direction:column; gap:8px; flex:1 }
+    .kanban-card { background:#111827; border:1px solid #1e293b; border-radius:10px; padding:9px 11px; cursor:pointer; transition:border-color .15s,transform .1s; }
+    .kanban-card:hover { border-color:#4f46e5; transform:translateY(-1px); }
+    .kanban-more { text-align:center; font-size:10px; color:#64748b; padding:6px; font-style:italic }
     .filter-select { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:100%; }
     .filter-select:focus { outline:none; border-color:#6366F1; }
     .filter-select option { background:#111827; color:#E2E8F0; }
@@ -318,6 +324,10 @@
           <p class="text-xs text-slate-400 mt-0.5">Complete dataset from Supabase</p>
         </div>
         <div class="flex gap-2 items-center">
+          <div style="display:flex;background:#111827;border:1px solid #374151;border-radius:8px;padding:2px;gap:2px">
+            <button onclick="setDealsView('table')" id="dealsViewBtnTable" class="px-2.5 py-1.5 text-[11px] font-bold rounded-md" style="background:#4f46e5;color:#fff;transition:all .15s">☰ Tablo</button>
+            <button onclick="setDealsView('kanban')" id="dealsViewBtnKanban" class="px-2.5 py-1.5 text-[11px] font-bold rounded-md" style="background:transparent;color:#94a3b8;transition:all .15s">▦ Kanban</button>
+          </div>
           <span class="text-xs text-slate-500" id="lastRefresh">—</span>
           <button onclick="loadDeals(true)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-lg font-semibold">↻ Refresh</button>
           <button onclick="exportExcel()" class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-600 text-white text-xs rounded-lg font-semibold">⬇ Excel</button>
@@ -445,30 +455,36 @@
             </div>
           </div>
         </div>
-        <div class="overflow-x-auto rounded-xl border border-gray-800 bg-gray-900" style="max-height:70vh;">
-          <table class="deal-tbl">
-            <thead>
-              <tr>
-                <th style="width:36px">#</th>
-                <th data-sort="name"    onclick="sortBy('name')"    style="cursor:pointer;user-select:none">Deal Name<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="id"      onclick="sortBy('id')"      style="cursor:pointer;user-select:none">Deal ID<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="team"    onclick="sortBy('team')"    style="cursor:pointer;user-select:none">Team<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="agent"   onclick="sortBy('agent')"   style="cursor:pointer;user-select:none">Agent<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="stage"   onclick="sortBy('stage')"   style="cursor:pointer;user-select:none">Stage<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="arrival" onclick="sortBy('arrival')" style="cursor:pointer;user-select:none">Arrival Date<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="created" onclick="sortBy('created')" style="cursor:pointer;user-select:none">Created<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="lang"    onclick="sortBy('lang')"    style="cursor:pointer;user-select:none">Language<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="amount"  onclick="sortBy('amount')"  style="cursor:pointer;user-select:none">Deal Amt<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="paid"    onclick="sortBy('paid')"    style="cursor:pointer;user-select:none">Paid<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="remaining" onclick="sortBy('remaining')" style="cursor:pointer;user-select:none">Kalan<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="payment" onclick="sortBy('payment')" style="cursor:pointer;user-select:none">Pay Status<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="result"  onclick="sortBy('result')"  style="cursor:pointer;user-select:none">Result Code<span class="sarrow" style="color:#475569"> ↕</span></th>
-                <th data-sort="sub"     onclick="sortBy('sub')"     style="cursor:pointer;user-select:none">Sub Code<span class="sarrow" style="color:#475569"> ↕</span></th>
-              </tr>
-            </thead>
-            <tbody id="dealsBody"></tbody>
-          </table>
-          <div id="emptyState" class="hidden text-center py-16 text-slate-500 text-sm">No deals match filters.</div>
+        <div id="dealsTableView">
+          <div class="overflow-x-auto rounded-xl border border-gray-800 bg-gray-900" style="max-height:70vh;">
+            <table class="deal-tbl">
+              <thead>
+                <tr>
+                  <th style="width:36px">#</th>
+                  <th data-sort="name"    onclick="sortBy('name')"    style="cursor:pointer;user-select:none">Deal Name<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="id"      onclick="sortBy('id')"      style="cursor:pointer;user-select:none">Deal ID<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="team"    onclick="sortBy('team')"    style="cursor:pointer;user-select:none">Team<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="agent"   onclick="sortBy('agent')"   style="cursor:pointer;user-select:none">Agent<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="stage"   onclick="sortBy('stage')"   style="cursor:pointer;user-select:none">Stage<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="arrival" onclick="sortBy('arrival')" style="cursor:pointer;user-select:none">Arrival Date<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="created" onclick="sortBy('created')" style="cursor:pointer;user-select:none">Created<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="lang"    onclick="sortBy('lang')"    style="cursor:pointer;user-select:none">Language<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="amount"  onclick="sortBy('amount')"  style="cursor:pointer;user-select:none">Deal Amt<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="paid"    onclick="sortBy('paid')"    style="cursor:pointer;user-select:none">Paid<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="remaining" onclick="sortBy('remaining')" style="cursor:pointer;user-select:none">Kalan<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="payment" onclick="sortBy('payment')" style="cursor:pointer;user-select:none">Pay Status<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="result"  onclick="sortBy('result')"  style="cursor:pointer;user-select:none">Result Code<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="sub"     onclick="sortBy('sub')"     style="cursor:pointer;user-select:none">Sub Code<span class="sarrow" style="color:#475569"> ↕</span></th>
+                </tr>
+              </thead>
+              <tbody id="dealsBody"></tbody>
+            </table>
+            <div id="emptyState" class="hidden text-center py-16 text-slate-500 text-sm">No deals match filters.</div>
+          </div>
+        </div>
+        <div id="dealsKanbanView" class="hidden">
+          <div id="kanbanBoard" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;align-items:flex-start"></div>
+          <div id="kanbanEmpty" class="hidden text-center py-16 text-slate-500 text-sm">No deals match filters.</div>
         </div>
       </div>
     </div>
@@ -1586,7 +1602,7 @@
         const av = getSortVal(a, sortCol), bv = getSortVal(b, sortCol);
         return av < bv ? -sortDir : av > bv ? sortDir : 0;
       });
-      renderDeals(filteredDeals);
+      if (_dealsViewMode === 'kanban') renderKanban(filteredDeals); else renderDeals(filteredDeals);
       document.querySelectorAll('th[data-sort]').forEach(th => {
         const arrow = th.querySelector('.sarrow');
         if (!arrow) return;
@@ -3810,6 +3826,79 @@
       dealPageSize = parseInt(document.getElementById('dealPageSizeSel').value) || 500;
       dealCurrentPage = 0;
       renderDeals(filteredDeals);
+    }
+
+    // ── Deal Listesi: Tablo / Kanban görünüm anahtarı ──────────────────
+    let _dealsViewMode = 'table';
+    function setDealsView(mode) {
+      _dealsViewMode = mode;
+      document.getElementById('dealsTableView').classList.toggle('hidden', mode !== 'table');
+      document.getElementById('dealsKanbanView').classList.toggle('hidden', mode !== 'kanban');
+      const bT = document.getElementById('dealsViewBtnTable'), bK = document.getElementById('dealsViewBtnKanban');
+      bT.style.background = mode === 'table'  ? '#4f46e5' : 'transparent'; bT.style.color = mode === 'table'  ? '#fff' : '#94a3b8';
+      bK.style.background = mode === 'kanban' ? '#4f46e5' : 'transparent'; bK.style.color = mode === 'kanban' ? '#fff' : '#94a3b8';
+      if (mode === 'kanban') renderKanban(filteredDeals);
+    }
+
+    // Stage'lerin akış sırası — bilinmeyen bir stage gelirse sona eklenir
+    const KANBAN_STAGE_ORDER = [
+      'Reservation Pending', 'Waiting appointment', 'Appointment confirmed',
+      'Waiting hotel confirmation', 'On Hold', 'Approval', 'Check in completed',
+      'Waiting next visit', 'Won', 'Cancelled',
+    ];
+    const KANBAN_CARDS_PER_COL = 60; // DOM'u şişirmemek için kolon başına sınır
+
+    function renderKanban(data) {
+      const board = document.getElementById('kanbanBoard');
+      const empty = document.getElementById('kanbanEmpty');
+      if (!data.length) { board.innerHTML = ''; empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+
+      // Stage'e göre grupla — index lookup için (openModal filteredDeals index bekliyor)
+      const groups = new Map();
+      data.forEach((d, idx) => {
+        const stage = d['Stage'] || 'Belirsiz';
+        if (!groups.has(stage)) groups.set(stage, []);
+        groups.get(stage).push(idx);
+      });
+
+      const stages = [...groups.keys()].sort((a, b) => {
+        const ia = KANBAN_STAGE_ORDER.indexOf(a), ib = KANBAN_STAGE_ORDER.indexOf(b);
+        if (ia === -1 && ib === -1) return a.localeCompare(b);
+        if (ia === -1) return 1;
+        if (ib === -1) return -1;
+        return ia - ib;
+      });
+
+      board.innerHTML = stages.map(stage => {
+        const idxs = groups.get(stage);
+        const totalAmt = idxs.reduce((s, i) => s + (Number(filteredDeals[i]['Deal Amount']) || 0), 0);
+        const shown = idxs.slice(0, KANBAN_CARDS_PER_COL);
+        const moreCount = idxs.length - shown.length;
+        const cards = shown.map(i => {
+          const d = filteredDeals[i];
+          const unpaid = isUnpaid(d);
+          return `<div class="kanban-card" onclick="openModal(${i})">
+            <div style="font-size:11.5px;font-weight:700;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${(d['Deal Name']||'').replace(/"/g,'&quot;')}">${fmt(d['Deal Name'])}</div>
+            <div style="font-size:9.5px;color:#818cf8;font-weight:600;margin-top:2px">${fmt(d['Deal Owner Name'])} · ${fmt(d['Team Group'])}</div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+              <span style="font-size:9.5px;color:#64748b">${formatDate(d['Arrival Date'])}</span>
+              <span style="font-size:10.5px;font-weight:700;color:${unpaid ? '#fbbf24' : '#4ade80'}">${fmtMoney(d['Deal Amount'])}</span>
+            </div>
+          </div>`;
+        }).join('');
+        const moreHtml = moreCount > 0 ? `<div class="kanban-more">+${moreCount} tane daha — daraltmak için filtreleri kullanın</div>` : '';
+        return `<div class="kanban-col">
+          <div class="kanban-col-head">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+              ${stagePill(stage)}
+              <span style="font-size:10px;color:#64748b;font-weight:700">${idxs.length}</span>
+            </div>
+            <div style="font-size:10px;color:#475569;margin-top:4px">${fmtMoney(totalAmt)}</div>
+          </div>
+          <div class="kanban-col-body">${cards}${moreHtml}</div>
+        </div>`;
+      }).join('');
     }
 
     function renderDeals(data) {
