@@ -1049,11 +1049,17 @@
         <h2 class="text-xl font-bold text-white">Bugün Gelecek Hastalar</h2>
         <p class="text-xs text-slate-400 mt-0.5">Tüm bölgeler — sistem geneli</p>
       </div>
-      <select id="todayPftFilter" onchange="renderAdminToday()" class="filter-select" style="width:170px">
-        <option value="">Tümü (Payment / FT)</option>
-        <option value="Payment">Payment</option>
-        <option value="Flight Ticket">Flight Ticket</option>
-      </select>
+      <div class="flex gap-2 flex-wrap">
+        <input id="todaySearch" placeholder="Hasta, danışman..." oninput="renderAdminToday()" class="filter-select" style="width:170px">
+        <select id="todayOwnerFilter" onchange="renderAdminToday()" class="filter-select" style="width:170px">
+          <option value="">Tüm Deal Owner'lar</option>
+        </select>
+        <select id="todayPftFilter" onchange="renderAdminToday()" class="filter-select" style="width:170px">
+          <option value="">Tümü (Payment / FT)</option>
+          <option value="Payment">Payment</option>
+          <option value="Flight Ticket">Flight Ticket</option>
+        </select>
+      </div>
     </div>
     <div class="am-table-wrap" style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b;max-height:calc(100vh - 260px)">
       <table style="width:100%;border-collapse:collapse">
@@ -1082,9 +1088,17 @@
 
   <!-- ════════════════ NO-SHOW VIEW ════════════════ -->
   <div id="view-noshow" class="hidden">
-    <div class="mb-4">
-      <h2 class="text-xl font-bold text-white">No-show Hastalar</h2>
-      <p class="text-xs text-slate-400 mt-0.5">Tüm bölgeler — sistem geneli</p>
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+      <div>
+        <h2 class="text-xl font-bold text-white">No-show Hastalar</h2>
+        <p class="text-xs text-slate-400 mt-0.5">Tüm bölgeler — sistem geneli</p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <input id="noshowSearch" placeholder="Hasta, danışman..." oninput="renderAdminNoshow()" class="filter-select" style="width:170px">
+        <select id="noshowOwnerFilter" onchange="renderAdminNoshow()" class="filter-select" style="width:170px">
+          <option value="">Tüm Deal Owner'lar</option>
+        </select>
+      </div>
     </div>
     <div style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b">
       <table style="width:100%;border-collapse:collapse">
@@ -1133,6 +1147,12 @@
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Takım</label>
           <select id="caFilterTeam" onchange="_caApplyFilters()" class="filter-select">
             <option value="">Tüm Takımlar</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Deal Owner</label>
+          <select id="caFilterOwner" onchange="_caApplyFilters()" class="filter-select">
+            <option value="">Tüm Deal Owner'lar</option>
           </select>
         </div>
         <div class="flex items-end gap-2">
@@ -1214,6 +1234,12 @@
             <option value="over">Sadece Fazla Ödenen</option>
           </select>
         </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Deal Owner</label>
+          <select id="waFilterOwner" onchange="_waApplyFilters()" class="filter-select">
+            <option value="">Tüm Deal Owner'lar</option>
+          </select>
+        </div>
         <div class="flex items-end gap-2">
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (baş.)</label><input type="date" id="waArrFrom" onchange="_waApplyFilters()"></div>
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (bit.)</label><input type="date" id="waArrTo" onchange="_waApplyFilters()"></div>
@@ -1275,6 +1301,11 @@
             <option value="reopened">Yeniden Açıldı</option>
             <option value="note">Not Eklendi</option>
             <option value="auto_closed">Otomatik Kapatıldı</option>
+          </select>
+        </div>
+        <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Deal Owner</label>
+          <select id="actOwnerFilter" onchange="renderAdminActivity()" class="filter-select" style="width:160px">
+            <option value="">Tüm Deal Owner'lar</option>
           </select>
         </div>
         <div class="flex items-end gap-2">
@@ -1417,10 +1448,38 @@
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
-      <div class="aam-info-grid mb-5" id="cdmFieldsGrid"></div>
+      <div class="aam-info-grid mb-4" style="grid-template-columns:repeat(3,1fr)">
+        <div class="aam-info-card"><div class="aam-info-label">Stage</div><div class="aam-info-val" id="cdmStage">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Arrival Date</div><div class="aam-info-val" id="cdmArrival">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Tutar / Ödenen</div><div class="aam-info-val" id="cdmMoney">—</div></div>
+      </div>
+
+      <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:14px">
+        <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;margin-bottom:4px">İptal Nedeni</div>
+        <div style="font-size:12px;color:#cbd5e1" id="cdmReasonText">—</div>
+      </div>
+
+      <div style="margin-bottom:12px">
+        <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;display:block;margin-bottom:6px">İptal Sonuç Kodu</label>
+        <select id="cdmResultCode" style="background:#111827;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:9px 12px;font-size:12px;width:100%">
+          <option value="">— Seç —</option>
+          <option value="Cancelled by Patient">Cancelled by Patient</option>
+          <option value="Cancelled by Clinic">Cancelled by Clinic</option>
+          <option value="Invalid Data">Invalid Data</option>
+          <option value="Duplicate Data">Duplicate Data</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:14px">
+        <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;display:block;margin-bottom:6px">Açıklama</label>
+        <textarea id="cdmReasonNote" maxlength="500" placeholder="İptal nedenini kısaca açıkla..." style="background:#111827;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:10px 12px;font-size:12px;width:100%;min-height:70px;resize:vertical;box-sizing:border-box"></textarea>
+        <div id="cdmSaveError" style="display:none;color:#f87171;font-size:11px;font-weight:600;margin-top:6px"></div>
+      </div>
+
       <div style="display:flex;gap:10px">
         <a id="cdmZohoLink" href="#" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#818cf8;font-size:12px;font-weight:700;text-decoration:none">Zoho'da Aç ↗</a>
-        <button onclick="closeCancelledDealModal()" style="flex:1;padding:11px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kapat</button>
+        <button id="cdmSaveBtn" onclick="_cdmSaveResult()" style="flex:1;padding:11px;background:#4f46e5;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kaydet</button>
+        <button onclick="closeCancelledDealModal()" style="flex:1;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">Kapat</button>
       </div>
     </div>
   </div>
@@ -1849,11 +1908,28 @@
       });
     }
 
+    // Deal Owner dropdown'ını bugün gelecek alarmlardaki danışmanlardan doldur
+    let _tdOwnersPopulated = false;
+    function _tdPopulateOwnerFilter() {
+      if (_tdOwnersPopulated) return;
+      const sel = document.getElementById('todayOwnerFilter');
+      if (!sel) return;
+      const owners = [...new Set(adminAllAlarms.map(a => a.deal_owner).filter(Boolean))].sort();
+      if (!owners.length) return;
+      sel.innerHTML = `<option value="">Tüm Deal Owner'lar</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+      _tdOwnersPopulated = true;
+    }
+
     function renderAdminToday() {
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
       let data = adminAllAlarms.filter(a => _amIsToday(a) && (active.has(a.status) || a.status === 'no_show'));
       const pftSel = document.getElementById('todayPftFilter');
       if (pftSel && pftSel.value) data = data.filter(a => a.payment_or_flight_ticket === pftSel.value);
+      const ownerSel = document.getElementById('todayOwnerFilter');
+      if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
+      const search = (document.getElementById('todaySearch')?.value || '').toLowerCase().trim();
+      if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
+      _tdPopulateOwnerFilter();
       if (_tdSortCol) data.sort((x, y) => {
         const a = _tdSortVal(x, _tdSortCol), b = _tdSortVal(y, _tdSortCol);
         return a < b ? -_tdSortDir : a > b ? _tdSortDir : 0;
@@ -1901,8 +1977,23 @@
     }
 
     // ── No-show ───────────────────────────────────────────────────────
+    let _noshowOwnersPopulated = false;
+    function _noshowPopulateOwnerFilter() {
+      if (_noshowOwnersPopulated) return;
+      const sel = document.getElementById('noshowOwnerFilter');
+      if (!sel) return;
+      const owners = [...new Set(adminAllAlarms.map(a => a.deal_owner).filter(Boolean))].sort();
+      if (!owners.length) return;
+      sel.innerHTML = `<option value="">Tüm Deal Owner'lar</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+      _noshowOwnersPopulated = true;
+    }
     function renderAdminNoshow() {
-      const data = adminAllAlarms.filter(a => a.status === 'no_show');
+      let data = adminAllAlarms.filter(a => a.status === 'no_show');
+      _noshowPopulateOwnerFilter();
+      const ownerSel = document.getElementById('noshowOwnerFilter');
+      if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
+      const search = (document.getElementById('noshowSearch')?.value || '').toLowerCase().trim();
+      if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
       const tbody = document.getElementById('noshowTbody');
       const empty = document.getElementById('noshowEmpty');
       if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
@@ -1937,15 +2028,16 @@
         if (!r.ok) throw new Error('HTTP ' + r.status);
         let rows = await r.json();
         if (!Array.isArray(rows)) rows = [];
-        // deal_id -> {name, region, team} eşlemesi (adminAllAlarms'tan)
+        // deal_id -> {name, region, team, owner} eşlemesi (adminAllAlarms'tan)
         const dealMap = new Map();
-        (adminAllAlarms || []).forEach(a => { if (a.deal_id) dealMap.set(String(a.deal_id), { name: a.deal_name, region: a.region, team: a.team }); });
+        (adminAllAlarms || []).forEach(a => { if (a.deal_id) dealMap.set(String(a.deal_id), { name: a.deal_name, region: a.region, team: a.team, owner: a.deal_owner }); });
         // RM: sadece kendi bölgesinin dealleri (adminAllAlarms zaten bölgeye kısıtlı)
         if (window.isRM) rows = rows.filter(l => l.deal_id && dealMap.has(String(l.deal_id)));
         _adminActivityRows = rows.map(l => {
           const d = dealMap.get(String(l.deal_id)) || {};
-          return { ...l, _name: d.name || '', _region: d.region || '', _team: d.team || '' };
+          return { ...l, _name: d.name || '', _region: d.region || '', _team: d.team || '', _owner: d.owner || '' };
         });
+        _actPopulateOwnerFilter();
         loading.style.display = 'none';
         renderAdminActivity();
       } catch(e) {
@@ -1955,9 +2047,18 @@
         empty.style.display = 'block';
       }
     }
+    function _actPopulateOwnerFilter() {
+      const sel = document.getElementById('actOwnerFilter');
+      if (!sel) return;
+      const cur = sel.value;
+      const owners = [...new Set(_adminActivityRows.map(l => l._owner).filter(Boolean))].sort();
+      sel.innerHTML = `<option value="">${I18N.t("Tüm Deal Owner'lar")}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+      if (owners.includes(cur)) sel.value = cur;
+    }
     function _actReset() {
       document.getElementById('actSearch').value = '';
       document.getElementById('actType').value = '';
+      document.getElementById('actOwnerFilter').value = '';
       ['actDateFrom','actDateTo'].forEach(id => NCDatePicker.setValue(id, ''));
       renderAdminActivity();
     }
@@ -1967,10 +2068,12 @@
       if (!tbody) return;
       const search = (document.getElementById('actSearch')?.value || '').toLowerCase().trim();
       const typeF  = document.getElementById('actType')?.value || '';
+      const ownerF = document.getElementById('actOwnerFilter')?.value || '';
       const dFrom  = document.getElementById('actDateFrom')?.value || '';
       const dTo    = document.getElementById('actDateTo')?.value || '';
       let data = _adminActivityRows.slice();
       if (typeF) data = data.filter(l => l.action_type === typeF);
+      if (ownerF) data = data.filter(l => l._owner === ownerF);
       if (search) data = data.filter(l => [l._name, l.action_by, l.note, l._team].join(' ').toLowerCase().includes(search));
       if (dFrom || dTo) data = data.filter(l => { const d = l.created_at ? String(l.created_at).slice(0,10) : ''; if (!d) return false; if (dFrom && d < dFrom) return false; if (dTo && d > dTo) return false; return true; });
       document.getElementById('actCount').textContent = data.length;
@@ -2046,6 +2149,13 @@
       const teams = [...new Set((adminCancelledDeals || []).map(d => (window.TeamMap && TeamMap.normalize(d.team)) || d.team).filter(Boolean))].sort();
       sel.innerHTML = `<option value="">${I18N.t('Tüm Takımlar')}</option>` + teams.map(t => `<option value="${t}">${t}</option>`).join('');
       if (teams.includes(cur)) sel.value = cur;
+
+      const ownerSel = document.getElementById('caFilterOwner');
+      if (!ownerSel) return;
+      const curOwner = ownerSel.value;
+      const owners = [...new Set((adminCancelledDeals || []).map(d => d.deal_owner).filter(Boolean))].sort();
+      ownerSel.innerHTML = `<option value="">${I18N.t("Tüm Deal Owner'lar")}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+      if (owners.includes(curOwner)) ownerSel.value = curOwner;
     }
 
     // Filtrelenmiş sonuçlar 50'şer kayıtlık sayfalara bölünür (Won Alarmı'yla aynı desen).
@@ -2065,6 +2175,7 @@
       document.getElementById('caFilterSearch').value = '';
       document.getElementById('caFilterRegion').value = window.isRM ? window.rmRegion : '';
       document.getElementById('caFilterTeam').value = '';
+      document.getElementById('caFilterOwner').value = '';
       ['caArrFrom','caArrTo','caCreatedFrom','caCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
       _caApplyFilters();
     }
@@ -2085,6 +2196,7 @@
       const search = (document.getElementById('caFilterSearch')?.value || '').toLowerCase().trim();
       const regionF = document.getElementById('caFilterRegion')?.value || '';
       const teamF   = document.getElementById('caFilterTeam')?.value || '';
+      const ownerF  = document.getElementById('caFilterOwner')?.value || '';
       const arrFrom = document.getElementById('caArrFrom')?.value || '';
       const arrTo   = document.getElementById('caArrTo')?.value || '';
       const crFrom  = document.getElementById('caCreatedFrom')?.value || '';
@@ -2094,6 +2206,7 @@
       if (search) data = data.filter(d => [d.deal_name, d.deal_owner, d.team].join(' ').toLowerCase().includes(search));
       if (regionF) data = data.filter(d => d._region === regionF);
       if (teamF) data = data.filter(d => ((window.TeamMap && TeamMap.normalize(d.team)) || d.team) === teamF);
+      if (ownerF) data = data.filter(d => d.deal_owner === ownerF);
       if (arrFrom || arrTo) data = data.filter(d => { const a = dOnly(d.arrival_date); if (!a) return false; if (arrFrom && a < arrFrom) return false; if (arrTo && a > arrTo) return false; return true; });
       if (crFrom || crTo) data = data.filter(d => { const c = dOnly(d.created_time); if (!c) return false; if (crFrom && c < crFrom) return false; if (crTo && c > crTo) return false; return true; });
       if (_caSortCol) {
@@ -2159,122 +2272,106 @@
     // Ekip/Notlar/Zaman Çizelgesi) + varsa ilişkili alarmın iptal detayını
     // (kim, ne zaman, hangi notla iptal etti) — buildAdminDealFields ile
     // BİREBİR aynı kategorili desen (bkz. "Tüm Dealler" sayfasındaki modal).
-    function buildCancelledDealFields(d, raw, alarmInfo) {
-      raw = raw || {};
-      const fields = [
-        ['__section__', 'Durum'],
-        ['Stage', d.stage],
-        ['Sonuç Kodu', d.result_codes || raw.Result_Codes],
-        ['Payment / Ticket', d.payment_or_flight_ticket || raw.Payment_Or_Flight_Ticket],
-      ];
-      if (alarmInfo) {
-        fields.push(
-          ['İptal Nedeni', alarmInfo.close_reason],
-          ['İptal Eden', alarmInfo.closed_by],
-          ['İptal Tarihi', alarmInfo.closed_at ? _amFmtDateTime(alarmInfo.closed_at) : null],
-          ['TL / Admin Notu', alarmInfo.note],
-        );
-      }
-      fields.push(
-        ['__section__', 'Kişi Bilgileri'],
-        ['İletişim', raw.Contact_Name],
-        ['E-posta', raw.Email],
-        ['Pasaport', raw.Passport],
-        ['Ülke', raw.Country_Name],
-        ['Dil', languageLabel(raw.Language || 'Bilinmiyor')],
-        ['Yetişkin / Çocuk', (raw.Adults || raw.Children) ? `${raw.Adults ?? 0} / ${raw.Children ?? 0}` : null],
-        ['Yolcu Sayısı', raw.No_of_Passengers],
-
-        ['__section__', 'Tarihler'],
-        ['Arrival Date',   d.arrival_date ? _amFmtDate(d.arrival_date) : null],
-        ['Eklenme Tarihi', d.created_time ? _amFmtDate(d.created_time) : null],
-        ['1. Vizit', d.visit_date_1 ? _amFmtDate(d.visit_date_1) : null],
-        ['2. Vizit', d.visit_date_2 ? _amFmtDate(d.visit_date_2) : null],
-        ['3. Vizit', d.visit_date_3 ? _amFmtDate(d.visit_date_3) : null],
-
-        ['__section__', 'Seyahat / Otel'],
-        ['Otel', raw.Hotel === 'Yes' ? (raw.Hotel_Name || 'Var') : (raw.Hotel === 'No' ? 'Yok' : null)],
-        ['Oda Tipi', raw.Room_type],
-        ['Check-in / Check-out', (raw.Check_in || raw.Check_out) ? `${formatDate(raw.Check_in)} — ${formatDate(raw.Check_out)}` : null],
-        ['Varış Uçuşu', raw.Arrival_Flight_No],
-        ['Dönüş Uçuşu', raw.Return_Flight_No],
-        ['Varış Havalimanı', raw.Arrival_Airport],
-        ['Dönüş Havalimanı', raw.Return_Airport],
-        ['Transfer Tipi', raw.Transfer_Type],
-        ['Doktor', raw.Doctor],
-
-        ['__section__', 'Finans'],
-        ['Tutar',  d.amount != null ? fmtMoney(d.amount) : null],
-        ['Ödenen', d.total_paid_amount != null ? fmtMoney(d.total_paid_amount) : null],
-        ['Kalan',  d.remaining_amount != null ? fmtMoney(d.remaining_amount) : null],
-        ['Ödeme Durumu', d.amount != null ? payStatusLabel((Number(d.total_paid_amount)||0) <= 0 ? 'Unpaid' : (Number(d.amount) > 0 && (Number(d.total_paid_amount)||0) >= Number(d.amount)) ? 'Paid' : 'Partial') : null],
-
-        ['__section__', 'Ekip'],
-        ['Bölge', d._region],
-        ['Takım', d.team],
-        ['Danışman', d.deal_owner],
-        ['Süpervizör', raw.Supervisor],
-        ['Tercüman', raw.Translator || raw.Translation_Group],
-
-        ['__section__', 'Notlar'],
-        ['Danışman Notu', raw.Description],
-        ['Lead Kaynağı', raw.Lead_Source],
-
-        ['__section__', 'Geçmiş / Zaman Çizelgesi'],
-        ['Oluşturuldu', _zTimelineEntry(raw.Created_Time, raw.Created_By)],
-        ['Son Güncelleme', _zTimelineEntry(raw.Modified_Time, raw.Modified_By)],
-        ['Stage Değişimi', raw.Old_Stage ? `${raw.Old_Stage} → ${d.stage || '—'}` : null],
-        ['Stage Değişim Tarihi', formatDateTime(raw.Stage_Modified_Time)],
-      );
-      return fields;
-    }
+    // İptal Alarmları modalı — G14 revizyonu: eskiden deal'in TÜM bilgilerini
+    // (kişi/otel/finans/ekip vb.) gösteren dev bir kart açılıyordu. Bunun
+    // yerine artık amaca yönelik, odaklı bir akış var: sadece "neden iptal
+    // edildi" bilgisi + iptal sonuç kodu seçimi (agent.html'deki Result Code
+    // sistemiyle aynı result_code/sub_code/agent_note alanlarına yazar).
+    let _cdmCurrentDeal = null;
 
     function openCancelledDealModal(id) {
       const d = (adminCancelledDeals || []).find(x => String(x.id) === String(id));
       if (!d) return;
+      _cdmCurrentDeal = d;
       currentCancelledDealId = String(d.id);
-      d._region = (typeof AlarmEngine !== 'undefined') ? AlarmEngine.getRegion(d.team) : '—';
       document.getElementById('cdmDealName').textContent  = d.deal_name || '—';
       document.getElementById('cdmDealOwner').textContent = d.deal_owner || '—';
+      document.getElementById('cdmStage').textContent     = d.stage || '—';
+      document.getElementById('cdmArrival').textContent   = d.arrival_date ? _amFmtDate(d.arrival_date) : '—';
+      document.getElementById('cdmMoney').innerHTML = (d.amount != null)
+        ? `<span style="color:#60a5fa">${fmtMoney(d.amount)}</span> / <span style="color:#4ade80">${fmtMoney(d.total_paid_amount)}</span>`
+        : '—';
       const zohoLink = document.getElementById('cdmZohoLink');
-      if (d.id) {
-        zohoLink.href = `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}`;
-        zohoLink.style.display = '';
-      } else {
-        zohoLink.style.display = 'none';
-      }
+      if (d.id) { zohoLink.href = `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}`; zohoLink.style.display = ''; }
+      else zohoLink.style.display = 'none';
+
       // İlgili alarmın iptal detayı (kim/ne zaman/hangi notla iptal etti) —
       // adminAllAlarms zaten yüklü, ekstra istek gerekmiyor.
       const alarmInfo = (adminAllAlarms || []).find(a => String(a.deal_id) === String(d.id) && ['cancelled','closed','no_show'].includes(a.status));
-      document.getElementById('cdmFieldsGrid').innerHTML = renderAdminDealFieldsHtml(buildCancelledDealFields(d, null, alarmInfo));
-      loadCancelledDealDetails(d, alarmInfo);
+      const reasonParts = [];
+      if (alarmInfo && alarmInfo.close_reason) reasonParts.push(alarmInfo.close_reason);
+      if (alarmInfo && alarmInfo.closed_by) reasonParts.push(`(${alarmInfo.closed_by}${alarmInfo.closed_at ? ' — ' + _amFmtDateTime(alarmInfo.closed_at) : ''})`);
+      if (alarmInfo && alarmInfo.note) reasonParts.push(`Not: ${alarmInfo.note}`);
+      if (d.result_code) reasonParts.push(`Sonuç Kodu: ${d.result_code}${d.sub_code ? ' / ' + d.sub_code : ''}`);
+      if (d.agent_note) reasonParts.push(`Danışman notu: ${d.agent_note}`);
+      document.getElementById('cdmReasonText').textContent = reasonParts.length ? reasonParts.join(' · ') : 'Kayıtlı bir iptal nedeni yok.';
+
+      document.getElementById('cdmResultCode').value = d.sub_code || '';
+      document.getElementById('cdmReasonNote').value = d.agent_note || '';
+      document.getElementById('cdmSaveError').style.display = 'none';
       document.getElementById('cancelledDealModal').classList.add('open');
       document.body.style.overflow = 'hidden';
+      _cdmLoadLive(d.id);
+    }
+
+    // Modal açılışında listede olmayan (result_code/agent_note gibi) güncel
+    // alanları tek deal için canlı çeker — liste performansı için bulk
+    // sorguda çekilmiyor.
+    async function _cdmLoadLive(dealId) {
+      try {
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(dealId)}&select=id,result_code,sub_code,agent_note&limit=1`, { headers: H });
+        if (!r.ok) return;
+        const rows = await r.json();
+        const live = rows && rows[0];
+        if (!live || !_cdmCurrentDeal || String(_cdmCurrentDeal.id) !== String(dealId)) return;
+        Object.assign(_cdmCurrentDeal, live);
+        if (live.sub_code) document.getElementById('cdmResultCode').value = live.sub_code;
+        if (live.agent_note) document.getElementById('cdmReasonNote').value = live.agent_note;
+        if (live.result_code || live.agent_note) {
+          const el = document.getElementById('cdmReasonText');
+          const extra = `Sonuç Kodu: ${live.result_code || '—'}${live.sub_code ? ' / ' + live.sub_code : ''}${live.agent_note ? ' · Danışman notu: ' + live.agent_note : ''}`;
+          if (!el.textContent.includes('Sonuç Kodu:')) el.textContent = (el.textContent === 'Kayıtlı bir iptal nedeni yok.' ? '' : el.textContent + ' · ') + extra;
+        }
+      } catch(e) { /* sessiz */ }
     }
 
     function closeCancelledDealModal() {
       document.getElementById('cancelledDealModal').classList.remove('open');
       document.body.style.overflow = '';
+      _cdmCurrentDeal = null;
     }
 
-    // İptal Alarmları listesi performans için tutar/ödeme/vizit/raw alanlarını
-    // çekmiyor (bkz. Won Alarmı'ndaki yavaş yükleme fix'iyle aynı gerekçe) —
-    // modal açılınca sadece o tek deal için canlı çekilir (raw dahil, kişi/
-    // otel/ekip/not bilgileri için).
-    async function loadCancelledDealDetails(d, alarmInfo) {
-      const dealId = d.id;
-      if (!dealId) return;
+    async function _cdmSaveResult() {
+      const d = _cdmCurrentDeal;
+      if (!d) return;
+      const code = document.getElementById('cdmResultCode').value;
+      const note = document.getElementById('cdmReasonNote').value.trim();
+      const errEl = document.getElementById('cdmSaveError');
+      if (!code) { errEl.textContent = 'Lütfen bir sonuç kodu seç.'; errEl.style.display = 'block'; return; }
+      if (!note) { errEl.textContent = 'Lütfen açıklama gir.'; errEl.style.display = 'block'; return; }
+      errEl.style.display = 'none';
+      const btn = document.getElementById('cdmSaveBtn');
+      btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+      const isInvalidDuplicate = code === 'Invalid Data' || code === 'Duplicate Data';
+      const fullCode = isInvalidDuplicate ? '9. Invalid / Duplicate Data' : '8. Cancelled';
       try {
-        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
-        const sel = 'id,amount,total_paid_amount,remaining_amount,visit_date_1,visit_date_2,visit_date_3,raw';
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(dealId)}&select=${sel}&limit=1`, { headers: H });
-        if (!r.ok) return;
-        const rows = await r.json();
-        const full = rows && rows[0];
-        if (!full || currentCancelledDealId !== String(dealId)) return;
-        const merged = { ...d, ...full };
-        document.getElementById('cdmFieldsGrid').innerHTML = renderAdminDealFieldsHtml(buildCancelledDealFields(merged, full.raw, alarmInfo));
-      } catch(e) { /* sessiz — kart zaten temel alanlarla dolu kalır */ }
+        const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(d.id)}`, {
+          method: 'PATCH', headers: H,
+          body: JSON.stringify({ result_code: fullCode, sub_code: code, agent_note: note, deal_status: 'locked', lock_approval_requested: false }),
+        });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const adminName = (currentUser && (currentUser.fullName || currentUser.username)) || 'Admin';
+        addLog('SAVE_RESULT', `İptal sonuç kodu: ${fullCode} / ${code}`, String(d.id), d.deal_name);
+        Object.assign(d, { result_code: fullCode, sub_code: code, agent_note: note });
+        showSiteNotice('İptal sonuç kodu kaydedildi.', 'success');
+        closeCancelledDealModal();
+      } catch(e) {
+        errEl.textContent = 'Kaydedilemedi: ' + e.message; errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = 'Kaydet';
+      }
     }
 
     // ── Won Alarmı ────────────────────────────────────────────────────
@@ -2344,6 +2441,13 @@
       const teams = [...new Set((adminWonMismatchDeals || []).map(d => (window.TeamMap && TeamMap.normalize(d.team)) || d.team).filter(Boolean))].sort();
       sel.innerHTML = `<option value="">${I18N.t('Tüm Takımlar')}</option>` + teams.map(t => `<option value="${t}">${t}</option>`).join('');
       if (teams.includes(cur)) sel.value = cur;
+
+      const ownerSel = document.getElementById('waFilterOwner');
+      if (!ownerSel) return;
+      const curOwner = ownerSel.value;
+      const owners = [...new Set((adminWonMismatchDeals || []).map(d => d.deal_owner).filter(Boolean))].sort();
+      ownerSel.innerHTML = `<option value="">${I18N.t("Tüm Deal Owner'lar")}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+      if (owners.includes(curOwner)) ownerSel.value = curOwner;
     }
 
     // Filtrelenmiş sonuçlar 50'şer kayıtlık sayfalara bölünür — 10K+ Won deal
@@ -2396,6 +2500,7 @@
       document.getElementById('waFilterRegion').value = window.isRM ? window.rmRegion : '';
       document.getElementById('waFilterTeam').value = '';
       document.getElementById('waFilterDir').value = '';
+      document.getElementById('waFilterOwner').value = '';
       ['waArrFrom','waArrTo','waCreatedFrom','waCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
       _waApplyFilters();
     }
@@ -2406,10 +2511,12 @@
       const regionF = document.getElementById('waFilterRegion')?.value || '';
       const teamF   = document.getElementById('waFilterTeam')?.value || '';
       const dirF    = document.getElementById('waFilterDir')?.value || '';
+      const ownerF  = document.getElementById('waFilterOwner')?.value || '';
       data = data.map(d => ({ ...d, _region: (typeof AlarmEngine !== 'undefined') ? AlarmEngine.getRegion(d.team) : '' }));
       if (search) data = data.filter(d => [d.deal_name, d.deal_owner, d.team].join(' ').toLowerCase().includes(search));
       if (regionF) data = data.filter(d => d._region === regionF);
       if (teamF) data = data.filter(d => ((window.TeamMap && TeamMap.normalize(d.team)) || d.team) === teamF);
+      if (ownerF) data = data.filter(d => d.deal_owner === ownerF);
       if (dirF === 'under') data = data.filter(d => d._diff < 0);
       else if (dirF === 'over') data = data.filter(d => d._diff > 0);
       // Arrival / Created tarih aralığı filtreleri (G10)

@@ -71,6 +71,8 @@
     #alarmModal.open { display:flex; }
     #dealModal { display:none; position:fixed; inset:0; z-index:9998; align-items:center; justify-content:center; padding:16px; }
     #dealModal.open { display:flex; }
+    #tlCancelReasonModal { display:none; position:fixed; inset:0; z-index:9998; align-items:center; justify-content:center; padding:16px; }
+    #tlCancelReasonModal.open { display:flex; }
     .modal-bg { position:absolute; inset:0; background:rgba(0,0,0,0.8); }
     .modal-box { position:relative; z-index:1; width:100%; max-width:640px; max-height:90vh; overflow-y:auto; background:#0d1526; border:1px solid #1e293b; border-radius:16px; padding:24px; box-shadow:0 25px 60px rgba(0,0,0,0.6); }
     .modal-box.wide { max-width:780px; }
@@ -413,6 +415,10 @@
         <p style="font-size:11px;color:#64748b;margin:3px 0 0" id="todayDateLabel">—</p>
       </div>
       <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="todaySearch" class="filter-inp" placeholder="Hasta, danışman..." oninput="renderToday()" style="width:170px">
+        <select id="todayOwnerFilter" class="filter-sel" onchange="renderToday()" style="width:170px">
+          <option value="">Tüm Danışmanlar</option>
+        </select>
         <select id="todayPftFilter" class="filter-sel" onchange="renderToday()" style="width:170px">
           <option value="">Tümü (Payment / FT)</option>
           <option value="Payment">Payment</option>
@@ -605,7 +611,13 @@
         <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">No-show Raporu</h2>
         <p style="font-size:11px;color:#64748b;margin:3px 0 0">Gelemedi olarak işaretlenen hastalar</p>
       </div>
-      <button onclick="exportNoshow()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Export CSV</button>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="noshowSearch" class="filter-inp" placeholder="Hasta, danışman..." oninput="renderNoshow()" style="width:170px">
+        <select id="noshowOwnerFilter" class="filter-sel" onchange="renderNoshow()" style="width:170px">
+          <option value="">Tüm Danışmanlar</option>
+        </select>
+        <button onclick="exportNoshow()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Export CSV</button>
+      </div>
     </div>
     <div id="noshowTableWrap" style="overflow-x:auto;border-radius:14px;border:1px solid #1e293b;background:#0f172a">
       <table class="alarm-tbl">
@@ -646,6 +658,11 @@
       </div>
       <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:end">
         <div><label style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;display:block;margin-bottom:4px">Ara</label><input id="tlcaSearch" type="text" placeholder="Hasta, danışman..." oninput="renderCancelledReport()" class="filter-inp" style="width:200px"></div>
+        <div><label style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;display:block;margin-bottom:4px">Danışman</label>
+          <select id="tlcaOwnerFilter" onchange="renderCancelledReport()" class="filter-sel" style="width:160px">
+            <option value="">Tüm Danışmanlar</option>
+          </select>
+        </div>
         <div style="display:flex;align-items:center;gap:5px">
           <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Arrival</span>
           <input type="date" id="tlcaArrFrom" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
@@ -709,6 +726,12 @@
             <option value="">Tümü (Eksik + Fazla)</option>
             <option value="under">Sadece Eksik Ödenen</option>
             <option value="over">Sadece Fazla Ödenen</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px">Danışman</label>
+          <select id="wonFilterOwner" onchange="_waApplyFilters()" class="filter-sel">
+            <option value="">Tüm Danışmanlar</option>
           </select>
         </div>
         <div>
@@ -785,6 +808,11 @@
             <option value="reopened">Yeniden Açıldı</option>
             <option value="note">Not Eklendi</option>
             <option value="auto_closed">Otomatik Kapatıldı</option>
+          </select>
+        </div>
+        <div><label style="font-size:9px;color:#64748b;font-weight:700;text-transform:uppercase;display:block;margin-bottom:4px">Danışman</label>
+          <select id="tlactOwnerFilter" onchange="renderTlActivity()" class="filter-sel" style="width:160px">
+            <option value="">Tüm Danışmanlar</option>
           </select>
         </div>
       </div>
@@ -935,6 +963,51 @@
     <div style="border-top:1px solid #1e293b;padding-top:16px">
       <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:10px">Aktif Alarmlar</div>
       <div id="dmAlarms"></div>
+    </div>
+  </div>
+</div>
+
+<!-- İptal Edilenler — odaklı iptal nedeni / sonuç kodu modalı -->
+<div id="tlCancelReasonModal">
+  <div class="modal-bg" onclick="_tlcaCloseModal()"></div>
+  <div class="modal-box">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
+      <div>
+        <h3 style="font-size:16px;font-weight:700;color:#f1f5f9;margin:0" id="tlcaDealName">—</h3>
+        <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600" id="tlcaDealOwner">—</div>
+      </div>
+      <button onclick="_tlcaCloseModal()" style="background:none;border:none;color:#475569;cursor:pointer;padding:4px">
+        <svg style="width:18px;height:18px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Stage</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px" id="tlcaStage">—</div></div>
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Arrival</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px" id="tlcaArrival">—</div></div>
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Tutar / Ödenen</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px" id="tlcaMoney">—</div></div>
+    </div>
+    <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;margin-bottom:4px">İptal Nedeni</div>
+      <div style="font-size:12px;color:#cbd5e1" id="tlcaReasonText">—</div>
+    </div>
+    <div style="margin-bottom:12px">
+      <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;display:block;margin-bottom:6px">İptal Sonuç Kodu</label>
+      <select id="tlcaResultCode" class="filter-sel" style="width:100%">
+        <option value="">— Seç —</option>
+        <option value="Cancelled by Patient">Cancelled by Patient</option>
+        <option value="Cancelled by Clinic">Cancelled by Clinic</option>
+        <option value="Invalid Data">Invalid Data</option>
+        <option value="Duplicate Data">Duplicate Data</option>
+      </select>
+    </div>
+    <div style="margin-bottom:14px">
+      <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;display:block;margin-bottom:6px">Açıklama</label>
+      <textarea id="tlcaReasonNote" maxlength="500" placeholder="İptal nedenini kısaca açıkla..." class="filter-inp" style="width:100%;min-height:70px;resize:vertical;box-sizing:border-box"></textarea>
+      <div id="tlcaSaveError" style="display:none;color:#f87171;font-size:11px;font-weight:600;margin-top:6px"></div>
+    </div>
+    <div style="display:flex;gap:10px">
+      <a id="tlcaZohoLink" href="#" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#818cf8;font-size:12px;font-weight:700;text-decoration:none">Zoho'da Aç ↗</a>
+      <button id="tlcaSaveBtn" onclick="_tlcaSaveResult()" style="flex:1;padding:11px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kaydet</button>
+      <button onclick="_tlcaCloseModal()" style="flex:1;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">Kapat</button>
     </div>
   </div>
 </div>
@@ -2244,13 +2317,31 @@
     }
   }
 
+  let _todayOwnersPopulated = false;
+  function _todayPopulateOwnerFilter() {
+    if (_todayOwnersPopulated) return;
+    const sel = document.getElementById('todayOwnerFilter');
+    if (!sel) return;
+    const owners = [...new Set(allAlarms.map(a => a.deal_owner).filter(Boolean))].sort();
+    if (!owners.length) return;
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+    _todayOwnersPopulated = true;
+  }
+
   // ── Bugün view ───────────────────────────────────────────────────
   function renderToday() {
     let todayAlarms = filterAlarms('today');
+    _todayPopulateOwnerFilter();
     const pftSel = document.getElementById('todayPftFilter');
     if (pftSel && pftSel.value) {
       todayAlarms = todayAlarms.filter(a => a.payment_or_flight_ticket === pftSel.value);
     }
+    const ownerSel = document.getElementById('todayOwnerFilter');
+    if (ownerSel && ownerSel.value) {
+      todayAlarms = todayAlarms.filter(a => a.deal_owner === ownerSel.value);
+    }
+    const search = (document.getElementById('todaySearch')?.value || '').toLowerCase().trim();
+    if (search) todayAlarms = todayAlarms.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
     const grid  = document.getElementById('todayGrid');
     const empty = document.getElementById('todayEmpty');
     document.getElementById('todayLoading').style.display = 'none';
@@ -2791,9 +2882,25 @@
     currentDeal = null;
   }
 
+  let _noshowOwnersPopulated = false;
+  function _noshowPopulateOwnerFilter() {
+    if (_noshowOwnersPopulated) return;
+    const sel = document.getElementById('noshowOwnerFilter');
+    if (!sel) return;
+    const owners = [...new Set(allAlarms.map(a => a.deal_owner).filter(Boolean))].sort();
+    if (!owners.length) return;
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+    _noshowOwnersPopulated = true;
+  }
+
   // ── No-show raporu ───────────────────────────────────────────────
   function renderNoshow() {
-    const data = allAlarms.filter(a => a.status === 'no_show').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+    let data = allAlarms.filter(a => a.status === 'no_show').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+    _noshowPopulateOwnerFilter();
+    const ownerSel = document.getElementById('noshowOwnerFilter');
+    if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
+    const search = (document.getElementById('noshowSearch')?.value || '').toLowerCase().trim();
+    if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
     const tbody = document.getElementById('noshowTbody');
     const empty = document.getElementById('noshowEmpty');
     if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
@@ -2882,22 +2989,110 @@
   }
   function _tlcaReset() {
     document.getElementById('tlcaSearch').value = '';
+    document.getElementById('tlcaOwnerFilter').value = '';
     ['tlcaArrFrom','tlcaArrTo','tlcaCreatedFrom','tlcaCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
     renderCancelledReport();
   }
+  let _tlcaOwnersPopulated = false;
+  function _tlcaPopulateOwnerFilter() {
+    if (_tlcaOwnersPopulated) return;
+    const sel = document.getElementById('tlcaOwnerFilter');
+    if (!sel) return;
+    const owners = [...new Set((cancelledDealsList || []).map(d => d.deal_owner).filter(Boolean))].sort();
+    if (!owners.length) return;
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+    _tlcaOwnersPopulated = true;
+  }
 
-  async function _caOpenDealModal(id) {
+  // İptal Edilenler tıklaması eskiden deal'in TÜM bilgilerini (kişi/otel/
+  // finans/ekip vb.) gösteren genel deal modalını açıyordu. Artık amaca
+  // yönelik, odaklı bir akış var: sadece "neden iptal edildi" + iptal sonuç
+  // kodu seçimi (agent.html'deki Result Code sistemiyle aynı result_code/
+  // sub_code/agent_note alanlarına yazar).
+  let _tlcaCurrentDeal = null;
+  function _caOpenDealModal(id) {
+    const d = (cancelledDealsList || []).find(x => String(x.id) === String(id));
+    if (!d) return;
+    _tlcaCurrentDeal = d;
+    document.getElementById('tlcaDealName').textContent  = d.deal_name || '—';
+    document.getElementById('tlcaDealOwner').textContent = d.deal_owner || '—';
+    document.getElementById('tlcaStage').textContent     = d.stage || '—';
+    document.getElementById('tlcaArrival').textContent   = d.arrival_date ? formatDate(d.arrival_date) : '—';
+    document.getElementById('tlcaMoney').innerHTML = (d.amount != null)
+      ? `<span style="color:#60a5fa">${fmtMoney(d.amount)}</span> / <span style="color:#4ade80">${fmtMoney(d.total_paid_amount)}</span>`
+      : '—';
+    const zohoLink = document.getElementById('tlcaZohoLink');
+    if (d.id) { zohoLink.href = `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}`; zohoLink.style.display = ''; }
+    else zohoLink.style.display = 'none';
+
+    const dealAlarms = (allAlarms || []).filter(a => a.deal_id === String(d.id) && ['cancelled','closed','no_show'].includes(a.status));
+    const alarmInfo = dealAlarms[0];
+    const reasonParts = [];
+    if (alarmInfo && alarmInfo.close_reason) reasonParts.push(alarmInfo.close_reason);
+    if (alarmInfo && alarmInfo.closed_by) reasonParts.push(`(${alarmInfo.closed_by}${alarmInfo.closed_at ? ' — ' + formatDateTime(alarmInfo.closed_at) : ''})`);
+    if (alarmInfo && alarmInfo.note) reasonParts.push(`Not: ${alarmInfo.note}`);
+    if (d.result_code) reasonParts.push(`Sonuç Kodu: ${d.result_code}${d.sub_code ? ' / ' + d.sub_code : ''}`);
+    if (d.agent_note) reasonParts.push(`Danışman notu: ${d.agent_note}`);
+    document.getElementById('tlcaReasonText').textContent = reasonParts.length ? reasonParts.join(' · ') : 'Kayıtlı bir iptal nedeni yok.';
+
+    document.getElementById('tlcaResultCode').value = d.sub_code || '';
+    document.getElementById('tlcaReasonNote').value = d.agent_note || '';
+    document.getElementById('tlcaSaveError').style.display = 'none';
+    document.getElementById('tlCancelReasonModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    _tlcaLoadLive(d.id);
+  }
+
+  // Listede olmayan güncel result_code/agent_note'u tek deal için canlı çeker
+  async function _tlcaLoadLive(dealId) {
     try {
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
-      const sel = 'id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date,payment_or_flight_ticket,raw';
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(id)}&select=${sel}&limit=1`, { headers: H });
-      if (r.ok) {
-        const rows = await r.json();
-        if (rows && rows[0]) { openDealModal(rows[0]); return; }
-      }
-    } catch(e) { /* aşağıda listedeki (raw'sız) veriyle aç */ }
-    const fallback = (cancelledDealsList || []).find(x => String(x.id) === String(id));
-    if (fallback) openDealModal(fallback);
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(dealId)}&select=id,result_code,sub_code,agent_note&limit=1`, { headers: H });
+      if (!r.ok) return;
+      const rows = await r.json();
+      const live = rows && rows[0];
+      if (!live || !_tlcaCurrentDeal || String(_tlcaCurrentDeal.id) !== String(dealId)) return;
+      Object.assign(_tlcaCurrentDeal, live);
+      if (live.sub_code) document.getElementById('tlcaResultCode').value = live.sub_code;
+      if (live.agent_note) document.getElementById('tlcaReasonNote').value = live.agent_note;
+    } catch(e) { /* sessiz */ }
+  }
+
+  function _tlcaCloseModal() {
+    document.getElementById('tlCancelReasonModal').classList.remove('open');
+    document.body.style.overflow = '';
+    _tlcaCurrentDeal = null;
+  }
+
+  async function _tlcaSaveResult() {
+    const d = _tlcaCurrentDeal;
+    if (!d) return;
+    const code = document.getElementById('tlcaResultCode').value;
+    const note = document.getElementById('tlcaReasonNote').value.trim();
+    const errEl = document.getElementById('tlcaSaveError');
+    if (!code) { errEl.textContent = 'Lütfen bir sonuç kodu seç.'; errEl.style.display = 'block'; return; }
+    if (!note) { errEl.textContent = 'Lütfen açıklama gir.'; errEl.style.display = 'block'; return; }
+    errEl.style.display = 'none';
+    const btn = document.getElementById('tlcaSaveBtn');
+    btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+    const isInvalidDuplicate = code === 'Invalid Data' || code === 'Duplicate Data';
+    const fullCode = isInvalidDuplicate ? '9. Invalid / Duplicate Data' : '8. Cancelled';
+    try {
+      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(d.id)}`, {
+        method: 'PATCH', headers: H,
+        body: JSON.stringify({ result_code: fullCode, sub_code: code, agent_note: note, deal_status: 'locked', lock_approval_requested: false }),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      addLog('SAVE_RESULT', `İptal sonuç kodu: ${fullCode} / ${code}`, String(d.id), d.deal_name);
+      Object.assign(d, { result_code: fullCode, sub_code: code, agent_note: note });
+      showNotice('İptal sonuç kodu kaydedildi.', 'success');
+      _tlcaCloseModal();
+    } catch(e) {
+      errEl.textContent = 'Kaydedilemedi: ' + e.message; errEl.style.display = 'block';
+    } finally {
+      btn.disabled = false; btn.textContent = 'Kaydet';
+    }
   }
 
   function renderCancelledReport() {
@@ -2911,6 +3106,9 @@
     const crFrom  = document.getElementById('tlcaCreatedFrom')?.value || '';
     const crTo    = document.getElementById('tlcaCreatedTo')?.value || '';
     let data = (cancelledDealsList || []).slice();
+    _tlcaPopulateOwnerFilter();
+    const ownerF = document.getElementById('tlcaOwnerFilter')?.value || '';
+    if (ownerF) data = data.filter(d => d.deal_owner === ownerF);
     if (search) data = data.filter(d => [d.deal_name, d.deal_owner, d.team, d.deal_id].join(' ').toLowerCase().includes(search));
     if (arrFrom || arrTo) data = data.filter(d => { const a = dOnly(d.arrival_date); if (!a) return false; if (arrFrom && a < arrFrom) return false; if (arrTo && a > arrTo) return false; return true; });
     if (crFrom || crTo) data = data.filter(d => { const c = dOnly(d.created_time); if (!c) return false; if (crFrom && c < crFrom) return false; if (crTo && c > crTo) return false; return true; });
@@ -3065,8 +3263,19 @@
   function _waResetFilters() {
     document.getElementById('wonFilterSearch').value = '';
     document.getElementById('wonFilterDir').value = '';
+    document.getElementById('wonFilterOwner').value = '';
     ['tlwaArrFrom','tlwaArrTo','tlwaCreatedFrom','tlwaCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
     _waApplyFilters();
+  }
+  let _waOwnersPopulated = false;
+  function _waPopulateOwnerFilter() {
+    if (_waOwnersPopulated) return;
+    const sel = document.getElementById('wonFilterOwner');
+    if (!sel) return;
+    const owners = [...new Set((wonMismatchDeals || []).map(d => d.deal_owner).filter(Boolean))].sort();
+    if (!owners.length) return;
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+    _waOwnersPopulated = true;
   }
 
   // Won Alarmı listesi performans için raw'ı çekmiyor (bkz. yavaş yükleme
@@ -3088,9 +3297,12 @@
 
   function renderWonAlarms() {
     let data = wonMismatchDeals || [];
+    _waPopulateOwnerFilter();
     const search = (document.getElementById('wonFilterSearch')?.value || '').toLowerCase().trim();
     const dirF   = document.getElementById('wonFilterDir')?.value || '';
+    const ownerF = document.getElementById('wonFilterOwner')?.value || '';
     if (search) data = data.filter(d => [d.deal_name, d.deal_owner, d.team].join(' ').toLowerCase().includes(search));
+    if (ownerF) data = data.filter(d => d.deal_owner === ownerF);
     if (dirF === 'under') data = data.filter(d => d._diff < 0);
     else if (dirF === 'over') data = data.filter(d => d._diff > 0);
     // Arrival / Created tarih aralığı filtreleri (G14)
@@ -3169,10 +3381,11 @@
       let rows = await r.json();
       if (!Array.isArray(rows)) rows = [];
       const dealMap = new Map();
-      (allAlarms || []).forEach(a => { if (a.deal_id) dealMap.set(String(a.deal_id), a.deal_name); });
+      (allAlarms || []).forEach(a => { if (a.deal_id) dealMap.set(String(a.deal_id), { name: a.deal_name, owner: a.deal_owner }); });
       // Takıma ait dealler (allAlarms zaten takım/bölge kısıtlı)
       rows = rows.filter(l => l.deal_id && dealMap.has(String(l.deal_id)));
-      _tlActivityRows = rows.map(l => ({ ...l, _name: dealMap.get(String(l.deal_id)) || '' }));
+      _tlActivityRows = rows.map(l => { const d = dealMap.get(String(l.deal_id)) || {}; return { ...l, _name: d.name || '', _owner: d.owner || '' }; });
+      _tlactPopulateOwnerFilter();
       loading.style.display = 'none';
       renderTlActivity();
     } catch(e) {
@@ -3181,9 +3394,18 @@
       empty.style.display = 'block';
     }
   }
+  function _tlactPopulateOwnerFilter() {
+    const sel = document.getElementById('tlactOwnerFilter');
+    if (!sel) return;
+    const cur = sel.value;
+    const owners = [...new Set(_tlActivityRows.map(l => l._owner).filter(Boolean))].sort();
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+    if (owners.includes(cur)) sel.value = cur;
+  }
   function _tlactReset() {
     document.getElementById('tlactSearch').value = '';
     document.getElementById('tlactType').value = '';
+    document.getElementById('tlactOwnerFilter').value = '';
     renderTlActivity();
   }
   function renderTlActivity() {
@@ -3192,8 +3414,10 @@
     if (!tbody) return;
     const search = (document.getElementById('tlactSearch')?.value || '').toLowerCase().trim();
     const typeF  = document.getElementById('tlactType')?.value || '';
+    const ownerF = document.getElementById('tlactOwnerFilter')?.value || '';
     let data = _tlActivityRows.slice();
     if (typeF) data = data.filter(l => l.action_type === typeF);
+    if (ownerF) data = data.filter(l => l._owner === ownerF);
     if (search) data = data.filter(l => [l._name, l.action_by, l.note].join(' ').toLowerCase().includes(search));
     if (!data.length) { tbody.innerHTML = ''; empty.textContent = I18N.t('Kayıtlı aksiyon bulunamadı.'); empty.style.display = 'block'; return; }
     empty.style.display = 'none';
