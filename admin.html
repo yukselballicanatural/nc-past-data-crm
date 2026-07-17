@@ -158,6 +158,7 @@
     .deal-tbl tbody tr.row-red td { background:rgba(127,29,29,0.15); }
     .deal-tbl tbody tr.row-amber td { background:rgba(120,53,15,0.12); }
     .tab-badge { display:inline-flex; align-items:center; justify-content:center; min-width:26px; padding:1px 6px; border-radius:9999px; font-size:10px; font-weight:700; line-height:1.6; }
+    .kpi-val { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:clamp(12px, 3vw, 18px); cursor:default; }
     .tbl th { position:sticky; top:0; background:#111827; z-index:2; }
     .tbl td, .tbl th { padding:8px 10px; font-size:11px; text-align:left; border-bottom:1px solid #1f2937; white-space:nowrap; }
     .tbl tr:hover td { background:#12182b; }
@@ -337,14 +338,14 @@
 
       <!-- KPI Row -->
       <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-4" id="dealKpiRow">
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Total</div><div class="text-lg font-bold text-white leading-tight" id="k1">0</div></div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Deal Amt</div><div class="text-lg font-bold text-blue-400 leading-tight" id="k2">€0</div></div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Paid</div><div class="text-lg font-bold text-emerald-400 leading-tight" id="k3">€0</div></div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Unpaid</div><div class="text-lg font-bold text-red-400 leading-tight" id="k4">€0</div></div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Won</div><div class="text-lg font-bold text-emerald-300 leading-tight" id="k5">0</div></div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Cancelled</div><div class="text-lg font-bold text-red-400 leading-tight" id="k6">0</div></div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">Unlock Req.</div><div class="text-lg font-bold text-amber-400 leading-tight" id="k7">0</div></div>
-        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3"><div class="text-[9px] text-slate-400 uppercase font-semibold">No Result</div><div class="text-lg font-bold text-rose-400 leading-tight" id="k8">0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Total</div><div class="text-lg font-bold text-white leading-tight kpi-val" id="k1">0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Deal Amt</div><div class="text-lg font-bold text-blue-400 leading-tight kpi-val" id="k2">€0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Paid</div><div class="text-lg font-bold text-emerald-400 leading-tight kpi-val" id="k3">€0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Unpaid</div><div class="text-lg font-bold text-red-400 leading-tight kpi-val" id="k4">€0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Won</div><div class="text-lg font-bold text-emerald-300 leading-tight kpi-val" id="k5">0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Cancelled</div><div class="text-lg font-bold text-red-400 leading-tight kpi-val" id="k6">0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Unlock Req.</div><div class="text-lg font-bold text-amber-400 leading-tight kpi-val" id="k7">0</div></div>
+        <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">No Result</div><div class="text-lg font-bold text-rose-400 leading-tight kpi-val" id="k8">0</div></div>
       </div>
 
       <!-- Filters -->
@@ -3721,8 +3722,8 @@
       const noRes   = data.filter(d => !d.result_code).length;
       const payRate = deal > 0 ? ((paid/deal)*100).toFixed(1) : 0;
 
-      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      set('k1', total); set('k2', fmtMoney(deal)); set('k3', fmtMoney(paid)); set('k4', fmtMoney(unpaid));
+      const set = (id, v, title) => { const el = document.getElementById(id); if (el) { el.textContent = v; if (title) el.title = title; } };
+      set('k1', total); set('k2', fmtCompact(deal), fmtMoney(deal)); set('k3', fmtCompact(paid), fmtMoney(paid)); set('k4', fmtCompact(unpaid), fmtMoney(unpaid));
       set('k5', won); set('k6', cancel); set('k7', unlockR); set('k8', noRes);
       set('sKpi1', total); set('sKpi2', fmtCompact(deal)); set('sKpi3', fmtCompact(paid)); set('sKpi4', fmtCompact(unpaid));
     }
@@ -4740,8 +4741,8 @@
     }
 
     function renderKpisFromSummary(s) {
-      const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
-      set('k1', s.total); set('k2', fmtMoney(s.sum_amount)); set('k3', fmtMoney(s.sum_paid)); set('k4', fmtMoney(s.sum_unpaid));
+      const set = (id, v, title) => { const el = document.getElementById(id); if (el) { el.textContent = v; if (title) el.title = title; } };
+      set('k1', s.total); set('k2', fmtCompact(s.sum_amount), fmtMoney(s.sum_amount)); set('k3', fmtCompact(s.sum_paid), fmtMoney(s.sum_paid)); set('k4', fmtCompact(s.sum_unpaid), fmtMoney(s.sum_unpaid));
       set('k5', s.won); set('k6', s.cancel); set('k7', s.unlock_requested); set('k8', s.no_result);
       set('sKpi1', s.total); set('sKpi2', fmtCompact(s.sum_amount)); set('sKpi3', fmtCompact(s.sum_paid)); set('sKpi4', fmtCompact(s.sum_unpaid));
     }
