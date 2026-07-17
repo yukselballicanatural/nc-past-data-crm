@@ -332,6 +332,7 @@
       <button class="tab-pill" id="atab-today" onclick="switchAlarmTab('today')">Bugün <span id="cnt-today" class="badge-cnt" style="background:rgba(74,222,128,0.2);color:#4ade80">0</span></button>
       <button class="tab-pill" id="atab-approaching" onclick="switchAlarmTab('approaching')">Yaklaşan <span id="cnt-approaching" class="badge-cnt" style="background:rgba(251,146,60,0.2);color:#fb923c">0</span></button>
       <button class="tab-pill" id="atab-missing" onclick="switchAlarmTab('missing')">Eksik Tarih <span id="cnt-missing" class="badge-cnt" style="background:rgba(248,113,113,0.2);color:#f87171">0</span></button>
+      <button class="tab-pill" id="atab-payment" onclick="switchAlarmTab('payment')">Ödeme Takip <span id="cnt-payment" class="badge-cnt" style="background:rgba(192,132,252,0.2);color:#c084fc">0</span></button>
       <button class="tab-pill" id="atab-overdue" onclick="switchAlarmTab('overdue')">Gecikmiş <span id="cnt-overdue" class="badge-cnt" style="background:rgba(248,113,113,0.2);color:#f87171">0</span></button>
       <button class="tab-pill" id="atab-noshow" onclick="switchAlarmTab('noshow')">No-show <span id="cnt-noshow" class="badge-cnt" style="background:rgba(100,116,139,0.2);color:#94a3b8">0</span></button>
       <button class="tab-pill" id="atab-cancelled" onclick="switchAlarmTab('cancelled')">İptal <span id="cnt-cancelled" class="badge-cnt" style="background:rgba(148,163,184,0.2);color:#94a3b8">0</span></button>
@@ -1406,6 +1407,31 @@
     return !!(a.reference_date && daysUntil(a.reference_date) === 0);
   }
 
+  // alarms.days_remaining alarm oluşturulduğu anda yazılıp bir daha
+  // güncellenmiyor (dedup_key artık eşik/tarih içermiyor, upsert
+  // ignore-duplicates ile mevcut satır korunuyor) — yani "30 gün kaldı"
+  // diye açılan bir alarm günler geçse de hep "30" gösteriyordu. Gösterim
+  // için HER ZAMAN reference_date'ten CANLI hesapla; sadece referans
+  // tarihi olmayan alarmlarda (payment_tracking, arrival_missing) saklanan
+  // değer (genelde null) kullanılır.
+  function liveDaysRemaining(a) {
+    return a.reference_date ? daysUntil(a.reference_date) : a.days_remaining;
+  }
+
+  // Kalan güne göre CANLI eşik grubu (45/30/15/7/3) — filtre ve rozetlerde
+  // tutarlı tek bir yerden hesaplanır, alarmın oluşturulduğu andaki sabit
+  // threshold_days değeri yerine.
+  function liveThreshBucket(a) {
+    const days = liveDaysRemaining(a);
+    if (days === null || days === undefined || days < 0) return null;
+    if (days <= 3) return 3;
+    if (days <= 7) return 7;
+    if (days <= 15) return 15;
+    if (days <= 30) return 30;
+    if (days <= 45) return 45;
+    return null;
+  }
+
   function showNotice(msg, type) {
     const el = document.getElementById('siteNotice');
     el.textContent = I18N.t(msg);
@@ -1499,8 +1525,9 @@
         case 'all':         return activeStatuses.has(a.status);
         case 'open':        return a.status === 'open' || a.status === 'seen';
         case 'today':       return isToday(a) && (activeStatuses.has(a.status) || a.status === 'no_show');
-        case 'approaching': return ['arrival_approaching','visit_approaching','payment_tracking'].includes(a.alarm_type) && activeStatuses.has(a.status) && (a.days_remaining || 0) > 0;
+        case 'approaching': return ['arrival_approaching','visit_approaching'].includes(a.alarm_type) && activeStatuses.has(a.status) && (liveDaysRemaining(a) || 0) > 0;
         case 'missing':     return a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status);
+        case 'payment':     return a.alarm_type === 'payment_tracking' && activeStatuses.has(a.status);
         case 'overdue':     return isOverdue(a);
         case 'noshow':      return a.status === 'no_show';
         case 'cancelled':   return a.status === 'cancelled';
@@ -1513,7 +1540,7 @@
   function getRowUrgencyClass(a) {
     if (isOverdue(a)) return 'alarm-row-overdue';
     if (isToday(a)) return 'alarm-row-today';
-    const days = a.days_remaining !== null ? a.days_remaining : daysUntil(a.reference_date);
+    const days = liveDaysRemaining(a);
     if (days !== null && days >= 0) {
       if (days <= 3)  return 'alarm-row-urgent';
       if (days <= 7)  return 'alarm-row-warn';
@@ -1579,7 +1606,7 @@
       case 'reference_field':   return fieldLabel(a.reference_field).toLowerCase();
       case 'reference_date':    return a.reference_date || '';
       case 'days_left': {
-        const d = a.days_remaining !== null && a.days_remaining !== undefined ? a.days_remaining : daysUntil(a.reference_date);
+        const d = liveDaysRemaining(a);
         return (d === null || d === undefined) ? 9999 : d;
       }
       case 'status':            return statusMeta(a.status).label.toLowerCase();
@@ -1612,7 +1639,7 @@
 
     // Eşik gün filtresi
     const thF = document.getElementById('alarmThreshFilter')?.value || '';
-    if (thF) data = data.filter(a => String(a.threshold_days) === thF);
+    if (thF) data = data.filter(a => String(liveThreshBucket(a)) === thF);
 
     // Arrival Date aralığı (G2) — deal'in gerçek arrival_date'i dealFinanceMap'ten
     const arrFrom = document.getElementById('alarmArrFrom')?.value || '';
@@ -1654,8 +1681,8 @@
       const sortVal = document.getElementById('alarmSortSel')?.value || 'created_desc';
       if (sortVal === 'days_asc') {
         data = [...data].sort((a, b) => {
-          const da = a.days_remaining !== null ? a.days_remaining : (daysUntil(a.reference_date) ?? 9999);
-          const db = b.days_remaining !== null ? b.days_remaining : (daysUntil(b.reference_date) ?? 9999);
+          const da = liveDaysRemaining(a) ?? 9999;
+          const db = liveDaysRemaining(b) ?? 9999;
           return da - db;
         });
       } else if (sortVal === 'overdue_first') {
@@ -1690,11 +1717,16 @@
           ? '<span style="color:#60a5fa;font-weight:800">FT</span>'
           : '<span style="color:#334155">—</span>';
 
-      // Threshold badge: 45G / 30G / 15G / 7G / 3G
+      // Kalan gün rozeti — CANLI hesaplanır (reference_date'ten), eşik
+      // penceresine göre renklendirilir. Statik threshold_days kullanılırsa
+      // gün geçse de "30G" hep aynı kalırdı; artık gün ilerledikçe rozet de
+      // 29G, 28G... diye sayar ve eşik değiştikçe rengi otomatik güncellenir.
+      const liveDays = liveDaysRemaining(a);
+      const tBucket = liveThreshBucket(a);
       const tColors = { 45:['#1e3a5f','#60a5fa'], 30:['#1e1b4b','#818cf8'], 15:['#422006','#f59e0b'], 7:['#431407','#f97316'], 3:['#450a0a','#ef4444'] };
-      const tc = a.threshold_days ? (tColors[a.threshold_days] || ['#1e293b','#64748b']) : null;
+      const tc = tBucket ? tColors[tBucket] : null;
       const threshBadge = tc
-        ? `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:800;background:${tc[0]};color:${tc[1]};border:1px solid ${tc[1]}55;margin-left:4px;letter-spacing:0.03em">${a.threshold_days}G</span>`
+        ? `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:800;background:${tc[0]};color:${tc[1]};border:1px solid ${tc[1]}55;margin-left:4px;letter-spacing:0.03em">${liveDays}G</span>`
         : '';
 
       return `<tr class="${urgCls}" onclick="openAlarmById('${a.id}')" style="${rowBg ? 'background:' + rowBg : ''}">
@@ -1711,7 +1743,7 @@
         </td>
         <td style="color:#94a3b8;font-size:11px">${fieldLabel(a.reference_field)}</td>
         <td style="color:#cbd5e1;font-size:11px;white-space:nowrap">${formatDate(a.reference_date)}</td>
-        <td style="white-space:nowrap">${daysDisplay(a.days_remaining, a.reference_date)}</td>
+        <td style="white-space:nowrap">${daysDisplay(liveDaysRemaining(a), a.reference_date)}</td>
         <td><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color};white-space:nowrap">${sm.label}</span></td>
         <td style="font-size:10px;white-space:nowrap">${pftBadge}</td>
         <td>${paymentCellHtml(a.deal_id)}${paymentMismatchBadge(a)}</td>
@@ -1758,6 +1790,7 @@
       today:      applyExtraAlarmFilters(filterAlarms('today')).length,
       approaching:applyExtraAlarmFilters(filterAlarms('approaching')).length,
       missing:    applyExtraAlarmFilters(filterAlarms('missing')).length,
+      payment:    applyExtraAlarmFilters(filterAlarms('payment')).length,
       overdue:    applyExtraAlarmFilters(filterAlarms('overdue')).length,
       noshow:     applyExtraAlarmFilters(filterAlarms('noshow')).length,
       cancelled:  applyExtraAlarmFilters(filterAlarms('cancelled')).length,
@@ -1994,7 +2027,7 @@
     document.getElementById('modalRefField').textContent  = fieldLabel(a.reference_field);
     document.getElementById('modalRefDate').textContent   = formatDate(a.reference_date);
     document.getElementById('modalCreatedAt').textContent = formatDateTime(a.created_at);
-    const days = a.days_remaining !== null ? a.days_remaining : daysUntil(a.reference_date);
+    const days = liveDaysRemaining(a);
     document.getElementById('modalDaysLeft').innerHTML    = daysDisplay(days, a.reference_date);
 
     // Deal / hasta detayları — dealFinanceMap'ten (loadDealFinance ile arka planda doldurulur)
@@ -2020,17 +2053,16 @@
       });
     }
 
-    // Threshold badge
+    // Threshold badge — CANLI hesaplanan kalan güne göre (bkz. liveDaysRemaining)
     const tColors = { 45:['#1e3a5f','#60a5fa'], 30:['#1e1b4b','#818cf8'], 15:['#422006','#f59e0b'], 7:['#431407','#f97316'], 3:['#450a0a','#ef4444'] };
-    const tc2 = a.threshold_days ? (tColors[a.threshold_days] || ['#1e293b','#94a3b8']) : null;
+    const liveDaysM = liveDaysRemaining(a);
+    const tBucketM = liveThreshBucket(a);
+    const tc2 = tBucketM ? tColors[tBucketM] : null;
     const threshEl = document.getElementById('modalThreshold');
     if (threshEl) {
       if (tc2) {
-        const isPayment = a.payment_or_flight_ticket === 'Payment';
-        const desc = isPayment
-          ? `${I18N.t('Son aktiviteden')} ${a.threshold_days} ${I18N.t('gün sonra tetiklendi')}`
-          : `${a.threshold_days} ${I18N.t('gün kala alarm üretildi')}`;
-        threshEl.innerHTML = `<span style="padding:2px 10px;border-radius:6px;font-size:11px;font-weight:800;background:${tc2[0]};color:${tc2[1]};border:1px solid ${tc2[1]}44">${a.threshold_days} ${I18N.t('gün eşiği')}</span><div style="font-size:9px;color:#64748b;margin-top:3px">${desc}</div>`;
+        const desc = `${liveDaysM} ${I18N.t('gün kaldı')}`;
+        threshEl.innerHTML = `<span style="padding:2px 10px;border-radius:6px;font-size:11px;font-weight:800;background:${tc2[0]};color:${tc2[1]};border:1px solid ${tc2[1]}44">${liveDaysM} ${I18N.t('gün eşiği')}</span><div style="font-size:9px;color:#64748b;margin-top:3px">${desc}</div>`;
       } else {
         threshEl.textContent = '—';
       }
@@ -2598,7 +2630,7 @@
         return `<div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span>
           <span style="font-size:11px;color:#94a3b8">${fieldLabel(a.reference_field)} · ${formatDate(a.reference_date)}</span>
-          ${daysDisplay(a.days_remaining, a.reference_date)}
+          ${daysDisplay(liveDaysRemaining(a), a.reference_date)}
           <span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color}">${sm.label}</span>
           <button onclick="closeDealModal();openAlarmById('${a.id}')" style="margin-left:auto;padding:3px 10px;background:#0d9488;border:none;border-radius:6px;color:#fff;font-size:9px;font-weight:700;cursor:pointer">Güncelle</button>
         </div>`;
@@ -3275,7 +3307,7 @@
         <td><span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color};white-space:nowrap">${tm.label}</span></td>
         <td style="color:#94a3b8;font-size:11px">${fieldLabel(a.reference_field)}</td>
         <td style="color:#cbd5e1;font-size:11px;white-space:nowrap">${formatDate(a.reference_date)}</td>
-        <td style="white-space:nowrap">${daysDisplay(a.days_remaining, a.reference_date)}</td>
+        <td style="white-space:nowrap">${daysDisplay(liveDaysRemaining(a), a.reference_date)}</td>
         <td><span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color};white-space:nowrap">${sm.label}</span></td>
         <td>
           <div style="display:flex;gap:4px">
@@ -3325,7 +3357,7 @@
         <td style="color:#94a3b8;font-size:10px;white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis">${fmt(a.team)}</td>
         <td><span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color};white-space:nowrap">${tm.label}</span></td>
         <td style="color:#cbd5e1;font-size:11px;white-space:nowrap">${formatDate(a.reference_date)}</td>
-        <td style="white-space:nowrap">${daysDisplay(a.days_remaining, a.reference_date)}</td>
+        <td style="white-space:nowrap">${daysDisplay(liveDaysRemaining(a), a.reference_date)}</td>
         <td><span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color};white-space:nowrap">${sm.label}</span></td>
         <td>
           <div style="display:flex;gap:4px">
