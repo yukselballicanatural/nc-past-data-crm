@@ -249,6 +249,8 @@
     ' — tamamlanmadı': ' — not complete',
     'Ödeme %100 ama stage Won değil': 'Payment 100% but stage is not Won',
     'Ödeme %100 ve deal Won — otomatik kapatıldı': 'Payment 100% and deal Won — auto-closed',
+    'Ödeme Takip': 'Payment Tracking',
+    'gün kaldı': 'days left',
     'gün eşiği': 'day threshold',
     'gün sonra tetiklendi': 'days after it was triggered',
     'gün kala alarm üretildi': 'days before, alarm was generated',
