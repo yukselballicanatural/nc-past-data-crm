@@ -1028,10 +1028,10 @@
 <script>
   let _scCb = null;
   function showSiteConfirm(title, msg, okLabel, okColor, onConfirm) {
-    document.getElementById('scTitle').textContent = title;
-    document.getElementById('scMsg').textContent = msg;
+    document.getElementById('scTitle').textContent = I18N.t(title);
+    document.getElementById('scMsg').textContent = I18N.t(msg);
     const ok = document.getElementById('scOk');
-    ok.textContent = okLabel; ok.style.background = okColor;
+    ok.textContent = I18N.t(okLabel); ok.style.background = okColor;
     document.getElementById('siteConfirm').style.display = 'flex';
     _scCb = onConfirm;
     ok.onclick = () => { const cb = _scCb; closeSiteConfirm(); if (cb) cb(); };
@@ -1091,7 +1091,11 @@
   // (yyyy-mm-dd) ve onchange davranışı korunur, sadece görünüm değişir.
   const NCDatePicker = (() => {
     const MONTHS_TR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+    const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
     const DOW_TR = ['Pt','Sa','Ça','Pe','Cu','Ct','Pz'];
+    const DOW_EN = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+    function MONTHS() { return I18N.getLang() === 'en' ? MONTHS_EN : MONTHS_TR; }
+    function DOW() { return I18N.getLang() === 'en' ? DOW_EN : DOW_TR; }
     let openState = null;
 
     function pad(n) { return String(n).padStart(2, '0'); }
@@ -1120,7 +1124,7 @@
       const trigger = document.createElement('div');
       trigger.className = 'nc-date-trigger';
       trigger.id = inputId + '_trigger';
-      trigger.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="nc-date-text placeholder">gg.aa.yyyy</span>`;
+      trigger.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="nc-date-text placeholder">${I18N.t('gg.aa.yyyy')}</span>`;
       trigger.addEventListener('click', (e) => { e.stopPropagation(); toggle(inputId); });
 
       input.parentNode.insertBefore(field, input);
@@ -1136,7 +1140,7 @@
       const span = trigger.querySelector('.nc-date-text');
       const d = fromISO(input.value);
       if (d) { span.textContent = fmtDisplay(d); span.classList.remove('placeholder'); }
-      else { span.textContent = 'gg.aa.yyyy'; span.classList.add('placeholder'); }
+      else { span.textContent = I18N.t('gg.aa.yyyy'); span.classList.add('placeholder'); }
     }
 
     function setValue(inputId, iso) {
@@ -1202,18 +1206,18 @@
         <div class="nc-cal-header">
           <button class="nc-cal-nav-btn" data-act="prev-month" type="button">‹</button>
           <div class="nc-cal-title">
-            <button data-act="show-months" type="button">${MONTHS_TR[month]}</button>
+            <button data-act="show-months" type="button">${MONTHS()[month]}</button>
             <button data-act="show-years" type="button">${year}</button>
           </div>
           <button class="nc-cal-nav-btn" data-act="next-month" type="button">›</button>
         </div>
         <div class="nc-cal-grid">
-          ${DOW_TR.map(d => `<div class="nc-cal-dow">${d}</div>`).join('')}
+          ${DOW().map(d => `<div class="nc-cal-dow">${d}</div>`).join('')}
           ${cells}
         </div>
         <div class="nc-cal-footer">
-          <button data-act="today" type="button">Bugün</button>
-          <button data-act="clear" type="button">Temizle</button>
+          <button data-act="today" type="button">${I18N.t('Bugün')}</button>
+          <button data-act="clear" type="button">${I18N.t('Temizle')}</button>
         </div>`;
     }
 
@@ -1226,7 +1230,7 @@
           <button class="nc-cal-nav-btn" data-act="next-year" type="button">›</button>
         </div>
         <div class="nc-cal-panel-grid">
-          ${MONTHS_TR.map((m,i) => `<div class="nc-cal-panel-item${i===cursor.getMonth()?' selected':''}" data-month="${i}">${m.slice(0,3)}</div>`).join('')}
+          ${MONTHS().map((m,i) => `<div class="nc-cal-panel-item${i===cursor.getMonth()?' selected':''}" data-month="${i}">${m.slice(0,3)}</div>`).join('')}
         </div>`;
     }
 
@@ -2110,7 +2114,7 @@
     const tm = alarmTypeMeta(a.alarm_type);
     const sm = statusMeta(a.status);
     document.getElementById('modalDealName').innerHTML = a.deal_id
-      ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''" title="Zoho'da Aç">${fmt(a.deal_name) || '—'} ↗</a>`
+      ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''" title="${I18N.t("Zoho'da Aç")}">${fmt(a.deal_name) || '—'} ↗</a>`
       : (a.deal_name || '—');
     document.getElementById('modalDealOwner').textContent = a.deal_owner || '—';
     document.getElementById('modalAlarmType').innerHTML   = `<span style="padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span>`;
@@ -2545,7 +2549,7 @@
       const start = offset + 1;
       const end   = Math.min(offset + allDeals.length, dealTotalCount);
       document.getElementById('dealSubtitle').textContent =
-        `${start}–${end} / ${dealTotalCount.toLocaleString()} kayıt${search ? ` · "` + search + `" araması` : ''}`;
+        `${start}–${end} / ${dealTotalCount.toLocaleString()} ${I18N.t('kayıt')}${search ? ` · "` + search + `" ` + I18N.t('araması') : ''}`;
 
       // Sayfalama kontrolleri
       const pager   = document.getElementById('dealPager');
@@ -2554,7 +2558,7 @@
       const lbl     = document.getElementById('dealPageLabel');
       const maxPage = Math.ceil(dealTotalCount / DEAL_PAGE_SIZE);
       if (pager) pager.style.display = (maxPage > 1 && _dealsViewMode === 'table') ? 'flex' : 'none';
-      if (lbl)   lbl.textContent     = `Sayfa ${dealCurrentPage + 1} / ${maxPage}`;
+      if (lbl)   lbl.textContent     = `${I18N.t('Sayfa')} ${dealCurrentPage + 1} / ${maxPage}`;
       if (prevBtn) prevBtn.disabled  = dealCurrentPage === 0;
       if (nextBtn) nextBtn.disabled  = dealCurrentPage >= maxPage - 1;
 
@@ -2591,7 +2595,7 @@
       const stages = [...new Set(rows.map(d => d.stage).filter(Boolean))].sort();
       const sel = document.getElementById('dealStageFilter');
       const cur = sel.value;
-      sel.innerHTML = '<option value="">Tüm Stageler</option>' + stages.map(s => `<option value="${s}">${s}</option>`).join('');
+      sel.innerHTML = `<option value="">${I18N.t('Tüm Stageler')}</option>` + stages.map(s => `<option value="${s}">${s}</option>`).join('');
       if (cur) sel.value = cur;
     } catch(e) { /* silent */ }
   }
@@ -2756,7 +2760,7 @@
 
     const groups = new Map();
     deals.forEach(d => {
-      const s = d.stage || 'Belirsiz';
+      const s = d.stage || I18N.t('Belirsiz');
       if (!groups.has(s)) groups.set(s, []);
       groups.get(s).push(d);
     });
@@ -2787,7 +2791,7 @@
           </div>
         </div>`;
       }).join('');
-      const moreHtml = moreCount > 0 ? `<div style="text-align:center;font-size:10px;color:#64748b;padding:6px;font-style:italic">+${moreCount} tane daha — daraltmak için filtreleri kullanın</div>` : '';
+      const moreHtml = moreCount > 0 ? `<div style="text-align:center;font-size:10px;color:#64748b;padding:6px;font-style:italic">+${moreCount} ${I18N.t('tane daha — daraltmak için filtreleri kullanın')}</div>` : '';
       return `<div class="tl-kanban-col">
         <div class="tl-kanban-col-head">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
@@ -3032,10 +3036,10 @@
     const reasonParts = [];
     if (alarmInfo && alarmInfo.close_reason) reasonParts.push(alarmInfo.close_reason);
     if (alarmInfo && alarmInfo.closed_by) reasonParts.push(`(${alarmInfo.closed_by}${alarmInfo.closed_at ? ' — ' + formatDateTime(alarmInfo.closed_at) : ''})`);
-    if (alarmInfo && alarmInfo.note) reasonParts.push(`Not: ${alarmInfo.note}`);
-    if (d.result_code) reasonParts.push(`Sonuç Kodu: ${d.result_code}${d.sub_code ? ' / ' + d.sub_code : ''}`);
-    if (d.agent_note) reasonParts.push(`Danışman notu: ${d.agent_note}`);
-    document.getElementById('tlcaReasonText').textContent = reasonParts.length ? reasonParts.join(' · ') : 'Kayıtlı bir iptal nedeni yok.';
+    if (alarmInfo && alarmInfo.note) reasonParts.push(`${I18N.t('Not: ')}${alarmInfo.note}`);
+    if (d.result_code) reasonParts.push(`${I18N.t('Sonuç Kodu: ')}${d.result_code}${d.sub_code ? ' / ' + d.sub_code : ''}`);
+    if (d.agent_note) reasonParts.push(`${I18N.t('Danışman notu: ')}${d.agent_note}`);
+    document.getElementById('tlcaReasonText').textContent = reasonParts.length ? reasonParts.join(' · ') : I18N.t('Kayıtlı bir iptal nedeni yok.');
 
     document.getElementById('tlcaResultCode').value = d.sub_code || '';
     document.getElementById('tlcaReasonNote').value = d.agent_note || '';
@@ -3072,11 +3076,11 @@
     const code = document.getElementById('tlcaResultCode').value;
     const note = document.getElementById('tlcaReasonNote').value.trim();
     const errEl = document.getElementById('tlcaSaveError');
-    if (!code) { errEl.textContent = 'Lütfen bir sonuç kodu seç.'; errEl.style.display = 'block'; return; }
-    if (!note) { errEl.textContent = 'Lütfen açıklama gir.'; errEl.style.display = 'block'; return; }
+    if (!code) { errEl.textContent = I18N.t('Lütfen bir sonuç kodu seç.'); errEl.style.display = 'block'; return; }
+    if (!note) { errEl.textContent = I18N.t('Lütfen açıklama gir.'); errEl.style.display = 'block'; return; }
     errEl.style.display = 'none';
     const btn = document.getElementById('tlcaSaveBtn');
-    btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+    btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
     const isInvalidDuplicate = code === 'Invalid Data' || code === 'Duplicate Data';
     const fullCode = isInvalidDuplicate ? '9. Invalid / Duplicate Data' : '8. Cancelled';
     try {
@@ -3091,9 +3095,9 @@
       showNotice('İptal sonuç kodu kaydedildi.', 'success');
       _tlcaCloseModal();
     } catch(e) {
-      errEl.textContent = 'Kaydedilemedi: ' + e.message; errEl.style.display = 'block';
+      errEl.textContent = I18N.t('Kaydedilemedi: ') + e.message; errEl.style.display = 'block';
     } finally {
-      btn.disabled = false; btn.textContent = 'Kaydet';
+      btn.disabled = false; btn.textContent = I18N.t('Kaydet');
     }
   }
 

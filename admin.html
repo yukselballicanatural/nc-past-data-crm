@@ -1861,12 +1861,12 @@
                 ${v.leader ? `<span class="text-[9px] text-slate-600">${v.leader}</span>` : ''}
               </div>
               <div class="flex gap-2 text-[10px] font-bold shrink-0">
-                <span class="${v.open ? 'text-amber-400' : 'text-slate-600'}">${v.open} açık</span>
-                ${v.overdue ? `<span class="text-red-400">${v.overdue} gec.</span>` : ''}
+                <span class="${v.open ? 'text-amber-400' : 'text-slate-600'}">${v.open} ${I18N.t('açık')}</span>
+                ${v.overdue ? `<span class="text-red-400">${v.overdue} ${I18N.t('gec.')}</span>` : ''}
               </div>
-            </div>`).join('') || '<p class="text-xs text-slate-600">Aktif alarm yok.</p>';
+            </div>`).join('') || `<p class="text-xs text-slate-600">${I18N.t('Aktif alarm yok.')}</p>`;
         const countEl = document.getElementById(prefix + 'TeamCount');
-        if (countEl) countEl.textContent = teamEntries.length + ' takım';
+        if (countEl) countEl.textContent = teamEntries.length + ' ' + I18N.t('takım');
       });
     }
 
@@ -1917,7 +1917,7 @@
       if (!sel) return;
       const owners = [...new Set(adminAllAlarms.map(a => a.deal_owner).filter(Boolean))].sort();
       if (!owners.length) return;
-      sel.innerHTML = `<option value="">Tüm Deal Owner'lar</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+      sel.innerHTML = `<option value="">${I18N.t("Tüm Deal Owner'lar")}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
       _tdOwnersPopulated = true;
     }
 
@@ -1953,7 +1953,7 @@
         const shortRef = info.ref || a.deal_id || '';
         const bd = 'border-bottom:1px solid #0f172a';
         const dealIdCell = a.deal_id
-          ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted" title="Zoho'da Aç">${shortRef} ↗</a>`
+          ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted" title="${I18N.t("Zoho'da Aç")}">${shortRef} ↗</a>`
           : '—';
         return `<tr style="cursor:pointer" onclick="openAdminAlarmModal('${a.id}')">
           <td style="padding:8px 10px;font-size:10px;color:#475569;${bd}">${i+1}</td>
@@ -1985,7 +1985,7 @@
       if (!sel) return;
       const owners = [...new Set(adminAllAlarms.map(a => a.deal_owner).filter(Boolean))].sort();
       if (!owners.length) return;
-      sel.innerHTML = `<option value="">Tüm Deal Owner'lar</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+      sel.innerHTML = `<option value="">${I18N.t("Tüm Deal Owner'lar")}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
       _noshowOwnersPopulated = true;
     }
     function renderAdminNoshow() {
@@ -2242,7 +2242,7 @@
 
       tbody.innerHTML = pageData.map((d, i) => {
         const dealIdCell = d.id
-          ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted;font-family:monospace;font-size:10px" title="Zoho'da Aç">${fmt(d.deal_id) || d.id} ↗</a>`
+          ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted;font-family:monospace;font-size:10px" title="${I18N.t("Zoho'da Aç")}">${fmt(d.deal_id) || d.id} ↗</a>`
           : '—';
         return `<tr style="cursor:pointer" onclick="openCancelledDealModal('${d.id}')">
           <td style="color:#475569;font-size:10px">${pageStart + i + 1}</td>
@@ -2302,10 +2302,13 @@
       const reasonParts = [];
       if (alarmInfo && alarmInfo.close_reason) reasonParts.push(alarmInfo.close_reason);
       if (alarmInfo && alarmInfo.closed_by) reasonParts.push(`(${alarmInfo.closed_by}${alarmInfo.closed_at ? ' — ' + _amFmtDateTime(alarmInfo.closed_at) : ''})`);
-      if (alarmInfo && alarmInfo.note) reasonParts.push(`Not: ${alarmInfo.note}`);
-      if (d.result_code) reasonParts.push(`Sonuç Kodu: ${d.result_code}${d.sub_code ? ' / ' + d.sub_code : ''}`);
-      if (d.agent_note) reasonParts.push(`Danışman notu: ${d.agent_note}`);
-      document.getElementById('cdmReasonText').textContent = reasonParts.length ? reasonParts.join(' · ') : 'Kayıtlı bir iptal nedeni yok.';
+      if (alarmInfo && alarmInfo.note) reasonParts.push(`${I18N.t('Not: ')}${alarmInfo.note}`);
+      if (d.result_code) reasonParts.push(`${I18N.t('Sonuç Kodu: ')}${d.result_code}${d.sub_code ? ' / ' + d.sub_code : ''}`);
+      if (d.agent_note) reasonParts.push(`${I18N.t('Danışman notu: ')}${d.agent_note}`);
+      const cdmReasonEl = document.getElementById('cdmReasonText');
+      cdmReasonEl.textContent = reasonParts.length ? reasonParts.join(' · ') : I18N.t('Kayıtlı bir iptal nedeni yok.');
+      cdmReasonEl.dataset.hasReason = reasonParts.length ? '1' : '0';
+      cdmReasonEl.dataset.hasResultCode = d.result_code ? '1' : '0';
 
       document.getElementById('cdmResultCode').value = d.sub_code || '';
       document.getElementById('cdmReasonNote').value = d.agent_note || '';
@@ -2331,8 +2334,11 @@
         if (live.agent_note) document.getElementById('cdmReasonNote').value = live.agent_note;
         if (live.result_code || live.agent_note) {
           const el = document.getElementById('cdmReasonText');
-          const extra = `Sonuç Kodu: ${live.result_code || '—'}${live.sub_code ? ' / ' + live.sub_code : ''}${live.agent_note ? ' · Danışman notu: ' + live.agent_note : ''}`;
-          if (!el.textContent.includes('Sonuç Kodu:')) el.textContent = (el.textContent === 'Kayıtlı bir iptal nedeni yok.' ? '' : el.textContent + ' · ') + extra;
+          const extra = `${I18N.t('Sonuç Kodu: ')}${live.result_code || '—'}${live.sub_code ? ' / ' + live.sub_code : ''}${live.agent_note ? ' · ' + I18N.t('Danışman notu: ') + live.agent_note : ''}`;
+          if (el.dataset.hasResultCode !== '1') {
+            el.textContent = (el.dataset.hasReason === '1' ? el.textContent + ' · ' : '') + extra;
+            el.dataset.hasResultCode = '1';
+          }
         }
       } catch(e) { /* sessiz */ }
     }
@@ -2349,11 +2355,11 @@
       const code = document.getElementById('cdmResultCode').value;
       const note = document.getElementById('cdmReasonNote').value.trim();
       const errEl = document.getElementById('cdmSaveError');
-      if (!code) { errEl.textContent = 'Lütfen bir sonuç kodu seç.'; errEl.style.display = 'block'; return; }
-      if (!note) { errEl.textContent = 'Lütfen açıklama gir.'; errEl.style.display = 'block'; return; }
+      if (!code) { errEl.textContent = I18N.t('Lütfen bir sonuç kodu seç.'); errEl.style.display = 'block'; return; }
+      if (!note) { errEl.textContent = I18N.t('Lütfen açıklama gir.'); errEl.style.display = 'block'; return; }
       errEl.style.display = 'none';
       const btn = document.getElementById('cdmSaveBtn');
-      btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+      btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
       const isInvalidDuplicate = code === 'Invalid Data' || code === 'Duplicate Data';
       const fullCode = isInvalidDuplicate ? '9. Invalid / Duplicate Data' : '8. Cancelled';
       try {
@@ -2369,9 +2375,9 @@
         showSiteNotice('İptal sonuç kodu kaydedildi.', 'success');
         closeCancelledDealModal();
       } catch(e) {
-        errEl.textContent = 'Kaydedilemedi: ' + e.message; errEl.style.display = 'block';
+        errEl.textContent = I18N.t('Kaydedilemedi: ') + e.message; errEl.style.display = 'block';
       } finally {
-        btn.disabled = false; btn.textContent = 'Kaydet';
+        btn.disabled = false; btn.textContent = I18N.t('Kaydet');
       }
     }
 
@@ -2551,7 +2557,7 @@
         return `<tr style="cursor:pointer" onclick="openWonAlarmModal('${d.id}')">
           <td style="color:#475569;font-size:10px">${pageStart + i + 1}</td>
           <td>
-            <div style="font-weight:600;color:#f1f5f9;font-size:12px">${fmt(d.deal_name)}<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="am-zoho-link" title="Zoho'da Aç">↗</a></div>
+            <div style="font-weight:600;color:#f1f5f9;font-size:12px">${fmt(d.deal_name)}<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" class="am-zoho-link" title="${I18N.t("Zoho'da Aç")}">↗</a></div>
             <div style="font-size:10px;color:#0d9488;font-weight:600">${fmt(d.deal_owner)}</div>
           </td>
           <td style="font-size:10px;font-family:monospace;color:#64748b"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted">${fmt(d.deal_id)}</a></td>
@@ -2615,7 +2621,7 @@
         const paid = Number(d.total_paid_amount) || 0, unpaid = Number(d.remaining_amount) || 0;
         const payStatus = paid <= 0 ? 'Unpaid' : (Number(d.amount) > 0 && paid >= Number(d.amount)) ? 'Paid' : 'Partial';
         set('wamPaymentStatus', payStatusLabel(payStatus));
-        set('wamLanguage', languageLabel(d.rawLang || 'Bilinmiyor'));
+        set('wamLanguage', languageLabel(d.rawLang || I18N.t('Bilinmiyor')));
         const visits = [d.visit_date_1, d.visit_date_2, d.visit_date_3].map(v => v ? _amFmtDate(v) : '—').join(' / ');
         set('wamVisits', visits);
         set('wamVisitStatus', (d.visit_date_1 || d.visit_date_2 || d.visit_date_3) ? 'Visited' : 'Not Visited');
@@ -2781,7 +2787,7 @@
         const sel = document.getElementById(id);
         if (!sel) return;
         const cur = sel.value;
-        sel.innerHTML = `<option value="">${placeholder}</option>` + arr.map(v => `<option value="${v}">${v}</option>`).join('');
+        sel.innerHTML = `<option value="">${I18N.t(placeholder)}</option>` + arr.map(v => `<option value="${v}">${v}</option>`).join('');
         if (cur) sel.value = cur;
       };
       fill('amFilterTeam', teams, "Tüm Team Leader'lar");
@@ -2866,7 +2872,7 @@
         const info = _amDealInfoFor(a.deal_id) || {};
         const shortRef = info.ref || a.deal_id || '';
         const dealIdCell = a.deal_id
-          ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted" title="Zoho'da Aç">${shortRef} ↗</a>`
+          ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted" title="${I18N.t("Zoho'da Aç")}">${shortRef} ↗</a>`
           : '—';
         const stageCell = info.stage ? `<span style="font-size:9px;color:#cbd5e1">${info.stage}</span>` : '<span style="color:#334155">—</span>';
         const amountTxt = (info.amount || info.amount === 0) ? fmtMoney(info.amount) : '—';
@@ -2959,15 +2965,15 @@
       document.getElementById('aamCreatedAt').textContent = _amFmtDateTime(a.created_at);
       const days = _amDaysUntil(a.reference_date);
       document.getElementById('aamDaysLeft').innerHTML = days === null ? '—'
-        : days < 0  ? `<span style="color:#f87171;font-weight:700">${Math.abs(days)} gün GECİKMİŞ</span>`
-        : days === 0 ? `<span style="color:#4ade80;font-weight:800">BUGÜN</span>`
-        : `<span style="color:#94a3b8">${days} gün</span>`;
+        : days < 0  ? `<span style="color:#f87171;font-weight:700">${Math.abs(days)} ${I18N.t('gün')} ${I18N.t('GECİKMİŞ')}</span>`
+        : days === 0 ? `<span style="color:#4ade80;font-weight:800">${I18N.t('BUGÜN')}</span>`
+        : `<span style="color:#94a3b8">${days} ${I18N.t('gün')}</span>`;
 
       const tlItems = [
-        { time: a.created_at,  label: 'Oluşturuldu',   color:'#475569' },
-        { time: a.seen_at,     label: 'Görüldü',        color:'#60a5fa' },
-        { time: a.actioned_at, label: 'Aksiyon Alındı', color:'#2dd4bf' },
-        { time: a.closed_at,   label: 'Kapatıldı' + (a.close_reason ? ' — '+a.close_reason : ''), color:'#94a3b8' },
+        { time: a.created_at,  label: I18N.t('Oluşturuldu'),   color:'#475569' },
+        { time: a.seen_at,     label: I18N.t('Görüldü'),        color:'#60a5fa' },
+        { time: a.actioned_at, label: I18N.t('Aksiyon Alındı'), color:'#2dd4bf' },
+        { time: a.closed_at,   label: I18N.t('Kapatıldı') + (a.close_reason ? ' — '+a.close_reason : ''), color:'#94a3b8' },
       ].filter(t => !!t.time);
       document.getElementById('aamTimelineBody').innerHTML = tlItems.length ?
         tlItems.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #0f172a">
@@ -2975,7 +2981,7 @@
           <span style="font-size:11px;color:${t.color};font-weight:600;flex:1">${t.label}</span>
           <span style="font-size:10px;color:#475569">${_amFmtDateTime(t.time)}</span>
         </div>`).join('') :
-        `<span style="font-size:11px;color:#475569">Henüz aksiyon yok.</span>`;
+        `<span style="font-size:11px;color:#475569">${I18N.t('Henüz aksiyon yok.')}</span>`;
 
       if (a.note) {
         document.getElementById('aamExistingNoteWrap').style.display = 'block';
@@ -3017,7 +3023,7 @@
         document.getElementById('aamDealPaidUnpaid').innerHTML = `<span style="color:#34d399">${fmtMoney(paid)}</span> / <span style="color:#f87171">${fmtMoney(unpaid)}</span>`;
         const payStatus = paid <= 0 ? 'Unpaid' : (Number(d.amount) > 0 && paid >= Number(d.amount)) ? 'Paid' : 'Partial';
         set('aamDealPaymentStatus', payStatusLabel(payStatus));
-        set('aamDealLanguage', languageLabel(d.rawLang || 'Bilinmiyor'));
+        set('aamDealLanguage', languageLabel(d.rawLang || I18N.t('Bilinmiyor')));
         const visits = [d.visit_date_1, d.visit_date_2, d.visit_date_3].map(v => v ? _amFmtDate(v) : '—').join(' / ');
         set('aamDealVisits', visits);
         set('aamDealVisitStatus', (d.visit_date_1 || d.visit_date_2 || d.visit_date_3) ? 'Visited' : 'Not Visited');
@@ -3095,9 +3101,9 @@
       const newStatus   = document.getElementById('aamNewStatus').value;
       const note        = document.getElementById('aamNoteInput').value.trim();
       const closeReason = document.getElementById('aamCloseReason').value;
-      if (!newStatus && !note) { alert('Durum seçin veya not girin.'); return; }
+      if (!newStatus && !note) { alert(I18N.t('Durum seçin veya not girin.')); return; }
       const btn = document.getElementById('aamBtnSave');
-      btn.disabled = true; btn.textContent = 'Kaydediliyor...';
+      btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
 
       const now = new Date().toISOString();
       const adminName = (currentUser && (currentUser.fullName || currentUser.username)) || 'Admin';
@@ -3136,9 +3142,9 @@
         renderRegionPanels();
         closeAdminAlarmModal();
       } catch(e) {
-        alert('Kayıt hatası: ' + e.message);
+        alert(I18N.t('Kayıt hatası: ') + e.message);
       } finally {
-        btn.disabled = false; btn.textContent = 'Kaydet';
+        btn.disabled = false; btn.textContent = I18N.t('Kaydet');
       }
     }
 
@@ -3226,7 +3232,7 @@
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
       const regions = {};
       adminAllAlarms.forEach(a => {
-        const r = a.region || 'Bilinmiyor';
+        const r = a.region || I18N.t('Bilinmiyor');
         if (!regions[r]) regions[r] = { total:0, open:0, overdue:0, closed:0, noshow:0, missing:0, today:0 };
         regions[r].total++;
         if (active.has(a.status)) regions[r].open++;
@@ -3367,8 +3373,8 @@
       const thresholds = (document.getElementById('setThresholds').value || '').trim();
       const repeatDays = (document.getElementById('setRepeatDays').value || '').trim();
       const nums = thresholds.split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
-      if (!nums.length) { alert('Geçerli eşik listesi girin (örn: 45,30,15,7,3)'); return; }
-      if (!parseInt(repeatDays) || parseInt(repeatDays) < 1) { alert('Geçerli tekrar periyodu girin (gün)'); return; }
+      if (!nums.length) { alert(I18N.t('Geçerli eşik listesi girin (örn: 45,30,15,7,3)')); return; }
+      if (!parseInt(repeatDays) || parseInt(repeatDays) < 1) { alert(I18N.t('Geçerli tekrar periyodu girin (gün)')); return; }
       const adminName = (currentUser && (currentUser.fullName || currentUser.username)) || 'Admin';
       try {
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' };
@@ -3380,9 +3386,9 @@
           ]),
         });
         if (!r.ok) throw new Error('HTTP ' + r.status);
-        document.getElementById('settingsStatus').textContent = 'Kaydedildi — bir sonraki motor çalışmasında geçerli olur.';
+        document.getElementById('settingsStatus').textContent = I18N.t('Kaydedildi — bir sonraki motor çalışmasında geçerli olur.');
         setTimeout(() => { document.getElementById('settingsStatus').textContent = ''; }, 4000);
-      } catch(e) { alert('Kaydedilemedi: ' + e.message); }
+      } catch(e) { alert(I18N.t('Kaydedilemedi: ') + e.message); }
     }
     // ════════════════ ALARM MONITORING END ════════════════
 
@@ -3397,7 +3403,7 @@
     function fmt(v) { return (v === null || v === undefined || v === '') ? '—' : fixTR(String(v)); }
     function _escAttr(v) { return String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
     function _noteBtn(note) {
-      return note ? `<button onclick="showNoteTip(event, this.dataset.note)" data-note="${_escAttr(note)}" style="padding:2px 8px;background:#1e293b;border:1px solid #f59e0b;border-radius:6px;color:#f59e0b;font-size:10px;font-weight:800;cursor:pointer" title="Notu görüntüle">!</button>` : '—';
+      return note ? `<button onclick="showNoteTip(event, this.dataset.note)" data-note="${_escAttr(note)}" style="padding:2px 8px;background:#1e293b;border:1px solid #f59e0b;border-radius:6px;color:#f59e0b;font-size:10px;font-weight:800;cursor:pointer" title="${I18N.t('Notu görüntüle')}">!</button>` : '—';
     }
     // KPI kutucuğundaki değer kutuya sığmıyorsa (uzun tutarlar) yazıyı
     // adım adım küçültür — sayı asla kesilmez/kısaltılmaz, sadece küçülür.
@@ -3437,7 +3443,7 @@
       'Swedish': 'İsveççe', 'Polish': 'Lehçe', 'Croatian': 'Hırvatça',
       'Indonesian': 'Endonezce', 'Northern Min': 'Kuzey Min Çincesi',
       'Burmese': 'Birmanca', 'Malay/Indonesian': 'Malayca/Endonezce',
-      'No Language': 'Dil Yok', 'Unknown': 'Bilinmiyor',
+      'No Language': 'Dil Yok', 'Unknown': I18N.t('Bilinmiyor'),
     };
     function languageLabel(l) { return I18N.t(_LANGUAGE_LABEL[l] || l); }
     function fmtCompact(v) {
@@ -3452,7 +3458,11 @@
     // (yyyy-mm-dd) ve onchange davranışı korunur, sadece görünüm değişir.
     const NCDatePicker = (() => {
       const MONTHS_TR = ['Ocak','Şubat','Mart','Nisan','Mayıs','Haziran','Temmuz','Ağustos','Eylül','Ekim','Kasım','Aralık'];
+      const MONTHS_EN = ['January','February','March','April','May','June','July','August','September','October','November','December'];
       const DOW_TR = ['Pt','Sa','Ça','Pe','Cu','Ct','Pz'];
+      const DOW_EN = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+      function MONTHS() { return I18N.getLang() === 'en' ? MONTHS_EN : MONTHS_TR; }
+      function DOW() { return I18N.getLang() === 'en' ? DOW_EN : DOW_TR; }
       let openState = null;
 
       function pad(n) { return String(n).padStart(2, '0'); }
@@ -3481,7 +3491,7 @@
         const trigger = document.createElement('div');
         trigger.className = 'nc-date-trigger';
         trigger.id = inputId + '_trigger';
-        trigger.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="nc-date-text placeholder">gg.aa.yyyy</span>`;
+        trigger.innerHTML = `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/></svg><span class="nc-date-text placeholder">${I18N.t('gg.aa.yyyy')}</span>`;
         trigger.addEventListener('click', (e) => { e.stopPropagation(); toggle(inputId); });
 
         input.parentNode.insertBefore(field, input);
@@ -3497,7 +3507,7 @@
         const span = trigger.querySelector('.nc-date-text');
         const d = fromISO(input.value);
         if (d) { span.textContent = fmtDisplay(d); span.classList.remove('placeholder'); }
-        else { span.textContent = 'gg.aa.yyyy'; span.classList.add('placeholder'); }
+        else { span.textContent = I18N.t('gg.aa.yyyy'); span.classList.add('placeholder'); }
       }
 
       function setValue(inputId, iso) {
@@ -3563,18 +3573,18 @@
           <div class="nc-cal-header">
             <button class="nc-cal-nav-btn" data-act="prev-month" type="button">‹</button>
             <div class="nc-cal-title">
-              <button data-act="show-months" type="button">${MONTHS_TR[month]}</button>
+              <button data-act="show-months" type="button">${MONTHS()[month]}</button>
               <button data-act="show-years" type="button">${year}</button>
             </div>
             <button class="nc-cal-nav-btn" data-act="next-month" type="button">›</button>
           </div>
           <div class="nc-cal-grid">
-            ${DOW_TR.map(d => `<div class="nc-cal-dow">${d}</div>`).join('')}
+            ${DOW().map(d => `<div class="nc-cal-dow">${d}</div>`).join('')}
             ${cells}
           </div>
           <div class="nc-cal-footer">
-            <button data-act="today" type="button">Bugün</button>
-            <button data-act="clear" type="button">Temizle</button>
+            <button data-act="today" type="button">${I18N.t('Bugün')}</button>
+            <button data-act="clear" type="button">${I18N.t('Temizle')}</button>
           </div>`;
       }
 
@@ -3587,7 +3597,7 @@
             <button class="nc-cal-nav-btn" data-act="next-year" type="button">›</button>
           </div>
           <div class="nc-cal-panel-grid">
-            ${MONTHS_TR.map((m,i) => `<div class="nc-cal-panel-item${i===cursor.getMonth()?' selected':''}" data-month="${i}">${m.slice(0,3)}</div>`).join('')}
+            ${MONTHS().map((m,i) => `<div class="nc-cal-panel-item${i===cursor.getMonth()?' selected':''}" data-month="${i}">${m.slice(0,3)}</div>`).join('')}
           </div>`;
       }
 
@@ -3977,7 +3987,7 @@
       // Stage'e göre grupla — index lookup için (openModal filteredDeals index bekliyor)
       const groups = new Map();
       data.forEach((d, idx) => {
-        const stage = d['Stage'] || 'Belirsiz';
+        const stage = d['Stage'] || I18N.t('Belirsiz');
         if (!groups.has(stage)) groups.set(stage, []);
         groups.get(stage).push(idx);
       });
@@ -4007,7 +4017,7 @@
             </div>
           </div>`;
         }).join('');
-        const moreHtml = moreCount > 0 ? `<div class="kanban-more">+${moreCount} tane daha — daraltmak için filtreleri kullanın</div>` : '';
+        const moreHtml = moreCount > 0 ? `<div class="kanban-more">+${moreCount} ${I18N.t('tane daha — daraltmak için filtreleri kullanın')}</div>` : '';
         return `<div class="kanban-col">
           <div class="kanban-col-head">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
@@ -4037,7 +4047,7 @@
         : '0 deals shown';
       if (pager) {
         pager.style.display = (data.length > dealPageSize && _dealsViewMode === 'table') ? 'flex' : 'none';
-        document.getElementById('dealPageLbl').textContent = `Sayfa ${dealCurrentPage+1} / ${maxPage+1}`;
+        document.getElementById('dealPageLbl').textContent = `${I18N.t('Sayfa')} ${dealCurrentPage+1} / ${maxPage+1}`;
         document.getElementById('btnDealPrev').disabled = dealCurrentPage === 0;
         document.getElementById('btnDealNext').disabled = dealCurrentPage >= maxPage;
       }
@@ -4204,7 +4214,7 @@
         return `
           <div class="aam-info-card">
             <div class="aam-info-label">${I18N.t(l)}</div>
-            <div class="aam-info-val">${fmt(v)}</div>
+            <div class="aam-info-val">${I18N.t(fmt(v))}</div>
           </div>`;
       }).join('');
     }
@@ -4457,7 +4467,7 @@
         .filter(([, d]) => !region || d.region === region)
         .map(([canonical, d]) => ({ canonical, label: d.label }))
         .sort((a,b) => a.label.localeCompare(b.label));
-      sel.innerHTML = '<option value="">Tüm Takım Liderleri</option>' +
+      sel.innerHTML = `<option value="">${I18N.t('Tüm Takım Liderleri')}</option>` +
         teams.map(t => `<option value="${t.canonical}">${t.label}</option>`).join('');
       if (teams.some(t => t.canonical === cur)) sel.value = cur;
     }
@@ -4563,7 +4573,7 @@
       ];
       document.getElementById('analyticsKpiStrip').innerHTML = kpis.map(k => `
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/30 transition-all duration-300">
-          <div class="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">${k.label}</div>
+          <div class="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">${I18N.t(k.label)}</div>
           <div class="text-lg font-bold ${k.color}">${k.value}</div>
         </div>`).join('');
       const lu = document.getElementById('analyticsLastUpdate');
@@ -4571,7 +4581,7 @@
 
       // Payment status
       const payMap = {};
-      data.forEach(d => { const p = d['Payment Status']||'Bilinmiyor'; payMap[p] = (payMap[p]||0)+1; });
+      data.forEach(d => { const p = d['Payment Status']||I18N.t('Bilinmiyor'); payMap[p] = (payMap[p]||0)+1; });
       const maxPay = Math.max(...Object.values(payMap), 1);
       const payColors = { Paid:'bg-emerald-500', Partial:'bg-amber-500', Unpaid:'bg-rose-500' };
       document.getElementById('paymentChart').innerHTML =
@@ -4583,7 +4593,7 @@
 
       // Region distribution
       const regionMap = {};
-      data.forEach(d => { const r = d['Region']||'Bilinmiyor'; regionMap[r] = (regionMap[r]||0)+1; });
+      data.forEach(d => { const r = d['Region']||I18N.t('Bilinmiyor'); regionMap[r] = (regionMap[r]||0)+1; });
       const maxR = Math.max(...Object.values(regionMap), 1);
       document.getElementById('regionChart').innerHTML =
         Object.entries(regionMap).sort((a,b) => b[1]-a[1]).map(([r,c]) => `
@@ -4614,7 +4624,7 @@
             <div class="text-[9px] text-slate-500 group-hover:text-slate-300 transition-colors">${m}</div>
             <div class="text-[9px] font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">${fmtCompact(v.amount)}</div>
           </div>`;
-      }).join('') : '<div class="text-xs text-slate-600 py-8 mx-auto">Arrival date verisi yok.</div>';
+      }).join('') : `<div class="text-xs text-slate-600 py-8 mx-auto">${I18N.t("Arrival date verisi yok.")}</div>`;
 
       // Result codes breakdown
       const rcMap = {};
@@ -4630,7 +4640,7 @@
       // Teams
       const teamMap = {};
       data.forEach(d => {
-        const t = d['Team Group'] || 'Bilinmiyor';
+        const t = d['Team Group'] || I18N.t('Bilinmiyor');
         if (!teamMap[t]) teamMap[t] = { deals:0, paid:0, unpaid:0, won:0 };
         teamMap[t].deals++;
         teamMap[t].paid += (Number(d['Paid Amount'])||0);
@@ -4642,7 +4652,7 @@
 
       // Stages
       const stageMap = {};
-      data.forEach(d => { const s = d['Stage']||'Bilinmiyor'; stageMap[s] = (stageMap[s]||0)+1; });
+      data.forEach(d => { const s = d['Stage']||I18N.t('Bilinmiyor'); stageMap[s] = (stageMap[s]||0)+1; });
       const maxS = Math.max(...Object.values(stageMap), 1);
       document.getElementById('stageChart').innerHTML =
         Object.entries(stageMap).sort((a,b) => b[1]-a[1]).map(([s,c]) => `
@@ -4654,7 +4664,7 @@
       // Agents
       const agentMap = {};
       data.forEach(d => {
-        const a = d['Deal Owner Name']||'Bilinmiyor';
+        const a = d['Deal Owner Name']||I18N.t('Bilinmiyor');
         if (!agentMap[a]) agentMap[a] = { deals:0, paid:0, results:0, wonPaid:0 };
         agentMap[a].deals++;
         agentMap[a].paid += (Number(d['Paid Amount'])||0);
@@ -4668,7 +4678,7 @@
 
       // Languages
       const langMap = {};
-      data.forEach(d => { const l = d['Language']||'Bilinmiyor'; langMap[l] = (langMap[l]||0)+1; });
+      data.forEach(d => { const l = d['Language']||I18N.t('Bilinmiyor'); langMap[l] = (langMap[l]||0)+1; });
       document.getElementById('langChart').innerHTML =
         Object.entries(langMap).sort((a,b) => b[1]-a[1]).map(([l,c]) => `
           <div class="bg-gray-800/50 border border-gray-700/40 rounded-xl p-3 text-center hover:border-indigo-500/60 hover:bg-gray-800 hover:-translate-y-0.5 transition-all duration-300 cursor-default" title="${languageLabel(l)}: ${(c/total*100).toFixed(1)}%">
@@ -4804,7 +4814,7 @@
       ];
       document.getElementById('analyticsKpiStrip').innerHTML = kpis.map(k => `
         <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 hover:border-gray-700 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-black/30 transition-all duration-300">
-          <div class="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">${k.label}</div>
+          <div class="text-[10px] uppercase tracking-wide text-slate-500 font-semibold mb-1">${I18N.t(k.label)}</div>
           <div class="text-lg font-bold ${k.color}">${k.value}</div>
         </div>`).join('');
       const lu = document.getElementById('analyticsLastUpdate');
@@ -4822,7 +4832,7 @@
 
       // Region distribution (ham takımdan TeamMap ile türet)
       const regionMap = {};
-      (s.by_team||[]).forEach(t => { const r = (window.TeamMap ? TeamMap.regionForTeam(t.team) : '') || 'Bilinmiyor'; regionMap[r] = (regionMap[r]||0) + t.deals; });
+      (s.by_team||[]).forEach(t => { const r = (window.TeamMap ? TeamMap.regionForTeam(t.team) : '') || I18N.t('Bilinmiyor'); regionMap[r] = (regionMap[r]||0) + t.deals; });
       const maxR = Math.max(...Object.values(regionMap), 1);
       document.getElementById('regionChart').innerHTML =
         Object.entries(regionMap).sort((a,b) => b[1]-a[1]).map(([r,c]) => `
@@ -4843,7 +4853,7 @@
             <div class="text-[9px] text-slate-500 group-hover:text-slate-300 transition-colors">${m.ym}</div>
             <div class="text-[9px] font-bold text-emerald-400 group-hover:text-emerald-300 transition-colors">${fmtCompact(m.amount)}</div>
           </div>`;
-      }).join('') : '<div class="text-xs text-slate-600 py-8 mx-auto">Arrival date verisi yok.</div>';
+      }).join('') : `<div class="text-xs text-slate-600 py-8 mx-auto">${I18N.t("Arrival date verisi yok.")}</div>`;
 
       // Result codes breakdown
       _resultCodeRows = (s.by_result||[]).map(r => ({ code: r.code, sub: '—', count: r.cnt, agents: r.agents }));
@@ -4852,7 +4862,7 @@
       // Teams (ham takımı TeamMap ile normalize edip yeniden topla)
       const teamMap = {};
       (s.by_team||[]).forEach(t => {
-        const name = (window.TeamMap && TeamMap.normalize(t.team)) || t.team || 'Bilinmiyor';
+        const name = (window.TeamMap && TeamMap.normalize(t.team)) || t.team || I18N.t('Bilinmiyor');
         if (!teamMap[name]) teamMap[name] = { deals:0, paid:0, unpaid:0, won:0 };
         teamMap[name].deals += t.deals; teamMap[name].paid += t.paid; teamMap[name].unpaid += t.unpaid; teamMap[name].won += t.won;
       });
@@ -4870,7 +4880,7 @@
           </div>`).join('');
 
       // Agents (ham deal_owner)
-      _agentSummaryRows = (s.by_owner||[]).map(o => ({ agent: o.owner || 'Bilinmiyor', deals:o.deals, paid:o.paid, results:o.results, wonPaid: o.won_paid || 0 }));
+      _agentSummaryRows = (s.by_owner||[]).map(o => ({ agent: o.owner || I18N.t('Bilinmiyor'), deals:o.deals, paid:o.paid, results:o.results, wonPaid: o.won_paid || 0 }));
       renderAgentSummaryTable();
 
       // Languages — ayrı, tembel çekilen veri (admin_language_breakdown),
@@ -5310,13 +5320,13 @@
       document.getElementById('umTeamList').innerHTML = filtered.length
         ? filtered.map(t => `<div onclick="setTeamValue('${t.replace(/'/g,"\\'")}');closeTeamDropdown()" style="padding:9px 14px;cursor:pointer;font-size:0.82rem;color:${t===current?'#818cf8':'#cbd5e1'};background:${t===current?'#1e1b4b':'transparent'};border-left:3px solid ${t===current?'#6366f1':'transparent'};transition:all 0.1s" onmouseover="this.style.background='#0f172a'" onmouseout="this.style.background='${t===current?'#1e1b4b':'transparent'}'">
             ${t===current?'<span style="color:#6366f1;margin-right:6px">✓</span>':''}<span>${t}</span></div>`).join('')
-        : '<div style="padding:12px 14px;color:#475569;font-size:0.78rem;text-align:center">Takım bulunamadı</div>';
+        : `<div style="padding:12px 14px;color:#475569;font-size:0.78rem;text-align:center">${I18N.t('Takım bulunamadı')}</div>`;
     }
     function setTeamValue(val) {
       document.getElementById('umTeam').value = val;
       const display = document.getElementById('umTeamDisplay');
       if (val) { display.textContent = val; display.style.color = '#f1f5f9'; }
-      else { display.textContent = 'Takım seçin veya yazın...'; display.style.color = '#64748b'; }
+      else { display.textContent = I18N.t('Takım seçin veya yazın...'); display.style.color = '#64748b'; }
       renderTeamList(window._umTeams || []);
     }
     function toggleTeamDropdown() {
@@ -5842,11 +5852,11 @@
   <script>
     let _scCb = null;
     function showSiteConfirm(title, msg, okLabel, okColor, onConfirm) {
-      document.getElementById('scTitle').textContent = title;
-      document.getElementById('scMsg').innerHTML = msg;
+      document.getElementById('scTitle').textContent = I18N.t(title);
+      document.getElementById('scMsg').innerHTML = I18N.t(msg);
       document.getElementById('scExtra').innerHTML = '';
       const ok = document.getElementById('scOk');
-      ok.textContent = okLabel; ok.style.background = okColor;
+      ok.textContent = I18N.t(okLabel); ok.style.background = okColor;
       document.getElementById('siteConfirm').style.display = 'flex';
       _scCb = onConfirm;
       ok.onclick = () => { const cb = _scCb; closeSiteConfirm(); if (cb) cb(); };
