@@ -1014,9 +1014,13 @@
     <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:14px">
       <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;margin-bottom:4px">İptal Nedeni</div>
       <div style="font-size:12px;color:#cbd5e1" id="tlcaReasonText">—</div>
+      <div id="tlcaSavedConfirm" style="display:none;margin-top:8px;padding-top:8px;border-top:1px solid #334155;font-size:11px;color:#4ade80;font-weight:700"></div>
     </div>
     <div style="margin-bottom:12px">
-      <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;display:block;margin-bottom:6px">İptal Sonuç Kodu</label>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+        <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">İptal Sonuç Kodu</label>
+        <button id="tlcaDeleteResultBtn" type="button" onclick="_tlcaDeleteResult()" style="display:none;padding:2px 8px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:9px;font-weight:700;cursor:pointer;flex-shrink:0">Sonuç Kodunu Sil</button>
+      </div>
       <select id="tlcaResultCode" class="filter-sel" style="width:100%">
         <option value="">— Seç —</option>
         <option value="Cancelled by Patient">Cancelled by Patient</option>
@@ -2991,7 +2995,7 @@
     try {
       const isRM = currentUser.role === 'regional-manager';
       const stageParam = encodeURIComponent('ilike.*cancel*');
-      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,payment_or_flight_ticket,created_time,sub_code,agent_note';
+      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,payment_or_flight_ticket,created_time,result_code,sub_code,agent_note';
       const PAGE = 1000;
       let baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
       if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
@@ -3078,6 +3082,20 @@
     if (d.id) { zohoLink.href = `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}`; zohoLink.style.display = ''; }
     else zohoLink.style.display = 'none';
 
+    document.getElementById('tlcaSavedConfirm').style.display = 'none';
+    _tlcaRefreshReasonCard(d);
+
+    document.getElementById('tlcaResultCode').value = d.sub_code || '';
+    document.getElementById('tlcaReasonNote').value = d.agent_note || '';
+    document.getElementById('tlcaSaveError').style.display = 'none';
+    document.getElementById('tlCancelReasonModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+    _tlcaLoadLive(d.id);
+  }
+
+  // İptal Nedeni kartını (metin + Sonuç Kodunu Sil butonu görünürlüğü) günceller —
+  // hem modal açılışında hem kaydet/sil sonrası aynı mantık kullanılsın diye ortak fonksiyon.
+  function _tlcaRefreshReasonCard(d) {
     const dealAlarms = (allAlarms || []).filter(a => a.deal_id === String(d.id) && ['cancelled','closed','no_show'].includes(a.status));
     const alarmInfo = dealAlarms[0];
     const reasonParts = [];
@@ -3087,13 +3105,8 @@
     if (d.result_code) reasonParts.push(`${I18N.t('Sonuç Kodu: ')}${d.result_code}${d.sub_code ? ' / ' + d.sub_code : ''}`);
     if (d.agent_note) reasonParts.push(`${I18N.t('Danışman notu: ')}${d.agent_note}`);
     document.getElementById('tlcaReasonText').textContent = reasonParts.length ? reasonParts.join(' · ') : I18N.t('Kayıtlı bir iptal nedeni yok.');
-
-    document.getElementById('tlcaResultCode').value = d.sub_code || '';
-    document.getElementById('tlcaReasonNote').value = d.agent_note || '';
-    document.getElementById('tlcaSaveError').style.display = 'none';
-    document.getElementById('tlCancelReasonModal').classList.add('open');
-    document.body.style.overflow = 'hidden';
-    _tlcaLoadLive(d.id);
+    const delBtn = document.getElementById('tlcaDeleteResultBtn');
+    if (delBtn) delBtn.style.display = d.sub_code ? '' : 'none';
   }
 
   // Listede olmayan güncel result_code/agent_note'u tek deal için canlı çeker
@@ -3108,6 +3121,7 @@
       Object.assign(_tlcaCurrentDeal, live);
       if (live.sub_code) document.getElementById('tlcaResultCode').value = live.sub_code;
       if (live.agent_note) document.getElementById('tlcaReasonNote').value = live.agent_note;
+      _tlcaRefreshReasonCard(_tlcaCurrentDeal);
     } catch(e) { /* sessiz */ }
   }
 
@@ -3139,13 +3153,49 @@
       if (!r.ok) throw new Error('HTTP ' + r.status);
       addLog('SAVE_RESULT', `İptal sonuç kodu: ${fullCode} / ${code}`, String(d.id), d.deal_name);
       Object.assign(d, { result_code: fullCode, sub_code: code, agent_note: note });
+      // Kaydedince modal kapanmaz — kullanıcı aksiyonun kartın içinde
+      // gerçekten işlendiğini (İptal Nedeni kartındaki yeşil onay satırı) görsün.
+      _tlcaRefreshReasonCard(d);
+      const confirmEl = document.getElementById('tlcaSavedConfirm');
+      const who = (currentUser && (currentUser.fullName || currentUser.username)) || '';
+      confirmEl.textContent = `✓ ${I18N.t('Sonuç kodu kaydedildi')}${who ? ' — ' + who : ''} · ${formatDateTime(new Date().toISOString())}`;
+      confirmEl.style.display = 'block';
       showNotice('İptal sonuç kodu kaydedildi.', 'success');
-      _tlcaCloseModal();
       renderCancelledReport();
     } catch(e) {
       errEl.textContent = I18N.t('Kaydedilemedi: ') + e.message; errEl.style.display = 'block';
     } finally {
       btn.disabled = false; btn.textContent = I18N.t('Kaydet');
+    }
+  }
+
+  // Yanlışlıkla kaydedilen/artık geçersiz olan sonuç kodunu temizler — Notu
+  // Sil ile aynı desen (showSiteConfirm + PATCH null + addLog + canlı liste güncelle).
+  function _tlcaDeleteResult() {
+    const d = _tlcaCurrentDeal;
+    if (!d || !d.sub_code) return;
+    showSiteConfirm('Sonuç Kodunu Sil', 'Bu sonuç kodunu ve notu silmek istediğine emin misin? Bu işlem geri alınamaz.', 'Sil', '#dc2626', () => _doTlcaDeleteResult());
+  }
+  async function _doTlcaDeleteResult() {
+    const d = _tlcaCurrentDeal;
+    if (!d) return;
+    try {
+      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(d.id)}`, {
+        method: 'PATCH', headers: H,
+        body: JSON.stringify({ result_code: null, sub_code: null, agent_note: null, deal_status: 'pending' }),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      addLog('SAVE_RESULT', `İptal sonuç kodu silindi (önceki: ${d.result_code || ''} / ${d.sub_code || ''})`, String(d.id), d.deal_name);
+      Object.assign(d, { result_code: null, sub_code: null, agent_note: null });
+      document.getElementById('tlcaResultCode').value = '';
+      document.getElementById('tlcaReasonNote').value = '';
+      document.getElementById('tlcaSavedConfirm').style.display = 'none';
+      _tlcaRefreshReasonCard(d);
+      renderCancelledReport();
+      showNotice('Sonuç kodu silindi.', 'success');
+    } catch(e) {
+      showNotice('Sonuç kodu silinemedi: ' + e.message, 'error');
     }
   }
 
