@@ -3396,7 +3396,7 @@
       const chip = (val, label) => `<button type="button" onclick="_amSetDayFilter('${val}')"
         class="am-day-chip${cur === val ? ' active' : ''}">${label}</button>`;
       document.getElementById('amDayFilterChips').innerHTML =
-        chip('', 'Tümü') + _AM_DAY_FILTER_PRESETS.map(v => chip(String(v), v + ' gün')).join('');
+        chip('', I18N.t('Tümü')) + _AM_DAY_FILTER_PRESETS.map(v => chip(String(v), v + ' ' + I18N.t('gün'))).join('');
     }
     function _amSetDayFilter(val) {
       const sel = document.getElementById('amFilterThresh');
