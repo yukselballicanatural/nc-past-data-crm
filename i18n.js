@@ -129,6 +129,7 @@
     'Danışman Notu': 'Consultant Note',
     'Lead Kaynağı': 'Lead Source',
     'Sonuç Kodu': 'Result Code',
+    'Bekliyor': 'Pending',
     'Onay Durumu': 'Approval Status',
     'Kişi Bilgileri': 'Contact Info',
     'İletişim': 'Contact',

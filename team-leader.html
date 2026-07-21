@@ -718,6 +718,7 @@
               <th style="text-align:right;cursor:pointer;user-select:none" onclick="_tlcaSort('paid')">Ödenen<span id="tlcasort-paid" class="sarrow"></span></th>
               <th onclick="_tlcaSort('created')" style="cursor:pointer;user-select:none">Created<span id="tlcasort-created" class="sarrow"></span></th>
               <th onclick="_tlcaSort('arrival')" style="cursor:pointer;user-select:none">Arrival<span id="tlcasort-arrival" class="sarrow"></span></th>
+              <th>Sonuç Kodu</th>
             </tr>
           </thead>
           <tbody id="cancelledTbody"></tbody>
@@ -2986,11 +2987,11 @@
     const tbody = document.getElementById('cancelledTbody');
     const empty = document.getElementById('cancelledEmpty');
     empty.style.display = 'none';
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
     try {
       const isRM = currentUser.role === 'regional-manager';
       const stageParam = encodeURIComponent('ilike.*cancel*');
-      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,payment_or_flight_ticket,created_time';
+      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,payment_or_flight_ticket,created_time,sub_code,agent_note';
       const PAGE = 1000;
       let baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
       if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
@@ -3140,6 +3141,7 @@
       Object.assign(d, { result_code: fullCode, sub_code: code, agent_note: note });
       showNotice('İptal sonuç kodu kaydedildi.', 'success');
       _tlcaCloseModal();
+      renderCancelledReport();
     } catch(e) {
       errEl.textContent = I18N.t('Kaydedilemedi: ') + e.message; errEl.style.display = 'block';
     } finally {
@@ -3188,6 +3190,9 @@
       const dealIdCell = d.id
         ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted;font-family:monospace;font-size:10px" title="Zoho'da Aç">${fmt(d.deal_id) || d.id} ↗</a>`
         : '—';
+      const resultCell = d.sub_code
+        ? `<span style="color:#4ade80;font-weight:700;font-size:10px;white-space:nowrap">✓ ${fmt(d.sub_code)}</span>`
+        : `<span style="color:#f59e0b;font-weight:700;font-size:10px;white-space:nowrap">${I18N.t('Bekliyor')}</span>`;
       return `<tr style="cursor:pointer" onclick="_caOpenDealModal('${d.id}')">
         <td style="color:#475569;font-size:10px">${i+1}</td>
         <td>
@@ -3200,6 +3205,7 @@
         <td style="text-align:right;font-size:11px;color:#4ade80;white-space:nowrap">${fmtMoney(d.total_paid_amount)}</td>
         <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.created_time ? formatDate(d.created_time) : '—'}</td>
         <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.arrival_date ? formatDate(d.arrival_date) : '—'}</td>
+        <td style="white-space:nowrap">${resultCell}</td>
       </tr>`;
     }).join('');
     I18N.translateDOM(tbody);
