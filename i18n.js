@@ -235,6 +235,8 @@
     'deal için alarm hesaplanıyor...': 'deals — calculating alarms...',
     'alarm kaydediliyor (dedup aktif)...': 'alarms — saving (dedup active)...',
     'Tarih girilen alarmlar kapatılıyor...': 'Closing alarms with dates now entered...',
+    'Kopya alarmlar temizleniyor...': 'Cleaning up duplicate alarms...',
+    'Ödemesi tamamlanan alarmlar kapatılıyor...': 'Closing alarms with payment completed...',
     'İptal olan dealler için alarmlar kapatılıyor...': 'Cancelling alarms for cancelled deals...',
     'Son çalıştırma:': 'Last run:',
     'deal gösteriliyor': 'deals shown',
@@ -301,6 +303,7 @@
 
     // ── admin.html: Analytics / Alarm Monitoring / Deal modalı — eksikler ──
     'Canlı · son güncelleme: ': 'Live · last updated: ',
+    'Canlı · son güncelleme:': 'Live · last updated:',
     'Deals tablosundaki canlı verilere göre otomatik hesaplanır.': 'Automatically calculated from live data in the Deals table.',
     'Takım Lideri': 'Team Leader',
     'Arrival Date başlangıç': 'Arrival Date start',
@@ -313,6 +316,7 @@
     'Detay': 'Detail',
     'Canlı': 'Live',
     ' güncellendi · ': ' updated · ',
+    'güncellendi ·': 'updated ·',
     'TL Performans': 'TL Performance',
     'Motor Ayarları': 'Engine Settings',
     'Bir gün seçince tüm sayfa (KPI kartları, bölge panelleri ve Alarm Listesi) sadece son N gün + gelecek N gün içindeki alarmlara göre filtrelenir':
@@ -398,6 +402,8 @@
     "Tüm Team Leader'lar": 'All Team Leaders',
     'Tüm Tipler': 'All Types',
     'Tüm bölgeler — sistem geneli alarm durumu': 'All regions — system-wide alarm status',
+    'Tüm bölgeler — sistem geneli alarm durumu ·': 'All regions — system-wide alarm status ·',
+    'Tüm bölgeler — sistem geneli': 'All regions — system-wide',
     'Unlock Onay': 'Unlock Approve',
     'Unlock Red': 'Unlock Reject',
     'Unlock Talebi': 'Unlock Request',
@@ -441,6 +447,13 @@
     'Geri Alındı': 'Undone',
     'alarm yüklendi': 'alarms loaded',
     'Tamamlandı:': 'Completed:',
+    'Veri yükleme hatası: ': 'Data load error: ',
+    'Logs tablosu bulunamadı veya erişim hatası: ': 'Logs table not found or access error: ',
+
+    // ── index.html: login sayfası ──
+    'Şifreyi göster / gizle': 'Show / hide password',
+    'Giriş Başarılı': 'Login Successful',
+    "Dashboard'a yönlendiriliyorsunuz…": 'Redirecting you to the dashboard…',
     'İptal Alarmları': 'Cancelled Alarms',
     'No-show Hastalar': 'No-show Patients',
     'Bölge Performans': 'Region Performance',

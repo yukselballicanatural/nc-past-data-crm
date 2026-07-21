@@ -5252,7 +5252,7 @@
         loadEl.classList.add('hidden');
         renderLogs();
       } catch(e) {
-        loadEl.innerHTML = `<p class="text-rose-400 text-sm text-center py-10">Logs tablosu bulunamadı veya erişim hatası: ${e.message}</p>`;
+        loadEl.innerHTML = `<p class="text-rose-400 text-sm text-center py-10">${I18N.t('Logs tablosu bulunamadı veya erişim hatası: ')}${e.message}</p>`;
       }
     }
 
