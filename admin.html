@@ -372,7 +372,7 @@
             <select id="fResult" class="filter-select" onchange="applyFilters()">
               <option value="">All</option><option value="pending">No Result</option><option value="locked">Has Result</option><option value="unlock">Unlock Req.</option></select></div>
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Search</label>
-            <input id="fSearch" class="filter-input" placeholder="Name, ID, result..." oninput="applyFilters()"></div>
+            <input id="fSearch" class="filter-input" placeholder="Name, ID, result..." oninput="_dbApplyFilters()"></div>
         </div>
         <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;padding-top:8px">
           <div>
@@ -639,7 +639,7 @@
       <div class="flex flex-wrap gap-2 mb-3" id="teamFilterBar"></div>
       <!-- Search -->
       <div class="mb-4">
-        <input type="text" id="userSearch" oninput="renderUsersTable()" placeholder="Search name, username, team, role…" class="filter-input" style="max-width:320px" />
+        <input type="text" id="userSearch" oninput="_dbRenderUsersTable()" placeholder="Search name, username, team, role…" class="filter-input" style="max-width:320px" />
       </div>
       <!-- Loading -->
       <div id="usersLoadingState" class="flex flex-col items-center py-16 gap-4">
@@ -698,7 +698,7 @@
         </div>
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Kullanıcı</label>
-          <input id="logUser" class="filter-input" style="width:140px" placeholder="Username..." oninput="renderLogs()">
+          <input id="logUser" class="filter-input" style="width:140px" placeholder="Username..." oninput="_dbRenderLogs()">
         </div>
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Sayfa</label>
@@ -722,7 +722,7 @@
         </div>
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arama</label>
-          <input id="logSearch" class="filter-input" style="width:180px" placeholder="Deal adı, detay..." oninput="renderLogs()">
+          <input id="logSearch" class="filter-input" style="width:180px" placeholder="Deal adı, detay..." oninput="_dbRenderLogs()">
         </div>
         <div class="flex items-end gap-2">
           <div>
@@ -811,7 +811,7 @@
           <input type="hidden" id="umTeam" />
           <div id="umTeamDropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:#1e293b;border:1px solid #334155;border-radius:10px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.5);overflow:hidden">
             <div style="padding:8px">
-              <input id="umTeamSearch" type="text" placeholder="Takım ara..." oninput="filterTeamList()" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:6px 10px;color:#f1f5f9;font-size:0.78rem;outline:none;box-sizing:border-box"/>
+              <input id="umTeamSearch" type="text" placeholder="Takım ara..." oninput="_dbFilterTeamList()" style="width:100%;background:#0f172a;border:1px solid #334155;border-radius:6px;padding:6px 10px;color:#f1f5f9;font-size:0.78rem;outline:none;box-sizing:border-box"/>
             </div>
             <div id="umTeamList" style="max-height:220px;overflow-y:auto"></div>
           </div>
@@ -930,7 +930,7 @@
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-3">
           <div>
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Ara</label>
-            <input id="amSearch" type="text" placeholder="Hasta, danışman..." oninput="renderAdminAlarmTable()" class="filter-select">
+            <input id="amSearch" type="text" placeholder="Hasta, danışman..." oninput="_dbRenderAdminAlarmTbl()" class="filter-select">
           </div>
           <div>
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Bölge</label>
@@ -1053,7 +1053,7 @@
         <p class="text-xs text-slate-400 mt-0.5">Tüm bölgeler — sistem geneli</p>
       </div>
       <div class="flex gap-2 flex-wrap">
-        <input id="todaySearch" placeholder="Hasta, danışman..." oninput="renderAdminToday()" class="filter-select" style="width:170px">
+        <input id="todaySearch" placeholder="Hasta, danışman..." oninput="_dbRenderAdminToday()" class="filter-select" style="width:170px">
         <select id="todayOwnerFilter" onchange="renderAdminToday()" class="filter-select" style="width:170px">
           <option value="">Tüm Deal Owner'lar</option>
         </select>
@@ -1097,7 +1097,7 @@
         <p class="text-xs text-slate-400 mt-0.5">Tüm bölgeler — sistem geneli</p>
       </div>
       <div class="flex gap-2 flex-wrap">
-        <input id="noshowSearch" placeholder="Hasta, danışman..." oninput="renderAdminNoshow()" class="filter-select" style="width:170px">
+        <input id="noshowSearch" placeholder="Hasta, danışman..." oninput="_dbRenderAdminNoshow()" class="filter-select" style="width:170px">
         <select id="noshowOwnerFilter" onchange="renderAdminNoshow()" class="filter-select" style="width:170px">
           <option value="">Tüm Deal Owner'lar</option>
         </select>
@@ -1136,7 +1136,7 @@
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Ara</label>
-          <input id="caFilterSearch" type="text" placeholder="Deal adı, danışman ara..." oninput="_caApplyFilters()" class="filter-select">
+          <input id="caFilterSearch" type="text" placeholder="Deal adı, danışman ara..." oninput="_dbCaApplyFilters()" class="filter-select">
         </div>
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Bölge</label>
@@ -1214,7 +1214,7 @@
       <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Ara</label>
-          <input id="waFilterSearch" type="text" placeholder="Deal adı, danışman ara..." oninput="_waApplyFilters()" class="filter-select">
+          <input id="waFilterSearch" type="text" placeholder="Deal adı, danışman ara..." oninput="_dbWaApplyFilters()" class="filter-select">
         </div>
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Bölge</label>
@@ -1296,7 +1296,7 @@
         <button onclick="_actReset()" class="text-[10px] text-indigo-400 font-semibold hover:text-indigo-300">Clear All</button>
       </div>
       <div class="flex flex-wrap gap-3 items-end">
-        <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Ara</label><input id="actSearch" type="text" placeholder="Hasta, kişi, not..." oninput="renderAdminActivity()" class="filter-select" style="width:200px"></div>
+        <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Ara</label><input id="actSearch" type="text" placeholder="Hasta, kişi, not..." oninput="_dbRenderAdminActivity()" class="filter-select" style="width:200px"></div>
         <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Aksiyon</label>
           <select id="actType" onchange="renderAdminActivity()" class="filter-select" style="width:170px">
             <option value="">Tümü</option>
@@ -3547,6 +3547,24 @@
     // sonucunu HTML attribute'u olarak kaçış (& ve ") — sıra önemli, çünkü
     // tarayıcı önce HTML'i çözer, ortaya çıkan string'i JS motoruna verir.
     function _jsStrAttr(v) { return String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
+    // Arama kutuları her tuş vuruşunda binlerce satırı yeniden filtrelemesin
+    // diye ortak debounce sarmalayıcı — sadece oninput tetikleyicisi
+    // geciktirilir, fonksiyonun kendisi (başka yerden senkron çağrılabilir)
+    // değişmez.
+    function _debounce(fn, delay) {
+      let t;
+      return function () { const args = arguments; clearTimeout(t); t = setTimeout(() => fn.apply(null, args), delay); };
+    }
+    const _dbApplyFilters        = _debounce(() => applyFilters(), 300);
+    const _dbRenderAdminAlarmTbl = _debounce(() => renderAdminAlarmTable(), 300);
+    const _dbRenderUsersTable    = _debounce(() => renderUsersTable(), 250);
+    const _dbRenderLogs          = _debounce(() => renderLogs(), 250);
+    const _dbFilterTeamList      = _debounce(() => filterTeamList(), 200);
+    const _dbRenderAdminToday    = _debounce(() => renderAdminToday(), 250);
+    const _dbRenderAdminNoshow   = _debounce(() => renderAdminNoshow(), 250);
+    const _dbCaApplyFilters      = _debounce(() => _caApplyFilters(), 250);
+    const _dbWaApplyFilters      = _debounce(() => _waApplyFilters(), 250);
+    const _dbRenderAdminActivity = _debounce(() => renderAdminActivity(), 250);
     function _noteBtn(note) {
       return note ? `<button onclick="showNoteTip(event, this.dataset.note)" data-note="${_escAttr(note)}" style="padding:2px 8px;background:#1e293b;border:1px solid #f59e0b;border-radius:6px;color:#f59e0b;font-size:10px;font-weight:800;cursor:pointer" title="${I18N.t('Notu görüntüle')}">!</button>` : '—';
     }
