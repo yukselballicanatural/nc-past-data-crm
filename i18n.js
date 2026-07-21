@@ -295,6 +295,8 @@
     'İptal sonuç kodu kaydedildi.': 'Cancellation result code saved.',
     'kayıt gösteriliyor': 'records shown',
     'Notu görüntüle': 'View note',
+    'Arrival Tarihi Aralığı': 'Arrival Date Range',
+    'Sayfa Boyutu': 'Page Size',
 
     // ── admin.html: Analytics / Alarm Monitoring / Deal modalı — eksikler ──
     'Canlı · son güncelleme: ': 'Live · last updated: ',

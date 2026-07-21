@@ -26,8 +26,16 @@
     .filter-sel { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:100%; }
     .filter-sel:focus { outline:none; border-color:#0D9488; }
     .filter-sel option { background:#111827; color:#E2E8F0; }
-    .filter-inp { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:100%; }
+    .filter-inp { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:100%; transition:border-color .15s; }
     .filter-inp:focus { outline:none; border-color:#0D9488; }
+    .filter-sel { transition:border-color .15s; }
+
+    /* ── Filtre kartı (Deal Listesi vb.) — etiketli, gruplu filtre alanı ── */
+    .filter-card { background:#0f172a; border:1px solid #1e293b; border-radius:14px; padding:14px 16px 16px; margin-bottom:16px; }
+    .filter-card-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
+    .filter-row { display:flex; gap:14px; align-items:flex-end; flex-wrap:wrap; }
+    .filter-group { display:flex; flex-direction:column; gap:5px; }
+    .filter-label { font-size:9.5px; font-weight:700; color:#5b6b85; text-transform:uppercase; letter-spacing:.06em; }
 
     /* ── Özel takvim (date picker) ─────────────────────────────────── */
     .nc-date-field { position:relative; display:inline-block; }
@@ -440,33 +448,52 @@
 
   <!-- ── VIEW: DEAL LISTESİ ── -->
   <div id="view-deals" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
-      <div>
-        <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Deal Listesi</h2>
-        <p style="font-size:11px;color:#64748b;margin:3px 0 0" id="dealSubtitle">Takımın aktif dealleri</p>
+    <div class="filter-card">
+      <div class="filter-card-head">
+        <div>
+          <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Deal Listesi</h2>
+          <p style="font-size:11px;color:#64748b;margin:3px 0 0" id="dealSubtitle">Takımın aktif dealleri</p>
+        </div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;background:#111827;border:1px solid #374151;border-radius:8px;padding:2px;gap:2px">
+            <button onclick="setDealsViewMode('table')" id="dealsViewBtnTable" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:#4f46e5;color:#fff;transition:all .15s">☰ Tablo</button>
+            <button onclick="setDealsViewMode('kanban')" id="dealsViewBtnKanban" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:transparent;color:#94a3b8;transition:all .15s">▦ Kanban</button>
+          </div>
+          <button onclick="loadDeals(true)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">↻ Yenile</button>
+        </div>
       </div>
-      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-        <input id="dealSearch" class="filter-inp" placeholder="Hasta veya danışman ara..." oninput="debounceDealSearch()" style="width:220px">
-        <select id="dealStageFilter" class="filter-sel" onchange="loadDeals(true)" style="width:160px">
-          <option value="">Tüm Stageler</option>
-        </select>
-        <input id="dealOwnerFilter" class="filter-inp" placeholder="Danışman filtrele..." oninput="debounceDealSearch()" style="width:160px">
-        <div style="display:flex;align-items:center;gap:5px">
-          <input type="date" id="dealDateFrom" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Arrival Date — başlangıç">
-          <span style="color:#475569;font-size:11px">–</span>
-          <input type="date" id="dealDateTo" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Arrival Date — bitiş">
-          <button onclick="ncClearDealDates()" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Tarih filtresini temizle">✕</button>
+      <div class="filter-row">
+        <div class="filter-group" style="flex:1 1 200px;min-width:200px">
+          <label class="filter-label">Ara</label>
+          <input id="dealSearch" class="filter-inp" placeholder="Hasta veya danışman ara..." oninput="debounceDealSearch()">
         </div>
-        <select id="dealPageSizeSel" class="filter-sel" onchange="dealChangePageSize()" style="width:110px">
-          <option value="100">100 / sayfa</option>
-          <option value="500">500 / sayfa</option>
-          <option value="1000">1000 / sayfa</option>
-        </select>
-        <div style="display:flex;background:#111827;border:1px solid #374151;border-radius:8px;padding:2px;gap:2px">
-          <button onclick="setDealsViewMode('table')" id="dealsViewBtnTable" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:#4f46e5;color:#fff;transition:all .15s">☰ Tablo</button>
-          <button onclick="setDealsViewMode('kanban')" id="dealsViewBtnKanban" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:transparent;color:#94a3b8;transition:all .15s">▦ Kanban</button>
+        <div class="filter-group" style="width:160px">
+          <label class="filter-label">Stage</label>
+          <select id="dealStageFilter" class="filter-sel" onchange="loadDeals(true)">
+            <option value="">Tüm Stageler</option>
+          </select>
         </div>
-        <button onclick="loadDeals(true)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">↻ Yenile</button>
+        <div class="filter-group" style="width:160px">
+          <label class="filter-label">Danışman</label>
+          <input id="dealOwnerFilter" class="filter-inp" placeholder="Danışman filtrele..." oninput="debounceDealSearch()">
+        </div>
+        <div class="filter-group">
+          <label class="filter-label">Arrival Tarihi Aralığı</label>
+          <div style="display:flex;align-items:center;gap:5px">
+            <input type="date" id="dealDateFrom" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Arrival Date — başlangıç">
+            <span style="color:#475569;font-size:11px">–</span>
+            <input type="date" id="dealDateTo" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Arrival Date — bitiş">
+            <button onclick="ncClearDealDates()" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0" title="Tarih filtresini temizle">✕</button>
+          </div>
+        </div>
+        <div class="filter-group" style="width:110px">
+          <label class="filter-label">Sayfa Boyutu</label>
+          <select id="dealPageSizeSel" class="filter-sel" onchange="dealChangePageSize()">
+            <option value="100">100 / sayfa</option>
+            <option value="500">500 / sayfa</option>
+            <option value="1000">1000 / sayfa</option>
+          </select>
+        </div>
       </div>
     </div>
     <div id="dealLoading" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;gap:12px">
