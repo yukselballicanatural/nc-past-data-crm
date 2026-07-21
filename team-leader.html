@@ -1579,7 +1579,13 @@
   }
 
   // ── Alarm tipi meta ──────────────────────────────────────────────
-  function alarmTypeMeta(type) {
+  // Alarmın "tipi" (alarm_type) oluşturulduğu anda DB'ye yazılıp bir daha
+  // güncellenmiyor — ör. "Bugün Gelecek" etiketiyle oluşan bir alarm günler
+  // sonra hâlâ aksiyon almamışsa da hep "Bugün Gelecek" görünürdü, oysa
+  // Kalan Gün canlı hesaplanıp "Gecikmiş" gösteriyordu — iki sütun çelişiyordu.
+  // `overdue` (canlı, reference_date'ten hesaplanmış) true ise "gelecek
+  // zaman" ifadeli tipler yerine tutarlı şekilde "Gecikmiş" gösterilir.
+  function alarmTypeMeta(type, overdue) {
     const m = {
       'arrival_approaching': { label:I18N.t('Arrival Yaklaşıyor'), bg:'#431407', color:'#fb923c' },
       'visit_approaching':   { label:I18N.t('Vizit Yaklaşıyor'),   bg:'#1e3a5f', color:'#60a5fa' },
@@ -1588,6 +1594,9 @@
       'payment_tracking':    { label:I18N.t('Payment Takip'),       bg:'#2e1065', color:'#c084fc' },
       'no_show':             { label:I18N.t('Gelemedi'),            bg:'#450a0a', color:'#f87171' },
     };
+    if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(type)) {
+      return { label: I18N.t('Gecikmiş'), bg:'#450a0a', color:'#f87171' };
+    }
     return m[type] || { label: type, bg:'#1e293b', color:'#94a3b8' };
   }
 
@@ -1723,7 +1732,7 @@
     switch (col) {
       case 'deal_name':         return (a.deal_name || '').toLowerCase();
       case 'stage':             return (_tlDealStage(a.deal_id) || '').toLowerCase();
-      case 'alarm_type':        return alarmTypeMeta(a.alarm_type).label.toLowerCase();
+      case 'alarm_type':        return alarmTypeMeta(a.alarm_type, isOverdue(a)).label.toLowerCase();
       case 'reference_field':   return fieldLabel(a.reference_field).toLowerCase();
       case 'reference_date':    return a.reference_date || '';
       case 'days_left': {
@@ -1827,9 +1836,9 @@
     cnt.textContent = `${data.length} ${I18N.t('alarm gösteriliyor')}`;
 
     tbody.innerHTML = data.map((a, i) => {
-      const tm     = alarmTypeMeta(a.alarm_type);
-      const sm     = statusMeta(a.status);
       const overdue = isOverdue(a);
+      const tm     = alarmTypeMeta(a.alarm_type, overdue);
+      const sm     = statusMeta(a.status);
       const rowBg   = overdue ? 'rgba(127,29,29,0.12)' : isToday(a) ? 'rgba(5,46,22,0.2)' : '';
       const urgCls  = getRowUrgencyClass(a);
       const pftBadge = a.payment_or_flight_ticket === 'Payment'
@@ -2139,7 +2148,7 @@
 
   function openAlarmModal(a) {
     currentAlarm = a;
-    const tm = alarmTypeMeta(a.alarm_type);
+    const tm = alarmTypeMeta(a.alarm_type, isOverdue(a));
     const sm = statusMeta(a.status);
     document.getElementById('modalDealName').innerHTML = a.deal_id
       ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''" title="${I18N.t("Zoho'da Aç")}">${fmt(a.deal_name) || '—'} ↗</a>`
@@ -2894,7 +2903,7 @@
       dmAl.innerHTML = `<p style="color:#475569;font-size:12px">${I18N.t('Bu deal için aktif alarm yok.')}</p>`;
     } else {
       dmAl.innerHTML = dealAlarms.map(a => {
-        const tm = alarmTypeMeta(a.alarm_type);
+        const tm = alarmTypeMeta(a.alarm_type, isOverdue(a));
         const sm = statusMeta(a.status);
         return `<div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span>
@@ -3696,9 +3705,10 @@
     if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
     tbody.innerHTML = data.map((a, i) => {
-      const tm = alarmTypeMeta(a.alarm_type);
+      const overdue = isOverdue(a);
+      const tm = alarmTypeMeta(a.alarm_type, overdue);
       const sm = statusMeta(a.status);
-      const rowBg = isOverdue(a) ? 'rgba(127,29,29,0.12)' : isToday(a) ? 'rgba(5,46,22,0.2)' : '';
+      const rowBg = overdue ? 'rgba(127,29,29,0.12)' : isToday(a) ? 'rgba(5,46,22,0.2)' : '';
       const safeId = a.id;
       return `<tr onclick="openAlarmById('${safeId}')" style="${rowBg ? 'background:'+rowBg : ''}">
         <td style="color:#475569;font-size:10px">${i+1}</td>
@@ -3747,9 +3757,10 @@
     empty.style.display = 'none';
 
     tbody.innerHTML = data.map((a, i) => {
-      const tm = alarmTypeMeta(a.alarm_type);
+      const overdue = isOverdue(a);
+      const tm = alarmTypeMeta(a.alarm_type, overdue);
       const sm = statusMeta(a.status);
-      const rowBg = isOverdue(a) ? 'rgba(127,29,29,0.12)' : isToday(a) ? 'rgba(5,46,22,0.2)' : '';
+      const rowBg = overdue ? 'rgba(127,29,29,0.12)' : isToday(a) ? 'rgba(5,46,22,0.2)' : '';
       return `<tr onclick="openAlarmById('${a.id}')" style="${rowBg ? 'background:'+rowBg : ''}">
         <td style="color:#475569;font-size:10px">${i+1}</td>
         <td>

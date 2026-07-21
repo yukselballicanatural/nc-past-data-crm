@@ -1706,7 +1706,11 @@
       return !!(a.reference_date && _amDaysUntil(a.reference_date) === 0);
     }
 
-    function _amTypeMeta(type) {
+    // overdue (canlı, reference_date'ten hesaplanan _amIsOverdue) true ise
+    // "gelecek zaman" ifadeli tipler (Bugün Gelecek / Yaklaşıyor) yerine
+    // Kalan Gün sütunuyla tutarlı şekilde "Gecikmiş" gösterilir — aksi halde
+    // hâlâ oluşturulduğu andaki (artık yanlış) etiketle görünmeye devam ederdi.
+    function _amTypeMeta(type, overdue) {
       const m = {
         'arrival_approaching':{ label:I18N.t('Arrival Yaklaşıyor'), color:'#fb923c' },
         'visit_approaching':  { label:I18N.t('Vizit Yaklaşıyor'),   color:'#60a5fa' },
@@ -1715,6 +1719,9 @@
         'payment_tracking':   { label:I18N.t('Payment Takip'),       color:'#c084fc' },
         'no_show':            { label:I18N.t('Gelemedi'),            color:'#f87171' },
       };
+      if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(type)) {
+        return { label: I18N.t('Gecikmiş'), color:'#f87171' };
+      }
       return m[type] || { label: type, color:'#94a3b8' };
     }
 
@@ -2863,10 +2870,10 @@
       const td = 'padding:8px 10px;border-bottom:1px solid #0f172a';
       tbody.innerHTML = pageData.map((a, _pi) => {
         const i = pageStart + _pi;
-        const tm  = _amTypeMeta(a.alarm_type);
         const sm  = _amStatusMeta(a.status);
         const days = _amDaysUntil(a.reference_date);
         const overdue = _amIsOverdue(a);
+        const tm  = _amTypeMeta(a.alarm_type, overdue);
         const daysTxt = days === null ? '—' : days < 0 ? `<span style="color:#f87171;font-weight:700">${Math.abs(days)}g ${I18N.t('GEÇ')}</span>` : days === 0 ? `<span style="color:#4ade80;font-weight:800">${I18N.t('BUGÜN')}</span>` : days <= 3 ? `<span style="color:#f87171">${days}g</span>` : days <= 7 ? `<span style="color:#fb923c">${days}g</span>` : `<span style="color:#60a5fa">${days}g</span>`;
         const rowBg = overdue ? 'rgba(127,29,29,0.12)' : '';
         // Alarmın deal'inin gerçek verisi (kısa Deal ID referansı, stage,
@@ -2919,7 +2926,7 @@
         case 'ref':    return (info.ref || a.deal_id || '').toLowerCase();
         case 'stage':  return (info.stage || '').toLowerCase();
         case 'team':   return (a.team || '').toLowerCase();
-        case 'type':   return _amTypeMeta(a.alarm_type).label.toLowerCase();
+        case 'type':   return _amTypeMeta(a.alarm_type, _amIsOverdue(a)).label.toLowerCase();
         case 'date':   return a.reference_date || '';
         case 'days':   { const d = _amDaysUntil(a.reference_date); return d === null ? 999999 : d; }
         case 'amount': return info.amount || 0;
@@ -2958,7 +2965,7 @@
       const zohoLink = document.getElementById('aamZohoLink');
       if (a.deal_id) { zohoLink.href = `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}`; zohoLink.style.display = ''; }
       else { zohoLink.style.display = 'none'; }
-      const tm = _amTypeMeta(a.alarm_type);
+      const tm = _amTypeMeta(a.alarm_type, _amIsOverdue(a));
       const sm = _amStatusMeta(a.status);
       document.getElementById('aamDealName').textContent  = a.deal_name || '—';
       document.getElementById('aamDealOwner').textContent = `${a.deal_owner||'—'} · ${a.team||'—'} · ${a.region||'—'}`;
