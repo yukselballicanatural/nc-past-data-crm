@@ -244,6 +244,7 @@
         <button onclick="switchView('noshow')" class="nav-btn" id="nav-noshow">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
           No-show
+          <span id="noshowAlarmBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:800;padding:1px 6px;min-width:20px;text-align:center">0</span>
         </button>
         <button onclick="switchView('cancelled-alarms')" class="nav-btn" id="nav-cancelled-alarms">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1795,6 +1796,14 @@
           const todayCount = all.filter(a => _amIsToday(a) && (activeSet.has(a.status) || a.status === 'no_show')).length;
           if (todayCount > 0) { todayBadge.textContent = todayCount; todayBadge.style.display = 'inline-block'; }
           else todayBadge.style.display = 'none';
+        }
+        // No-show menü rozeti — renderAdminNoshow() ile aynı filtre, sayfaya
+        // hiç girilmeden de doğru sayı görünsün.
+        const noshowBadge = document.getElementById('noshowAlarmBadge');
+        if (noshowBadge) {
+          const noshowCount = all.filter(a => a.status === 'no_show').length;
+          if (noshowCount > 0) { noshowBadge.textContent = noshowCount; noshowBadge.style.display = 'inline-block'; }
+          else noshowBadge.style.display = 'none';
         }
       } catch(e) {
         document.getElementById('adminEngineStatus').textContent = I18N.t('Yükleme hatası: ') + e.message;

@@ -172,6 +172,7 @@
       <button onclick="switchView('noshow')" class="nav-btn" id="nav-noshow">
         <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/></svg>
         <span>No-show Raporu</span>
+        <span id="navBadgeNoshow" class="badge-cnt ml-auto" style="background:#dc2626;color:#fff;display:none">0</span>
       </button>
       <button onclick="switchView('cancelled')" class="nav-btn" id="nav-cancelled">
         <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
@@ -1949,6 +1950,14 @@
     else nbA.style.display = 'none';
     if (todayCnt > 0) { nbT.textContent = todayCnt; nbT.style.display = 'inline-flex'; }
     else nbT.style.display = 'none';
+
+    // No-show menü rozeti — sayfaya hiç girilmeden de doğru sayı görünsün
+    const nbN = document.getElementById('navBadgeNoshow');
+    if (nbN) {
+      const noshowCnt = allAlarms.filter(a => a.status === 'no_show').length;
+      if (noshowCnt > 0) { nbN.textContent = noshowCnt; nbN.style.display = 'inline-flex'; }
+      else nbN.style.display = 'none';
+    }
 
     // Metrics strip güncelle
     renderMetricsStrip();
@@ -3892,6 +3901,13 @@
 
       // Alarmları yükle
       await loadAlarms();
+
+      // İptal Edilenler / Won Alarmı menü rozetleri de diğer alarm
+      // sayfaları gibi girişte arka planda önceden yüklenir — kullanıcı
+      // sayfaya hiç girmeden de menüde doğru sayı görünsün (bkz. admin.html
+      // aynı davranış). Alarmlar ekranını bloklamamak için await edilmez.
+      loadCancelledDeals();
+      loadWonAlarms();
 
       // RM için özel nav + default view
       if (isRM) {
