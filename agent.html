@@ -37,6 +37,7 @@
     .deal-tbl tbody tr.row-red td { background:rgba(127,29,29,0.15); }
     .deal-tbl tbody tr.row-amber td { background:rgba(120,53,15,0.12); }
     .tab-badge { display:inline-flex; align-items:center; justify-content:center; min-width:26px; padding:1px 6px; border-radius:9999px; font-size:10px; font-weight:700; line-height:1.6; }
+    .kpi-val { white-space:nowrap; overflow:hidden; display:block; }
     #dealModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
     #dealModal.open { display:flex; }
     .modal-backdrop { position:absolute; inset:0; background:rgba(0,0,0,0.75); }
@@ -47,7 +48,7 @@
 <body class="min-h-screen text-slate-100 flex flex-col lg:flex-row">
 
   <!-- Sidebar -->
-  <aside class="w-full lg:w-64 lg:min-h-screen bg-gray-900 border-b lg:border-b-0 lg:border-r border-gray-800 p-5 flex flex-col justify-between sticky top-0 z-50 shrink-0" style="max-height:100vh;overflow-y:auto;">
+  <aside class="w-full lg:w-64 lg:min-h-screen bg-gray-900 border-b lg:border-b-0 lg:border-r border-gray-800 p-5 flex flex-col justify-between lg:sticky lg:top-0 z-50 shrink-0" style="max-height:100vh;overflow-y:auto;">
     <div class="space-y-5">
       <div class="flex items-center gap-2 pb-4 border-b border-gray-800">
         <div style="flex:1;min-width:0">
@@ -126,21 +127,21 @@
 
     <!-- KPI row 2: financial breakdown by date type -->
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-      <div class="bg-gray-900/70 border border-amber-900/30 rounded-xl p-2.5">
+      <div class="bg-gray-900/70 border border-amber-900/30 rounded-xl p-2.5 overflow-hidden">
         <div class="text-[9px] text-amber-500 font-semibold uppercase">Past Arrival — Paid</div>
-        <div class="text-sm font-bold text-emerald-400 mt-1" id="kpiArrPaid">€0</div>
+        <div class="text-sm font-bold text-emerald-400 mt-1 kpi-val" id="kpiArrPaid">€0</div>
       </div>
-      <div class="bg-gray-900/70 border border-amber-900/30 rounded-xl p-2.5">
+      <div class="bg-gray-900/70 border border-amber-900/30 rounded-xl p-2.5 overflow-hidden">
         <div class="text-[9px] text-amber-500 font-semibold uppercase">Past Arrival — Unpaid</div>
-        <div class="text-sm font-bold text-red-400 mt-1" id="kpiArrUnpaid">€0</div>
+        <div class="text-sm font-bold text-red-400 mt-1 kpi-val" id="kpiArrUnpaid">€0</div>
       </div>
-      <div class="bg-gray-900/70 border border-blue-900/30 rounded-xl p-2.5">
+      <div class="bg-gray-900/70 border border-blue-900/30 rounded-xl p-2.5 overflow-hidden">
         <div class="text-[9px] text-blue-500 font-semibold uppercase">Past Visit — Paid</div>
-        <div class="text-sm font-bold text-emerald-400 mt-1" id="kpiVisPaid">€0</div>
+        <div class="text-sm font-bold text-emerald-400 mt-1 kpi-val" id="kpiVisPaid">€0</div>
       </div>
-      <div class="bg-gray-900/70 border border-blue-900/30 rounded-xl p-2.5">
+      <div class="bg-gray-900/70 border border-blue-900/30 rounded-xl p-2.5 overflow-hidden">
         <div class="text-[9px] text-blue-500 font-semibold uppercase">Past Visit — Unpaid</div>
-        <div class="text-sm font-bold text-red-400 mt-1" id="kpiVisUnpaid">€0</div>
+        <div class="text-sm font-bold text-red-400 mt-1 kpi-val" id="kpiVisUnpaid">€0</div>
       </div>
     </div>
 
@@ -1052,7 +1053,7 @@
   </div>
 
   <!-- ── In-site Notice (success / error) ── -->
-  <div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:0.85rem;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);white-space:nowrap"></div>
+  <div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:0.85rem;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);max-width:92vw;white-space:normal;word-break:break-word;text-align:center"></div>
 
 </body>
 </html>

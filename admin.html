@@ -11,6 +11,7 @@
   <script src="alarm-engine.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
+    *, *::before, *::after { box-sizing: border-box; }
     body { font-family: 'Inter', sans-serif; background-color: #080b11; }
     h1,h2,h3 { font-family: 'Outfit', sans-serif; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -186,7 +187,7 @@
     .aam-info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .aam-info-card { background:#111827; border:1px solid #1e293b; border-radius:10px; padding:10px 12px; }
     .aam-info-label { font-size:9px; color:#475569; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:3px; }
-    .aam-info-val { font-size:12px; color:#e2e8f0; font-weight:500; }
+    .aam-info-val { font-size:12px; color:#e2e8f0; font-weight:500; overflow-wrap:anywhere; }
     .aam-info-section { grid-column:1/-1; font-size:10px; font-weight:700; color:#818cf8; text-transform:uppercase; letter-spacing:0.08em; }
     textarea.aam-note { background:#111827; border:1px solid #374151; color:#e2e8f0; border-radius:10px; padding:10px 12px; font-size:12px; width:100%; resize:vertical; min-height:80px; box-sizing:border-box; }
     textarea.aam-note:focus { outline:none; border-color:#0d9488; }
@@ -888,9 +889,9 @@
           <span class="am-region-count" id="istTeamCount">0 takım</span>
         </div>
         <div class="grid grid-cols-3 gap-2 mb-1">
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400" id="istOpen">0</div></div>
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Gecikmiş</div><div class="text-xl font-bold text-red-400" id="istOverdue">0</div></div>
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400" id="istNoshow">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400 kpi-val" id="istOpen">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Gecikmiş</div><div class="text-xl font-bold text-red-400 kpi-val" id="istOverdue">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400 kpi-val" id="istNoshow">0</div></div>
         </div>
         <div class="am-region-bar mb-4"><div id="istRatioBar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#f87171)"></div></div>
         <div id="istTeamList" class="space-y-1.5 am-team-scroll"></div>
@@ -905,9 +906,9 @@
           <span class="am-region-count" id="morTeamCount">0 takım</span>
         </div>
         <div class="grid grid-cols-3 gap-2 mb-1">
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400" id="morOpen">0</div></div>
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">Gecikmiş</div><div class="text-xl font-bold text-red-400" id="morOverdue">0</div></div>
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400" id="morNoshow">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400 kpi-val" id="morOpen">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Gecikmiş</div><div class="text-xl font-bold text-red-400 kpi-val" id="morOverdue">0</div></div>
+          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400 kpi-val" id="morNoshow">0</div></div>
         </div>
         <div class="am-region-bar mb-4"><div id="morRatioBar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#f87171)"></div></div>
         <div id="morTeamList" class="space-y-1.5 am-team-scroll"></div>
@@ -1035,7 +1036,7 @@
         <span>Toplam Ödenen: <strong class="text-emerald-400 font-bold" id="amTotalPaid">€0</strong></span>
         <span>Toplam Kalan: <strong class="text-red-400 font-bold" id="amTotalRemaining">€0</strong></span>
       </div>
-      <div id="adminAlarmPager" style="display:none;align-items:center;justify-content:center;gap:12px;margin-top:10px">
+      <div id="adminAlarmPager" style="display:none;align-items:center;justify-content:center;gap:12px;margin-top:10px;flex-wrap:wrap">
         <button id="adminAlarmPrevBtn" onclick="_aaChangePage(-1)" class="am-btn" style="padding:4px 14px">‹ Önceki</button>
         <span id="adminAlarmPageInfo" class="text-xs text-slate-400"></span>
         <button id="adminAlarmNextBtn" onclick="_aaChangePage(1)" class="am-btn" style="padding:4px 14px">Sonraki ›</button>
@@ -1131,7 +1132,7 @@
         <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Filters</span>
         <button onclick="_caResetFilters()" class="text-[10px] text-indigo-400 font-semibold hover:text-indigo-300">Clear All</button>
       </div>
-      <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Ara</label>
           <input id="caFilterSearch" type="text" placeholder="Deal adı, danışman ara..." oninput="_caApplyFilters()" class="filter-select">
@@ -1156,11 +1157,11 @@
             <option value="">Tüm Deal Owner'lar</option>
           </select>
         </div>
-        <div class="flex items-end gap-2">
+        <div class="flex items-end gap-2 col-span-2">
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (baş.)</label><input type="date" id="caArrFrom" onchange="_caApplyFilters()"></div>
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (bit.)</label><input type="date" id="caArrTo" onchange="_caApplyFilters()"></div>
         </div>
-        <div class="flex items-end gap-2">
+        <div class="flex items-end gap-2 col-span-2">
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (baş.)</label><input type="date" id="caCreatedFrom" onchange="_caApplyFilters()"></div>
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (bit.)</label><input type="date" id="caCreatedTo" onchange="_caApplyFilters()"></div>
         </div>
@@ -1187,7 +1188,7 @@
         </table>
       </div>
       <div id="cancelledAlarmEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">İptal edilmiş alarm bulunamadı.</div>
-      <div id="cancelledAlarmPager" style="display:none;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-top:1px solid #1e293b">
+      <div id="cancelledAlarmPager" style="display:none;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-top:1px solid #1e293b;flex-wrap:wrap">
         <span class="text-xs text-slate-500" id="cancelledAlarmPageInfo"></span>
         <div style="display:flex;gap:6px">
           <button onclick="_caChangePage(-1)" id="cancelledAlarmPrevBtn" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700 disabled:opacity-40" style="cursor:pointer">← Önceki</button>
@@ -1208,7 +1209,7 @@
         <span class="text-xs font-bold text-slate-300 uppercase tracking-wider">Filters</span>
         <button onclick="_waResetFilters()" class="text-[10px] text-indigo-400 font-semibold hover:text-indigo-300">Clear All</button>
       </div>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Ara</label>
           <input id="waFilterSearch" type="text" placeholder="Deal adı, danışman ara..." oninput="_waApplyFilters()" class="filter-select">
@@ -1241,11 +1242,11 @@
             <option value="">Tüm Deal Owner'lar</option>
           </select>
         </div>
-        <div class="flex items-end gap-2">
+        <div class="flex items-end gap-2 col-span-2">
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (baş.)</label><input type="date" id="waArrFrom" onchange="_waApplyFilters()"></div>
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (bit.)</label><input type="date" id="waArrTo" onchange="_waApplyFilters()"></div>
         </div>
-        <div class="flex items-end gap-2">
+        <div class="flex items-end gap-2 col-span-2">
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (baş.)</label><input type="date" id="waCreatedFrom" onchange="_waApplyFilters()"></div>
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (bit.)</label><input type="date" id="waCreatedTo" onchange="_waApplyFilters()"></div>
         </div>
@@ -1271,7 +1272,7 @@
         </table>
       </div>
       <div id="wonAlarmEmpty" style="display:none;text-align:center;padding:60px 16px;color:#475569;font-size:13px">Ödeme uyuşmazlığı olan Won deal bulunamadı.</div>
-      <div id="wonAlarmPager" style="display:none;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-top:1px solid #1e293b">
+      <div id="wonAlarmPager" style="display:none;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;border-top:1px solid #1e293b;flex-wrap:wrap">
         <span class="text-xs text-slate-500" id="wonAlarmPageInfo"></span>
         <div style="display:flex;gap:6px">
           <button onclick="_waChangePage(-1)" id="wonAlarmPrevBtn" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700 disabled:opacity-40" style="cursor:pointer">← Önceki</button>
@@ -1449,7 +1450,7 @@
           <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         </button>
       </div>
-      <div class="aam-info-grid mb-4" style="grid-template-columns:repeat(3,1fr)">
+      <div class="aam-info-grid mb-4" style="grid-template-columns:repeat(3,minmax(96px,1fr))">
         <div class="aam-info-card"><div class="aam-info-label">Stage</div><div class="aam-info-val" id="cdmStage">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Arrival Date</div><div class="aam-info-val" id="cdmArrival">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Tutar / Ödenen</div><div class="aam-info-val" id="cdmMoney">—</div></div>
@@ -1833,9 +1834,12 @@
         const openCount    = ra.filter(a => active.has(a.status) && a.status !== 'arrived' && a.status !== 'examined').length;
         const overdueCount = ra.filter(a => _amIsOverdue(a)).length;
         const noshowCount  = ra.filter(a => a.status === 'no_show').length;
-        document.getElementById(prefix + 'Open').textContent    = openCount;
-        document.getElementById(prefix + 'Overdue').textContent = overdueCount;
-        document.getElementById(prefix + 'Noshow').textContent  = noshowCount;
+        ['Open','Overdue','Noshow'].forEach((suffix, i) => {
+          const el = document.getElementById(prefix + suffix);
+          if (!el) return;
+          el.textContent = [openCount, overdueCount, noshowCount][i];
+          fitKpiText(el);
+        });
         const ratioTotal = openCount + overdueCount + noshowCount;
         const ratioBar = document.getElementById(prefix + 'RatioBar');
         if (ratioBar) ratioBar.style.width = ratioTotal ? Math.round((overdueCount + noshowCount) / ratioTotal * 100) + '%' : '0%';
@@ -5817,7 +5821,7 @@
     })();
   </script>
 
-  <div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:0.85rem;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);white-space:nowrap"></div>
+  <div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:0.85rem;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);max-width:92vw;white-space:normal;word-break:break-word;text-align:center"></div>
   <div id="notePopup" style="display:none;position:fixed;z-index:10001;max-width:280px;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;font-size:12px;color:#cbd5e1;box-shadow:0 8px 30px rgba(0,0,0,0.5);word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap"></div>
   <script>
     function showNoteTip(ev, text) {

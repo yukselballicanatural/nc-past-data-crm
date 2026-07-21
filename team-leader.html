@@ -87,7 +87,7 @@
     .info-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
     .info-card { background:#111827; border:1px solid #1e293b; border-radius:10px; padding:10px 12px; }
     .info-label { font-size:9px; color:#475569; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:3px; }
-    .info-val { font-size:12px; color:#e2e8f0; font-weight:500; }
+    .info-val { font-size:12px; color:#e2e8f0; font-weight:500; overflow-wrap:anywhere; }
     textarea.modal-note { background:#111827; border:1px solid #374151; color:#e2e8f0; border-radius:10px; padding:10px 12px; font-size:12px; width:100%; resize:vertical; min-height:80px; }
     textarea.modal-note:focus { outline:none; border-color:#0d9488; }
 
@@ -326,14 +326,14 @@
         <option value="7">7 Gün</option>
         <option value="3">3 Gün</option>
       </select>
-      <div style="display:flex;align-items:center;gap:5px">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
         <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Arrival</span>
         <input type="date" id="alarmArrFrom" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Arrival Date — başlangıç">
         <span style="color:#475569;font-size:11px">–</span>
         <input type="date" id="alarmArrTo" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Arrival Date — bitiş">
         <button onclick="NCDatePicker.setValue('alarmArrFrom','');NCDatePicker.setValue('alarmArrTo','')" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Arrival tarih filtresini temizle">✕</button>
       </div>
-      <div style="display:flex;align-items:center;gap:5px">
+      <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
         <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Created</span>
         <input type="date" id="alarmCreatedFrom" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Created Time — başlangıç">
         <span style="color:#475569;font-size:11px">–</span>
@@ -479,7 +479,7 @@
         </div>
         <div class="filter-group">
           <label class="filter-label">Arrival Tarihi Aralığı</label>
-          <div style="display:flex;align-items:center;gap:5px">
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
             <input type="date" id="dealDateFrom" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Arrival Date — başlangıç">
             <span style="color:#475569;font-size:11px">–</span>
             <input type="date" id="dealDateTo" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Arrival Date — bitiş">
@@ -690,13 +690,13 @@
             <option value="">Tüm Danışmanlar</option>
           </select>
         </div>
-        <div style="display:flex;align-items:center;gap:5px">
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
           <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Arrival</span>
           <input type="date" id="tlcaArrFrom" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
           <span style="color:#475569">–</span>
           <input type="date" id="tlcaArrTo" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
         </div>
-        <div style="display:flex;align-items:center;gap:5px">
+        <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
           <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Created</span>
           <input type="date" id="tlcaCreatedFrom" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
           <span style="color:#475569">–</span>
@@ -760,7 +760,7 @@
         </div>
         <div class="filter-group">
           <label class="filter-label">Arrival Tarihi Aralığı</label>
-          <div style="display:flex;align-items:center;gap:5px">
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
             <input type="date" id="tlwaArrFrom" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
             <span style="color:#475569;font-size:11px">–</span>
             <input type="date" id="tlwaArrTo" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
@@ -768,7 +768,7 @@
         </div>
         <div class="filter-group">
           <label class="filter-label">Oluşturulma Tarihi Aralığı</label>
-          <div style="display:flex;align-items:center;gap:5px">
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
             <input type="date" id="tlwaCreatedFrom" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
             <span style="color:#475569;font-size:11px">–</span>
             <input type="date" id="tlwaCreatedTo" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
@@ -1004,10 +1004,10 @@
         <svg style="width:18px;height:18px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px">
-      <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Stage</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px" id="tlcaStage">—</div></div>
-      <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Arrival</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px" id="tlcaArrival">—</div></div>
-      <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Tutar / Ödenen</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px" id="tlcaMoney">—</div></div>
+    <div style="display:grid;grid-template-columns:repeat(3,minmax(96px,1fr));gap:8px;margin-bottom:14px">
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;min-width:0"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Stage</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px;overflow-wrap:anywhere" id="tlcaStage">—</div></div>
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;min-width:0"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Arrival</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px;overflow-wrap:anywhere" id="tlcaArrival">—</div></div>
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;min-width:0"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Tutar / Ödenen</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px;overflow-wrap:anywhere" id="tlcaMoney">—</div></div>
     </div>
     <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:14px">
       <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;margin-bottom:4px">İptal Nedeni</div>
@@ -1037,7 +1037,7 @@
 </div>
 
 <!-- Bildirim -->
-<div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);white-space:nowrap"></div>
+<div id="siteNotice" style="display:none;position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:10000;padding:12px 24px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,0.5);max-width:92vw;white-space:normal;word-break:break-word;text-align:center"></div>
 <div id="notePopup" style="display:none;position:fixed;z-index:10001;max-width:280px;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;font-size:12px;color:#cbd5e1;box-shadow:0 8px 30px rgba(0,0,0,0.5);word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap"></div>
 <div id="siteConfirm" style="display:none;position:fixed;inset:0;z-index:10002;background:rgba(0,0,0,0.7);align-items:center;justify-content:center">
   <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;max-width:440px;width:95%;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
@@ -1191,6 +1191,10 @@
       const popup = document.createElement('div');
       popup.className = 'nc-cal-popup';
       trigger.parentNode.appendChild(popup);
+      // Takvim, tetikleyicinin sağında yer kalmıyorsa (dar ekran/sağ kenardaki
+      // "bitiş" tarihi alanları) ekran dışına taşmasın diye sağa hizalanır.
+      const rect = trigger.getBoundingClientRect();
+      if (rect.left + 264 > window.innerWidth) { popup.style.left = 'auto'; popup.style.right = '0'; }
       openState = { inputId, view: 'days', cursor, selected: sel, popupEl: popup };
       render();
       setTimeout(() => document.addEventListener('mousedown', onDocClick, true), 0);
@@ -2394,10 +2398,10 @@
           </button>
         </div>` : `
         <div style="display:flex;gap:6px;margin-top:10px;flex-wrap:wrap">
-          <button onclick="quickAction('${a.id}','arrived')" style="flex:1;padding:6px;background:#052e16;border:1px solid #166534;border-radius:8px;color:#4ade80;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Hasta Geldi</button>
-          <button onclick="quickAction('${a.id}','examined')" style="flex:1;padding:6px;background:#083344;border:1px solid #0e7490;border-radius:8px;color:#67e8f9;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Muayene</button>
-          <button onclick="quickAction('${a.id}','processing')" style="flex:1;padding:6px;background:#042f2e;border:1px solid #0d9488;border-radius:8px;color:#2dd4bf;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">İşlemlerde</button>
-          <button onclick="quickAction('${a.id}','no_show')" style="flex:1;padding:6px;background:#450a0a;border:1px solid #7f1d1d;border-radius:8px;color:#f87171;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Gelemedi</button>
+          <button onclick="quickAction('${a.id}','arrived')" style="flex:1;min-width:76px;padding:6px;background:#052e16;border:1px solid #166534;border-radius:8px;color:#4ade80;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Hasta Geldi</button>
+          <button onclick="quickAction('${a.id}','examined')" style="flex:1;min-width:76px;padding:6px;background:#083344;border:1px solid #0e7490;border-radius:8px;color:#67e8f9;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Muayene</button>
+          <button onclick="quickAction('${a.id}','processing')" style="flex:1;min-width:76px;padding:6px;background:#042f2e;border:1px solid #0d9488;border-radius:8px;color:#2dd4bf;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">İşlemlerde</button>
+          <button onclick="quickAction('${a.id}','no_show')" style="flex:1;min-width:76px;padding:6px;background:#450a0a;border:1px solid #7f1d1d;border-radius:8px;color:#f87171;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Gelemedi</button>
         </div>`;
       const pftDisplay = a.payment_or_flight_ticket === 'Payment'
         ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#2e1065;color:#c084fc;border:1px solid #4c1d95">Payment</span>'
@@ -3798,6 +3802,17 @@
     if (full.style.display !== 'none') { full.style.display = 'none'; mini.style.display = 'flex'; }
     else { full.style.display = 'flex'; mini.style.display = 'none'; }
   }
+
+  // Dar ekranlarda (tablet/mobil) tam sidebar (260px) içeriği ezip
+  // kullanılmaz hale getiriyordu — ilk açılışta ekran darsa mini (56px)
+  // sidebar ile başla. Kullanıcı toggleSidebar() ile istediği an genişletebilir.
+  (function () {
+    if (window.innerWidth <= 900) {
+      const full = document.getElementById('sidebarFull');
+      const mini = document.getElementById('sidebarMini');
+      if (full && mini) { full.style.display = 'none'; mini.style.display = 'flex'; }
+    }
+  })();
 
   // ── Logout ───────────────────────────────────────────────────────
   function doLogout() { sessionStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
