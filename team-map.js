@@ -47,6 +47,10 @@ window.TeamMap = (function () {
       label: 'SM - Mert Team', leader: 'Joseph Stone', region: 'Istanbul',
       aliases: ['SM- Mert Team', 'Mert Jospeh - Sales Master'],
     },
+    'Sales Master - Amin Connor West': { // eski deallarda "SM Amin Connor - Team" olarak geçiyor
+      label: 'Connor West Team', leader: 'Connor West', region: 'Istanbul',
+      aliases: ['Sales Master - Amin Connor West', 'SM Amin Connor - Team'],
+    },
     'Farah Team - Morocco': {
       label: 'Farah Team', leader: 'Farah El Moujahed', region: 'Morocco',
       aliases: ['Farah Team - Morocco', 'Team Leader - Farah'],
