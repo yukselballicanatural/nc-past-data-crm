@@ -8,8 +8,10 @@
 // toplu migrasyon script'i gerekmez, her kullanıcı ilk girişinde kendiliğinden
 // güvenli hale gelir.
 import bcrypt from 'bcryptjs';
+import { signToken, normalizeRole } from './_auth.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
+const TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 saat — bir mesai günü
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -74,6 +76,17 @@ export default async function handler(req, res) {
     if (!ok) { res.status(401).json({ error: GENERIC }); return; }
 
     delete user.Password; // Client'a asla şifre/hash dönmez
+
+    // admin/super-admin ise, Users sayfasının service_role gerektiren
+    // uçlarını (api/admin-users.js) çağırabilmesi için imzalı bir token
+    // ekle. Diğer roller için gereksiz — token yine de üretilse zararsız
+    // olurdu ama sadece ihtiyacı olana veriliyor.
+    const AUTH_SECRET = process.env.AUTH_TOKEN_SECRET;
+    const role = normalizeRole(user['Role']);
+    if (AUTH_SECRET && (role === 'admin' || role === 'super-admin')) {
+      user.token = signToken({ u: user['Username'], r: role, exp: Date.now() + TOKEN_TTL_MS }, AUTH_SECRET);
+    }
+
     res.status(200).json({ ok: true, user });
   } catch (e) {
     res.status(500).json({ error: 'Sunucu hatası: ' + e.message });

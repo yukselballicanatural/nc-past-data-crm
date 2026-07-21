@@ -399,7 +399,12 @@
         .replace(/ÄŸ/g,'ğ').replace(/Äž/g,'Ğ').replace(/ÅŸ/g,'ş').replace(/Åž/g,'Ş')
         .replace(/Ã¢/g,'â').replace(/Ã‚/g,'Â').replace(/Ã¡/g,'á').replace(/Ã©/g,'é');
     }
-    function fmt(v) { return (v === null || v === undefined || v === '') ? '—' : fixTR(String(v)); }
+    // HTML'e gömülecek her dinamik değer (deal adı, danışman notu vb. —
+    // Zoho'dan/kullanıcıdan gelen, güvenilmeyen metin) burada escape edilir.
+    // fmt() neredeyse her innerHTML render'ında kullanıldığı için tek
+    // noktadan XSS'e kapatıyor.
+    function _escHtml(v) { return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+    function fmt(v) { return (v === null || v === undefined || v === '') ? '—' : _escHtml(fixTR(String(v))); }
     function fmtMoney(v) {
       if (!v && v !== 0) return '€0';
       return '€' + Number(v).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2});
@@ -420,7 +425,7 @@
       else if (s.includes('appointment')) cls = 'stage-Appointment';
       else if (s.includes('reservation')) cls = 'stage-Reservation';
       else if (s.includes('waiting')) cls = 'stage-Waiting';
-      return `<span class="stage-pill ${cls}">${stage}</span>`;
+      return `<span class="stage-pill ${cls}">${fmt(stage)}</span>`;
     }
 
     function updateKPIs() {
@@ -503,12 +508,12 @@
         let resultBadge;
         if (isLocked) {
           const cont = isContinuing(d.sub_code);
-          const label = d.sub_code || d.result_code || 'Locked';
+          const label = fmt(d.sub_code || d.result_code || 'Locked');
           resultBadge = cont
             ? `<span class="inline-flex items-center text-[9px] bg-blue-900/40 text-blue-400 px-2 py-0.5 rounded-full font-bold whitespace-nowrap max-w-[120px] overflow-hidden text-ellipsis" title="${label}">&#9654; ${label}</span>`
             : `<span class="inline-flex items-center text-[9px] bg-emerald-900/50 text-emerald-400 px-2 py-0.5 rounded-full font-bold whitespace-nowrap max-w-[120px] overflow-hidden text-ellipsis" title="${label}">&#10003; ${label}</span>`;
         } else if (d.status === 'not_reached') {
-          const label = d.sub_code || 'Not Reached';
+          const label = fmt(d.sub_code || 'Not Reached');
           resultBadge = `<span class="inline-flex items-center text-[9px] bg-slate-700/60 text-slate-400 px-2 py-0.5 rounded-full font-bold whitespace-nowrap max-w-[120px] overflow-hidden text-ellipsis" title="${label}">&#8211; ${label}</span>`;
         } else if (d.lock_approval_requested) {
           resultBadge = `<span class="text-[9px] bg-amber-900/40 text-amber-400 px-2 py-0.5 rounded-full font-bold">Unlock Pending</span>`;
@@ -517,7 +522,7 @@
         }
         return `<tr class="${rowCls}" onclick="openModal(${i})">
           <td class="text-slate-600 text-[10px]">${i+1}</td>
-          <td class="text-white font-medium" title="${(d['Deal Name']||'').replace(/"/g,'&quot;')}">${fmt(d['Deal Name'])}</td>
+          <td class="text-white font-medium" title="${fmt(d['Deal Name'])}">${fmt(d['Deal Name'])}</td>
           <td class="text-slate-500 font-mono text-[10px]"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d['Deal Id']}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="text-decoration:underline;text-decoration-style:dotted" class="hover:text-indigo-400">${fmt(d['DealID'])||fmt(d['Deal Id'])}</a></td>
           <td>${stagePill(d['Stage'])}</td>
           <td class="text-slate-300 text-[11px]">${formatDate(d['Arrival Date'])}</td>
@@ -606,9 +611,9 @@
           ${label}
         </div>
         <div class="bg-gray-900/80 rounded-lg p-3 text-xs space-y-1.5 mb-1">
-          <div><span class="text-slate-500 font-medium">Result Code:</span> <strong class="text-white">${d.result_code||'—'}</strong></div>
-          <div><span class="text-slate-500 font-medium">Sub Code:</span> <strong class="text-slate-200">${d.sub_code||'—'}</strong></div>
-          ${d.agent_note ? `<div><span class="text-slate-500 font-medium">Note:</span> <span class="text-slate-300">${d.agent_note}</span></div>` : ''}
+          <div><span class="text-slate-500 font-medium">Result Code:</span> <strong class="text-white">${fmt(d.result_code)}</strong></div>
+          <div><span class="text-slate-500 font-medium">Sub Code:</span> <strong class="text-slate-200">${fmt(d.sub_code)}</strong></div>
+          ${d.agent_note ? `<div><span class="text-slate-500 font-medium">Note:</span> <span class="text-slate-300">${fmt(d.agent_note)}</span></div>` : ''}
         </div>
         ${unlockHtml}`;
     }
@@ -621,7 +626,7 @@
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
       document.getElementById('modalDealName').textContent = d['Deal Name'] || '—';
       const zohoId = d['Deal Id'] || '';
-      document.getElementById('modalDealId').innerHTML = `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${zohoId}" target="_blank" rel="noopener" style="text-decoration:underline;text-decoration-style:dotted;color:inherit" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${d['DealID'] || zohoId}${zohoId ? ' ↗' : ''}</a>`;
+      document.getElementById('modalDealId').innerHTML = `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${zohoId}" target="_blank" rel="noopener" style="text-decoration:underline;text-decoration-style:dotted;color:inherit" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(d['DealID'] || zohoId)}${zohoId ? ' ↗' : ''}</a>`;
       document.getElementById('modalStage').innerHTML = stagePill(d['Stage']);
       set('modalArrival', formatDate(d['Arrival Date']));
       set('modalLanguage', fmt(d['Language']));
@@ -1002,7 +1007,7 @@
           }
           spinEl.classList.add('hidden');
           errEl.classList.remove('hidden');
-          document.getElementById('errorMsg').innerHTML = `No deals found for <strong>"${dealOwnerName}"</strong>.<br><span style="font-size:10px;opacity:0.7">Sample names in DB: ${sampleNames.join(', ')}</span>`;
+          document.getElementById('errorMsg').innerHTML = `No deals found for <strong>"${fmt(dealOwnerName)}"</strong>.<br><span style="font-size:10px;opacity:0.7">Sample names in DB: ${sampleNames.map(fmt).join(', ')}</span>`;
           return;
         }
 

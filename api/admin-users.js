@@ -4,14 +4,14 @@
 // kapatılabilir (bkz. admin_summary_rpc.sql yanındaki lockdown SQL'i) —
 // tarayıcı artık bu tabloya hiçbir zaman doğrudan dokunmuyor.
 //
-// Not: Bu endpoint'in KENDİSİ, çağıranın gerçekten giriş yapmış bir admin
-// olduğunu doğrulayan bir JWT/Auth kontrolü yapmıyor — sistemde henüz gerçek
-// oturum (Supabase Auth) olmadığı için bu mümkün değil. Yine de bu, mevcut
-// (anon key ile Users tablosunun herkese açık okunabilmesi) durumdan çok
-// daha güvenli: artık dışarıdan biri sadece herkese açık anon key'i bilerek
-// Users tablosunu doğrudan sorgulayamaz. Gerçek "sadece admin çağırabilir"
-// garantisi, planlanan Supabase Auth geçişiyle birlikte gelecek.
+// Auth: çağıranın api/login.js'te üretilen imzalı, süresi dolmamış ve
+// admin/super-admin rolüne ait bir token'ı Authorization: Bearer başlığında
+// göndermesi ZORUNLU — aksi halde 401. Bu olmadan bu uç, service_role
+// yetkisiyle Users tablosunda TAM CRUD (parola değiştirme/kullanıcı
+// silme dahil) yapabilen, kimliği doğrulanmamış herkese açık bir endpoint
+// olurdu.
 import bcrypt from 'bcryptjs';
+import { verifyToken, bearerToken } from './_auth.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
 
@@ -24,6 +24,17 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'Sunucu yapılandırma hatası: SUPABASE_SERVICE_ROLE_KEY eksik.' });
     return;
   }
+  const AUTH_SECRET = process.env.AUTH_TOKEN_SECRET;
+  if (!AUTH_SECRET) {
+    res.status(500).json({ error: 'Sunucu yapılandırma hatası: AUTH_TOKEN_SECRET eksik.' });
+    return;
+  }
+  const claims = verifyToken(bearerToken(req), AUTH_SECRET);
+  if (!claims || (claims.r !== 'admin' && claims.r !== 'super-admin')) {
+    res.status(401).json({ error: 'Yetkisiz erişim.' });
+    return;
+  }
+
   const H  = { apikey: SERVICE_KEY, Authorization: 'Bearer ' + SERVICE_KEY };
   const HJ = { ...H, 'Content-Type': 'application/json; charset=utf-8' };
 

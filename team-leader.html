@@ -1109,8 +1109,19 @@
   let dealFinanceMap = {}; // deal_id -> {total, paid, remaining, pct, stage, isWon}
 
   // ── Helpers ─────────────────────────────────────────────────────
-  function fmt(v) { return (v === null || v === undefined || v === '') ? '—' : String(v); }
+  // HTML'e gömülecek her dinamik değer (deal adı, danışman notu, iptal
+  // sebebi vb. — Zoho'dan/kullanıcıdan gelen, güvenilmeyen metin) burada
+  // escape edilir. fmt() neredeyse her innerHTML render'ında kullanıldığı
+  // için tek noktadan XSS'e kapatıyor — "<script>" içeren bir deal adı artık
+  // düz metin olarak görünür, tarayıcıda çalıştırılmaz.
+  function _escHtml(v) { return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+  function fmt(v) { return (v === null || v === undefined || v === '') ? '—' : _escHtml(String(v)); }
   function _escAttr(v) { return String(v).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  // onclick="fn('${...}')" gibi bir HTML attribute İÇİNDE JS string literal
+  // kuran yerler için: önce JS string olarak kaçış (\ ve '), sonra bunun
+  // sonucunu HTML attribute'u olarak kaçış (& ve ") — sıra önemli, çünkü
+  // tarayıcı önce HTML'i çözer, ortaya çıkan string'i JS motoruna verir.
+  function _jsStrAttr(v) { return String(v).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/&/g,'&amp;').replace(/"/g,'&quot;'); }
   function _noteBtn(note) {
     return note ? `<button onclick="showNoteTip(event, this.dataset.note)" data-note="${_escAttr(note)}" style="padding:2px 8px;background:#1e293b;border:1px solid #f59e0b;border-radius:6px;color:#f59e0b;font-size:10px;font-weight:800;cursor:pointer" title="Notu görüntüle">!</button>` : '—';
   }
@@ -1463,7 +1474,7 @@
 
   function paymentMismatchBadge(a) {
     if (!a._paymentMismatch) return '';
-    return `<div style="margin-top:4px;font-size:9px;font-weight:700;color:#fbbf24;background:#422006;border:1px solid #78350f;border-radius:6px;padding:2px 6px;display:inline-block" title="${a._paymentMismatch.replace(/"/g,'&quot;')}">⚠ ${a._paymentMismatch}</div>`;
+    return `<div style="margin-top:4px;font-size:9px;font-weight:700;color:#fbbf24;background:#422006;border:1px solid #78350f;border-radius:6px;padding:2px 6px;display:inline-block" title="${fmt(a._paymentMismatch)}">⚠ ${fmt(a._paymentMismatch)}</div>`;
   }
 
   // payment_tracking alarmlarını Won + %100 ödeme durumuna göre otomatik kapat,
@@ -1603,7 +1614,7 @@
     if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(type)) {
       return { label: I18N.t('Gecikmiş'), bg:'#450a0a', color:'#f87171' };
     }
-    return m[type] || { label: type, bg:'#1e293b', color:'#94a3b8' };
+    return m[type] || { label: fmt(type), bg:'#1e293b', color:'#94a3b8' };
   }
 
   function statusMeta(s) {
@@ -1619,7 +1630,7 @@
       'escalated':   { label:I18N.t('Eskale'),           bg:'#431407', color:'#fb923c' },
       'cancelled':   { label:I18N.t('İptal'),            bg:'#1e293b', color:'#475569' },
     };
-    return m[s] || { label: s, bg:'#1e293b', color:'#94a3b8' };
+    return m[s] || { label: fmt(s), bg:'#1e293b', color:'#94a3b8' };
   }
 
   function fieldLabel(f) {
@@ -1630,7 +1641,7 @@
       'visit_date_3':      I18N.t('3. Vizit'),
       'last_activity_time':I18N.t('Son Aktivite'),
     };
-    return m[f] || f || '—';
+    return m[f] || fmt(f);
   }
 
   function daysDisplay(days, refDate) {
@@ -1983,7 +1994,7 @@
     if (!sel) return;
     const cur = sel.value;
     sel.innerHTML = `<option value="">${I18N.t('Danışman: Tümü')}</option>` +
-      sorted.map(([name, s]) => `<option value="${name.replace(/"/g,'&quot;')}">${name} (${s.total}${s.overdue > 0 ? ' ⚠' + s.overdue : ''})</option>`).join('');
+      sorted.map(([name, s]) => `<option value="${fmt(name)}">${fmt(name)} (${s.total}${s.overdue > 0 ? ' ⚠' + s.overdue : ''})</option>`).join('');
     if (cur && byOwner[cur]) sel.value = cur;
   }
 
@@ -2219,7 +2230,7 @@
       { time: a.created_at,  label: I18N.t('Oluşturuldu'),    color: '#475569' },
       { time: a.seen_at,     label: I18N.t('Görüldü'),         color: '#60a5fa' },
       { time: a.actioned_at, label: I18N.t('Aksiyon Alındı'),  color: '#2dd4bf' },
-      { time: a.closed_at,   label: I18N.t('Kapatıldı') + (a.close_reason ? ' — ' + a.close_reason : ''), color: '#94a3b8' },
+      { time: a.closed_at,   label: I18N.t('Kapatıldı') + (a.close_reason ? ' — ' + fmt(a.close_reason) : ''), color: '#94a3b8' },
     ].filter(t => !!t.time);
     document.getElementById('modalTimelineBody').innerHTML = tlItems.length ?
       tlItems.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #0f172a">
@@ -2262,10 +2273,10 @@
       list.innerHTML = logs.map(l => `
         <div style="padding:6px 0;border-bottom:1px solid #0f172a">
           <div style="display:flex;justify-content:space-between;gap:8px">
-            <span style="font-size:10px;font-weight:700;color:#2dd4bf">${actionLabels[l.action_type] || l.action_type}${l.new_status && l.new_status !== l.old_status ? ' → ' + (statusMeta(l.new_status).label || l.new_status) : ''}</span>
+            <span style="font-size:10px;font-weight:700;color:#2dd4bf">${fmt(actionLabels[l.action_type] || l.action_type)}${l.new_status && l.new_status !== l.old_status ? ' → ' + fmt(statusMeta(l.new_status).label || l.new_status) : ''}</span>
             <span style="font-size:9px;color:#475569;white-space:nowrap">${formatDateTime(l.created_at)}</span>
           </div>
-          <div style="font-size:10px;color:#64748b;word-break:break-word;overflow-wrap:anywhere">${l.action_by || '—'}${l.note ? ' · ' + l.note : ''}</div>
+          <div style="font-size:10px;color:#64748b;word-break:break-word;overflow-wrap:anywhere">${fmt(l.action_by)}${l.note ? ' · ' + fmt(l.note) : ''}</div>
         </div>`).join('');
       wrap.style.display = 'block';
     } catch(e) { /* sessiz */ }
@@ -2381,7 +2392,7 @@
     if (!sel) return;
     const owners = [...new Set(allAlarms.map(a => a.deal_owner).filter(Boolean))].sort();
     if (!owners.length) return;
-    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
     _todayOwnersPopulated = true;
   }
 
@@ -2946,7 +2957,7 @@
     if (!sel) return;
     const owners = [...new Set(allAlarms.map(a => a.deal_owner).filter(Boolean))].sort();
     if (!owners.length) return;
-    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
     _noshowOwnersPopulated = true;
   }
 
@@ -3057,7 +3068,7 @@
     if (!sel) return;
     const owners = [...new Set((cancelledDealsList || []).map(d => d.deal_owner).filter(Boolean))].sort();
     if (!owners.length) return;
-    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
     _tlcaOwnersPopulated = true;
   }
 
@@ -3382,7 +3393,7 @@
     if (!sel) return;
     const owners = [...new Set((wonMismatchDeals || []).map(d => d.deal_owner).filter(Boolean))].sort();
     if (!owners.length) return;
-    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
     _waOwnersPopulated = true;
   }
 
@@ -3507,7 +3518,7 @@
     if (!sel) return;
     const cur = sel.value;
     const owners = [...new Set(_tlActivityRows.map(l => l._owner).filter(Boolean))].sort();
-    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${o}">${o}</option>`).join('');
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
     if (owners.includes(cur)) sel.value = cur;
   }
   function _tlactReset() {
@@ -3700,7 +3711,7 @@
     const sel = document.getElementById('rmTeamFilter');
     const cur = sel.value;
     sel.innerHTML = `<option value="">${I18N.t('Tüm Takımlar')}</option>` +
-      Object.keys(teams).sort().map(t => `<option value="${t}">${teams[t].label || t}</option>`).join('');
+      Object.keys(teams).sort().map(t => `<option value="${fmt(t)}">${fmt(teams[t].label || t)}</option>`).join('');
     if (cur) sel.value = cur;
 
     const sorted = Object.entries(teams).sort((a,b) => b[1].overdue - a[1].overdue || b[1].open - a[1].open || b[1].total - a[1].total);
@@ -3719,12 +3730,12 @@
         s.escalated > 0 ? `<span style="padding:2px 7px;border-radius:9999px;font-size:9px;font-weight:800;background:#431407;color:#fb923c">↑ ${s.escalated} ${I18N.t('ESKALE')}</span>` : '',
         s.overdue > 0   ? `<span style="padding:2px 7px;border-radius:9999px;font-size:9px;font-weight:800;background:#450a0a;color:#f87171">⚠ ${s.overdue} ${I18N.t('GECİKMİŞ')}</span>` : '',
       ].filter(Boolean).join('');
-      const safeTeam = teamName.replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+      const safeTeam = _jsStrAttr(teamName);
       return `<div onclick="selectRmTeam('${safeTeam}')" style="background:${urgBg};border:2px solid ${urgBc};border-radius:14px;padding:16px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='#0d9488'" onmouseout="this.style.borderColor='${urgBc}'">
         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:6px;margin-bottom:10px;flex-wrap:wrap">
           <div>
-            <div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:2px">${s.label || teamName}</div>
-            <div style="font-size:10px;color:#64748b">${s.leader ? 'TL: ' + s.leader + ' · ' : ''}${s.total} ${I18N.t('aktif alarm')}</div>
+            <div style="font-size:12px;font-weight:700;color:#f1f5f9;margin-bottom:2px">${fmt(s.label || teamName)}</div>
+            <div style="font-size:10px;color:#64748b">${s.leader ? 'TL: ' + fmt(s.leader) + ' · ' : ''}${s.total} ${I18N.t('aktif alarm')}</div>
             <div style="font-size:9px;color:#475569;margin-top:1px">${I18N.t('Kapatılan:')} ${s.closed || 0}${s.grand ? ' · ' + I18N.t('Kapatma oranı %') + Math.round((s.closed || 0) / s.grand * 100) : ''}</div>
           </div>
           <div style="display:flex;gap:4px;flex-wrap:wrap">${badges}</div>

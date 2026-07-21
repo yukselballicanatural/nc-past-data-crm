@@ -603,7 +603,11 @@
           role: role,
           team: user['Takim Adi'] || user['Role Name'] || '',
           id: user['Id'] || user['id'] || '',
-          zoho_id: user['Id'] || ''
+          zoho_id: user['Id'] || '',
+          // admin/super-admin girişlerinde api/login.js'in ürettiği imzalı
+          // token — admin.html'in Users sayfası (api/admin-users.js) bunu
+          // Authorization başlığında gönderir, aksi halde 401 alır.
+          token: user['token'] || ''
         };
 
         sessionStorage.setItem('nc_current_user', JSON.stringify(sessionUser));
