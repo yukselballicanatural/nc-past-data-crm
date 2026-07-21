@@ -731,49 +731,46 @@
 
   <!-- ════════════════ WON ALARMI ════════════════ -->
   <div id="view-won" style="display:none">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
-      <div>
-        <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Won Alarmı</h2>
-        <p style="font-size:11px;color:#64748b;margin:3px 0 0">Stage'i "Won" olup ödenen tutar paket tutarına eşit olmayan (eksik veya fazla ödenmiş) dealler</p>
-      </div>
-    </div>
-    <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:14px 16px;margin-bottom:14px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <span style="font-size:10px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em">Filtreler</span>
-        <button onclick="_waResetFilters()" style="font-size:10px;font-weight:700;color:#818cf8;background:none;border:none;cursor:pointer">Temizle</button>
-      </div>
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px">
+    <div class="filter-card">
+      <div class="filter-card-head">
         <div>
-          <label style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px">Ara</label>
+          <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Won Alarmı</h2>
+          <p style="font-size:11px;color:#64748b;margin:3px 0 0">Stage'i "Won" olup ödenen tutar paket tutarına eşit olmayan (eksik veya fazla ödenmiş) dealler</p>
+        </div>
+        <button onclick="_waResetFilters()" style="font-size:11px;font-weight:700;color:#818cf8;background:none;border:none;cursor:pointer;flex-shrink:0">Temizle</button>
+      </div>
+      <div class="filter-row">
+        <div class="filter-group" style="flex:1 1 200px;min-width:200px">
+          <label class="filter-label">Ara</label>
           <input id="wonFilterSearch" type="text" placeholder="Hasta veya danışman ara..." oninput="_waApplyFilters()" class="filter-inp">
         </div>
-        <div>
-          <label style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px">Yön</label>
+        <div class="filter-group" style="width:170px">
+          <label class="filter-label">Yön</label>
           <select id="wonFilterDir" onchange="_waApplyFilters()" class="filter-sel">
             <option value="">Tümü (Eksik + Fazla)</option>
             <option value="under">Sadece Eksik Ödenen</option>
             <option value="over">Sadece Fazla Ödenen</option>
           </select>
         </div>
-        <div>
-          <label style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px">Danışman</label>
+        <div class="filter-group" style="width:160px">
+          <label class="filter-label">Danışman</label>
           <select id="wonFilterOwner" onchange="_waApplyFilters()" class="filter-sel">
             <option value="">Tüm Danışmanlar</option>
           </select>
         </div>
-        <div>
-          <label style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px">Arrival Date</label>
-          <div style="display:flex;align-items:center;gap:4px">
+        <div class="filter-group">
+          <label class="filter-label">Arrival Tarihi Aralığı</label>
+          <div style="display:flex;align-items:center;gap:5px">
             <input type="date" id="tlwaArrFrom" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
-            <span style="color:#475569">–</span>
+            <span style="color:#475569;font-size:11px">–</span>
             <input type="date" id="tlwaArrTo" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
           </div>
         </div>
-        <div>
-          <label style="font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.04em;display:block;margin-bottom:4px">Created Time</label>
-          <div style="display:flex;align-items:center;gap:4px">
+        <div class="filter-group">
+          <label class="filter-label">Oluşturulma Tarihi Aralığı</label>
+          <div style="display:flex;align-items:center;gap:5px">
             <input type="date" id="tlwaCreatedFrom" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
-            <span style="color:#475569">–</span>
+            <span style="color:#475569;font-size:11px">–</span>
             <input type="date" id="tlwaCreatedTo" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
           </div>
         </div>

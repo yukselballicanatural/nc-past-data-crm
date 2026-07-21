@@ -296,6 +296,7 @@
     'kayıt gösteriliyor': 'records shown',
     'Notu görüntüle': 'View note',
     'Arrival Tarihi Aralığı': 'Arrival Date Range',
+    'Oluşturulma Tarihi Aralığı': 'Created Date Range',
     'Sayfa Boyutu': 'Page Size',
 
     // ── admin.html: Analytics / Alarm Monitoring / Deal modalı — eksikler ──
