@@ -1505,7 +1505,7 @@
       if (!fin || fin.pct === null) return;
       const fullyPaid = fin.pct >= 100;
       if (fin.isWon && fullyPaid) {
-        const updates = { status: 'closed', closed_at: new Date().toISOString(), close_reason: I18N.t('Ödeme %100 ve deal Won — otomatik kapatıldı') };
+        const updates = { status: 'closed', closed_at: new Date().toISOString(), close_reason: 'Ödeme %100 ve deal Won — otomatik kapatıldı' };
         try {
           const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${a.id}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
           if (r.ok) {
@@ -2244,7 +2244,7 @@
       { time: a.created_at,  label: I18N.t('Oluşturuldu'),    color: '#475569' },
       { time: a.seen_at,     label: I18N.t('Görüldü'),         color: '#60a5fa' },
       { time: a.actioned_at, label: I18N.t('Aksiyon Alındı'),  color: '#2dd4bf' },
-      { time: a.closed_at,   label: I18N.t('Kapatıldı') + (a.close_reason ? ' — ' + fmt(a.close_reason) : ''), color: '#94a3b8' },
+      { time: a.closed_at,   label: I18N.t('Kapatıldı') + (a.close_reason ? ' — ' + fmt(I18N.t(a.close_reason)) : ''), color: '#94a3b8' },
     ].filter(t => !!t.time);
     document.getElementById('modalTimelineBody').innerHTML = tlItems.length ?
       tlItems.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #0f172a">
@@ -3124,7 +3124,7 @@
     const dealAlarms = (allAlarms || []).filter(a => a.deal_id === String(d.id) && ['cancelled','closed','no_show'].includes(a.status));
     const alarmInfo = dealAlarms[0];
     const reasonParts = [];
-    if (alarmInfo && alarmInfo.close_reason) reasonParts.push(alarmInfo.close_reason);
+    if (alarmInfo && alarmInfo.close_reason) reasonParts.push(I18N.t(alarmInfo.close_reason));
     if (alarmInfo && alarmInfo.closed_by) reasonParts.push(`(${alarmInfo.closed_by}${alarmInfo.closed_at ? ' — ' + formatDateTime(alarmInfo.closed_at) : ''})`);
     if (alarmInfo && alarmInfo.note) reasonParts.push(`${I18N.t('Not: ')}${alarmInfo.note}`);
     if (d.result_code) reasonParts.push(`${I18N.t('Sonuç Kodu: ')}${d.result_code}${d.sub_code ? ' / ' + d.sub_code : ''}`);

@@ -622,7 +622,7 @@
       const d = filteredDeals[index];
       if (!d) return;
       currentModalDeal = d;
-      addLog('VIEW_DEAL', `${I18N.t('Deal görüntülendi: ')}${d['Deal Name']}`, String(d['Deal Id']), d['Deal Name']);
+      addLog('VIEW_DEAL', `Deal görüntülendi: ${d['Deal Name']}`, String(d['Deal Id']), d['Deal Name']);
       const set = (id, v) => { const el = document.getElementById(id); if (el) el.textContent = v; };
       document.getElementById('modalDealName').textContent = d['Deal Name'] || '—';
       const zohoId = d['Deal Id'] || '';
@@ -790,7 +790,7 @@
           body: JSON.stringify({ lock_approval_requested: true })
         });
         if (!resp.ok) throw new Error(await resp.text());
-        addLog('UNLOCK_REQUEST', `${I18N.t('Unlock talebi: ')}${d?.['Deal Name']||dealId}${reason?I18N.t(' — Sebep: ')+reason:''}`, String(dealId), d?.['Deal Name']||'');
+        addLog('UNLOCK_REQUEST', `Unlock talebi: ${d?.['Deal Name']||dealId}${reason?' — Sebep: '+reason:''}`, String(dealId), d?.['Deal Name']||'');
         if (d) { d.lock_approval_requested = true; }
         const main = allDeals.find(x => x['Deal Id'] === dealId);
         if (main) main.lock_approval_requested = true;
@@ -996,7 +996,7 @@
       spinEl.classList.remove('hidden'); cardEl.classList.add('hidden'); errEl.classList.add('hidden');
       try {
         const deals = await doFetch();
-        addLog('LOGIN', `${I18N.t('Giriş yapıldı — ')}${deals.length}${I18N.t(' deal yüklendi')}`);
+        addLog('LOGIN', `Giriş yapıldı — ${deals.length} deal yüklendi`);
 
         if (deals.length === 0) {
           const sr = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=deal_owner&limit=200`, { headers: h });

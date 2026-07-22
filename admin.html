@@ -2130,7 +2130,7 @@
       document.getElementById('actCount').textContent = data.length;
       if (!data.length) { tbody.innerHTML = ''; empty.textContent = I18N.t('Kayıtlı aksiyon bulunamadı.'); empty.style.display = 'block'; return; }
       empty.style.display = 'none';
-      const actionLabels = { status_change:'Durum Değişti', note:'Not Eklendi', closed:'Kapatıldı', reopened:'Yeniden Açıldı', created:'Oluşturuldu', auto_closed:'Otomatik Kapatıldı' };
+      const actionLabels = { status_change:I18N.t('Durum Değişti'), note:I18N.t('Not Eklendi'), closed:I18N.t('Kapatıldı'), reopened:I18N.t('Yeniden Açıldı'), created:I18N.t('Oluşturuldu'), auto_closed:I18N.t('Otomatik Kapatıldı') };
       tbody.innerHTML = data.slice(0, 500).map(l => {
         const act = actionLabels[l.action_type] || l.action_type;
         const transition = (l.new_status && l.new_status !== l.old_status)
@@ -2390,7 +2390,7 @@
       // adminAllAlarms zaten yüklü, ekstra istek gerekmiyor.
       const alarmInfo = (adminAllAlarms || []).find(a => String(a.deal_id) === String(d.id) && ['cancelled','closed','no_show'].includes(a.status));
       const reasonParts = [];
-      if (alarmInfo && alarmInfo.close_reason) reasonParts.push(alarmInfo.close_reason);
+      if (alarmInfo && alarmInfo.close_reason) reasonParts.push(I18N.t(alarmInfo.close_reason));
       if (alarmInfo && alarmInfo.closed_by) reasonParts.push(`(${alarmInfo.closed_by}${alarmInfo.closed_at ? ' — ' + _amFmtDateTime(alarmInfo.closed_at) : ''})`);
       if (alarmInfo && alarmInfo.note) reasonParts.push(`${I18N.t('Not: ')}${alarmInfo.note}`);
       if (d.result_code) reasonParts.push(`${I18N.t('Sonuç Kodu: ')}${d.result_code}${d.sub_code ? ' / ' + d.sub_code : ''}`);
@@ -3107,7 +3107,7 @@
         { time: a.created_at,  label: I18N.t('Oluşturuldu'),   color:'#475569' },
         { time: a.seen_at,     label: I18N.t('Görüldü'),        color:'#60a5fa' },
         { time: a.actioned_at, label: I18N.t('Aksiyon Alındı'), color:'#2dd4bf' },
-        { time: a.closed_at,   label: I18N.t('Kapatıldı') + (a.close_reason ? ' — '+fmt(a.close_reason) : ''), color:'#94a3b8' },
+        { time: a.closed_at,   label: I18N.t('Kapatıldı') + (a.close_reason ? ' — '+fmt(I18N.t(a.close_reason)) : ''), color:'#94a3b8' },
       ].filter(t => !!t.time);
       document.getElementById('aamTimelineBody').innerHTML = tlItems.length ?
         tlItems.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #0f172a">
@@ -3185,7 +3185,7 @@
         if (!r.ok) return;
         const logs = await r.json();
         if (!Array.isArray(logs) || !logs.length) return;
-        const actionLabels = { status_change:'Durum Değişti', note:'Not Eklendi', closed:'Kapatıldı', reopened:'Yeniden Açıldı', created:'Oluşturuldu', auto_closed:'Otomatik Kapatıldı' };
+        const actionLabels = { status_change:I18N.t('Durum Değişti'), note:I18N.t('Not Eklendi'), closed:I18N.t('Kapatıldı'), reopened:I18N.t('Yeniden Açıldı'), created:I18N.t('Oluşturuldu'), auto_closed:I18N.t('Otomatik Kapatıldı') };
         list.innerHTML = logs.map(l => `
           <div style="padding:6px 0;border-bottom:1px solid #0f172a">
             <div style="display:flex;justify-content:space-between;gap:8px">
