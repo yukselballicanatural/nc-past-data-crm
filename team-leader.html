@@ -3019,10 +3019,12 @@
     tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
     try {
       const isRM = currentUser.role === 'regional-manager';
-      const stageParam = encodeURIComponent('ilike.*cancel*');
+      // stage Cancelled (Zoho'dan) VEYA agent'ın kendi girdiği sonuç kodu
+      // "8. Cancelled" olan dealler — bkz. admin.html'deki aynı düzeltme.
+      const orParam = encodeURIComponent('(stage.ilike.*cancel*,result_code.ilike.8.*)');
       const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,payment_or_flight_ticket,created_time,result_code,sub_code,agent_note';
       const PAGE = 1000;
-      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
+      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?or=${orParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}`;
       if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
       else if (isRM) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
 
