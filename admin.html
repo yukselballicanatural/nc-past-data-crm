@@ -2202,6 +2202,27 @@
           }));
           rest.forEach(batch => { if (Array.isArray(batch)) all.push(...batch); });
         }
+        // Bir alarm Alarm Monitoring'den "İptal / Geçersiz" olarak kapatılınca
+        // (alarms.status='cancelled') deal'in Zoho stage'i/result_code'u
+        // değişmeyebilir — yukarıdaki sorgu bu dealleri kaçırabilir. O
+        // alarmların bağlı olduğu dealleri de ayrıca çekip listeye ekle.
+        try {
+          const knownIds = new Set(all.map(d => String(d.id)));
+          let alarmUrl = `${SUPABASE_URL}/rest/v1/alarms?status=eq.cancelled&select=deal_id&limit=2000`;
+          if (window.rmTeams) alarmUrl += `&team=${TeamMap.inFilter(window.rmTeams)}`;
+          const aR = await fetch(alarmUrl, { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
+          if (aR.ok) {
+            const cancelledAlarms = await aR.json();
+            const missingIds = [...new Set(cancelledAlarms.map(a => String(a.deal_id)).filter(Boolean))]
+              .filter(id => !knownIds.has(id));
+            if (missingIds.length) {
+              const idsFilter = encodeURIComponent('in.(' + missingIds.join(',') + ')');
+              const mR = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=${idsFilter}&select=${selectCols}`, { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
+              if (mR.ok) { const missingDeals = await mR.json(); all = all.concat(missingDeals); }
+            }
+          }
+        } catch(e) { /* sessiz — asıl listeyi engellemez */ }
+
         adminCancelledDeals = all;
         _caPopulateTeamFilter();
         _caCurrentPage = 1;
@@ -3278,6 +3299,9 @@
         updateAdminAlarmKPIs();
         renderAdminAlarmTable();
         renderRegionPanels();
+        // Alarm "İptal / Geçersiz" olarak kapatıldıysa İptal Alarmları
+        // listesini/rozetini de tazele — bkz. team-leader.html'deki aynı düzeltme.
+        if (newStatus === 'cancelled') loadAdminCancelledDeals();
         closeAdminAlarmModal();
       } catch(e) {
         alert(I18N.t('Kayıt hatası: ') + e.message);
