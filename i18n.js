@@ -311,6 +311,8 @@
     'Notu görüntüle': 'View note',
     'Arrival Tarihi Aralığı': 'Arrival Date Range',
     'Oluşturulma Tarihi Aralığı': 'Created Date Range',
+    'Oluşturulma Yılı': 'Created Year',
+    'Tüm Yıllar': 'All Years',
     'Sayfa Boyutu': 'Page Size',
 
     // ── admin.html: Analytics / Alarm Monitoring / Deal modalı — eksikler ──

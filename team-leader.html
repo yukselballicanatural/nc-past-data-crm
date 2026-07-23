@@ -493,6 +493,27 @@
             <button onclick="ncClearDealDates()" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0" title="Tarih filtresini temizle">✕</button>
           </div>
         </div>
+        <div class="filter-group">
+          <label class="filter-label">Oluşturulma Tarihi Aralığı</label>
+          <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+            <input type="date" id="dealCreatedFrom" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Created Time — başlangıç">
+            <span style="color:#475569;font-size:11px">–</span>
+            <input type="date" id="dealCreatedTo" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Created Time — bitiş">
+            <button onclick="ncClearDealCreatedDates()" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0" title="Oluşturulma tarih filtresini temizle">✕</button>
+          </div>
+        </div>
+        <div class="filter-group" style="width:130px">
+          <label class="filter-label">Oluşturulma Yılı</label>
+          <select id="dealCreatedYearFilter" class="filter-sel" onchange="loadDeals(true)">
+            <option value="">Tüm Yıllar</option>
+            <option value="2027">2027</option>
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+            <option value="2023">2023</option>
+            <option value="2022">2022</option>
+          </select>
+        </div>
         <div class="filter-group" style="width:110px">
           <label class="filter-label">Sayfa Boyutu</label>
           <select id="dealPageSizeSel" class="filter-sel" onchange="dealChangePageSize()">
@@ -523,7 +544,7 @@
             <th onclick="dealSortBy('stage')" style="cursor:pointer;user-select:none">Stage<span id="dsort-stage" class="sarrow"></span></th>
             <th onclick="dealSortBy('deal_owner')" style="cursor:pointer;user-select:none">Danışman<span id="dsort-deal_owner" class="sarrow"></span></th>
             <th onclick="dealSortBy('arrival_date')" style="cursor:pointer;user-select:none">Arrival<span id="dsort-arrival_date" class="sarrow"></span></th>
-            <th onclick="dealSortBy('created_time')" style="cursor:pointer;user-select:none">Eklenme Tarihi<span id="dsort-created_time" class="sarrow"></span></th>
+            <th onclick="dealSortBy('created_time')" style="cursor:pointer;user-select:none">Oluşturulma<span id="dsort-created_time" class="sarrow"></span></th>
             <th onclick="dealSortBy('payment_or_flight_ticket')" style="cursor:pointer;user-select:none">P/F<span id="dsort-payment_or_flight_ticket" class="sarrow"></span></th>
             <th>Alarm</th>
             <th onclick="dealSortBy('amount')" style="cursor:pointer;user-select:none">Tutar<span id="dsort-amount" class="sarrow"></span></th>
@@ -1345,8 +1366,28 @@
   })();
 
   function ncClearDealDates()  { NCDatePicker.setValue('dealDateFrom', '');  NCDatePicker.setValue('dealDateTo', ''); }
+  function ncClearDealCreatedDates() {
+    document.getElementById('dealCreatedYearFilter').value = '';
+    NCDatePicker.setValue('dealCreatedFrom', '');
+    NCDatePicker.setValue('dealCreatedTo', '');
+  }
 
-  ['alarmArrFrom', 'alarmArrTo', 'alarmCreatedFrom', 'alarmCreatedTo', 'dealDateFrom', 'dealDateTo', 'tlcaArrFrom', 'tlcaArrTo', 'tlcaCreatedFrom', 'tlcaCreatedTo', 'tlwaArrFrom', 'tlwaArrTo', 'tlwaCreatedFrom', 'tlwaCreatedTo'].forEach(id => NCDatePicker.attach(id));
+  // Oluşturulma Tarihi Aralığı (manuel) + Oluşturulma Yılı (hızlı seçim) — ikisi
+  // birlikte kullanılırsa kesişimleri alınır (ör. yıl=2025 + manuel başlangıç
+  // 2025-06-01 seçilirse, 2025-06-01'den yıl sonuna kadar filtrelenir).
+  function _dealCreatedRange() {
+    let from = document.getElementById('dealCreatedFrom')?.value || '';
+    let to   = document.getElementById('dealCreatedTo')?.value || '';
+    const year = document.getElementById('dealCreatedYearFilter')?.value || '';
+    if (year) {
+      const yFrom = `${year}-01-01`, yTo = `${year}-12-31`;
+      from = from && from > yFrom ? from : yFrom;
+      to   = to && to < yTo ? to : yTo;
+    }
+    return { from, to };
+  }
+
+  ['alarmArrFrom', 'alarmArrTo', 'alarmCreatedFrom', 'alarmCreatedTo', 'dealDateFrom', 'dealDateTo', 'dealCreatedFrom', 'dealCreatedTo', 'tlcaArrFrom', 'tlcaArrTo', 'tlcaCreatedFrom', 'tlcaCreatedTo', 'tlwaArrFrom', 'tlwaArrTo', 'tlwaCreatedFrom', 'tlwaCreatedTo'].forEach(id => NCDatePicker.attach(id));
 
   // ── Deal finans bilgisi (Ödenen / Toplam / Kalan / Won durumu) ────
   // alarms tablosunda amount/paid/stage kolonu yok, bu yüzden deal_id
@@ -2683,6 +2724,7 @@
       const owner  = (document.getElementById('dealOwnerFilter')?.value || '').trim();
       const dateFrom = document.getElementById('dealDateFrom')?.value || '';
       const dateTo   = document.getElementById('dealDateTo')?.value || '';
+      const { from: createdFrom, to: createdTo } = _dealCreatedRange();
       const offset = dealCurrentPage * DEAL_PAGE_SIZE;
 
       // Postgres varsayılanı DESC'te null'ları öne koyar — nullslast ile boş değerleri sona at
@@ -2700,6 +2742,8 @@
       if (owner)  url += `&deal_owner=ilike.*${encodeURIComponent(owner)}*`;
       if (dateFrom) url += `&arrival_date=gte.${encodeURIComponent(dateFrom)}`;
       if (dateTo)   url += `&arrival_date=lte.${encodeURIComponent(dateTo)}`;
+      if (createdFrom) url += `&created_time=gte.${encodeURIComponent(createdFrom)}`;
+      if (createdTo)   url += `&created_time=lte.${encodeURIComponent(createdTo)}T23:59:59`;
 
       const r = await fetch(url, { headers: H });
       if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -2777,12 +2821,14 @@
   let dealTotalsKey = null; // filtre imzası — değişmediyse tekrar hesaplama
 
   function dealFilterSignature() {
+    const { from: createdFrom, to: createdTo } = _dealCreatedRange();
     return [
       document.getElementById('dealSearch')?.value || '',
       document.getElementById('dealStageFilter')?.value || '',
       document.getElementById('dealOwnerFilter')?.value || '',
       document.getElementById('dealDateFrom')?.value || '',
       document.getElementById('dealDateTo')?.value || '',
+      createdFrom, createdTo,
     ].join('|');
   }
 
@@ -2803,6 +2849,7 @@
       const owner  = (document.getElementById('dealOwnerFilter')?.value || '').trim();
       const dateFrom = document.getElementById('dealDateFrom')?.value || '';
       const dateTo   = document.getElementById('dealDateTo')?.value || '';
+      const { from: createdFrom, to: createdTo } = _dealCreatedRange();
 
       // Sadece küçük alanları çek — raw'ın tamamı değil, JSON içinden seçilen değerler
       let base = `${SUPABASE_URL}/rest/v1/deals?select=amount,total_paid_amount,ramt:raw->>Amount,rpaid:raw->>Total_Paid_Amount,pft:raw->>Payment_Or_Flight_Ticket`;
@@ -2813,6 +2860,8 @@
       if (owner)  base += `&deal_owner=ilike.*${encodeURIComponent(owner)}*`;
       if (dateFrom) base += `&arrival_date=gte.${encodeURIComponent(dateFrom)}`;
       if (dateTo)   base += `&arrival_date=lte.${encodeURIComponent(dateTo)}`;
+      if (createdFrom) base += `&created_time=gte.${encodeURIComponent(createdFrom)}`;
+      if (createdTo)   base += `&created_time=lte.${encodeURIComponent(createdTo)}T23:59:59`;
 
       let totalAmt = 0, totalPaid = 0, ftCount = 0, payCount = 0, count = 0, offset = 0;
       while (true) {
@@ -2885,6 +2934,7 @@
       const owner  = (document.getElementById('dealOwnerFilter')?.value || '').trim();
       const dateFrom = document.getElementById('dealDateFrom')?.value || '';
       const dateTo   = document.getElementById('dealDateTo')?.value || '';
+      const { from: createdFrom, to: createdTo } = _dealCreatedRange();
       const PAGE = 1000;
       let baseUrl = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date&order=id.asc`;
       if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
@@ -2894,6 +2944,8 @@
       if (owner)  baseUrl += `&deal_owner=ilike.*${encodeURIComponent(owner)}*`;
       if (dateFrom) baseUrl += `&arrival_date=gte.${encodeURIComponent(dateFrom)}`;
       if (dateTo)   baseUrl += `&arrival_date=lte.${encodeURIComponent(dateTo)}`;
+      if (createdFrom) baseUrl += `&created_time=gte.${encodeURIComponent(createdFrom)}`;
+      if (createdTo)   baseUrl += `&created_time=lte.${encodeURIComponent(createdTo)}T23:59:59`;
 
       const first = await fetch(`${baseUrl}&limit=${PAGE}&offset=0`, { headers: H });
       if (!first.ok) throw new Error('HTTP ' + first.status);
