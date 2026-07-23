@@ -1493,6 +1493,17 @@
         </select>
       </div>
 
+      <div id="aamResultCodeWrap" style="display:none;margin-bottom:12px">
+        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Sonuç Kodu <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></label>
+        <select id="aamResultCode" class="filter-select" onchange="onAamResultCodeChange()">
+          <option value="">— Seç —</option>
+        </select>
+      </div>
+      <div id="aamFollowUpDateWrap" style="display:none;margin-bottom:12px">
+        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Takip Tarihi <span style="color:#f87171;font-weight:700">*</span></label>
+        <input type="date" id="aamFollowUpDateInput" class="filter-select" style="width:100%;box-sizing:border-box">
+      </div>
+
       <div style="margin-bottom:18px">
         <label style="font-size:11px;color:#94a3b8;font-weight:700;display:flex;justify-content:space-between;margin-bottom:6px">
           <span>Not <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></span>
@@ -1545,10 +1556,14 @@
         </div>
         <select id="cdmResultCode" style="background:#111827;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:9px 12px;font-size:12px;width:100%">
           <option value="">— Seç —</option>
-          <option value="Cancelled by Patient">Cancelled by Patient</option>
-          <option value="Cancelled by Clinic">Cancelled by Clinic</option>
-          <option value="Invalid Data">Invalid Data</option>
-          <option value="Duplicate Data">Duplicate Data</option>
+          <option value="Fiyat/Bütçe">Fiyat/Bütçe</option>
+          <option value="Medikal Uygunsuzluk">Medikal Uygunsuzluk</option>
+          <option value="Rakip Klinik">Rakip Klinik</option>
+          <option value="Vize/Seyahat Sorunu">Vize/Seyahat Sorunu</option>
+          <option value="Hasta Vazgeçti">Hasta Vazgeçti</option>
+          <option value="Ulaşılamadı">Ulaşılamadı (Yönetici Onayıyla Kapat)</option>
+          <option value="Operasyonel Problem">Operasyonel Problem</option>
+          <option value="Mükerrer/Hatalı Deal">Mükerrer/Hatalı Deal</option>
         </select>
       </div>
 
@@ -2591,8 +2606,8 @@
       errEl.style.display = 'none';
       const btn = document.getElementById('cdmSaveBtn');
       btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
-      const isInvalidDuplicate = code === 'Invalid Data' || code === 'Duplicate Data';
-      const fullCode = isInvalidDuplicate ? '9. Invalid / Duplicate Data' : '8. Cancelled';
+      const isInvalidDuplicate = code === 'Mükerrer/Hatalı Deal';
+      const fullCode = isInvalidDuplicate ? 'Invalid or Duplicate Deal' : 'Deal Cancelled';
       try {
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
         const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(d.id)}`, {
@@ -3236,6 +3251,81 @@
       });
     }
 
+    // ── Sonuç Kodu (Result Code) — Zoho_Deals_Alarm_Yonetimi.md ─────────
+    // team-leader.html'deki RESULT_CODE_MAP ile aynı liste/mantık (bkz. oradaki
+    // yorum). action: 'close' | 'cancel' | 'followup' (Takip Tarihi zorunlu) | 'wait'
+    const AAM_RESULT_CODE_MAP = {
+      today: [
+        { code: 'Hasta Geldi',        action: 'close' },
+        { code: 'Geliş Teyit Edildi', action: 'followup' },
+        { code: 'Tarih Değiştirildi', action: 'wait' },
+        { code: 'Hasta Gelmedi',      action: 'followup' },
+        { code: 'Ulaşılamadı',        action: 'followup' },
+        { code: 'İptal Edildi',       action: 'cancel' },
+      ],
+      approaching: [
+        { code: 'Geliş Teyit Edildi',        action: 'followup' },
+        { code: 'Yeni Takip Tarihi Verildi', action: 'followup' },
+        { code: 'Arrival Date Güncellendi',  action: 'wait' },
+        { code: 'Ulaşılamadı',               action: 'followup' },
+        { code: 'İptal Talebi',              action: 'followup' },
+      ],
+      missing: [
+        { code: 'Arrival Date Eklendi',     action: 'wait' },
+        { code: 'Karar Bekleniyor',         action: 'followup' },
+        { code: 'Seyahat Planı Bekleniyor', action: 'followup' },
+        { code: 'Ulaşılamadı',              action: 'followup' },
+        { code: 'Deal Geçersiz',            action: 'close' },
+      ],
+      overdue: [
+        { code: 'Hasta Geldi',        action: 'close' },
+        { code: 'Yeni Tarih Verildi', action: 'wait' },
+        { code: 'No Show',            action: 'followup' },
+        { code: 'Ulaşılamadı',        action: 'followup' },
+        { code: 'İptal Edildi',       action: 'cancel' },
+        { code: 'Tarih Hatalıydı',    action: 'wait' },
+      ],
+    };
+
+    function aamResultCodeGroupFor(a) {
+      if (_amIsOverdue(a)) return 'overdue';
+      if (a.alarm_type === 'arrival_missing') return 'missing';
+      if (a.alarm_type === 'today_patient') return 'today';
+      if (['arrival_approaching', 'visit_approaching'].includes(a.alarm_type)) return 'approaching';
+      return null;
+    }
+
+    function populateAamResultCodeSelect(a) {
+      const group = aamResultCodeGroupFor(a);
+      const wrap  = document.getElementById('aamResultCodeWrap');
+      const sel   = document.getElementById('aamResultCode');
+      if (!group || !AAM_RESULT_CODE_MAP[group]) {
+        wrap.style.display = 'none';
+        sel.innerHTML = '<option value="">— Seç —</option>';
+        document.getElementById('aamFollowUpDateWrap').style.display = 'none';
+        return;
+      }
+      wrap.style.display = 'block';
+      sel.innerHTML = '<option value="">— Seç —</option>' + AAM_RESULT_CODE_MAP[group].map(rc =>
+        `<option value="${fmt(rc.code)}" data-action="${rc.action}">${I18N.t(rc.code)}</option>`
+      ).join('');
+      sel.value = a.result_code || '';
+      document.getElementById('aamFollowUpDateInput').value = a.follow_up_date || '';
+      onAamResultCodeChange();
+    }
+
+    function onAamResultCodeChange() {
+      const sel    = document.getElementById('aamResultCode');
+      const opt    = sel.selectedOptions[0];
+      const action = opt ? opt.getAttribute('data-action') : '';
+      document.getElementById('aamFollowUpDateWrap').style.display = action === 'followup' ? 'block' : 'none';
+      const newStatusSel = document.getElementById('aamNewStatus');
+      if (action === 'close')       newStatusSel.value = 'closed';
+      else if (action === 'cancel') newStatusSel.value = 'cancelled';
+      else if (action === 'followup' && !newStatusSel.value) newStatusSel.value = 'in_progress';
+      newStatusSel.dispatchEvent(new Event('change'));
+    }
+
     // ── Admin alarm detay/aksiyon modalı ─────────────────────────────
     let currentAdminAlarm = null;
 
@@ -3302,6 +3392,7 @@
       document.getElementById('aamNoteInput').value = '';
       const aamNC = document.getElementById('aamNoteCount'); if (aamNC) aamNC.textContent = '0 / 100';
       document.getElementById('aamCloseReasonWrap').style.display = 'none';
+      populateAamResultCodeSelect(a);
       document.getElementById('adminAlarmModal').classList.add('open');
       document.body.style.overflow = 'hidden';
       loadAdminAlarmHistory(a.id);
@@ -3346,7 +3437,8 @@
     }
 
     document.getElementById('aamNewStatus').addEventListener('change', function() {
-      const needReason = ['closed','cancelled'].includes(this.value);
+      const hasResultCodeGroup = currentAdminAlarm && !!aamResultCodeGroupFor(currentAdminAlarm);
+      const needReason = ['closed','cancelled'].includes(this.value) && !hasResultCodeGroup;
       document.getElementById('aamCloseReasonWrap').style.display = needReason ? 'block' : 'none';
     });
 
@@ -3410,7 +3502,12 @@
       const newStatus   = document.getElementById('aamNewStatus').value;
       const note        = document.getElementById('aamNoteInput').value.trim();
       const closeReason = document.getElementById('aamCloseReason').value;
-      if (!newStatus && !note) { alert(I18N.t('Durum seçin veya not girin.')); return; }
+      const aamResultSel   = document.getElementById('aamResultCode');
+      const resultCode     = aamResultSel.value;
+      const resultAction   = resultCode ? (aamResultSel.selectedOptions[0]?.getAttribute('data-action') || '') : '';
+      const followUpDate   = document.getElementById('aamFollowUpDateInput').value;
+      if (!newStatus && !note && !resultCode) { alert(I18N.t('Durum seçin veya not girin.')); return; }
+      if (resultAction === 'followup' && !followUpDate) { alert(I18N.t('Bu sonuç kodu için Takip Tarihi girilmelidir.')); return; }
       const btn = document.getElementById('aamBtnSave');
       btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
 
@@ -3419,10 +3516,12 @@
       const updates = {};
       if (newStatus) updates.status = newStatus;
       if (note)      updates.note   = note;
+      if (resultCode) updates.result_code = resultCode;
+      if (resultAction === 'followup') updates.follow_up_date = followUpDate;
       if (['no_show','closed','cancelled'].includes(newStatus)) {
         updates.closed_at    = now;
         updates.closed_by    = adminName;
-        updates.close_reason = newStatus === 'no_show' ? 'no_show' : closeReason;
+        updates.close_reason = newStatus === 'no_show' ? 'no_show' : (resultCode || closeReason);
       } else if (newStatus === 'open') {
         updates.close_reason = null; updates.closed_at = null; updates.closed_by = null;
       }

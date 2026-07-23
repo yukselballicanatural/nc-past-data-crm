@@ -421,6 +421,82 @@ window.AlarmEngine = (function () {
     return closed;
   }
 
+  // Zoho_Deals_Alarm_Yonetimi.md: "Arrival Date ileri bir tarihe değiştirildi
+  // → eski Bugün/Yaklaşan/Gecikmiş alarmı otomatik kapanır, yeni tarihe göre
+  // yeni alarm oluşturulur" (aynı kural visit_date_1/2/3 için de geçerli).
+  // computeAlarms() dedup_key'i {deal_id}_{field}_{tarih} olarak ürettiği için
+  // tarih değişince YENİ bir satır eklenir ama ESKİ satır kapanmadan açık
+  // kalırdı (mükerrer/yanlış "gecikmiş" görünümüne yol açar). Bu fonksiyon her
+  // motor çalışmasında, açık arrival/visit alarmlarının reference_date'ini
+  // deal'in GÜNCEL tarih alanıyla karşılaştırır; eşleşmiyorsa (tarih
+  // değişmiş veya silinmiş) alarmı kapatır.
+  async function closeStaleDateAlarms(BASE, KEY, deals) {
+    const norm = (v) => (v ? String(v).split('T')[0] : null);
+    const currentByDeal = new Map();
+    for (const d of deals) {
+      const raw = getRaw(d);
+      currentByDeal.set(String(d.id), {
+        arrival_date: norm(raw.Arrival_Date || raw.arrival_date || null),
+        visit_date_1: norm(raw.Visit_Date  || raw.Visit_Date_1 || null),
+        visit_date_2: norm(raw.Visit_Date1 || raw.Visit_Date_2 || null),
+        visit_date_3: norm(raw.Visit_Date2 || raw.Visit_Date_3 || null),
+      });
+    }
+    const dealIds = [...currentByDeal.keys()];
+    if (!dealIds.length) return 0;
+
+    const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+    let openAlarms = [];
+    for (let i = 0; i < dealIds.length; i += 200) {
+      const idList = dealIds.slice(i, i + 200).join(',');
+      const r = await fetch(
+        `${BASE}/rest/v1/alarms?status=in.(open,seen,in_progress,escalated)` +
+        `&alarm_type=in.(arrival_approaching,visit_approaching,today_patient)` +
+        `&deal_id=in.(${idList})&select=id,deal_id,reference_field,reference_date`,
+        { headers: H }
+      );
+      if (!r.ok) continue;
+      const batch = await r.json();
+      if (Array.isArray(batch)) openAlarms.push(...batch);
+    }
+    if (!openAlarms.length) return 0;
+
+    const toClose = [];
+    for (const a of openAlarms) {
+      const cur = currentByDeal.get(String(a.deal_id));
+      if (!cur || !(a.reference_field in cur)) continue;
+      const curDate = cur[a.reference_field];
+      const alarmDate = norm(a.reference_date);
+      if (curDate !== alarmDate) toClose.push({ id: a.id, field: a.reference_field, wasRemoved: !curDate });
+    }
+    if (!toClose.length) return 0;
+
+    const now = new Date().toISOString();
+    const PH = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+    let closed = 0;
+    // Kapanış nedenini (silindi/güncellendi) ve alanı gruplu şekilde işaretle
+    const groups = new Map();
+    for (const item of toClose) {
+      const isArrival = item.field === 'arrival_date';
+      const reason = item.wasRemoved
+        ? (isArrival ? 'Arrival Date Removed' : 'Visit Date Removed')
+        : (isArrival ? 'Arrival Date Updated' : 'Visit Date Updated');
+      if (!groups.has(reason)) groups.set(reason, []);
+      groups.get(reason).push(item.id);
+    }
+    for (const [reason, ids] of groups) {
+      for (let i = 0; i < ids.length; i += 100) {
+        const idList = ids.slice(i, i + 100).join(',');
+        const pr = await fetch(`${BASE}/rest/v1/alarms?id=in.(${idList})`, {
+          method: 'PATCH', headers: PH,
+          body: JSON.stringify({ status: 'closed', close_reason: reason, closed_at: now, closed_by: 'system' }),
+        });
+        if (pr.ok) closed += Math.min(100, ids.length - i);
+      }
+    }
+    return closed;
+  }
+
   // ── Ana çalıştırma — her zaman TÜM takımlar için üretir ─────────
   const _t = (s) => (typeof I18N !== 'undefined' ? I18N.t(s) : s);
   async function run(BASE, KEY, opts = {}) {
@@ -434,6 +510,10 @@ window.AlarmEngine = (function () {
     for (const deal of deals) newAlarms.push(...computeAlarms(deal));
     if (onProgress) onProgress(`${newAlarms.length} ${_t('alarm kaydediliyor (dedup aktif)...')}`);
     const result = await insertAlarms(BASE, KEY, newAlarms);
+    // Arrival/Visit tarihi değişen veya silinen deallerin ESKİ (artık tarihi
+    // uyuşmayan) alarmlarını kapat — bkz. Zoho_Deals_Alarm_Yonetimi.md
+    if (onProgress) onProgress(_t('Tarihi değişen alarmlar kapatılıyor...'));
+    const staleDateCount = await closeStaleDateAlarms(BASE, KEY, deals);
     // Aynı hasta/tarih için birden fazla aktif alarm kalmışsa fazlalıkları kapat
     if (onProgress) onProgress(_t('Kopya alarmlar temizleniyor...'));
     const dedupCount = await closeDuplicateAlarms(BASE, KEY);
@@ -446,8 +526,8 @@ window.AlarmEngine = (function () {
     // Won + ödemesi %100 tamamlanmış deallerin açık kalan alarmlarını kapat
     if (onProgress) onProgress(_t('Won ve ödemesi tamamlanan dealler için alarmlar kapatılıyor...'));
     const wonPaidCount = await closeAlarmsForWonPaidDeals(BASE, KEY);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, wonPaid: wonPaidCount, ...result };
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms };
 })();
