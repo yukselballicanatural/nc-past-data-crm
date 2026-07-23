@@ -63,6 +63,7 @@ export default async function handler(req, res) {
           fullName: u['Deal Owner Name'] || u['Username'] || '',
           role: u['Role'] || '',
           phone: u['Phone'] || '',
+          email: u['Email'] || '',
         }))
         .sort((a, b) => a.fullName.localeCompare(b.fullName));
       res.status(200).json({ team: myTeam, members });
@@ -74,6 +75,7 @@ export default async function handler(req, res) {
       if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
       const targetUsername = String(body?.username || '').trim();
       const phone = String(body?.phone || '').trim();
+      const email = String(body?.email || '').trim();
       if (!targetUsername) { res.status(400).json({ error: 'Kullanıcı adı gerekli.' }); return; }
 
       // Hedef kullanıcı GERÇEKTEN çağıranın kendi takımında mı — server-side doğrula.
@@ -91,7 +93,7 @@ export default async function handler(req, res) {
       const patchR = await fetch(`${SUPABASE_URL}/rest/v1/Users?Username=eq.${encodeURIComponent(targetUsername)}`, {
         method: 'PATCH',
         headers: { ...HJ, Prefer: 'return=minimal' },
-        body: JSON.stringify({ Phone: phone || null }),
+        body: JSON.stringify({ Phone: phone || null, Email: email || null }),
       });
       if (!patchR.ok) { res.status(502).json({ error: 'Veritabanı hatası.' }); return; }
       res.status(200).json({ ok: true });

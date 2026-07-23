@@ -952,11 +952,25 @@
   <div id="view-team-members" style="display:none">
     <div style="margin-bottom:20px">
       <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Takımımdaki Kişiler</h2>
-      <p style="font-size:11px;color:#64748b;margin:3px 0 0">Takımındaki danışmanların WhatsApp numaraları — bir numara girip kaydettikten sonra "WhatsApp'tan Yaz" ile o kişiyle sohbet doğrudan açılır.</p>
+      <p style="font-size:11px;color:#64748b;margin:3px 0 0">Telefon ve e-posta sütunlarını kendin doldur, kaydet butonuna bas.</p>
     </div>
     <div id="tmLoading" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">Yükleniyor...</div>
     <div id="tmEmpty" style="display:none;text-align:center;padding:50px 16px;color:#475569;font-size:13px">Takımında kayıtlı kişi bulunamadı.</div>
-    <div id="tmGrid" style="display:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+    <div id="tmTableWrap" style="display:none;overflow-x:auto">
+      <table id="tmTable" style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead>
+          <tr style="border-bottom:1px solid #1e293b">
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap">#</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap">Ad Soyad</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap">Rol</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap">Telefon</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap">E-posta</th>
+            <th style="padding:8px 12px;text-align:left;font-size:10px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap"></th>
+          </tr>
+        </thead>
+        <tbody id="tmTbody"></tbody>
+      </table>
+    </div>
   </div>
 
 </main>
@@ -3834,8 +3848,8 @@
   async function loadTeamMembers() {
     const loading = document.getElementById('tmLoading');
     const empty   = document.getElementById('tmEmpty');
-    const grid    = document.getElementById('tmGrid');
-    loading.style.display = 'block'; empty.style.display = 'none'; grid.style.display = 'none';
+    const wrap    = document.getElementById('tmTableWrap');
+    loading.style.display = 'block'; empty.style.display = 'none'; if (wrap) wrap.style.display = 'none';
     try {
       const token = (currentUser && currentUser.token) || '';
       const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
@@ -3852,47 +3866,46 @@
   }
 
   function renderTeamMembers() {
-    const grid  = document.getElementById('tmGrid');
+    const wrap  = document.getElementById('tmTableWrap');
+    const tbody = document.getElementById('tmTbody');
     const empty = document.getElementById('tmEmpty');
-    if (!_teamMembers.length) { grid.style.display = 'none'; empty.style.display = 'block'; return; }
+    if (!_teamMembers.length) { wrap.style.display = 'none'; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
-    grid.style.display = 'grid';
-    grid.innerHTML = _teamMembers.map((m, i) => {
-      const initials = (m.fullName || m.username || '?').trim().charAt(0).toUpperCase() || '?';
-      return `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
-          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${fmt(initials)}</div>
-          <div style="min-width:0">
-            <div style="font-size:13px;font-weight:700;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmt(m.fullName)}</div>
-            <div style="font-size:10px;color:#64748b">${fmt(m.role)}</div>
-          </div>
-        </div>
-        <input type="tel" id="tmPhone-${i}" value="${fmt(m.phone)}" placeholder="+90 5xx xxx xx xx" class="filter-inp" style="width:100%;box-sizing:border-box;margin-bottom:8px">
-        <div style="display:flex;gap:6px">
-          <button onclick="saveMemberPhone(${i})" style="flex:1;padding:8px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Kaydet</button>
-          <button onclick="openMemberWhatsApp(${i})" style="flex:1;padding:8px;background:#166534;border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">WhatsApp'tan Yaz</button>
-        </div>
-      </div>`;
+    wrap.style.display = 'block';
+    tbody.innerHTML = _teamMembers.map((m, i) => {
+      const rowBg = i % 2 === 0 ? '' : 'background:#0a1120';
+      return `<tr style="${rowBg};border-bottom:1px solid #1e293b">
+        <td style="padding:8px 12px;color:#475569;font-size:11px;white-space:nowrap">${i + 1}</td>
+        <td style="padding:8px 12px;color:#f1f5f9;font-weight:600;white-space:nowrap">${fmt(m.fullName)}</td>
+        <td style="padding:8px 12px;color:#64748b;white-space:nowrap">${fmt(m.role)}</td>
+        <td style="padding:8px 12px"><input type="tel" id="tmPhone-${i}" value="${fmt(m.phone)}" placeholder="+90 5xx xxx xx xx" class="filter-inp" style="width:160px;box-sizing:border-box"></td>
+        <td style="padding:8px 12px"><input type="email" id="tmEmail-${i}" value="${fmt(m.email)}" placeholder="ornek@mail.com" class="filter-inp" style="width:200px;box-sizing:border-box"></td>
+        <td style="padding:8px 12px;white-space:nowrap">
+          <button onclick="saveMember(${i})" style="padding:5px 12px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">Kaydet</button>
+          <button onclick="openMemberWhatsApp(${i})" style="padding:5px 10px;background:#166534;border:none;border-radius:7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">WA</button>
+        </td>
+      </tr>`;
     }).join('');
-    I18N.translateDOM(grid);
+    I18N.translateDOM(tbody);
   }
 
-  async function saveMemberPhone(i) {
+  async function saveMember(i) {
     const m = _teamMembers[i];
     if (!m) return;
-    const input = document.getElementById('tmPhone-' + i);
-    const phone = input.value.trim();
+    const phone = (document.getElementById('tmPhone-' + i) || {}).value?.trim() || '';
+    const email = (document.getElementById('tmEmail-' + i) || {}).value?.trim() || '';
     try {
       const token = (currentUser && currentUser.token) || '';
       const r = await fetch('/api/team-members', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
-        body: JSON.stringify({ username: m.username, phone }),
+        body: JSON.stringify({ username: m.username, phone, email }),
       });
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
       m.phone = phone;
-      showNotice('Telefon numarası kaydedildi.', 'success');
+      m.email = email;
+      showNotice('Kaydedildi.', 'success');
     } catch(e) {
       showNotice('Kaydedilemedi: ' + e.message, 'error');
     }
