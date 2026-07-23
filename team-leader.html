@@ -302,9 +302,6 @@
       </div>
     </div>
 
-    <!-- Metrics Strip (rendered by JS) -->
-    <div id="metricsStrip" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px"></div>
-
     <!-- Search + Sort bar -->
     <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
       <input id="alarmSearch" class="filter-inp" placeholder="Hasta, danışman ara..." oninput="_dbAlarmSearch()" style="flex:1;min-width:160px;max-width:280px">
@@ -348,16 +345,11 @@
 
     <!-- Sub-tabs -->
     <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
-      <button class="tab-pill active" id="atab-all" onclick="switchAlarmTab('all')">Tümü <span id="cnt-all" class="badge-cnt" style="background:rgba(255,255,255,0.15);color:#fff">0</span></button>
-      <button class="tab-pill" id="atab-open" onclick="switchAlarmTab('open')">Açık <span id="cnt-open" class="badge-cnt" style="background:rgba(251,191,36,0.2);color:#fbbf24">0</span></button>
+      <button class="tab-pill active" id="atab-open" onclick="switchAlarmTab('open')">Açık <span id="cnt-open" class="badge-cnt" style="background:rgba(251,191,36,0.2);color:#fbbf24">0</span></button>
       <button class="tab-pill" id="atab-today" onclick="switchAlarmTab('today')">Bugün <span id="cnt-today" class="badge-cnt" style="background:rgba(74,222,128,0.2);color:#4ade80">0</span></button>
       <button class="tab-pill" id="atab-approaching" onclick="switchAlarmTab('approaching')">Yaklaşan <span id="cnt-approaching" class="badge-cnt" style="background:rgba(251,146,60,0.2);color:#fb923c">0</span></button>
       <button class="tab-pill" id="atab-missing" onclick="switchAlarmTab('missing')">Eksik Tarih <span id="cnt-missing" class="badge-cnt" style="background:rgba(248,113,113,0.2);color:#f87171">0</span></button>
-      <button class="tab-pill" id="atab-payment" onclick="switchAlarmTab('payment')">Ödeme Takip <span id="cnt-payment" class="badge-cnt" style="background:rgba(192,132,252,0.2);color:#c084fc">0</span></button>
       <button class="tab-pill" id="atab-overdue" onclick="switchAlarmTab('overdue')">Gecikmiş <span id="cnt-overdue" class="badge-cnt" style="background:rgba(248,113,113,0.2);color:#f87171">0</span></button>
-      <button class="tab-pill" id="atab-noshow" onclick="switchAlarmTab('noshow')">No-show <span id="cnt-noshow" class="badge-cnt" style="background:rgba(100,116,139,0.2);color:#94a3b8">0</span></button>
-      <button class="tab-pill" id="atab-cancelled" onclick="switchAlarmTab('cancelled')">İptal <span id="cnt-cancelled" class="badge-cnt" style="background:rgba(148,163,184,0.2);color:#94a3b8">0</span></button>
-      <button class="tab-pill" id="atab-noactivity" onclick="switchAlarmTab('noactivity')">Aktivite Yok <span id="cnt-noactivity" class="badge-cnt" style="background:rgba(192,132,252,0.2);color:#c084fc">0</span></button>
     </div>
 
     <!-- Loading -->
@@ -1106,7 +1098,7 @@
   let allAlarms   = [];
   let allDeals    = [];
   let activeView  = 'alarms';
-  let activeAlarmTab = 'all';
+  let activeAlarmTab = 'open';
   let currentAlarm   = null;
   let currentDeal    = null;
   let dealFinanceMap = {}; // deal_id -> {total, paid, remaining, pct, stage, isWon}
@@ -1688,7 +1680,7 @@
       switch(tab) {
         case 'all':         return activeStatuses.has(a.status);
         case 'open':        return a.status === 'open' || a.status === 'seen';
-        case 'today':       return isToday(a) && (activeStatuses.has(a.status) || a.status === 'no_show');
+        case 'today':       return isToday(a) && activeStatuses.has(a.status);
         case 'approaching': return ['arrival_approaching','visit_approaching'].includes(a.alarm_type) && activeStatuses.has(a.status) && (liveDaysRemaining(a) || 0) > 0;
         case 'missing':     return a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status);
         case 'payment':     return a.alarm_type === 'payment_tracking' && activeStatuses.has(a.status);
@@ -1920,31 +1912,6 @@
     I18N.translateDOM(tbody);
   }
 
-  // ── Metrics strip (tıklanabilir hızlı filtreler) ────────────────
-  function renderMetricsStrip() {
-    const el = document.getElementById('metricsStrip');
-    if (!el) return;
-    const total     = applyExtraAlarmFilters(filterAlarms('all')).length;
-    const todayCnt  = applyExtraAlarmFilters(filterAlarms('today')).length;
-    const overdue   = applyExtraAlarmFilters(filterAlarms('overdue')).length;
-    const approachCnt = applyExtraAlarmFilters(filterAlarms('approaching')).length;
-    const missing   = applyExtraAlarmFilters(filterAlarms('missing')).length;
-    const noshow    = applyExtraAlarmFilters(filterAlarms('noshow')).length;
-    const cancelledCnt = applyExtraAlarmFilters(filterAlarms('cancelled')).length;
-    const pills = [
-      { label:`${total} ${I18N.t('Toplam Aktif')}`,   bg:'#1e293b', color:'#94a3b8', tab:'all'         },
-      { label:`${todayCnt} ${I18N.t('Bugün')}`,        bg:'#052e16', color:'#4ade80', tab:'today'        },
-      { label:`${overdue} ${I18N.t('Gecikmiş')}`,      bg:'#450a0a', color:'#f87171', tab:'overdue'      },
-      { label:`${approachCnt} ${I18N.t('Yaklaşan')}`,  bg:'#422006', color:'#fb923c', tab:'approaching'  },
-      { label:`${missing} ${I18N.t('Eksik Tarih')}`,   bg:'#1e293b', color:'#6b7280', tab:'missing'      },
-      ...(noshow > 0 ? [{ label:`${noshow} No-show`, bg:'#1e293b', color:'#f87171', tab:'noshow' }] : []),
-      ...(cancelledCnt > 0 ? [{ label:`${cancelledCnt} ${I18N.t('İptal')}`, bg:'#1e293b', color:'#94a3b8', tab:'cancelled' }] : []),
-    ];
-    el.innerHTML = pills.map(p =>
-      `<button class="metric-pill" onclick="switchAlarmTab('${p.tab}')" style="background:${p.bg};color:${p.color};border:1px solid ${p.color}33">${p.label}</button>`
-    ).join('');
-  }
-
   // ── Tab badge sayaçları güncelle ─────────────────────────────────
   function updateTabCounts() {
     // Sekme sayaçları da aktif filtrelere (danışman, P/FT, eşik, tarih, arama) göre hesaplanır
@@ -1992,8 +1959,6 @@
       else nbN.style.display = 'none';
     }
 
-    // Metrics strip güncelle
-    renderMetricsStrip();
   }
 
   // ── Danışman bazlı alarm özeti ───────────────────────────────────
