@@ -121,6 +121,9 @@
     'Hasta durumu, arama sonucu, notlar...': 'Patient status, call result, notes...',
 
     // ── Sonuç Kodu (Result Code) — Zoho_Deals_Alarm_Yonetimi.md ────
+    'Alarm Durumu': 'Alarm Status',
+    'Sonuç Kodu seçilmelidir.': 'A result code must be selected.',
+    'için kayıtlı telefon numarası yok, WhatsApp mesajı gönderilemedi.': 'has no phone number on file — WhatsApp message could not be sent.',
     'Takip Tarihi': 'Follow-up Date',
     'Geliş Teyit Edildi': 'Arrival Confirmed',
     'Tarih Değiştirildi': 'Date Changed',

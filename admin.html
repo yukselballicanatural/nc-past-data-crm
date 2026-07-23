@@ -1468,16 +1468,12 @@
       </div>
 
       <div style="margin-bottom:12px">
-        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Yeni Durum</label>
+        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Alarm Durumu</label>
         <select id="aamNewStatus" class="filter-select">
           <option value="">— Durum seçin —</option>
           <option value="open">Açık (Yeniden Aç)</option>
           <option value="seen">Görüldü</option>
           <option value="in_progress">Takipte</option>
-          <option value="arrived">Hasta Geldi</option>
-          <option value="examined">Muayene Oldu</option>
-          <option value="processing">İşlemleri Yapılıyor</option>
-          <option value="no_show">Gelemedi (No-show)</option>
           <option value="closed">Kapatıldı</option>
           <option value="cancelled">İptal / Geçersiz</option>
         </select>
@@ -1494,7 +1490,7 @@
       </div>
 
       <div id="aamResultCodeWrap" style="display:none;margin-bottom:12px">
-        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Sonuç Kodu <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></label>
+        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Sonuç Kodu <span style="color:#f87171;font-weight:700">*</span></label>
         <select id="aamResultCode" class="filter-select" onchange="onAamResultCodeChange()">
           <option value="">— Seç —</option>
         </select>
@@ -3465,6 +3461,37 @@
       } catch(e) { /* sessiz */ }
     }
 
+    // Sonuç Kodu kaydedilince ilgili danışmanın WhatsApp'ına otomatik yönlendirir
+    // — bkz. team-leader.html'deki sendResultCodeWhatsApp aynı mantık/kısıt.
+    // NOT: api/team-members.js çağıranın KENDİ "Takim Adi"sine göre kapsamlanır;
+    // admin/super-admin/RM hesaplarının çoğunda bu alan boş olduğundan telefon
+    // bulunamayabilir — bu durumda kullanıcıya net bir hata bildirimi gösterilir.
+    function _amWaDigits(phone) {
+      return String(phone || '').replace(/[^\d]/g, '');
+    }
+    async function sendAdminResultCodeWhatsApp(alarm, resultCode, note) {
+      try {
+        const ownerName = (alarm.deal_owner || '').trim();
+        if (!ownerName) return;
+        const token = (currentUser && currentUser.token) || '';
+        const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
+        const data = await r.json().catch(() => ({}));
+        const members = data.members || [];
+        const member = members.find(m => (m.fullName || '').trim().toLowerCase() === ownerName.toLowerCase());
+        const digits = member ? _amWaDigits(member.phone) : '';
+        if (!digits) { showSiteNotice(`${ownerName} ${I18N.t('için kayıtlı telefon numarası yok, WhatsApp mesajı gönderilemedi.')}`, 'error'); return; }
+        const dealLink = alarm.deal_id ? `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${alarm.deal_id}` : '';
+        const lines = [
+          'Alarm Result Code Update',
+          `Deal: ${alarm.deal_name || '-'}`,
+          dealLink ? `Link: ${dealLink}` : '',
+          `Result Code: ${resultCode}`,
+          note ? `Note: ${note}` : '',
+        ].filter(Boolean);
+        window.open(`https://wa.me/${digits}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
+      } catch(e) { /* WhatsApp yönlendirmesi ana kayıt akışını bozmasın */ }
+    }
+
     // Admin: mevcut notu sil (yanlışlıkla eklenen/test notlarını temizlemek için)
     function deleteAdminAlarmNote() {
       const a = currentAdminAlarm;
@@ -3506,6 +3533,8 @@
       const resultCode     = aamResultSel.value;
       const resultAction   = resultCode ? (aamResultSel.selectedOptions[0]?.getAttribute('data-action') || '') : '';
       const followUpDate   = document.getElementById('aamFollowUpDateInput').value;
+      const resultCodeRequired = document.getElementById('aamResultCodeWrap').style.display !== 'none';
+      if (resultCodeRequired && !resultCode) { alert(I18N.t('Sonuç Kodu seçilmelidir.')); return; }
       if (!newStatus && !note && !resultCode) { alert(I18N.t('Durum seçin veya not girin.')); return; }
       if (resultAction === 'followup' && !followUpDate) { alert(I18N.t('Bu sonuç kodu için Takip Tarihi girilmelidir.')); return; }
       const btn = document.getElementById('aamBtnSave');
@@ -3551,6 +3580,7 @@
         // Alarm "İptal / Geçersiz" olarak kapatıldıysa İptal Alarmları
         // listesini/rozetini de tazele — bkz. team-leader.html'deki aynı düzeltme.
         if (newStatus === 'cancelled') loadAdminCancelledDeals();
+        if (resultCode) sendAdminResultCodeWhatsApp(a, resultCode, note);
         closeAdminAlarmModal();
       } catch(e) {
         alert(I18N.t('Kayıt hatası: ') + e.message);
