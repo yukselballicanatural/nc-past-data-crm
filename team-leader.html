@@ -1075,18 +1075,13 @@
 
     <!-- Aksiyon Seçimi -->
     <div style="margin-bottom:12px">
-      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Yeni Durum</label>
+      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Alarm Durumu</label>
       <select id="newStatus" class="filter-sel">
         <option value="">— Durum seçin —</option>
         <option value="seen">Görüldü</option>
         <option value="in_progress">Takipte</option>
-        <option value="arrived">Hasta Geldi</option>
-        <option value="examined">Muayene Oldu</option>
-        <option value="processing">İşlemleri Yapılıyor</option>
-        <option value="no_show">Gelemedi (No-show)</option>
         <option value="closed">Kapatıldı</option>
         <option value="cancelled">İptal / Geçersiz</option>
-        <option value="escalated" id="optEscalated" style="display:none">Eskale (Yöneticiye İlet)</option>
       </select>
     </div>
 
@@ -1102,10 +1097,11 @@
     </div>
 
     <!-- Sonuç Kodu — Zoho Deals Alarm Yönetimi.md tablolarına göre alarm tipine
-         özel manuel değerlendirme listesi. Seçim otomatik olarak Yeni Durum'u
-         önerir (Kapat/İptal Alarmı Oluştur/Takibe Al/Zoho Güncellemesini Bekle). -->
+         özel manuel değerlendirme listesi. Seçim otomatik olarak Alarm Durumu'nu
+         önerir (Kapat/İptal Alarmı Oluştur/Takibe Al/Zoho Güncellemesini Bekle).
+         Bu alarm tipi için bir sonuç kodu tablosu varsa seçim ZORUNLUDUR. -->
     <div id="resultCodeWrap" style="display:none;margin-bottom:12px">
-      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Sonuç Kodu <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></label>
+      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Sonuç Kodu <span style="color:#f87171;font-weight:700">*</span></label>
       <select id="alarmResultCode" class="filter-sel" onchange="onResultCodeChange()">
         <option value="">— Seç —</option>
       </select>
@@ -2635,9 +2631,6 @@
     const _nc = document.getElementById('noteCount'); if (_nc) _nc.textContent = '0 / 100';
     document.getElementById('closeReasonWrap').style.display = 'none';
     populateResultCodeSelect(a);
-    // Eskale seçeneği sadece RM'ye görünür
-    document.getElementById('optEscalated').style.display =
-      (currentUser && currentUser.role === 'regional-manager') ? '' : 'none';
     document.getElementById('alarmModal').classList.add('open');
     document.body.style.overflow = 'hidden';
     loadAlarmHistory(a.id);
@@ -2733,6 +2726,9 @@
     const resultCode    = resultSel.value;
     const resultAction  = resultCode ? (resultSel.selectedOptions[0]?.getAttribute('data-action') || '') : '';
     const followUpDate  = document.getElementById('followUpDateInput').value;
+    // Bu alarm tipi için bir Sonuç Kodu tablosu varsa seçim ZORUNLUDUR.
+    const resultCodeRequired = document.getElementById('resultCodeWrap').style.display !== 'none';
+    if (resultCodeRequired && !resultCode) { showNotice('Sonuç Kodu seçilmelidir.', 'error'); return; }
     if (!newStatus && !note && !resultCode) { showNotice('Durum seçin, sonuç kodu seçin veya not girin.', 'error'); return; }
     // Takibe Al seçilen hiçbir işlem, yeni takip tarihi girilmeden tamamlanmamalıdır.
     if (resultAction === 'followup' && !followUpDate) { showNotice('Bu sonuç kodu için Takip Tarihi girilmelidir.', 'error'); return; }
@@ -2776,6 +2772,9 @@
       // listesini/rozetini de tazele — deal'in Zoho stage'i değişmemiş
       // olabilir ama artık bu alarm sayesinde o listeye de girmesi gerekiyor.
       if (newStatus === 'cancelled') loadCancelledDeals();
+      // Sonuç Kodu seçildiyse ilgili danışmana (deal owner) otomatik olarak
+      // WhatsApp'tan (İngilizce, deal linki + adı + sonuç koduyla) yönlendir.
+      if (resultCode) sendResultCodeWhatsApp(currentAlarm, resultCode, note);
       closeAlarmModal();
       showNotice('Alarm güncellendi.', 'success');
     } catch(e) {
@@ -2783,6 +2782,38 @@
     } finally {
       btn.disabled = false; btn.textContent = I18N.t('Kaydet');
     }
+  }
+
+  // Sonuç Kodu kaydedilince ilgili danışmanın WhatsApp'ına otomatik yönlendirir.
+  // Telefon numarası Takımımdaki Kişiler (api/team-members) üzerinden, deal_owner
+  // adına göre eşleştirilir. NOT: wa.me linki mesajı ÖNCEDEN DOLDURUR ve doğru
+  // sohbeti açar; WhatsApp'ın kendi sayfasındaki "Gönder" tuşuna dışarıdan bir
+  // web sitesinin JS ile basması tarayıcı/WhatsApp güvenlik kısıtları yüzünden
+  // mümkün değildir (cross-origin) — bu yüzden son "Gönder" tıklaması kullanıcıda kalır.
+  async function sendResultCodeWhatsApp(alarm, resultCode, note) {
+    try {
+      const ownerName = (alarm.deal_owner || '').trim();
+      if (!ownerName) return;
+      let members = _teamMembers;
+      if (!members || !members.length) {
+        const token = (currentUser && currentUser.token) || '';
+        const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
+        const data = await r.json().catch(() => ({}));
+        members = data.members || [];
+      }
+      const member = members.find(m => (m.fullName || '').trim().toLowerCase() === ownerName.toLowerCase());
+      const digits = member ? _waDigits(member.phone) : '';
+      if (!digits) { showNotice(`${ownerName} ${I18N.t('için kayıtlı telefon numarası yok, WhatsApp mesajı gönderilemedi.')}`, 'error'); return; }
+      const dealLink = alarm.deal_id ? `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${alarm.deal_id}` : '';
+      const lines = [
+        'Alarm Result Code Update',
+        `Deal: ${alarm.deal_name || '-'}`,
+        dealLink ? `Link: ${dealLink}` : '',
+        `Result Code: ${resultCode}`,
+        note ? `Note: ${note}` : '',
+      ].filter(Boolean);
+      window.open(`https://wa.me/${digits}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
+    } catch(e) { /* WhatsApp yönlendirmesi ana kayıt akışını bozmasın */ }
   }
 
   let _todayOwnersPopulated = false;
@@ -2923,7 +2954,7 @@
   async function undoQuickAction(alarmId) {
     const idx = allAlarms.findIndex(x => x.id === alarmId);
     const prevStatus = idx >= 0 ? allAlarms[idx].status : null;
-    const updates = { status: 'open', actioned_at: null, closed_at: null, closed_by: null, close_reason: null };
+    const updates = { status: 'open', actioned_at: null, closed_at: null, closed_by: null, close_reason: null, note: null };
     try {
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
       const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${alarmId}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
