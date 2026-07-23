@@ -3865,6 +3865,23 @@
     }
   }
 
+  function _tmRowHtml(m, i) {
+    const rowBg = i % 2 === 0 ? '' : 'background:#0a1120';
+    const phoneDisplay = m.phone || '<span style="color:#334155">—</span>';
+    const emailDisplay = m.email || '<span style="color:#334155">—</span>';
+    return `<tr id="tmRow-${i}" style="${rowBg};border-bottom:1px solid #1e293b">
+      <td style="padding:8px 12px;color:#475569;font-size:11px;white-space:nowrap">${i + 1}</td>
+      <td style="padding:8px 12px;color:#f1f5f9;font-weight:600;white-space:nowrap">${fmt(m.fullName)}</td>
+      <td style="padding:8px 12px;color:#64748b;white-space:nowrap">${fmt(m.role)}</td>
+      <td id="tmPhoneCell-${i}" style="padding:8px 12px;color:#cbd5e1;white-space:nowrap;min-width:170px">${phoneDisplay}</td>
+      <td id="tmEmailCell-${i}" style="padding:8px 12px;color:#cbd5e1;min-width:200px">${emailDisplay}</td>
+      <td style="padding:8px 12px;white-space:nowrap;text-align:right">
+        <button onclick="editMember(${i})" id="tmEditBtn-${i}" style="padding:5px 12px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">Düzelt</button>
+        <button onclick="openMemberWhatsApp(${i})" style="padding:5px 10px;background:#166534;border:none;border-radius:7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">WA</button>
+      </td>
+    </tr>`;
+  }
+
   function renderTeamMembers() {
     const wrap  = document.getElementById('tmTableWrap');
     const tbody = document.getElementById('tmTbody');
@@ -3872,28 +3889,55 @@
     if (!_teamMembers.length) { wrap.style.display = 'none'; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
     wrap.style.display = 'block';
-    tbody.innerHTML = _teamMembers.map((m, i) => {
-      const rowBg = i % 2 === 0 ? '' : 'background:#0a1120';
-      return `<tr style="${rowBg};border-bottom:1px solid #1e293b">
-        <td style="padding:8px 12px;color:#475569;font-size:11px;white-space:nowrap">${i + 1}</td>
-        <td style="padding:8px 12px;color:#f1f5f9;font-weight:600;white-space:nowrap">${fmt(m.fullName)}</td>
-        <td style="padding:8px 12px;color:#64748b;white-space:nowrap">${fmt(m.role)}</td>
-        <td style="padding:8px 12px"><input type="tel" id="tmPhone-${i}" value="${fmt(m.phone)}" placeholder="+90 5xx xxx xx xx" class="filter-inp" style="width:160px;box-sizing:border-box"></td>
-        <td style="padding:8px 12px"><input type="email" id="tmEmail-${i}" value="${fmt(m.email)}" placeholder="ornek@mail.com" class="filter-inp" style="width:200px;box-sizing:border-box"></td>
-        <td style="padding:8px 12px;white-space:nowrap">
-          <button onclick="saveMember(${i})" style="padding:5px 12px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">Kaydet</button>
-          <button onclick="openMemberWhatsApp(${i})" style="padding:5px 10px;background:#166534;border:none;border-radius:7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">WA</button>
-        </td>
-      </tr>`;
-    }).join('');
+    tbody.innerHTML = _teamMembers.map((m, i) => _tmRowHtml(m, i)).join('');
     I18N.translateDOM(tbody);
+  }
+
+  function editMember(i) {
+    const m = _teamMembers[i];
+    if (!m) return;
+    const phoneCell = document.getElementById('tmPhoneCell-' + i);
+    const emailCell = document.getElementById('tmEmailCell-' + i);
+    const editBtn   = document.getElementById('tmEditBtn-' + i);
+    phoneCell.innerHTML = `<input type="tel" id="tmPhone-${i}" value="${fmt(m.phone)}" placeholder="+90 5xx xxx xx xx" class="filter-inp" style="width:155px;box-sizing:border-box">`;
+    emailCell.innerHTML = `<input type="email" id="tmEmail-${i}" value="${fmt(m.email)}" placeholder="ornek@mail.com" class="filter-inp" style="width:190px;box-sizing:border-box">`;
+    editBtn.style.display = 'none';
+    const td = editBtn.parentElement;
+    const saveSpan = document.createElement('span');
+    saveSpan.id = 'tmSaveCancel-' + i;
+    saveSpan.innerHTML = `<button onclick="saveMember(${i})" style="padding:5px 12px;background:#0f766e;border:none;border-radius:7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">Kaydet</button><button onclick="cancelMember(${i})" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">İptal</button>`;
+    td.insertBefore(saveSpan, editBtn);
+    const phoneInp = document.getElementById('tmPhone-' + i);
+    if (phoneInp && !phoneInp.value) phoneInp.value = '+90 ';
+    phoneInp && phoneInp.focus();
+  }
+
+  function cancelMember(i) {
+    const row = document.getElementById('tmRow-' + i);
+    if (!row) return;
+    const m = _teamMembers[i];
+    const rowBg = i % 2 === 0 ? '' : 'background:#0a1120';
+    row.outerHTML = _tmRowHtml(m, i);
+  }
+
+  function _validatePhone(raw) {
+    const v = raw.trim();
+    if (!v) return { ok: true, val: '' };
+    const digits = v.replace(/[^\d]/g, '');
+    if (!v.startsWith('+90') || digits.length !== 12) {
+      return { ok: false, msg: 'Telefon +90 ile başlamalı ve 12 rakam içermeli (ör. +90 532 123 45 67).' };
+    }
+    return { ok: true, val: v };
   }
 
   async function saveMember(i) {
     const m = _teamMembers[i];
     if (!m) return;
-    const phone = (document.getElementById('tmPhone-' + i) || {}).value?.trim() || '';
-    const email = (document.getElementById('tmEmail-' + i) || {}).value?.trim() || '';
+    const rawPhone = (document.getElementById('tmPhone-' + i) || {}).value || '';
+    const email    = ((document.getElementById('tmEmail-' + i) || {}).value || '').trim();
+    const phoneCheck = _validatePhone(rawPhone);
+    if (!phoneCheck.ok) { showNotice(phoneCheck.msg, 'error'); return; }
+    const phone = phoneCheck.val;
     try {
       const token = (currentUser && currentUser.token) || '';
       const r = await fetch('/api/team-members', {
@@ -3905,6 +3949,8 @@
       if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
       m.phone = phone;
       m.email = email;
+      const row = document.getElementById('tmRow-' + i);
+      if (row) row.outerHTML = _tmRowHtml(m, i);
       showNotice('Kaydedildi.', 'success');
     } catch(e) {
       showNotice('Kaydedilemedi: ' + e.message, 'error');
