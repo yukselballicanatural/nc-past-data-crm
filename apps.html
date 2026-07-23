@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Natural Clinic — Uygulamalar</title>
+<script src="i18n.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    background: #05080f;
+    color: #f1f5f9;
+    position: relative;
+    overflow-x: hidden;
+  }
+  body::before {
+    content: '';
+    position: fixed; top: -160px; right: -120px;
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(201,169,127,0.06) 0%, transparent 65%);
+    pointer-events: none;
+  }
+  body::after {
+    content: '';
+    position: fixed; bottom: -140px; left: -100px;
+    width: 420px; height: 420px;
+    background: radial-gradient(circle, rgba(6,105,90,0.07) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  /* ─── Header ─── */
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 26px 48px;
+    position: relative; z-index: 2;
+  }
+  .logo-mini { display: flex; align-items: baseline; gap: 0; }
+  .logo-mini-text { font-family: 'Cormorant Garamond', serif; font-size: 26px; font-weight: 400; color: #f7f3ec; letter-spacing: -0.5px; }
+  .logo-mini-dot { font-family: 'Cormorant Garamond', serif; font-size: 26px; color: #c9a97f; }
+  .logo-mini-clinic { font-family: 'Cormorant Garamond', serif; font-size: 13px; font-weight: 400; color: #c9a97f; letter-spacing: 4px; text-transform: lowercase; display: block; margin-top: 2px; margin-left: 1px; }
+  .logo-mini-wrap { display: flex; flex-direction: column; }
+
+  .user-area { display: flex; align-items: center; gap: 14px; }
+  .user-info { text-align: right; }
+  .user-name { font-size: 13px; font-weight: 600; color: #f1f5f9; }
+  .user-role { font-size: 10.5px; color: rgba(255,255,255,0.35); margin-top: 2px; text-transform: capitalize; }
+  .user-avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: linear-gradient(135deg, #c9a97f 0%, #a8845a 100%);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 700; color: #0a0a0a;
+    flex-shrink: 0;
+  }
+  .logout-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.09);
+    color: rgba(255,255,255,0.45);
+    font-size: 11px; font-weight: 600;
+    padding: 8px 14px; border-radius: 9px;
+    cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .logout-btn:hover { background: rgba(239,68,68,0.08); border-color: rgba(239,68,68,0.25); color: #fca5a5; }
+
+  /* ─── Hero ─── */
+  .hero { text-align: center; padding: 28px 24px 8px; position: relative; z-index: 2; }
+  .hero-title { font-family: 'Cormorant Garamond', serif; font-size: 40px; font-weight: 500; color: #f7f3ec; letter-spacing: -0.5px; }
+  .hero-title em { color: #c9a97f; font-style: italic; }
+  .hero-sub { margin-top: 10px; font-size: 13px; color: rgba(255,255,255,0.35); letter-spacing: 0.3px; }
+
+  /* ─── App grid ─── */
+  .apps-wrap { max-width: 1080px; margin: 0 auto; padding: 48px 32px 80px; position: relative; z-index: 2; }
+  .apps-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 22px;
+  }
+  @media (max-width: 920px) { .apps-grid { grid-template-columns: repeat(2, 1fr); } }
+  @media (max-width: 520px) { .apps-grid { grid-template-columns: 1fr; } }
+
+  .app-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 20px;
+    padding: 34px 20px 26px;
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    gap: 16px;
+    cursor: pointer;
+    transition: transform 0.2s cubic-bezier(0.22,1,0.36,1), border-color 0.2s, background 0.2s, box-shadow 0.2s;
+    position: relative;
+    text-decoration: none;
+    color: inherit;
+  }
+  .app-card:hover {
+    transform: translateY(-6px);
+    border-color: rgba(201,169,127,0.35);
+    background: rgba(255,255,255,0.035);
+    box-shadow: 0 20px 45px rgba(0,0,0,0.35);
+  }
+  .app-card.disabled {
+    cursor: default;
+    opacity: 0.55;
+  }
+  .app-card.disabled:hover {
+    transform: none;
+    border-color: rgba(255,255,255,0.07);
+    background: rgba(255,255,255,0.02);
+    box-shadow: none;
+  }
+
+  .app-icon-wrap {
+    width: 72px; height: 72px;
+    border-radius: 20px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .app-name { font-size: 14px; font-weight: 700; color: #f1f5f9; line-height: 1.35; letter-spacing: -0.1px; }
+  .app-desc { font-size: 11px; color: rgba(255,255,255,0.32); line-height: 1.5; }
+
+  .app-badge {
+    position: absolute; top: 14px; right: 14px;
+    font-size: 8.5px; font-weight: 800; letter-spacing: 1px;
+    text-transform: uppercase;
+    padding: 4px 9px; border-radius: 20px;
+  }
+  .app-badge.active {
+    background: rgba(74,222,128,0.1); border: 1px solid rgba(74,222,128,0.25); color: #4ade80;
+  }
+  .app-badge.soon {
+    background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.12); color: rgba(255,255,255,0.4);
+  }
+  .app-badge.external {
+    background: rgba(96,165,250,0.1); border: 1px solid rgba(96,165,250,0.25); color: #60a5fa;
+  }
+
+  .footer-note {
+    text-align: center;
+    font-size: 10.5px;
+    color: rgba(255,255,255,0.18);
+    margin-top: 52px;
+    letter-spacing: 0.3px;
+  }
+
+  /* Toast for "coming soon" */
+  #miniToast {
+    position: fixed;
+    bottom: 32px; left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    z-index: 9999;
+    background: #0d0f18;
+    border: 1px solid rgba(201,169,127,0.25);
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #f1f5f9;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+  }
+  #miniToast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="logo-mini-wrap">
+      <div class="logo-mini">
+        <span class="logo-mini-text">natural<em style="font-style:italic">.</em></span>
+      </div>
+      <span class="logo-mini-clinic">clinic</span>
+    </div>
+    <div class="user-area">
+      <div class="user-info">
+        <div class="user-name" id="uaName">—</div>
+        <div class="user-role" id="uaRole">—</div>
+      </div>
+      <div class="user-avatar" id="uaAvatar">—</div>
+      <button class="logout-btn" onclick="logout()">
+        <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        Çıkış
+      </button>
+    </div>
+  </div>
+
+  <div class="hero">
+    <div class="hero-title">Uygulama<em>lar</em>ınız</div>
+    <div class="hero-sub">Devam etmek için bir uygulama seçin</div>
+  </div>
+
+  <div class="apps-wrap">
+    <div class="apps-grid" id="appsGrid"></div>
+    <div class="footer-note">Natural Clinic &copy; <span id="yearNow"></span> &middot; İç Sistemler Portalı</div>
+  </div>
+
+  <div id="miniToast"></div>
+
+<script>
+  const currentUser = JSON.parse(sessionStorage.getItem('nc_current_user') || 'null');
+  if (!currentUser || !currentUser.role) {
+    window.location.href = 'index.html';
+  }
+
+  document.getElementById('yearNow').textContent = new Date().getFullYear ? '2026' : '';
+  document.getElementById('uaName').textContent = currentUser.fullName || currentUser.username || '—';
+  document.getElementById('uaRole').textContent = ({
+    'agent': 'Danışman', 'team-leader': 'Takım Lideri', 'admin': 'Admin',
+    'super-admin': 'Süper Admin', 'regional-manager': 'Bölge Müdürü'
+  })[currentUser.role] || currentUser.role;
+  document.getElementById('uaAvatar').textContent = (currentUser.fullName || currentUser.username || '?').trim().charAt(0).toUpperCase();
+
+  function alarmSystemUrl() {
+    if (currentUser.role === 'agent') return 'agent.html';
+    if (currentUser.role === 'team-leader') return 'team-leader.html';
+    return 'admin.html'; // admin, super-admin, regional-manager
+  }
+
+  const APPS = [
+    {
+      key: 'pdks',
+      name: 'Natural Clinic PDKS',
+      desc: 'Personel Devam Kontrol Sistemi',
+      status: 'soon',
+      iconBg: 'linear-gradient(135deg, #1d4ed8 0%, #1e3a8a 100%)',
+      icon: `<svg width="34" height="34" fill="none" viewBox="0 0 24 24" stroke="#93c5fd" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path stroke-linecap="round" stroke-linejoin="round" d="M12 7v5l3.5 2"/></svg>`
+    },
+    {
+      key: 'alarm',
+      name: 'Natural Clinic Takım Lideri Alarm Takip Sistemi',
+      desc: 'Deal, alarm ve ekip takip paneli',
+      status: 'active',
+      iconBg: 'linear-gradient(135deg, #dc2626 0%, #7f1d1d 100%)',
+      icon: `<svg width="34" height="34" fill="none" viewBox="0 0 24 24" stroke="#fca5a5" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.4-1.4A2 2 0 0118 14.2V11a6 6 0 10-12 0v3.2a2 2 0 01-.6 1.4L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>`
+    },
+    {
+      key: 'dashboard',
+      name: 'Natural Clinic Dashboard',
+      desc: 'Genel performans ve raporlama',
+      status: 'soon',
+      iconBg: 'linear-gradient(135deg, #059669 0%, #064e3b 100%)',
+      icon: `<svg width="34" height="34" fill="none" viewBox="0 0 24 24" stroke="#6ee7b7" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M9 17V9m3 8V5m3 12v-4M4 21h16"/></svg>`
+    },
+    {
+      key: 'quality',
+      name: 'Quality Training',
+      desc: 'Eğitim ve kalite kontrol modülü',
+      status: 'external',
+      url: 'https://nc-quality-control.vercel.app/login',
+      iconBg: 'linear-gradient(135deg, #c9a97f 0%, #a8845a 100%)',
+      icon: `<svg width="34" height="34" fill="none" viewBox="0 0 24 24" stroke="#1c1917" stroke-width="1.8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 14l9-5-9-5-9 5 9 5zm0 0l9-5v6M12 14v7m-6-4v3.2c0 .5.3.9.7 1.1C8.1 22 10 22.5 12 22.5s3.9-.5 5.3-1.2c.4-.2.7-.6.7-1.1V13"/></svg>`
+    }
+  ];
+
+  const BADGE_LABEL = { active: 'Aktif', soon: 'Yakında', external: 'Harici' };
+
+  function renderApps() {
+    const grid = document.getElementById('appsGrid');
+    grid.innerHTML = APPS.map(a => {
+      const disabled = a.status === 'soon';
+      return `<div class="app-card${disabled ? ' disabled' : ''}" onclick="${disabled ? `showSoonToast('${a.name}')` : `openApp('${a.key}')`}">
+        <span class="app-badge ${a.status}">${BADGE_LABEL[a.status]}</span>
+        <div class="app-icon-wrap" style="background:${a.iconBg}">${a.icon}</div>
+        <div class="app-name">${a.name}</div>
+        <div class="app-desc">${a.desc}</div>
+      </div>`;
+    }).join('');
+  }
+  renderApps();
+
+  function openApp(key) {
+    const app = APPS.find(a => a.key === key);
+    if (!app) return;
+    if (app.key === 'alarm') { window.location.href = alarmSystemUrl(); return; }
+    if (app.url) { window.open(app.url, '_blank', 'noopener'); return; }
+  }
+
+  function showSoonToast(name) {
+    const t = document.getElementById('miniToast');
+    t.textContent = `${name} — çok yakında aktif olacak.`;
+    t.classList.add('show');
+    clearTimeout(window._soonTimer);
+    window._soonTimer = setTimeout(() => t.classList.remove('show'), 2400);
+  }
+
+  function logout() {
+    sessionStorage.removeItem('nc_current_user');
+    window.location.href = 'index.html';
+  }
+</script>
+</body>
+</html>

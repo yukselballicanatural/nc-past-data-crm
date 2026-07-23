@@ -626,10 +626,10 @@
         } catch(e) {}
 
         setTimeout(() => {
-          if (role === 'agent')                                       window.location.href = 'agent.html';
-          else if (role === 'team-leader')                            window.location.href = 'team-leader.html';
-          // RM'ler artık admin panelinin bölgeye kısıtlı halini kullanır
-          else if (role === 'admin' || role === 'super-admin' || role === 'regional-manager') window.location.href = 'admin.html';
+          // Login sonrası doğrudan panele değil, uygulama seçim ekranına
+          // (apps.html) gidiyor — kullanıcı orada Natural Clinic'e ait
+          // hangi sisteme gireceğini seçiyor.
+          if (['agent','team-leader','admin','super-admin','regional-manager'].includes(role)) window.location.href = 'apps.html';
           else showAlert(`Role "${role}" is not authorized.`, 'error');
         }, 600);
 
@@ -645,9 +645,7 @@
     try {
       const existing = JSON.parse(sessionStorage.getItem('nc_current_user') || 'null');
       if (existing && existing.role) {
-        if (existing.role === 'agent')                                        window.location.href = 'agent.html';
-        else if (existing.role === 'team-leader')                             window.location.href = 'team-leader.html';
-        else if (existing.role === 'admin' || existing.role === 'super-admin' || existing.role === 'regional-manager') window.location.href = 'admin.html';
+        window.location.href = 'apps.html';
       }
     } catch(e) { sessionStorage.removeItem('nc_current_user'); }
   </script>
