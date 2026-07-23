@@ -373,6 +373,54 @@ window.AlarmEngine = (function () {
     return cancelled;
   }
 
+  // Stage'i Won VE bakiyesi tamamen ödenmiş (ödenen >= tutar) deallerin hâlâ
+  // açık kalan TÜM alarmlarını kapat — iş tamamlandı, hatırlatmaya gerek yok.
+  // fetchActiveDeals() Won'u zaten dışarıda bıraktığı için (ACTIVE_STAGES'e
+  // dahil değil) burada Won dealleri ayrıca, doğrudan çekiyoruz.
+  async function closeAlarmsForWonPaidDeals(BASE, KEY) {
+    const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+    const stageParam = encodeURIComponent('ilike.*won*');
+    let deals = [], offset = 0;
+    while (true) {
+      const url = `${BASE}/rest/v1/deals?stage=${stageParam}&select=id,amount,total_paid_amount&limit=1000&offset=${offset}`;
+      const r = await fetch(url, { headers: H });
+      if (!r.ok) break;
+      const batch = await r.json();
+      if (!Array.isArray(batch) || !batch.length) break;
+      deals.push(...batch);
+      if (batch.length < 1000) break;
+      offset += 1000;
+    }
+    const paidIds = deals
+      .filter(d => (Number(d.amount) || 0) > 0 && (Number(d.total_paid_amount) || 0) >= Number(d.amount))
+      .map(d => String(d.id));
+    if (!paidIds.length) return 0;
+
+    const now = new Date().toISOString();
+    const PH  = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+    let closed = 0;
+
+    for (let i = 0; i < paidIds.length; i += 200) {
+      const idList = paidIds.slice(i, i + 200).join(',');
+      const r = await fetch(
+        `${BASE}/rest/v1/alarms?status=in.(open,seen,in_progress,escalated,arrived,examined,processing)&deal_id=in.(${idList})&select=id`,
+        { headers: H }
+      );
+      if (!r.ok) continue;
+      const toClose = await r.json();
+      if (!toClose.length) continue;
+
+      const idListAlarms = toClose.map(a => a.id).join(',');
+      const pr = await fetch(
+        `${BASE}/rest/v1/alarms?id=in.(${idListAlarms})`,
+        { method: 'PATCH', headers: PH,
+          body: JSON.stringify({ status: 'closed', close_reason: 'Ödeme %100 ve deal Won — otomatik kapatıldı', closed_at: now, closed_by: 'system' }) }
+      );
+      if (pr.ok) closed += toClose.length;
+    }
+    return closed;
+  }
+
   // ── Ana çalıştırma — her zaman TÜM takımlar için üretir ─────────
   const _t = (s) => (typeof I18N !== 'undefined' ? I18N.t(s) : s);
   async function run(BASE, KEY, opts = {}) {
@@ -395,8 +443,11 @@ window.AlarmEngine = (function () {
     // Stage'i Cancelled olan deallerin açık kalan alarmlarını iptal et
     if (onProgress) onProgress(_t('İptal olan dealler için alarmlar kapatılıyor...'));
     const cancelledCount = await closeAlarmsForCancelledDeals(BASE, KEY);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, ...result };
+    // Won + ödemesi %100 tamamlanmış deallerin açık kalan alarmlarını kapat
+    if (onProgress) onProgress(_t('Won ve ödemesi tamamlanan dealler için alarmlar kapatılıyor...'));
+    const wonPaidCount = await closeAlarmsForWonPaidDeals(BASE, KEY);
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, wonPaid: wonPaidCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals };
 })();
