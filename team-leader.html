@@ -347,8 +347,8 @@
       </div>
     </div>
 
-    <!-- Sub-tabs -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+    <!-- Sub-tabs — sadece Tablo görünümünde anlamlı, Kanban tüm durumları zaten tek seferde gösterir -->
+    <div id="alarmTabsRow" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
       <button class="tab-pill active" id="atab-open" onclick="switchAlarmTab('open')">Açık <span id="cnt-open" class="badge-cnt" style="background:rgba(251,191,36,0.2);color:#fbbf24">0</span></button>
       <button class="tab-pill" id="atab-today" onclick="switchAlarmTab('today')">Bugün <span id="cnt-today" class="badge-cnt" style="background:rgba(74,222,128,0.2);color:#4ade80">0</span></button>
       <button class="tab-pill" id="atab-approaching" onclick="switchAlarmTab('approaching')">Yaklaşan <span id="cnt-approaching" class="badge-cnt" style="background:rgba(251,146,60,0.2);color:#fb923c">0</span></button>
@@ -1864,6 +1864,14 @@
     }
     updateAlarmSortArrows();
 
+    // Kanban, seçili sekmeden (Açık/Bugün/Yaklaşan/vb) BAĞIMSIZ olarak tüm
+    // aktif alarmları tek seferde durum sütunlarında gösterir — Deal Listesi
+    // Kanban'ı nasıl tüm stage'leri aynı anda gösteriyorsa aynı mantık.
+    // Arama/danışman/P-FT/eşik/tarih filtreleri yine de uygulanır.
+    if (_alarmsViewMode === 'kanban') {
+      renderAlarmsKanban(applyExtraAlarmFilters(filterAlarms('all')));
+    }
+
     const tbody = document.getElementById('alarmTbody');
     const empty = document.getElementById('alarmEmpty');
     const cnt   = document.getElementById('alarmCount');
@@ -1871,7 +1879,6 @@
       tbody.innerHTML = '';
       empty.style.display = 'block';
       cnt.textContent = '';
-      if (_alarmsViewMode === 'kanban') renderAlarmsKanban(data);
       return;
     }
     empty.style.display = 'none';
@@ -1929,7 +1936,6 @@
       </tr>`;
     }).join('');
     I18N.translateDOM(tbody);
-    if (_alarmsViewMode === 'kanban') renderAlarmsKanban(data);
   }
 
   // ── Alarmlar: Tablo / Kanban görünüm anahtarı ────────────────────
@@ -1938,6 +1944,10 @@
     _alarmsViewMode = mode;
     document.getElementById('alarmTableWrap').style.display   = mode === 'table'  ? '' : 'none';
     document.getElementById('alarmsKanbanView').style.display = mode === 'kanban' ? 'block' : 'none';
+    // Kanban tüm durumları (Açık/Bugün/Yaklaşan/vb ayrımı yapmadan) zaten tek
+    // seferde sütunlar halinde gösterdiği için sekmelerin Kanban'da anlamı yok
+    const tabsRow = document.getElementById('alarmTabsRow');
+    if (tabsRow) tabsRow.style.display = mode === 'kanban' ? 'none' : 'flex';
     const bT = document.getElementById('alarmsViewBtnTable'), bK = document.getElementById('alarmsViewBtnKanban');
     bT.style.background = mode === 'table'  ? '#4f46e5' : 'transparent'; bT.style.color = mode === 'table'  ? '#fff' : '#94a3b8';
     bK.style.background = mode === 'kanban' ? '#4f46e5' : 'transparent'; bK.style.color = mode === 'kanban' ? '#fff' : '#94a3b8';
