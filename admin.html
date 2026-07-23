@@ -967,7 +967,6 @@
               <option value="visit_approaching">Vizit Yaklaşıyor</option>
               <option value="arrival_missing">Tarih Eksik</option>
               <option value="today_patient">Bugün Gelecek</option>
-              <option value="payment_tracking">Payment Takip</option>
               <option value="no_show">No-show</option>
             </select>
           </div>
@@ -1765,7 +1764,6 @@
         'visit_approaching':  { label:I18N.t('Vizit Yaklaşıyor'),   color:'#60a5fa' },
         'arrival_missing':    { label:I18N.t('Tarih Eksik'),         color:'#f87171' },
         'today_patient':      { label:I18N.t('Bugün Gelecek'),       color:'#4ade80' },
-        'payment_tracking':   { label:I18N.t('Payment Takip'),       color:'#c084fc' },
         'no_show':            { label:I18N.t('Gelemedi'),            color:'#f87171' },
       };
       if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(type)) {
@@ -1839,13 +1837,15 @@
       if (!adminAllAlarms.length) {
         const cached = await _getCached(_alarmsCacheKey(), _ALARMS_TTL);
         if (cached && cached.length) {
-          adminAllAlarms = cached;
+          // payment_tracking artık üretilmeyen kaldırılmış bir alarm tipi —
+          // eski cache'te/DB'de kalmış olsa bile hiçbir sayaca/tabloya girmesin.
+          adminAllAlarms = cached.filter(a => a.alarm_type !== 'payment_tracking');
           updateAdminAlarmKPIs();
           renderRegionPanels();
           populateAdminAlarmFilters();
           renderAdminAlarmTable();
-          _amEnsureShortRefMap(cached);
-          _amUpdateBadges(cached);
+          _amEnsureShortRefMap(adminAllAlarms);
+          _amUpdateBadges(adminAllAlarms);
         }
       }
       if (!silent) document.getElementById('adminEngineStatus').textContent = I18N.t('Alarmlar yükleniyor...');
@@ -1872,18 +1872,18 @@
           ));
           rest.forEach(p => { if (Array.isArray(p)) all.push(...p); });
         }
-        adminAllAlarms = all;
+        adminAllAlarms = all.filter(a => a.alarm_type !== 'payment_tracking');
         updateAdminAlarmKPIs();
         renderRegionPanels();
         if (!silent) {
           populateAdminAlarmFilters();
           renderAdminAlarmTable();
         }
-        _amEnsureShortRefMap(all);
-        document.getElementById('adminEngineStatus').textContent = `${all.length} ${I18N.t('alarm yüklendi')}`;
+        _amEnsureShortRefMap(adminAllAlarms);
+        document.getElementById('adminEngineStatus').textContent = `${adminAllAlarms.length} ${I18N.t('alarm yüklendi')}`;
         const lr = document.getElementById('amLastRefresh');
         if (lr) lr.textContent = new Date().toLocaleTimeString('tr-TR');
-        _amUpdateBadges(all);
+        _amUpdateBadges(adminAllAlarms);
         _setCache(_alarmsCacheKey(), all);
       } catch(e) {
         document.getElementById('adminEngineStatus').textContent = I18N.t('Yükleme hatası: ') + e.message;
@@ -1903,7 +1903,6 @@
       document.getElementById('mk4').textContent = a.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
       const todayStr = new Date().toISOString().slice(0,10);
       document.getElementById('mk5').textContent = a.filter(x => x.status === 'no_show' && x.closed_at && x.closed_at.slice(0,10) === todayStr).length;
-      document.getElementById('mk6').textContent = a.filter(x => x.alarm_type === 'payment_tracking' && active.has(x.status)).length;
       document.getElementById('mk7').textContent = a.filter(x => ['arrival_approaching','visit_approaching'].includes(x.alarm_type) && active.has(x.status)).length;
       document.getElementById('mk8').textContent = a.filter(x => x.payment_or_flight_ticket === 'Flight Ticket' && ['arrival_approaching','visit_approaching','arrival_missing','today_patient'].includes(x.alarm_type) && active.has(x.status)).length;
 
@@ -2120,13 +2119,15 @@
       if (_closedAlarmsOwnersPopulated) return;
       const sel = document.getElementById('closedAlarmsOwnerFilter');
       if (!sel) return;
-      const owners = [...new Set(adminAllAlarms.filter(a => a.status === 'closed').map(a => a.deal_owner).filter(Boolean))].sort();
+      const owners = [...new Set(adminAllAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').map(a => a.deal_owner).filter(Boolean))].sort();
       if (!owners.length) return;
       sel.innerHTML = `<option value="">${I18N.t("Tüm Deal Owner'lar")}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
       _closedAlarmsOwnersPopulated = true;
     }
     function renderAdminClosedAlarms() {
-      let data = adminAllAlarms.filter(a => a.status === 'closed').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+      // payment_tracking artık üretilmeyen kaldırılmış bir alarm tipi — eski
+      // kayıtlardan kalmış olsa bile bu raporda görünmesin.
+      let data = adminAllAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
       _closedAlarmsPopulateOwnerFilter();
       const ownerSel = document.getElementById('closedAlarmsOwnerFilter');
       if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
@@ -3003,6 +3004,9 @@
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
 
       return adminAllAlarms.filter(a => {
+        // payment_tracking artık üretilmeyen kaldırılmış bir alarm tipi —
+        // eski kayıtlardan kalmış olsa bile hiçbir yerde gösterilmesin.
+        if (a.alarm_type === 'payment_tracking') return false;
         if (region && a.region !== region) return false;
         if (team   && (TeamMap.normalize(a.team) || a.team) !== team) return false;
         if (owner  && a.deal_owner !== owner) return false;

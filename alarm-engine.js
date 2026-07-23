@@ -118,31 +118,6 @@ window.AlarmEngine = (function () {
     const isPayment = pft === 'Payment';
     const isFlight  = pft === 'Flight Ticket';
 
-    // ── Ödeme takibi: tutar ≠ ödenen tutar olan HER deal için ──────────
-    // Amaç net: ödemesi eksik kalan hiçbir hastayı kaçırmamak. Önceden bu
-    // sadece "Payment" tipi + son aktiviteden bu yana geçen süre eşiğine
-    // göre çalışıyordu — Flight Ticket dealler ve eşik penceresine
-    // girmeyenler (ör. daha yeni ama ödemesi eksik) hiç uyarılmıyordu.
-    // Artık pft tipinden bağımsız: bakiye kalan HER aktif deal alarma girer,
-    // ödeme tamamlanana kadar tek satır olarak açık kalır (bkz.
-    // closeSettledPaymentAlarms — bakiye kapanınca otomatik kapatılır).
-    const amount = Number(deal.amount) || 0;
-    const paid   = Number(deal.total_paid_amount) || 0;
-    const unpaid = Math.max(0, Math.round((amount - paid) * 100) / 100);
-    if (unpaid > 0) {
-      alarms.push({
-        ...base,
-        alarm_type:      'payment_tracking',
-        reference_field: 'payment_due',
-        reference_date:  null,
-        threshold_days:  null,
-        days_remaining:  null,
-        // Tarih/eşik içermeyen SABİT anahtar — bakiye kapanana kadar tek
-        // alarm satırı kalır, tekrar tekrar yeni satır açılmaz.
-        dedup_key:       `${deal.id}_payment_due`,
-      });
-    }
-
     // ── Arrival + Visit tarihleri ────────────────────────────────────
     const dateFields = [];
 
@@ -293,69 +268,6 @@ window.AlarmEngine = (function () {
     return closed;
   }
 
-  // Bakiyesi kapanmış (tutar = ödenen) deallerin açık ödeme takip alarmlarını
-  // kapat — computeAlarms artık unpaid>0 olan HER dealde alarm ürettiği için,
-  // ödeme tamamlanınca bu alarmın da otomatik kapanması gerekiyor.
-  //
-  // Ayrıca ESKİ şemayla (sadece "Payment" pft tipi + son aktivite eşiği,
-  // reference_field=last_activity_time) açılmış alarmlar da burada kapatılır:
-  // yeni şema (reference_field=payment_due, tarihsiz, tüm pft tipleri) farklı
-  // bir dedup_key kullandığı için eskiler kendiliğinden kapanmaz — kapatılmazsa
-  // aynı deal için iki ayrı "ödeme" alarmı (eski + yeni) birden görünür.
-  async function closeSettledPaymentAlarms(BASE, KEY, deals) {
-    const H   = { apikey: KEY, Authorization: 'Bearer ' + KEY };
-    const now = new Date().toISOString();
-    const PH  = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
-    let closed = 0;
-
-    // 1) Eski şema: last_activity_time referanslı tüm açık ödeme alarmları
-    //    artık geçersiz — yeni şema devralıyor.
-    {
-      const r = await fetch(
-        `${BASE}/rest/v1/alarms?alarm_type=eq.payment_tracking&reference_field=eq.last_activity_time&status=in.(open,seen,in_progress,escalated)&select=id`,
-        { headers: H }
-      );
-      if (r.ok) {
-        const legacy = await r.json();
-        for (let i = 0; i < legacy.length; i += 100) {
-          const idList = legacy.slice(i, i + 100).map(a => a.id).join(',');
-          const pr = await fetch(`${BASE}/rest/v1/alarms?id=in.(${idList})`, {
-            method: 'PATCH', headers: PH,
-            body: JSON.stringify({ status: 'closed', close_reason: 'legacy_scheme', closed_at: now, closed_by: 'system' }),
-          });
-          if (pr.ok) closed += Math.min(100, legacy.length - i);
-        }
-      }
-    }
-
-    // 2) Yeni şema: bakiyesi kapanmış deallerin payment_due alarmlarını kapat
-    const settledIds = [];
-    for (const d of deals) {
-      const amount = Number(d.amount) || 0;
-      const paid   = Number(d.total_paid_amount) || 0;
-      if (amount - paid <= 0) settledIds.push(String(d.id));
-    }
-    for (let i = 0; i < settledIds.length; i += 200) {
-      const idList = settledIds.slice(i, i + 200).join(',');
-      const r = await fetch(
-        `${BASE}/rest/v1/alarms?alarm_type=eq.payment_tracking&reference_field=eq.payment_due&status=in.(open,seen,in_progress,escalated)&deal_id=in.(${idList})&select=id`,
-        { headers: H }
-      );
-      if (!r.ok) continue;
-      const toClose = await r.json();
-      if (!toClose.length) continue;
-
-      const idListAlarms = toClose.map(a => a.id).join(',');
-      const pr = await fetch(
-        `${BASE}/rest/v1/alarms?id=in.(${idListAlarms})`,
-        { method: 'PATCH', headers: PH,
-          body: JSON.stringify({ status: 'closed', close_reason: 'payment_settled', closed_at: now, closed_by: 'system' }) }
-      );
-      if (pr.ok) closed += toClose.length;
-    }
-    return closed;
-  }
-
   // Aynı (deal, alan, tarih) için birden fazla AKTİF alarm varsa fazlalıkları
   // kapat. Eski motor sürümleri farklı dedup_key formatları kullandığı için
   // (eşik dahil: "..._15_...", bugün ayrı: "..._today_...") geçmişte üretilen
@@ -480,14 +392,11 @@ window.AlarmEngine = (function () {
     // Arrival Date artık dolu olan deallerin eksik tarih alarmlarını kapat
     if (onProgress) onProgress(_t('Tarih girilen alarmlar kapatılıyor...'));
     const closedCount = await closeStaleArrivalMissing(BASE, KEY, deals);
-    // Bakiyesi kapanmış deallerin açık ödeme takip alarmlarını kapat
-    if (onProgress) onProgress(_t('Ödemesi tamamlanan alarmlar kapatılıyor...'));
-    const settledCount = await closeSettledPaymentAlarms(BASE, KEY, deals);
     // Stage'i Cancelled olan deallerin açık kalan alarmlarını iptal et
     if (onProgress) onProgress(_t('İptal olan dealler için alarmlar kapatılıyor...'));
     const cancelledCount = await closeAlarmsForCancelledDeals(BASE, KEY);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, settled: settledCount, ...result };
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms, closeSettledPaymentAlarms };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms };
 })();
