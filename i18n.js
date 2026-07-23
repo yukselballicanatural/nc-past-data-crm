@@ -72,6 +72,7 @@
     'Bu deallar Payment türünde ancak henüz Last Activity Time girilmemiş. Takibe alınması önerilir.':
       'These deals are Payment type but Last Activity Time has not been entered yet. Follow-up is recommended.',
     'Bu sekmede alarm bulunamadı.': 'No alarms found in this tab.',
+    'Bu görünümde alarm bulunamadı.': 'No alarms found in this view.',
     'Bu takım için aktif alarm bulunamadı.': 'No active alarms found for this team.',
     'Bugün': 'Today',
     'Bugün Gelecek': 'Arriving Today',
@@ -342,6 +343,7 @@
     'Durum Değişti': 'Status Changed',
     'Not Eklendi': 'Note Added',
     'Oluşturuldu': 'Created',
+    'Oluşturulma': 'Created',
     'Yeniden Açıldı': 'Reopened',
     'Otomatik Kapatıldı': 'Auto-closed',
     'Henüz aksiyon yok.': 'No action yet.',
