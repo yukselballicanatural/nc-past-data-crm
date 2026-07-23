@@ -2079,14 +2079,18 @@
     });
     const wrap   = document.getElementById('alarmTableWrap');
     const noAct  = document.getElementById('noActivityTableWrap');
+    const kanban = document.getElementById('alarmsKanbanView');
     if (tab === 'noactivity') {
-      if (wrap)  wrap.style.display  = 'none';
-      if (noAct) noAct.style.display = 'block';
+      if (wrap)   wrap.style.display   = 'none';
+      if (kanban) kanban.style.display = 'none';
+      if (noAct)  noAct.style.display  = 'block';
       renderPaymentNoActivity();
     } else {
       if (noAct) noAct.style.display = 'none';
-      if (wrap && document.getElementById('alarmLoading').style.display === 'none') {
-        wrap.style.display = 'block';
+      const loadingDone = document.getElementById('alarmLoading').style.display === 'none';
+      if (loadingDone) {
+        if (wrap)   wrap.style.display   = _alarmsViewMode === 'table'  ? 'block' : 'none';
+        if (kanban) kanban.style.display = _alarmsViewMode === 'kanban' ? 'block' : 'none';
       }
       renderAlarms();
     }
@@ -2161,7 +2165,8 @@
       renderAlarms();
       renderConsultantStrip();
       document.getElementById('alarmLoading').style.display = 'none';
-      document.getElementById('alarmTableWrap').style.display = 'block';
+      document.getElementById('alarmTableWrap').style.display   = _alarmsViewMode === 'table'  ? 'block' : 'none';
+      document.getElementById('alarmsKanbanView').style.display = _alarmsViewMode === 'kanban' ? 'block' : 'none';
 
       // Ödeme/finans verisi ve Won+ödeme otomatik kapama kuralı arka planda
       // çalışır — tabloyu ilk göstermek için bunları beklemeye gerek yok,
@@ -2173,7 +2178,8 @@
         .catch(() => {});
     } catch(e) {
       document.getElementById('alarmLoading').style.display = 'none';
-      document.getElementById('alarmTableWrap').style.display = 'block';
+      document.getElementById('alarmTableWrap').style.display   = _alarmsViewMode === 'table'  ? 'block' : 'none';
+      document.getElementById('alarmsKanbanView').style.display = _alarmsViewMode === 'kanban' ? 'block' : 'none';
       showNotice('Alarmlar yüklenemedi: ' + e.message, 'error');
     }
   }
