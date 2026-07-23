@@ -995,8 +995,6 @@
               <option value="Waiting hotel confirmation">Waiting hotel confirmation</option>
               <option value="On Hold">On Hold</option>
               <option value="Check in completed">Check in completed</option>
-              <option value="Won">Won</option>
-              <option value="Cancelled">Cancelled</option>
               <option value="Closed Lost">Closed Lost</option>
             </select>
           </div>
@@ -1848,10 +1846,10 @@
         if (noshowCount > 0) { noshowBadge.textContent = noshowCount; noshowBadge.style.display = 'inline-block'; }
         else noshowBadge.style.display = 'none';
       }
-      // Kapatılan Alarmlar menü rozeti — payment_tracking hariç (bkz. renderAdminClosedAlarms)
+      // Kapatılan Alarmlar menü rozeti — tüm kapatılmış alarmlar (deal/satır gizlenmiyor)
       const closedBadge = document.getElementById('closedAlarmBadge');
       if (closedBadge) {
-        const closedCount = all.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').length;
+        const closedCount = all.filter(a => a.status === 'closed').length;
         if (closedCount > 0) { closedBadge.textContent = closedCount; closedBadge.style.display = 'inline-block'; }
         else closedBadge.style.display = 'none';
       }
@@ -2147,16 +2145,16 @@
       if (_closedAlarmsOwnersPopulated) return;
       const sel = document.getElementById('closedAlarmsOwnerFilter');
       if (!sel) return;
-      const owners = [...new Set(adminAllAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').map(a => a.deal_owner).filter(Boolean))].sort();
+      const owners = [...new Set(adminAllAlarms.filter(a => a.status === 'closed').map(a => a.deal_owner).filter(Boolean))].sort();
       if (!owners.length) return;
       sel.innerHTML = `<option value="">${I18N.t("Tüm Deal Owner'lar")}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
       _closedAlarmsOwnersPopulated = true;
     }
     function renderAdminClosedAlarms() {
-      // Payment Takip artık geçerli bir alarm tipi sayılmıyor — geçmiş
-      // kayıtları da dahil hiçbir yerde (bu rapor dahil) gösterilmesin.
-      // Rozet (closedAlarmBadge) de aynı hariç tutmayı uygular, sayılar tutarlı kalır.
-      let data = adminAllAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+      // Deal/kayıt gizlenmez — bu deal'in kapandığını görmek önemli. Sadece
+      // "Payment Takip" ALARM TİPİ etiketi hiçbir yerde gösterilmiyor (aşağıda
+      // tm boşa çekiliyor); satırın kendisi diğer kapatılmış alarmlar gibi listelenir.
+      let data = adminAllAlarms.filter(a => a.status === 'closed').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
       _closedAlarmsPopulateOwnerFilter();
       const ownerSel = document.getElementById('closedAlarmsOwnerFilter');
       if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
@@ -2167,7 +2165,10 @@
       if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
       empty.style.display = 'none';
       tbody.innerHTML = data.map(a => {
-        const tm = _amTypeMeta(a.alarm_type, false);
+        // "Payment Takip" artık geçerli bir alarm tipi sayılmıyor — bu tipteki
+        // eski kayıtlarda Alarm Tipi hücresi boş bırakılır, satırın kendisi silinmez.
+        const isPaymentTracking = a.alarm_type === 'payment_tracking';
+        const tm = isPaymentTracking ? null : _amTypeMeta(a.alarm_type, false);
         const closedInfo = _amDealInfoFor(a.deal_id) || {};
         const closedRef = closedInfo.ref || '';
         return `<tr>
@@ -2176,7 +2177,7 @@
         <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.deal_owner)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.team)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.region)}</td>
-        <td style="padding:8px 10px;font-size:10px;border-bottom:1px solid #0f172a;white-space:nowrap"><span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:#1e293b;color:${tm.color}">${tm.label}</span></td>
+        <td style="padding:8px 10px;font-size:10px;border-bottom:1px solid #0f172a;white-space:nowrap">${tm ? `<span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:#1e293b;color:${tm.color}">${tm.label}</span>` : '<span style="color:#475569">—</span>'}</td>
         <td style="padding:8px 10px;font-size:10px;color:#cbd5e1;border-bottom:1px solid #0f172a;white-space:nowrap">${_amFmtDate(a.closed_at)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a;white-space:nowrap">${fmt(a.closed_by)}</td>
         <td style="padding:8px 10px;border-bottom:1px solid #0f172a;text-align:center">${_noteBtn(a.note)}</td>

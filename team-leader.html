@@ -331,8 +331,6 @@
         <option value="Waiting hotel confirmation">Waiting hotel confirmation</option>
         <option value="On Hold">On Hold</option>
         <option value="Check in completed">Check in completed</option>
-        <option value="Won">Won</option>
-        <option value="Cancelled">Cancelled</option>
         <option value="Closed Lost">Closed Lost</option>
       </select>
       <select id="alarmSortSel" class="filter-sel" onchange="alarmSortCol=null;renderAlarms()" style="width:180px">
@@ -2098,16 +2096,27 @@
       const tm = key === 'overdue' ? alarmTypeMeta('today_patient', true) : alarmTypeMeta(key, false);
       const shown = list.slice(0, ALARM_KANBAN_CARDS_PER_COL);
       const moreCount = list.length - shown.length;
+      const tColors = { 45:['#1e3a5f','#60a5fa'], 30:['#1e1b4b','#818cf8'], 15:['#422006','#f59e0b'], 7:['#431407','#f97316'], 3:['#450a0a','#ef4444'] };
       const cards = shown.map(a => {
         const sm = statusMeta(a.status);
+        const tBucket = liveThreshBucket(a);
+        const tc = tBucket ? tColors[tBucket] : null;
+        const threshBadge = tc
+          ? `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:800;background:${tc[0]};color:${tc[1]};border:1px solid ${tc[1]}55;margin-left:4px;letter-spacing:0.03em">${tBucket}G</span>`
+          : '';
+        const dealIdHtml = a.deal_id
+          ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted" title="Zoho'da Aç">${dealFinanceMap[a.deal_id]?.ref || a.deal_id} ↗</a>`
+          : '—';
         return `<div class="tl-kanban-card" onclick="openAlarmById('${a.id}')">
           <div style="font-size:11.5px;font-weight:700;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmt(a.deal_name)}</div>
           <div style="font-size:9.5px;color:#0d9488;font-weight:600;margin-top:2px">${fmt(a.deal_owner)}</div>
+          <div style="font-size:9px;font-family:monospace;color:#64748b;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${dealIdHtml}</div>
           <div style="margin-top:6px"><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color}">${sm.label}</span></div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
             <span style="font-size:9.5px;color:#64748b">${formatDate(a.reference_date)}</span>
-            ${daysDisplay(liveDaysRemaining(a), a.reference_date)}
+            <span>${daysDisplay(liveDaysRemaining(a), a.reference_date)}${threshBadge}</span>
           </div>
+          <div style="margin-top:6px;padding-top:6px;border-top:1px solid #1e293b">${paymentCellHtml(a.deal_id)}</div>
         </div>`;
       }).join('');
       const moreHtml = moreCount > 0 ? `<div style="text-align:center;font-size:10px;color:#64748b;padding:6px;font-style:italic">+${moreCount} ${I18N.t('tane daha — daraltmak için filtreleri kullanın')}</div>` : '';
@@ -2171,10 +2180,10 @@
       else nbN.style.display = 'none';
     }
 
-    // Kapatılan Alarmlar menü rozeti — payment_tracking hariç (bkz. renderClosedAlarms)
+    // Kapatılan Alarmlar menü rozeti — tüm kapatılmış alarmlar (deal/satır gizlenmiyor)
     const nbC = document.getElementById('navBadgeClosedAlarms');
     if (nbC) {
-      const closedCnt = allAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').length;
+      const closedCnt = allAlarms.filter(a => a.status === 'closed').length;
       if (closedCnt > 0) { nbC.textContent = closedCnt; nbC.style.display = 'inline-flex'; }
       else nbC.style.display = 'none';
     }
@@ -2876,7 +2885,7 @@
       const r = await fetch(url, { headers: H });
       if (!r.ok) return;
       const rows = await r.json();
-      const stages = [...new Set(rows.map(d => d.stage).filter(Boolean))].sort();
+      const stages = [...new Set(rows.map(d => d.stage).filter(s => s && !['Won','Cancelled'].includes(s)))].sort();
       const sel = document.getElementById('dealStageFilter');
       const cur = sel.value;
       sel.innerHTML = `<option value="">${I18N.t('Tüm Stageler')}</option>` + stages.map(s => `<option value="${s}">${s}</option>`).join('');
@@ -2885,7 +2894,7 @@
   }
 
   function populateDealStageFilter() {
-    const stages = [...new Set(allDeals.map(d => d.stage).filter(Boolean))].sort();
+    const stages = [...new Set(allDeals.map(d => d.stage).filter(s => s && !['Won','Cancelled'].includes(s)))].sort();
     const sel = document.getElementById('dealStageFilter');
     const cur = sel.value;
     sel.innerHTML = '<option value="">Tüm Stageler</option>' + stages.map(s => `<option value="${s}">${s}</option>`).join('');
@@ -3227,17 +3236,17 @@
     if (_closedAlarmsOwnersPopulated) return;
     const sel = document.getElementById('closedAlarmsOwnerFilter');
     if (!sel) return;
-    const owners = [...new Set(allAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').map(a => a.deal_owner).filter(Boolean))].sort();
+    const owners = [...new Set(allAlarms.filter(a => a.status === 'closed').map(a => a.deal_owner).filter(Boolean))].sort();
     if (!owners.length) return;
     sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
     _closedAlarmsOwnersPopulated = true;
   }
 
   function renderClosedAlarms() {
-    // Payment Takip artık geçerli bir alarm tipi sayılmıyor — geçmiş
-    // kayıtları da dahil hiçbir yerde (bu rapor dahil) gösterilmesin.
-    // Rozet (navBadgeClosedAlarms) de aynı hariç tutmayı uygular, sayılar tutarlı kalır.
-    let data = allAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+    // Deal/kayıt gizlenmez — bu deal'in kapandığını görmek önemli. Sadece
+    // "Payment Takip" ALARM TİPİ etiketi hiçbir yerde gösterilmiyor (aşağıda
+    // tm.label boşa çekiliyor); satırın kendisi diğer kapatılmış alarmlar gibi listelenir.
+    let data = allAlarms.filter(a => a.status === 'closed').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
     _closedAlarmsPopulateOwnerFilter();
     const ownerSel = document.getElementById('closedAlarmsOwnerFilter');
     if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
@@ -3248,14 +3257,17 @@
     if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
     empty.style.display = 'none';
     tbody.innerHTML = data.map((a, i) => {
-      const tm = alarmTypeMeta(a.alarm_type, false);
+      // "Payment Takip" artık geçerli bir alarm tipi sayılmıyor — bu tipteki
+      // eski kayıtlarda Alarm Tipi hücresi boş bırakılır, satırın kendisi silinmez.
+      const isPaymentTracking = a.alarm_type === 'payment_tracking';
+      const tm = isPaymentTracking ? null : alarmTypeMeta(a.alarm_type, false);
       return `<tr>
       <td style="color:#475569;font-size:10px">${i+1}</td>
       <td style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(a.deal_name)}</a></td>
       <td style="font-size:10px;font-family:monospace;white-space:nowrap">${a.deal_id ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted">${dealFinanceMap[a.deal_id]?.ref || a.deal_id} ↗</a>` : '—'}</td>
       <td style="color:#94a3b8;font-size:11px;white-space:nowrap">${fmt(a.deal_owner)}</td>
       <td style="color:#94a3b8;font-size:10px;white-space:nowrap">${fmt((typeof TeamMap!=='undefined' && TeamMap.normalize(a.team)) || a.team)}</td>
-      <td style="white-space:nowrap"><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span></td>
+      <td style="white-space:nowrap">${tm ? `<span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span>` : '<span style="color:#334155">—</span>'}</td>
       <td style="color:#64748b;font-size:11px;white-space:nowrap">${formatDate(a.reference_date)}</td>
       <td style="color:#94a3b8;font-size:11px;white-space:nowrap">${formatDateTime(a.closed_at)}</td>
       <td style="color:#64748b;font-size:11px;white-space:nowrap">${fmt(a.closed_by)}</td>
@@ -4327,9 +4339,9 @@
   }
 
   function exportClosedAlarms() {
-    const data = allAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking');
+    const data = allAlarms.filter(a => a.status === 'closed');
     const headers = csvRow(['Hasta','Danışman','Takım','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Not']);
-    const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),a.alarm_type,a.reference_date,a.closed_at,a.closed_by,a.note]))];
+    const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),(a.alarm_type==='payment_tracking'?'':a.alarm_type),a.reference_date,a.closed_at,a.closed_by,a.note]))];
     downloadCsv(rows, `kapatilan_alarmlar_${new Date().toISOString().slice(0,10)}.csv`);
   }
 
