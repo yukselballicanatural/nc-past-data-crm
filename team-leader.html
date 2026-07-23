@@ -292,6 +292,10 @@
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span id="engineStatus" style="font-size:10px;color:#475569"></span>
+        <div style="display:flex;background:#111827;border:1px solid #374151;border-radius:8px;padding:2px;gap:2px">
+          <button onclick="setAlarmsViewMode('table')" id="alarmsViewBtnTable" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:#4f46e5;color:#fff;transition:all .15s">☰ Tablo</button>
+          <button onclick="setAlarmsViewMode('kanban')" id="alarmsViewBtnKanban" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:transparent;color:#94a3b8;transition:all .15s">▦ Kanban</button>
+        </div>
         <button onclick="runEngineManual()" id="btnRunEngine" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s" onmouseover="this.style.background='#0d9488';this.style.borderColor='#0d9488';this.style.color='#fff'" onmouseout="this.style.background='#1e293b';this.style.borderColor='#334155';this.style.color='#94a3b8'">
           <svg style="width:13px;height:13px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Alarmları Güncelle
@@ -370,6 +374,7 @@
               <th onclick="alarmSortBy('alarm_type')" style="cursor:pointer;user-select:none">Alarm Tipi<span id="asort-alarm_type" class="sarrow"></span></th>
               <th onclick="alarmSortBy('reference_field')" style="cursor:pointer;user-select:none">Alan<span id="asort-reference_field" class="sarrow"></span></th>
               <th onclick="alarmSortBy('reference_date')" style="cursor:pointer;user-select:none">Tarih<span id="asort-reference_date" class="sarrow"></span></th>
+              <th onclick="alarmSortBy('created')" style="cursor:pointer;user-select:none">Oluşturulma<span id="asort-created" class="sarrow"></span></th>
               <th onclick="alarmSortBy('days_left')" style="cursor:pointer;user-select:none">Kalan Gün<span id="asort-days_left" class="sarrow"></span></th>
               <th onclick="alarmSortBy('status')" style="cursor:pointer;user-select:none">Durum<span id="asort-status" class="sarrow"></span></th>
               <th onclick="alarmSortBy('payment_or_flight_ticket')" style="cursor:pointer;user-select:none">P/FT<span id="asort-payment_or_flight_ticket" class="sarrow"></span></th>
@@ -408,6 +413,12 @@
         <div id="noActivityEmpty" style="display:none;text-align:center;padding:48px 16px;color:#475569;font-size:13px">Payment türünde aktivitesiz deal bulunamadı.</div>
       </div>
       <div style="margin-top:8px;font-size:11px;color:#475569" id="noActivityCount"></div>
+    </div>
+
+    <!-- Alarm Kanban görünümü -->
+    <div id="alarmsKanbanView" style="display:none">
+      <div id="alarmsKanbanBoard" style="display:flex;gap:12px;overflow-x:auto;padding-bottom:8px;align-items:flex-start"></div>
+      <div id="alarmsKanbanEmpty" style="display:none;text-align:center;padding:48px 16px;color:#475569;font-size:13px">Bu görünümde alarm bulunamadı.</div>
     </div>
   </div>
 
@@ -1744,7 +1755,7 @@
   }
 
   function updateAlarmSortArrows() {
-    ['deal_name','stage','alarm_type','reference_field','reference_date','days_left','status','payment_or_flight_ticket','payment_remaining','note'].forEach(col => {
+    ['deal_name','stage','alarm_type','reference_field','reference_date','created','days_left','status','payment_or_flight_ticket','payment_remaining','note'].forEach(col => {
       const el = document.getElementById('asort-' + col);
       if (!el) return;
       if (col === alarmSortCol) {
@@ -1764,6 +1775,7 @@
       case 'alarm_type':        return alarmTypeMeta(a.alarm_type, isOverdue(a)).label.toLowerCase();
       case 'reference_field':   return fieldLabel(a.reference_field).toLowerCase();
       case 'reference_date':    return a.reference_date || '';
+      case 'created':           return dealFinanceMap[a.deal_id]?.created || '';
       case 'days_left': {
         const d = liveDaysRemaining(a);
         return (d === null || d === undefined) ? 9999 : d;
@@ -1859,6 +1871,7 @@
       tbody.innerHTML = '';
       empty.style.display = 'block';
       cnt.textContent = '';
+      if (_alarmsViewMode === 'kanban') renderAlarmsKanban(data);
       return;
     }
     empty.style.display = 'none';
@@ -1880,12 +1893,14 @@
       // penceresine göre renklendirilir. Statik threshold_days kullanılırsa
       // gün geçse de "30G" hep aynı kalırdı; artık gün ilerledikçe rozet de
       // 29G, 28G... diye sayar ve eşik değiştikçe rengi otomatik güncellenir.
-      const liveDays = liveDaysRemaining(a);
       const tBucket = liveThreshBucket(a);
       const tColors = { 45:['#1e3a5f','#60a5fa'], 30:['#1e1b4b','#818cf8'], 15:['#422006','#f59e0b'], 7:['#431407','#f97316'], 3:['#450a0a','#ef4444'] };
       const tc = tBucket ? tColors[tBucket] : null;
+      // Rozet, canlı kalan güne göre hangi EŞİK KOVASINA (bucket: 3/7/15/30/45)
+      // düştüğünü gösterir — ham kalan gün sayısını değil. Örn. kalan gün 13
+      // olsa da bu 15 günlük eşiğin içine düştüğü için rozette "15G" yazar.
       const threshBadge = tc
-        ? `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:800;background:${tc[0]};color:${tc[1]};border:1px solid ${tc[1]}55;margin-left:4px;letter-spacing:0.03em">${liveDays}G</span>`
+        ? `<span style="display:inline-block;padding:1px 6px;border-radius:4px;font-size:8px;font-weight:800;background:${tc[0]};color:${tc[1]};border:1px solid ${tc[1]}55;margin-left:4px;letter-spacing:0.03em">${tBucket}G</span>`
         : '';
 
       return `<tr class="${urgCls}" onclick="openAlarmById('${a.id}')" style="${rowBg ? 'background:' + rowBg : ''}">
@@ -1902,6 +1917,7 @@
         </td>
         <td style="color:#94a3b8;font-size:11px">${fieldLabel(a.reference_field)}</td>
         <td style="color:#cbd5e1;font-size:11px;white-space:nowrap">${formatDate(a.reference_date)}</td>
+        <td style="color:#94a3b8;font-size:11px;white-space:nowrap">${formatDate(dealFinanceMap[a.deal_id]?.created)}</td>
         <td style="white-space:nowrap">${daysDisplay(liveDaysRemaining(a), a.reference_date)}</td>
         <td><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color};white-space:nowrap">${sm.label}</span></td>
         <td style="font-size:10px;white-space:nowrap">${pftBadge}</td>
@@ -1913,6 +1929,77 @@
       </tr>`;
     }).join('');
     I18N.translateDOM(tbody);
+    if (_alarmsViewMode === 'kanban') renderAlarmsKanban(data);
+  }
+
+  // ── Alarmlar: Tablo / Kanban görünüm anahtarı ────────────────────
+  let _alarmsViewMode = 'table';
+  function setAlarmsViewMode(mode) {
+    _alarmsViewMode = mode;
+    document.getElementById('alarmTableWrap').style.display   = mode === 'table'  ? '' : 'none';
+    document.getElementById('alarmsKanbanView').style.display = mode === 'kanban' ? 'block' : 'none';
+    const bT = document.getElementById('alarmsViewBtnTable'), bK = document.getElementById('alarmsViewBtnKanban');
+    bT.style.background = mode === 'table'  ? '#4f46e5' : 'transparent'; bT.style.color = mode === 'table'  ? '#fff' : '#94a3b8';
+    bK.style.background = mode === 'kanban' ? '#4f46e5' : 'transparent'; bK.style.color = mode === 'kanban' ? '#fff' : '#94a3b8';
+    renderAlarms();
+  }
+
+  const ALARM_KANBAN_STATUS_ORDER = ['open','seen','in_progress','arrived','examined','processing','escalated'];
+  const ALARM_KANBAN_CARDS_PER_COL = 60;
+
+  // Deal Listesi Kanban'ıyla aynı desen — burada ayrı bir fetch yok, tablo
+  // için zaten hesaplanmış filtrelenmiş `data` seti Durum'a göre gruplanır.
+  function renderAlarmsKanban(data) {
+    const board = document.getElementById('alarmsKanbanBoard');
+    const empty = document.getElementById('alarmsKanbanEmpty');
+    if (!board) return;
+    if (!data.length) { board.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+
+    const groups = new Map();
+    data.forEach(a => {
+      const s = a.status || '—';
+      if (!groups.has(s)) groups.set(s, []);
+      groups.get(s).push(a);
+    });
+    const statuses = [...groups.keys()].sort((a, b) => {
+      const ia = ALARM_KANBAN_STATUS_ORDER.indexOf(a), ib = ALARM_KANBAN_STATUS_ORDER.indexOf(b);
+      if (ia === -1 && ib === -1) return a.localeCompare(b);
+      if (ia === -1) return 1;
+      if (ib === -1) return -1;
+      return ia - ib;
+    });
+
+    board.innerHTML = statuses.map(status => {
+      const list = groups.get(status);
+      const sm = statusMeta(status);
+      const shown = list.slice(0, ALARM_KANBAN_CARDS_PER_COL);
+      const moreCount = list.length - shown.length;
+      const cards = shown.map(a => {
+        const overdue = isOverdue(a);
+        const tm = alarmTypeMeta(a.alarm_type, overdue);
+        return `<div class="tl-kanban-card" onclick="openAlarmById('${a.id}')">
+          <div style="font-size:11.5px;font-weight:700;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmt(a.deal_name)}</div>
+          <div style="font-size:9.5px;color:#0d9488;font-weight:600;margin-top:2px">${fmt(a.deal_owner)}</div>
+          <div style="margin-top:6px"><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+            <span style="font-size:9.5px;color:#64748b">${formatDate(a.reference_date)}</span>
+            ${daysDisplay(liveDaysRemaining(a), a.reference_date)}
+          </div>
+        </div>`;
+      }).join('');
+      const moreHtml = moreCount > 0 ? `<div style="text-align:center;font-size:10px;color:#64748b;padding:6px;font-style:italic">+${moreCount} ${I18N.t('tane daha — daraltmak için filtreleri kullanın')}</div>` : '';
+      return `<div class="tl-kanban-col">
+        <div class="tl-kanban-col-head">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+            <span style="font-size:10px;font-weight:700;color:${sm.color}">${sm.label}</span>
+            <span style="font-size:10px;color:#64748b;font-weight:700">${list.length}</span>
+          </div>
+        </div>
+        <div class="tl-kanban-col-body">${cards}${moreHtml}</div>
+      </div>`;
+    }).join('');
+    I18N.translateDOM(board);
   }
 
   // ── Tab badge sayaçları güncelle ─────────────────────────────────
@@ -2204,7 +2291,7 @@
     if (threshEl) {
       if (tc2) {
         const desc = `${liveDaysM} ${I18N.t('gün kaldı')}`;
-        threshEl.innerHTML = `<span style="padding:2px 10px;border-radius:6px;font-size:11px;font-weight:800;background:${tc2[0]};color:${tc2[1]};border:1px solid ${tc2[1]}44">${liveDaysM} ${I18N.t('gün eşiği')}</span><div style="font-size:9px;color:#64748b;margin-top:3px">${desc}</div>`;
+        threshEl.innerHTML = `<span style="padding:2px 10px;border-radius:6px;font-size:11px;font-weight:800;background:${tc2[0]};color:${tc2[1]};border:1px solid ${tc2[1]}44">${tBucketM} ${I18N.t('gün eşiği')}</span><div style="font-size:9px;color:#64748b;margin-top:3px">${desc}</div>`;
       } else {
         threshEl.textContent = '—';
       }
