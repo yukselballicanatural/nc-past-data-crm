@@ -360,6 +360,7 @@
     'Sonuç Kodu: ': 'Result Code: ',
     'Danışman notu: ': 'Consultant note: ',
     'Kayıtlı bir iptal nedeni yok.': 'No cancellation reason recorded.',
+    'Kayıtlı bir sonuç yok.': 'No result recorded.',
     'Lütfen bir sonuç kodu seç.': 'Please select a result code.',
     'Lütfen açıklama gir.': 'Please enter a description.',
     'Kaydedilemedi: ': 'Save failed: ',
