@@ -1262,7 +1262,7 @@
   function _noteBtn(note) {
     return note ? `<button onclick="showNoteTip(event, this.dataset.note)" data-note="${_escAttr(note)}" style="padding:2px 8px;background:#1e293b;border:1px solid #f59e0b;border-radius:6px;color:#f59e0b;font-size:10px;font-weight:800;cursor:pointer" title="Notu görüntüle">!</button>` : '—';
   }
-  function fmtMoney(v) { return v ? '€' + Number(v).toLocaleString('en-US', {maximumFractionDigits: 0}) : '€0'; }
+  function fmtMoney(v) { return v ? '€' + Number(v).toLocaleString('tr-TR', {maximumFractionDigits: 0}) : '€0'; }
 
   // ── Özel takvim (date picker) — input[type=date]'i gizleyip yerine
   // şık, tıklanabilir bir takvim popup'ı bağlar. Gerçek input'un value'su
@@ -2872,7 +2872,7 @@
       const start = offset + 1;
       const end   = Math.min(offset + allDeals.length, dealTotalCount);
       document.getElementById('dealSubtitle').textContent =
-        `${start}–${end} / ${dealTotalCount.toLocaleString()} ${I18N.t('kayıt')}${search ? ` · "` + search + `" ` + I18N.t('araması') : ''}`;
+        `${start}–${end} / ${dealTotalCount.toLocaleString('tr-TR')} ${I18N.t('kayıt')}${search ? ` · "` + search + `" ` + I18N.t('araması') : ''}`;
 
       // Sayfalama kontrolleri
       const pager   = document.getElementById('dealPager');
@@ -2998,9 +2998,9 @@
       bar.innerHTML = `
         <div class="deal-total-item"><div class="deal-total-label">${I18N.t('Toplam Deal')}</div><div class="deal-total-value" style="color:#f1f5f9">${count.toLocaleString('tr-TR')}</div></div>
         <div style="width:1px;background:#1e293b;align-self:stretch"></div>
-        <div class="deal-total-item"><div class="deal-total-label">${I18N.t('Toplam Tutar')}</div><div class="deal-total-value" style="color:#60a5fa">€${totalAmt.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+        <div class="deal-total-item"><div class="deal-total-label">${I18N.t('Toplam Tutar')}</div><div class="deal-total-value" style="color:#60a5fa">€${totalAmt.toLocaleString('tr-TR',{maximumFractionDigits:0})}</div></div>
         <div style="width:1px;background:#1e293b;align-self:stretch"></div>
-        <div class="deal-total-item"><div class="deal-total-label">${I18N.t('Ödenen')}</div><div class="deal-total-value" style="color:#4ade80">€${totalPaid.toLocaleString('en-US',{maximumFractionDigits:0})}</div></div>
+        <div class="deal-total-item"><div class="deal-total-label">${I18N.t('Ödenen')}</div><div class="deal-total-value" style="color:#4ade80">€${totalPaid.toLocaleString('tr-TR',{maximumFractionDigits:0})}</div></div>
         <div style="width:1px;background:#1e293b;align-self:stretch"></div>
         <div class="deal-total-item"><div class="deal-total-label">Flight Ticket</div><div class="deal-total-value" style="color:#60a5fa">${ftCount.toLocaleString('tr-TR')}</div></div>
         <div class="deal-total-item"><div class="deal-total-label">Payment</div><div class="deal-total-value" style="color:#c084fc">${payCount.toLocaleString('tr-TR')}</div></div>`;
@@ -3127,9 +3127,9 @@
         <div class="tl-kanban-col-head">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
             <span style="font-size:10px;font-weight:700;color:${stageColor}">${fmt(stage)}</span>
-            <span style="font-size:10px;color:#64748b;font-weight:700">${list.length}</span>
+            <span style="font-size:10px;color:#f87171;font-weight:700">${list.length}</span>
           </div>
-          <div style="font-size:10px;color:#475569;margin-top:4px">${fmtMoney(totalAmt)}</div>
+          <div style="font-size:10px;color:#f87171;font-weight:700;margin-top:4px">${fmtMoney(totalAmt)}</div>
         </div>
         <div class="tl-kanban-col-body">${cards}${moreHtml}</div>
       </div>`;

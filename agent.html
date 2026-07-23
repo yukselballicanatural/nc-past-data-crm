@@ -410,7 +410,7 @@
     function fmt(v) { return (v === null || v === undefined || v === '') ? '—' : _escHtml(fixTR(String(v))); }
     function fmtMoney(v) {
       if (!v && v !== 0) return '€0';
-      return '€' + Number(v).toLocaleString('en-US', {minimumFractionDigits:0, maximumFractionDigits:2});
+      return '€' + Number(v).toLocaleString('tr-TR', {minimumFractionDigits:0, maximumFractionDigits:2});
     }
     function fmtCompact(v) {
       const n = Number(v) || 0;
