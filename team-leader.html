@@ -323,6 +323,17 @@
       </select>
       <select id="alarmStageFilter" class="filter-sel" onchange="updateTabCounts();renderAlarms()" style="width:170px">
         <option value="">Stage: Tümü</option>
+        <option value="Waiting appointment">Waiting appointment</option>
+        <option value="Reservation Pending">Reservation Pending</option>
+        <option value="Approval">Approval</option>
+        <option value="Appointment confirmed">Appointment confirmed</option>
+        <option value="Waiting next visit">Waiting next visit</option>
+        <option value="Waiting hotel confirmation">Waiting hotel confirmation</option>
+        <option value="On Hold">On Hold</option>
+        <option value="Check in completed">Check in completed</option>
+        <option value="Won">Won</option>
+        <option value="Cancelled">Cancelled</option>
+        <option value="Closed Lost">Closed Lost</option>
       </select>
       <select id="alarmSortSel" class="filter-sel" onchange="alarmSortCol=null;renderAlarms()" style="width:180px">
         <option value="created_desc">En Yeni Önce</option>
@@ -2187,14 +2198,6 @@
     sel.innerHTML = `<option value="">${I18N.t('Danışman: Tümü')}</option>` +
       sorted.map(([name, s]) => `<option value="${fmt(name)}">${fmt(name)} (${s.total}${s.overdue > 0 ? ' ⚠' + s.overdue : ''})</option>`).join('');
     if (cur && byOwner[cur]) sel.value = cur;
-    // Stage dropdown'ını da doldur
-    const stageSel = document.getElementById('alarmStageFilter');
-    if (stageSel) {
-      const curStage = stageSel.value;
-      const stages = [...new Set(allAlarms.map(a => dealFinanceMap[a.deal_id]?.stage).filter(Boolean))].sort();
-      stageSel.innerHTML = `<option value="">${I18N.t('Stage: Tümü')}</option>` + stages.map(s => `<option value="${s}">${s}</option>`).join('');
-      if (curStage) stageSel.value = curStage;
-    }
   }
 
   // ── Alarm subtab değiştir ────────────────────────────────────────

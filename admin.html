@@ -987,6 +987,17 @@
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Stage</label>
             <select id="amFilterStage" onchange="renderAdminAlarmTable()" class="filter-select">
               <option value="">Tüm Stage'ler</option>
+              <option value="Waiting appointment">Waiting appointment</option>
+              <option value="Reservation Pending">Reservation Pending</option>
+              <option value="Approval">Approval</option>
+              <option value="Appointment confirmed">Appointment confirmed</option>
+              <option value="Waiting next visit">Waiting next visit</option>
+              <option value="Waiting hotel confirmation">Waiting hotel confirmation</option>
+              <option value="On Hold">On Hold</option>
+              <option value="Check in completed">Check in completed</option>
+              <option value="Won">Won</option>
+              <option value="Cancelled">Cancelled</option>
+              <option value="Closed Lost">Closed Lost</option>
             </select>
           </div>
           <div>
@@ -3075,8 +3086,6 @@
       };
       fill('amFilterTeam', teams, "Tüm Team Leader'lar");
       fill('amFilterOwner', owners, "Tüm Deal Owner'lar");
-      const stages = [...new Set(adminAllAlarms.map(a => _amDealInfoFor(a.deal_id)?.stage).filter(Boolean))].sort();
-      fill('amFilterStage', stages, "Tüm Stage'ler");
     }
 
     // Alarm Listesi sayfalaması — binlerce filtrelenmiş satırı tek seferde
