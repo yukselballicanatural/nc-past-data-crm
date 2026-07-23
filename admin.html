@@ -874,14 +874,13 @@
       </div>
     </div>
 
-    <!-- KPI Cards — 8 kart -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
+    <!-- KPI Cards — 7 kart (Payment Takip alarm tipi/motoru kaldırıldı) -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
       <div class="am-kpi text-center am-critical" style="--am-glow:#fbbf24"><div class="am-kpi-icon">🔔</div><div class="am-kpi-val text-amber-400" id="mk1">0</div><div class="am-kpi-label">Açık Alarm</div></div>
       <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-icon">📅</div><div class="am-kpi-val text-cyan-400" id="mk2">0</div><div class="am-kpi-label">Bugün Gelecek</div></div>
       <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-icon">⏱️</div><div class="am-kpi-val text-red-400" id="mk3">0</div><div class="am-kpi-label">Gecikmiş</div></div>
       <div class="am-kpi text-center" style="--am-glow:#94a3b8"><div class="am-kpi-icon">❔</div><div class="am-kpi-val text-slate-400" id="mk4">0</div><div class="am-kpi-label">Eksik Tarih</div></div>
       <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-icon">🚫</div><div class="am-kpi-val text-red-400" id="mk5">0</div><div class="am-kpi-label">Bugün Gelemeyen</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-icon">💳</div><div class="am-kpi-val text-cyan-400" id="mk6">0</div><div class="am-kpi-label">Payment Takip</div></div>
       <div class="am-kpi text-center" style="--am-glow:#fbbf24"><div class="am-kpi-icon">⏳</div><div class="am-kpi-val text-amber-400" id="mk7">0</div><div class="am-kpi-label">Yaklaşan</div></div>
       <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-icon">✈️</div><div class="am-kpi-val text-cyan-400" id="mk8">0</div><div class="am-kpi-label">FT Takip</div></div>
     </div>
@@ -1403,6 +1402,7 @@
       <!-- Deal Detayları — All Deals sayfasındaki gibi tam bilgi -->
       <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Deal Detayları</div>
       <div class="aam-info-grid mb-5" id="aamDealDetailGrid">
+        <div class="aam-info-card"><div class="aam-info-label">Deal ID</div><div class="aam-info-val" id="aamDealRef">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Stage</div><div class="aam-info-val" id="aamDealStage">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Arrival Date</div><div class="aam-info-val" id="aamDealArrival">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Deal Amount</div><div class="aam-info-val" id="aamDealAmount">—</div></div>
@@ -3209,6 +3209,16 @@
       const sm = _amStatusMeta(a.status);
       document.getElementById('aamDealName').textContent  = a.deal_name || '—';
       document.getElementById('aamDealOwner').textContent = `${a.deal_owner||'—'} · ${a.team||'—'} · ${a.region||'—'}`;
+      const info0 = _amDealInfoFor(a.deal_id) || {};
+      const shortRef0 = info0.ref || '';
+      const aamDealRefEl = document.getElementById('aamDealRef');
+      if (aamDealRefEl) {
+        if (a.deal_id) {
+          aamDealRefEl.innerHTML = `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted" title="Zoho'da Aç">${shortRef0 || a.deal_id} ↗</a>`;
+        } else {
+          aamDealRefEl.textContent = '—';
+        }
+      }
       document.getElementById('aamAlarmType').innerHTML   = `<span style="padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;background:${tm.color}22;color:${tm.color}">${fmt(tm.label)}</span>`;
       document.getElementById('aamAlarmStatus').innerHTML = `<span style="padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;background:${sm.color}22;color:${sm.color}">${fmt(sm.label)}</span>`;
       document.getElementById('aamRefField').textContent  = a.reference_field || '—';
