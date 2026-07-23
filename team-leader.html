@@ -2239,9 +2239,15 @@
   }
 
   // ── Alarmları Supabase'den çek ───────────────────────────────────
-  async function loadAlarms() {
-    document.getElementById('alarmLoading').style.display = 'flex';
-    document.getElementById('alarmTableWrap').style.display = 'none';
+  // silent=true: arka planda otomatik yenileme (motor periyodik çalıştığında) —
+  // ekranda yüklenme animasyonu/"tablo kayboluyor" hissi YARATMAZ, kullanıcı
+  // sayfayı okurken/scroll ederken kesintiye uğramaz. Veri sessizce tazelenir,
+  // yeni alarm varsa notifyNewAlarms() zaten bir toast gösteriyor — o yeterli.
+  async function loadAlarms(silent = false) {
+    if (!silent) {
+      document.getElementById('alarmLoading').style.display = 'flex';
+      document.getElementById('alarmTableWrap').style.display = 'none';
+    }
     try {
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
       const isRM    = currentUser.role === 'regional-manager';
@@ -2306,9 +2312,11 @@
       updateTabCounts();
       renderAlarms();
       renderConsultantStrip();
-      document.getElementById('alarmLoading').style.display = 'none';
-      document.getElementById('alarmTableWrap').style.display   = _alarmsViewMode === 'table'  ? 'block' : 'none';
-      document.getElementById('alarmsKanbanView').style.display = _alarmsViewMode === 'kanban' ? 'block' : 'none';
+      if (!silent) {
+        document.getElementById('alarmLoading').style.display = 'none';
+        document.getElementById('alarmTableWrap').style.display   = _alarmsViewMode === 'table'  ? 'block' : 'none';
+        document.getElementById('alarmsKanbanView').style.display = _alarmsViewMode === 'kanban' ? 'block' : 'none';
+      }
 
       // Ödeme/finans verisi arka planda çalışır — tabloyu ilk göstermek
       // için beklemeye gerek yok, hazır olunca ilgili kolon/kartlar
@@ -2317,10 +2325,12 @@
         .then(() => { renderAlarms(); if (activeView === 'today') renderToday(); if (activeView === 'noshow') renderNoshow(); })
         .catch(() => {});
     } catch(e) {
-      document.getElementById('alarmLoading').style.display = 'none';
-      document.getElementById('alarmTableWrap').style.display   = _alarmsViewMode === 'table'  ? 'block' : 'none';
-      document.getElementById('alarmsKanbanView').style.display = _alarmsViewMode === 'kanban' ? 'block' : 'none';
-      showNotice('Alarmlar yüklenemedi: ' + e.message, 'error');
+      if (!silent) {
+        document.getElementById('alarmLoading').style.display = 'none';
+        document.getElementById('alarmTableWrap').style.display   = _alarmsViewMode === 'table'  ? 'block' : 'none';
+        document.getElementById('alarmsKanbanView').style.display = _alarmsViewMode === 'kanban' ? 'block' : 'none';
+      }
+      if (!silent) showNotice('Alarmlar yüklenemedi: ' + e.message, 'error');
     }
   }
 
@@ -2372,10 +2382,13 @@
       localStorage.setItem(cacheKey, String(Date.now()));
       if (statusEl) statusEl.textContent = `${I18N.t('Son çalıştırma:')} ${new Date().toLocaleTimeString(I18N.getLang() === 'en' ? 'en-US' : 'tr-TR')} — ${result.deals} ${I18N.t('deal,')} ${result.generated} alarm, ${result.cancelled || 0} ${I18N.t('İptal')}`;
       if (manual) showNotice(`${I18N.t('Motor tamamlandı:')} ${result.deals} ${I18N.t('deal,')} ${result.generated} ${I18N.t('alarm kontrol edildi')}`, 'success');
-      await loadAlarms();
+      // Otomatik (arka plan) çalıştırmada sessiz yenile — tablo/kanban
+      // ekranda "yükleniyor" diye kaybolmasın, kullanıcı kesintiye uğramasın.
+      // Manuel butonla tetiklenirse (kullanıcı bekliyor) eski görünür davranış kalır.
+      await loadAlarms(!manual);
     } catch(e) {
       if (statusEl) statusEl.textContent = I18N.t('Motor hatası: ') + e.message;
-      showNotice('Alarm motoru hatası: ' + e.message, 'error');
+      if (manual) showNotice('Alarm motoru hatası: ' + e.message, 'error');
     } finally {
       if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
     }
@@ -3290,11 +3303,13 @@
   // stage'i Cancelled olan dealler canlı taranır, alarm motoruna bağlı
   // değildir. Team leader kendi takımını, regional manager kendi bölgesini görür.
   let cancelledDealsList = [];
-  async function loadCancelledDeals() {
+  async function loadCancelledDeals(silent = false) {
     const tbody = document.getElementById('cancelledTbody');
     const empty = document.getElementById('cancelledEmpty');
-    empty.style.display = 'none';
-    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
+    if (!silent) {
+      empty.style.display = 'none';
+      tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
+    }
     try {
       const isRM = currentUser.role === 'regional-manager';
       // stage Cancelled (Zoho'dan) VEYA agent'ın kendi girdiği sonuç kodu
@@ -3596,11 +3611,13 @@
   // fazla ödenmiş) dealleri deals tablosundan canlı tarar; alarm motoruna
   // bağlı değildir. Team leader kendi takımını, regional manager kendi bölgesini görür.
   let wonMismatchDeals = [];
-  async function loadWonAlarms() {
+  async function loadWonAlarms(silent = false) {
     const tbody = document.getElementById('wonTbody');
     const empty = document.getElementById('wonEmpty');
-    empty.style.display = 'none';
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
+    if (!silent) {
+      empty.style.display = 'none';
+      tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">${I18N.t('Yükleniyor...')}</td></tr>`;
+    }
     try {
       // raw jsonb'ye DOKUNULMUYOR — 169 alanli TOAST'li jsonb'yi binlerce Won
       // satirinda acmak eskiden Language dagilimini 10-15 sn'ye kadar
@@ -4427,9 +4444,11 @@
   function _startLiveRefresh() {
     if (_liveRefreshTimer) return;
     _liveRefreshTimer = setInterval(() => {
-      if (['alarms','today','noshow'].includes(activeView)) loadAlarms();
-      else if (activeView === 'cancelled') loadCancelledDeals();
-      else if (activeView === 'won')       loadWonAlarms();
+      // silent=true: ekranda "yükleniyor" / tablo kaybolması YOK, veri arka
+      // planda sessizce tazelenir — kullanıcı sayfayı okurken kesintiye uğramaz.
+      if (['alarms','today','noshow'].includes(activeView)) loadAlarms(true);
+      else if (activeView === 'cancelled') loadCancelledDeals(true);
+      else if (activeView === 'won')       loadWonAlarms(true);
     }, 60000);
   }
 </script>
