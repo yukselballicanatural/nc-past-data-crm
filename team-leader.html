@@ -1954,11 +1954,23 @@
     renderAlarms();
   }
 
-  const ALARM_KANBAN_STATUS_ORDER = ['open','seen','in_progress','arrived','examined','processing','escalated'];
+  // Sütun sırası tablodaki sekme sırasıyla (Bugün/Yaklaşan.../Eksik Tarih/Gecikmiş) tutarlı
+  const ALARM_KANBAN_TYPE_ORDER = ['today_patient','arrival_approaching','visit_approaching','arrival_missing','overdue'];
   const ALARM_KANBAN_CARDS_PER_COL = 60;
 
-  // Deal Listesi Kanban'ıyla aynı desen — burada ayrı bir fetch yok, tablo
-  // için zaten hesaplanmış filtrelenmiş `data` seti Durum'a göre gruplanır.
+  // Alarmın CANLI (overdue durumuna göre) etkin tipini döndürür — alarmTypeMeta
+  // ile aynı "gecikmişse Gecikmiş say" mantığı, ama burada gruplama ANAHTARI
+  // için kullanılıyor (i18n'e göre değişen label değil, sabit key).
+  function _effectiveAlarmTypeKey(a) {
+    const overdue = isOverdue(a);
+    if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(a.alarm_type)) return 'overdue';
+    return a.alarm_type || 'unknown';
+  }
+
+  // Kanban — Alarm Tipine göre ayrı sütunlar (Bugün Gelecek / Arrival Yaklaşıyor /
+  // Vizit Yaklaşıyor / Tarih Eksik / Gecikmiş), Durum tablodaki gibi kart üzerinde
+  // rozet olarak gösterilir. Deal Listesi Kanban'ıyla aynı desen — ayrı bir fetch
+  // yok, tablo için zaten hesaplanmış filtrelenmiş `data` seti Tipe göre gruplanır.
   function renderAlarmsKanban(data) {
     const board = document.getElementById('alarmsKanbanBoard');
     const empty = document.getElementById('alarmsKanbanEmpty');
@@ -1968,30 +1980,29 @@
 
     const groups = new Map();
     data.forEach(a => {
-      const s = a.status || '—';
-      if (!groups.has(s)) groups.set(s, []);
-      groups.get(s).push(a);
+      const key = _effectiveAlarmTypeKey(a);
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key).push(a);
     });
-    const statuses = [...groups.keys()].sort((a, b) => {
-      const ia = ALARM_KANBAN_STATUS_ORDER.indexOf(a), ib = ALARM_KANBAN_STATUS_ORDER.indexOf(b);
+    const types = [...groups.keys()].sort((a, b) => {
+      const ia = ALARM_KANBAN_TYPE_ORDER.indexOf(a), ib = ALARM_KANBAN_TYPE_ORDER.indexOf(b);
       if (ia === -1 && ib === -1) return a.localeCompare(b);
       if (ia === -1) return 1;
       if (ib === -1) return -1;
       return ia - ib;
     });
 
-    board.innerHTML = statuses.map(status => {
-      const list = groups.get(status);
-      const sm = statusMeta(status);
+    board.innerHTML = types.map(key => {
+      const list = groups.get(key);
+      const tm = key === 'overdue' ? alarmTypeMeta('today_patient', true) : alarmTypeMeta(key, false);
       const shown = list.slice(0, ALARM_KANBAN_CARDS_PER_COL);
       const moreCount = list.length - shown.length;
       const cards = shown.map(a => {
-        const overdue = isOverdue(a);
-        const tm = alarmTypeMeta(a.alarm_type, overdue);
+        const sm = statusMeta(a.status);
         return `<div class="tl-kanban-card" onclick="openAlarmById('${a.id}')">
           <div style="font-size:11.5px;font-weight:700;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmt(a.deal_name)}</div>
           <div style="font-size:9.5px;color:#0d9488;font-weight:600;margin-top:2px">${fmt(a.deal_owner)}</div>
-          <div style="margin-top:6px"><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span></div>
+          <div style="margin-top:6px"><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.bg};color:${sm.color}">${sm.label}</span></div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
             <span style="font-size:9.5px;color:#64748b">${formatDate(a.reference_date)}</span>
             ${daysDisplay(liveDaysRemaining(a), a.reference_date)}
@@ -2002,7 +2013,7 @@
       return `<div class="tl-kanban-col">
         <div class="tl-kanban-col-head">
           <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-            <span style="font-size:10px;font-weight:700;color:${sm.color}">${sm.label}</span>
+            <span style="font-size:10px;font-weight:700;color:${tm.color}">${tm.label}</span>
             <span style="font-size:10px;color:#64748b;font-weight:700">${list.length}</span>
           </div>
         </div>
