@@ -982,6 +982,29 @@
 
 </main>
 
+<!-- ════════════════ NO-SHOW REASON MODAL ════════════════ -->
+<div id="noshowModal" style="display:none;position:fixed;inset:0;z-index:9000;display:none;align-items:center;justify-content:center">
+  <div style="position:absolute;inset:0;background:rgba(0,0,0,0.6);backdrop-filter:blur(3px)" onclick="closeNoshowModal()"></div>
+  <div style="position:relative;background:#0f172a;border:1px solid #1e293b;border-radius:16px;padding:24px;width:100%;max-width:420px;margin:16px;box-shadow:0 25px 60px rgba(0,0,0,0.6)">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+      <div style="width:32px;height:32px;border-radius:8px;background:#450a0a;border:1px solid #7f1d1d;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+        <svg style="width:16px;height:16px;color:#f87171" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </div>
+      <div>
+        <div style="font-size:14px;font-weight:700;color:#f1f5f9">Gelemedi — Açıklama</div>
+        <div style="font-size:11px;color:#64748b" id="noshowPatientName"></div>
+      </div>
+    </div>
+    <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Neden gelemedi? <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></label>
+    <textarea id="noshowNote" rows="3" maxlength="200" placeholder="ör. hasta iptal etti, bilet sorunu, sağlık durumu…" class="filter-inp" style="width:100%;box-sizing:border-box;resize:none;font-size:12px" oninput="document.getElementById('noshowNoteCount').textContent=this.value.length+' / 200'"></textarea>
+    <div style="text-align:right;font-size:10px;color:#475569;margin-top:3px;margin-bottom:16px"><span id="noshowNoteCount">0 / 200</span></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="closeNoshowModal()" style="flex:1;padding:10px;background:#1e293b;border:1px solid #334155;border-radius:9px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">İptal</button>
+      <button onclick="confirmNoshow()" style="flex:1;padding:10px;background:#7f1d1d;border:none;border-radius:9px;color:#fecaca;font-size:12px;font-weight:700;cursor:pointer">Gelemedi Olarak İşaretle</button>
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════ ALARM ACTION MODAL ════════════════ -->
 <div id="alarmModal">
   <div class="modal-bg" onclick="closeAlarmModal()"></div>
@@ -1067,7 +1090,7 @@
       </select>
     </div>
 
-    <!-- Kapatma Sebebi (closed/cancelled seçilince göster) -->
+    <!-- Kapatma Sebebi (closed/cancelled seçilince göster — sadece Sonuç Kodu tablosu olmayan tiplerde) -->
     <div id="closeReasonWrap" style="display:none;margin-bottom:12px">
       <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Kapatma Sebebi</label>
       <select id="closeReason" class="filter-sel">
@@ -1076,6 +1099,20 @@
         <option value="manual">Manuel Kapatma</option>
         <option value="cancelled">İptal</option>
       </select>
+    </div>
+
+    <!-- Sonuç Kodu — Zoho Deals Alarm Yönetimi.md tablolarına göre alarm tipine
+         özel manuel değerlendirme listesi. Seçim otomatik olarak Yeni Durum'u
+         önerir (Kapat/İptal Alarmı Oluştur/Takibe Al/Zoho Güncellemesini Bekle). -->
+    <div id="resultCodeWrap" style="display:none;margin-bottom:12px">
+      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Sonuç Kodu <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></label>
+      <select id="alarmResultCode" class="filter-sel" onchange="onResultCodeChange()">
+        <option value="">— Seç —</option>
+      </select>
+    </div>
+    <div id="followUpDateWrap" style="display:none;margin-bottom:12px">
+      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Takip Tarihi <span style="color:#f87171;font-weight:700">*</span></label>
+      <input type="date" id="followUpDateInput" class="filter-sel" style="width:100%;box-sizing:border-box">
     </div>
 
     <!-- Not -->
@@ -1152,10 +1189,14 @@
       </div>
       <select id="tlcaResultCode" class="filter-sel" style="width:100%">
         <option value="">— Seç —</option>
-        <option value="Cancelled by Patient">Cancelled by Patient</option>
-        <option value="Cancelled by Clinic">Cancelled by Clinic</option>
-        <option value="Invalid Data">Invalid Data</option>
-        <option value="Duplicate Data">Duplicate Data</option>
+        <option value="Fiyat/Bütçe">Fiyat/Bütçe</option>
+        <option value="Medikal Uygunsuzluk">Medikal Uygunsuzluk</option>
+        <option value="Rakip Klinik">Rakip Klinik</option>
+        <option value="Vize/Seyahat Sorunu">Vize/Seyahat Sorunu</option>
+        <option value="Hasta Vazgeçti">Hasta Vazgeçti</option>
+        <option value="Ulaşılamadı">Ulaşılamadı (Yönetici Onayıyla Kapat)</option>
+        <option value="Operasyonel Problem">Operasyonel Problem</option>
+        <option value="Mükerrer/Hatalı Deal">Mükerrer/Hatalı Deal</option>
       </select>
     </div>
     <div style="margin-bottom:14px">
@@ -2417,6 +2458,88 @@
 
   function runEngineManual() { runEngine(true); }
 
+  // ── Sonuç Kodu (Result Code) — Zoho_Deals_Alarm_Yonetimi.md ─────────
+  // Her alarm tipi için standart manuel sonuç kodu listesi. action:
+  //   'close'    → Kapat (alarmı kapatır)
+  //   'cancel'   → İptal Alarmı Oluştur (alarmı 'cancelled' yapar)
+  //   'followup' → Takibe Al (Takip Tarihi ZORUNLU, alarm açık kalır)
+  //   'wait'     → Zoho Güncellemesini / Otomatik Kapanışı Bekle (sadece kaydeder, durum değişmez)
+  const RESULT_CODE_MAP = {
+    today: [
+      { code: 'Hasta Geldi',        action: 'close' },
+      { code: 'Geliş Teyit Edildi', action: 'followup' },
+      { code: 'Tarih Değiştirildi', action: 'wait' },
+      { code: 'Hasta Gelmedi',      action: 'followup' },
+      { code: 'Ulaşılamadı',        action: 'followup' },
+      { code: 'İptal Edildi',       action: 'cancel' },
+    ],
+    approaching: [
+      { code: 'Geliş Teyit Edildi',       action: 'followup' },
+      { code: 'Yeni Takip Tarihi Verildi', action: 'followup' },
+      { code: 'Arrival Date Güncellendi', action: 'wait' },
+      { code: 'Ulaşılamadı',              action: 'followup' },
+      { code: 'İptal Talebi',             action: 'followup' },
+    ],
+    missing: [
+      { code: 'Arrival Date Eklendi',       action: 'wait' },
+      { code: 'Karar Bekleniyor',           action: 'followup' },
+      { code: 'Seyahat Planı Bekleniyor',   action: 'followup' },
+      { code: 'Ulaşılamadı',                action: 'followup' },
+      { code: 'Deal Geçersiz',              action: 'close' },
+    ],
+    overdue: [
+      { code: 'Hasta Geldi',        action: 'close' },
+      { code: 'Yeni Tarih Verildi', action: 'wait' },
+      { code: 'No Show',            action: 'followup' },
+      { code: 'Ulaşılamadı',        action: 'followup' },
+      { code: 'İptal Edildi',       action: 'cancel' },
+      { code: 'Tarih Hatalıydı',    action: 'wait' },
+    ],
+  };
+
+  // Gecikmiş (overdue) canlı hesaplanan bir durum olduğu için önce onu, sonra
+  // alarm_type'a göre eşleşen sonuç kodu grubunu döndürür.
+  function resultCodeGroupFor(a) {
+    if (isOverdue(a)) return 'overdue';
+    if (a.alarm_type === 'arrival_missing') return 'missing';
+    if (a.alarm_type === 'today_patient') return 'today';
+    if (['arrival_approaching', 'visit_approaching'].includes(a.alarm_type)) return 'approaching';
+    return null;
+  }
+
+  function populateResultCodeSelect(a) {
+    const group = resultCodeGroupFor(a);
+    const wrap  = document.getElementById('resultCodeWrap');
+    const sel   = document.getElementById('alarmResultCode');
+    if (!group || !RESULT_CODE_MAP[group]) {
+      wrap.style.display = 'none';
+      sel.innerHTML = '<option value="">— Seç —</option>';
+      document.getElementById('followUpDateWrap').style.display = 'none';
+      return;
+    }
+    wrap.style.display = 'block';
+    sel.innerHTML = '<option value="">— Seç —</option>' + RESULT_CODE_MAP[group].map(rc =>
+      `<option value="${fmt(rc.code)}" data-action="${rc.action}">${I18N.t(rc.code)}</option>`
+    ).join('');
+    sel.value = a.result_code || '';
+    document.getElementById('followUpDateInput').value = a.follow_up_date || '';
+    onResultCodeChange();
+  }
+
+  // Sonuç kodu seçilince ilgili aksiyona göre Yeni Durum'u öner ve Takip
+  // Tarihi alanını göster/gizle — kullanıcı Yeni Durum'u yine de değiştirebilir.
+  function onResultCodeChange() {
+    const sel    = document.getElementById('alarmResultCode');
+    const opt    = sel.selectedOptions[0];
+    const action = opt ? opt.getAttribute('data-action') : '';
+    document.getElementById('followUpDateWrap').style.display = action === 'followup' ? 'block' : 'none';
+    const newStatusSel = document.getElementById('newStatus');
+    if (action === 'close')       newStatusSel.value = 'closed';
+    else if (action === 'cancel') newStatusSel.value = 'cancelled';
+    else if (action === 'followup' && !newStatusSel.value) newStatusSel.value = 'in_progress';
+    newStatusSel.dispatchEvent(new Event('change'));
+  }
+
   // ── Alarm action modal ───────────────────────────────────────────
   function openAlarmById(id) {
     const a = allAlarms.find(x => x.id === id);
@@ -2511,6 +2634,7 @@
     document.getElementById('noteInput').value = '';
     const _nc = document.getElementById('noteCount'); if (_nc) _nc.textContent = '0 / 100';
     document.getElementById('closeReasonWrap').style.display = 'none';
+    populateResultCodeSelect(a);
     // Eskale seçeneği sadece RM'ye görünür
     document.getElementById('optEscalated').style.display =
       (currentUser && currentUser.role === 'regional-manager') ? '' : 'none';
@@ -2550,7 +2674,10 @@
   }
 
   document.getElementById('newStatus').addEventListener('change', function() {
-    const needReason = ['closed','cancelled'].includes(this.value);
+    // Bu alarm tipi için bir Sonuç Kodu tablosu varsa (bkz. resultCodeGroupFor)
+    // eski genel "Kapatma Sebebi" seçimi gösterilmez — Sonuç Kodu onun yerini alır.
+    const hasResultCodeGroup = currentAlarm && !!resultCodeGroupFor(currentAlarm);
+    const needReason = ['closed','cancelled'].includes(this.value) && !hasResultCodeGroup;
     document.getElementById('closeReasonWrap').style.display = needReason ? 'block' : 'none';
   });
 
@@ -2599,10 +2726,16 @@
   }
 
   async function saveAlarmAction() {
-    const newStatus  = document.getElementById('newStatus').value;
-    const note       = document.getElementById('noteInput').value.trim();
-    const closeReason= document.getElementById('closeReason').value;
-    if (!newStatus && !note) { showNotice('Durum seçin veya not girin.', 'error'); return; }
+    const newStatus   = document.getElementById('newStatus').value;
+    const note        = document.getElementById('noteInput').value.trim();
+    const closeReason = document.getElementById('closeReason').value;
+    const resultSel    = document.getElementById('alarmResultCode');
+    const resultCode    = resultSel.value;
+    const resultAction  = resultCode ? (resultSel.selectedOptions[0]?.getAttribute('data-action') || '') : '';
+    const followUpDate  = document.getElementById('followUpDateInput').value;
+    if (!newStatus && !note && !resultCode) { showNotice('Durum seçin, sonuç kodu seçin veya not girin.', 'error'); return; }
+    // Takibe Al seçilen hiçbir işlem, yeni takip tarihi girilmeden tamamlanmamalıdır.
+    if (resultAction === 'followup' && !followUpDate) { showNotice('Bu sonuç kodu için Takip Tarihi girilmelidir.', 'error'); return; }
     const btn = document.getElementById('btnSaveAction');
     btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
 
@@ -2610,6 +2743,8 @@
     const updates = {};
     if (newStatus) updates.status = newStatus;
     if (note)      updates.note   = note;
+    if (resultCode) updates.result_code = resultCode;
+    if (resultAction === 'followup') updates.follow_up_date = followUpDate;
 
     if (newStatus === 'seen') {
       updates.seen_at = now;
@@ -2619,7 +2754,7 @@
     if (['no_show','closed','cancelled'].includes(newStatus)) {
       updates.closed_at  = now;
       updates.closed_by  = currentUser.fullName || currentUser.username;
-      updates.close_reason = newStatus === 'no_show' ? 'no_show' : closeReason;
+      updates.close_reason = newStatus === 'no_show' ? 'no_show' : (resultCode || closeReason);
     }
 
     try {
@@ -2700,7 +2835,7 @@
           <button onclick="quickAction('${a.id}','arrived')" style="flex:1;min-width:76px;padding:6px;background:#052e16;border:1px solid #166534;border-radius:8px;color:#4ade80;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Hasta Geldi</button>
           <button onclick="quickAction('${a.id}','examined')" style="flex:1;min-width:76px;padding:6px;background:#083344;border:1px solid #0e7490;border-radius:8px;color:#67e8f9;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Muayene</button>
           <button onclick="quickAction('${a.id}','processing')" style="flex:1;min-width:76px;padding:6px;background:#042f2e;border:1px solid #0d9488;border-radius:8px;color:#2dd4bf;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">İşlemlerde</button>
-          <button onclick="quickAction('${a.id}','no_show')" style="flex:1;min-width:76px;padding:6px;background:#450a0a;border:1px solid #7f1d1d;border-radius:8px;color:#f87171;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Gelemedi</button>
+          <button onclick="promptNoShow('${a.id}','${_escHtml(a.deal_name||'')}')" style="flex:1;min-width:76px;padding:6px;background:#450a0a;border:1px solid #7f1d1d;border-radius:8px;color:#f87171;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Gelemedi</button>
         </div>`;
       const pftDisplay = a.payment_or_flight_ticket === 'Payment'
         ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#2e1065;color:#c084fc;border:1px solid #4c1d95">Payment</span>'
@@ -2730,7 +2865,34 @@
     I18N.translateDOM(grid);
   }
 
-  async function quickAction(alarmId, status) {
+  let _noshowPendingId = null;
+
+  function promptNoShow(alarmId, patientName) {
+    _noshowPendingId = alarmId;
+    const modal = document.getElementById('noshowModal');
+    const note  = document.getElementById('noshowNote');
+    const count = document.getElementById('noshowNoteCount');
+    const nameEl = document.getElementById('noshowPatientName');
+    note.value = '';
+    count.textContent = '0 / 200';
+    nameEl.textContent = patientName || '';
+    modal.style.display = 'flex';
+    setTimeout(() => note.focus(), 50);
+  }
+
+  function closeNoshowModal() {
+    document.getElementById('noshowModal').style.display = 'none';
+    _noshowPendingId = null;
+  }
+
+  function confirmNoshow() {
+    if (!_noshowPendingId) return;
+    const note = document.getElementById('noshowNote').value.trim();
+    closeNoshowModal();
+    quickAction(_noshowPendingId, 'no_show', note);
+  }
+
+  async function quickAction(alarmId, status, note) {
     const now = new Date().toISOString();
     const updates = { status, actioned_at: now };
     if (['no_show','closed'].includes(status)) {
@@ -2738,6 +2900,7 @@
       updates.closed_by    = currentUser.fullName || currentUser.username;
       updates.close_reason = status === 'no_show' ? 'no_show' : 'completed';
     }
+    if (note) updates.note = note;
     try {
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
       const r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${alarmId}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
@@ -2745,7 +2908,7 @@
       const idx = allAlarms.findIndex(x => x.id === alarmId);
       if (idx >= 0) {
         const isClose = ['no_show','closed'].includes(status);
-        logAlarmAction(allAlarms[idx], isClose ? 'closed' : 'status_change', allAlarms[idx].status, status, null);
+        logAlarmAction(allAlarms[idx], isClose ? 'closed' : 'status_change', allAlarms[idx].status, status, note || null);
         addLog(isClose ? 'ALARM_CLOSE' : 'ALARM_QUICK_ACTION', `Hızlı aksiyon: ${allAlarms[idx].status} → ${status}`, allAlarms[idx].deal_id, allAlarms[idx].deal_name);
         allAlarms[idx] = { ...allAlarms[idx], ...updates };
       }
@@ -3508,8 +3671,8 @@
     errEl.style.display = 'none';
     const btn = document.getElementById('tlcaSaveBtn');
     btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
-    const isInvalidDuplicate = code === 'Invalid Data' || code === 'Duplicate Data';
-    const fullCode = isInvalidDuplicate ? '9. Invalid / Duplicate Data' : '8. Cancelled';
+    const isInvalidDuplicate = code === 'Mükerrer/Hatalı Deal';
+    const fullCode = isInvalidDuplicate ? 'Invalid or Duplicate Deal' : 'Deal Cancelled';
     try {
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
       const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(d.id)}`, {
