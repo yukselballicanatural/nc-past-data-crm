@@ -2887,9 +2887,10 @@
 
   function confirmNoshow() {
     if (!_noshowPendingId) return;
+    const alarmId = _noshowPendingId;
     const note = document.getElementById('noshowNote').value.trim();
     closeNoshowModal();
-    quickAction(_noshowPendingId, 'no_show', note);
+    quickAction(alarmId, 'no_show', note);
   }
 
   async function quickAction(alarmId, status, note) {
