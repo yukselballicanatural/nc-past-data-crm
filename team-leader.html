@@ -1126,6 +1126,10 @@
       <div id="alarmHistoryList" style="max-height:160px;overflow-y:auto;background:#0d1526;border:1px solid #1e293b;border-radius:10px;padding:8px 12px"></div>
     </div>
 
+    <button onclick="sendResultCodeWhatsAppClick()" style="width:100%;padding:11px;margin-bottom:10px;background:#052e16;border:1px solid #166534;border-radius:10px;color:#4ade80;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
+      <svg style="width:15px;height:15px" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.8 14.14c-.24.68-1.42 1.3-1.96 1.34-.5.04-1.02.06-1.65-.1-.38-.1-.87-.28-1.5-.55-2.63-1.14-4.35-3.8-4.48-3.98-.13-.18-1.07-1.42-1.07-2.7 0-1.29.68-1.92.92-2.18.24-.26.53-.33.71-.33.18 0 .35 0 .5.01.16.01.38-.06.6.45.24.55.8 1.9.87 2.04.07.14.11.3.02.48-.09.18-.13.29-.26.45-.13.16-.27.35-.39.47-.13.13-.26.27-.11.53.15.26.68 1.12 1.46 1.82 1 .89 1.85 1.17 2.11 1.3.26.13.41.11.56-.06.16-.18.65-.76.83-1.02.18-.26.35-.21.6-.13.24.09 1.54.73 1.8.86.26.13.44.2.5.31.06.13.06.7-.18 1.38z"/></svg>
+      WhatsApp'tan Agent'a Bildirim Gönder
+    </button>
     <div style="display:flex;gap:10px">
       <button onclick="closeAlarmModal()" style="flex:1;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">İptal</button>
       <button onclick="saveAlarmAction()" id="btnSaveAction" style="flex:2;padding:11px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kaydet</button>
@@ -2780,9 +2784,6 @@
       // listesini/rozetini de tazele — deal'in Zoho stage'i değişmemiş
       // olabilir ama artık bu alarm sayesinde o listeye de girmesi gerekiyor.
       if (newStatus === 'cancelled') loadCancelledDeals();
-      // Sonuç Kodu seçildiyse ilgili danışmana (deal owner) otomatik olarak
-      // WhatsApp'tan (İngilizce, deal linki + adı + sonuç koduyla) yönlendir.
-      if (resultCode) sendResultCodeWhatsApp(currentAlarm, resultCode, note);
       closeAlarmModal();
       showNotice('Alarm güncellendi.', 'success');
     } catch(e) {
@@ -2792,7 +2793,17 @@
     }
   }
 
-  // Sonuç Kodu kaydedilince ilgili danışmanın WhatsApp'ına otomatik yönlendirir.
+  // "WhatsApp'tan Agent'a Bildirim Gönder" butonu — Kaydet'ten BAĞIMSIZ bir
+  // aksiyon. Kaydetmeden de, kaydettikten sonra da kullanılabilir; modaldaki
+  // o anki Sonuç Kodu / Not alanlarını okuyup ilgili danışmanın WhatsApp'ını açar.
+  function sendResultCodeWhatsAppClick() {
+    if (!currentAlarm) return;
+    const resultCode = document.getElementById('alarmResultCode').value;
+    if (!resultCode) { showNotice('WhatsApp bildirimi göndermek için önce bir Sonuç Kodu seçin.', 'error'); return; }
+    const note = document.getElementById('noteInput').value.trim();
+    sendResultCodeWhatsApp(currentAlarm, resultCode, note);
+  }
+
   // Telefon numarası Takımımdaki Kişiler (api/team-members) üzerinden, deal_owner
   // adına göre eşleştirilir. NOT: wa.me linki mesajı ÖNCEDEN DOLDURUR ve doğru
   // sohbeti açar; WhatsApp'ın kendi sayfasındaki "Gönder" tuşuna dışarıdan bir
