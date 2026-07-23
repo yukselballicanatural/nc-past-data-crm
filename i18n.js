@@ -109,6 +109,15 @@
     'Muayene Oldu': 'Examined',
     'No-show Raporu': 'No-show Report',
     'No-show kaydı bulunamadı.': 'No no-show record found.',
+    'Kapatılan Alarmlar': 'Closed Alarms',
+    "\"Kapatıldı\" durumuna alınan alarmlar — bu alarmlar tamamlandı sayılır, ama deal'in kendisi Zoho'da olduğu stage'de kalmaya devam eder (bu sadece alarmın kapanışını, dealin sonucunu değil gösterir)":
+      'Alarms marked as "Closed" — these are considered done, but the deal itself stays in whatever stage it has in Zoho (this only shows the alarm was closed, not the deal\'s outcome)',
+    'Kapatılma Tarihi': 'Closed Date',
+    'Kapatan': 'Closed By',
+    'Ref. Tarih': 'Ref. Date',
+    'Kapatılan alarm bulunamadı.': 'No closed alarm found.',
+    "\"Kapatıldı\" durumuna alınan alarmlar — tüm bölgeler/sistem geneli (deal'in Zoho stage'ini değil, sadece alarmın kapanışını gösterir)":
+      "Alarms marked as \"Closed\" — all regions/system-wide (this only shows the alarm was closed, not the deal's Zoho stage)",
     'Not': 'Note',
     'P / FT: Tümü': 'P / FT: All',
     'P/F': 'P/F',

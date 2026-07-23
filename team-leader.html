@@ -177,6 +177,11 @@
         <span>No-show Raporu</span>
         <span id="navBadgeNoshow" class="badge-cnt ml-auto" style="background:#dc2626;color:#fff;display:none">0</span>
       </button>
+      <button onclick="switchView('closed-alarms')" class="nav-btn" id="nav-closed-alarms">
+        <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Kapatılan Alarmlar</span>
+        <span id="navBadgeClosedAlarms" class="badge-cnt ml-auto" style="background:#64748b;color:#fff;display:none">0</span>
+      </button>
       <button onclick="switchView('cancelled')" class="nav-btn" id="nav-cancelled">
         <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
         <span>İptal Edilenler</span>
@@ -699,6 +704,42 @@
     </div>
   </div>
 
+  <!-- ── VIEW: KAPATILAN ALARMLAR ── -->
+  <div id="view-closed-alarms" style="display:none">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <div>
+        <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Kapatılan Alarmlar</h2>
+        <p style="font-size:11px;color:#64748b;margin:3px 0 0">"Kapatıldı" durumuna alınan alarmlar — bu alarmlar tamamlandı sayılır, ama deal'in kendisi Zoho'da olduğu stage'de kalmaya devam eder (bu sadece alarmın kapanışını, dealin sonucunu değil gösterir)</p>
+      </div>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <input id="closedAlarmsSearch" class="filter-inp" placeholder="Hasta, danışman..." oninput="_dbRenderClosedAlarms()" style="width:170px">
+        <select id="closedAlarmsOwnerFilter" class="filter-sel" onchange="renderClosedAlarms()" style="width:170px">
+          <option value="">Tüm Danışmanlar</option>
+        </select>
+        <button onclick="exportClosedAlarms()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Export CSV</button>
+      </div>
+    </div>
+    <div id="closedAlarmsTableWrap" style="overflow-x:auto;border-radius:14px;border:1px solid #1e293b;background:#0f172a">
+      <table class="alarm-tbl">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Hasta</th>
+            <th>Danışman</th>
+            <th>Takım</th>
+            <th>Alarm Tipi</th>
+            <th>Ref. Tarih</th>
+            <th>Kapatılma Tarihi</th>
+            <th>Kapatan</th>
+            <th>Not</th>
+          </tr>
+        </thead>
+        <tbody id="closedAlarmsTbody"></tbody>
+      </table>
+      <div id="closedAlarmsEmpty" style="display:none;text-align:center;padding:48px 16px;color:#475569;font-size:13px">Kapatılan alarm bulunamadı.</div>
+    </div>
+  </div>
+
   <!-- ── VIEW: İPTAL EDİLENLER ── -->
   <div id="view-cancelled" style="display:none">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
@@ -1174,6 +1215,7 @@
   const _dbRenderToday    = _debounce(() => renderToday(), 250);
   const _dbRmAlarmTable   = _debounce(() => renderRmAlarmTable(), 300);
   const _dbRenderNoshow   = _debounce(() => renderNoshow(), 250);
+  const _dbRenderClosedAlarms = _debounce(() => renderClosedAlarms(), 250);
   const _dbCancelledReport = _debounce(() => renderCancelledReport(), 250);
   const _dbWaApplyFilters = _debounce(() => _waApplyFilters(), 250);
   const _dbTlActivity     = _debounce(() => renderTlActivity(), 250);
@@ -2123,6 +2165,14 @@
       const noshowCnt = allAlarms.filter(a => a.status === 'no_show').length;
       if (noshowCnt > 0) { nbN.textContent = noshowCnt; nbN.style.display = 'inline-flex'; }
       else nbN.style.display = 'none';
+    }
+
+    // Kapatılan Alarmlar menü rozeti — aynı desen
+    const nbC = document.getElementById('navBadgeClosedAlarms');
+    if (nbC) {
+      const closedCnt = allAlarms.filter(a => a.status === 'closed').length;
+      if (closedCnt > 0) { nbC.textContent = closedCnt; nbC.style.display = 'inline-flex'; }
+      else nbC.style.display = 'none';
     }
 
   }
@@ -3157,6 +3207,49 @@
     I18N.translateDOM(tbody);
   }
 
+  // ── Kapatılan Alarmlar raporu ──────────────────────────────────────
+  // "Kapatıldı" seçilen alarmlar diğer sekmelerden (activeStatuses'a dahil
+  // olmadığı için) kaybolur — bu alarmın nereye "gittiğini" görebilmek için
+  // No-show Raporu ile birebir aynı desende ayrı bir rapor sayfası.
+  let _closedAlarmsOwnersPopulated = false;
+  function _closedAlarmsPopulateOwnerFilter() {
+    if (_closedAlarmsOwnersPopulated) return;
+    const sel = document.getElementById('closedAlarmsOwnerFilter');
+    if (!sel) return;
+    const owners = [...new Set(allAlarms.filter(a => a.status === 'closed').map(a => a.deal_owner).filter(Boolean))].sort();
+    if (!owners.length) return;
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
+    _closedAlarmsOwnersPopulated = true;
+  }
+
+  function renderClosedAlarms() {
+    let data = allAlarms.filter(a => a.status === 'closed').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+    _closedAlarmsPopulateOwnerFilter();
+    const ownerSel = document.getElementById('closedAlarmsOwnerFilter');
+    if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
+    const search = (document.getElementById('closedAlarmsSearch')?.value || '').toLowerCase().trim();
+    if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
+    const tbody = document.getElementById('closedAlarmsTbody');
+    const empty = document.getElementById('closedAlarmsEmpty');
+    if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    tbody.innerHTML = data.map((a, i) => {
+      const tm = alarmTypeMeta(a.alarm_type, false);
+      return `<tr>
+      <td style="color:#475569;font-size:10px">${i+1}</td>
+      <td style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(a.deal_name)}</a></td>
+      <td style="color:#94a3b8;font-size:11px;white-space:nowrap">${fmt(a.deal_owner)}</td>
+      <td style="color:#94a3b8;font-size:10px;white-space:nowrap">${fmt((typeof TeamMap!=='undefined' && TeamMap.normalize(a.team)) || a.team)}</td>
+      <td style="white-space:nowrap"><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span></td>
+      <td style="color:#64748b;font-size:11px;white-space:nowrap">${formatDate(a.reference_date)}</td>
+      <td style="color:#94a3b8;font-size:11px;white-space:nowrap">${formatDateTime(a.closed_at)}</td>
+      <td style="color:#64748b;font-size:11px;white-space:nowrap">${fmt(a.closed_by)}</td>
+      <td style="text-align:center">${_noteBtn(a.note)}</td>
+    </tr>`;
+    }).join('');
+    I18N.translateDOM(tbody);
+  }
+
   // ── İptal Edilenler ──────────────────────────────────────────────
   // Eskiden allAlarms'taki status==='cancelled' alarmlarına bakıyordu, ama
   // bir deal Zoho'da Cancelled stage'e geçince buna karşılık gelen bir alarm
@@ -3843,7 +3936,7 @@
 
   function switchView(v) {
     activeView = v;
-    const views = ['alarms','today','deals','noshow','cancelled','won','rm-overview','activity','team-members'];
+    const views = ['alarms','today','deals','noshow','closed-alarms','cancelled','won','rm-overview','activity','team-members'];
     views.forEach(id => {
       const vw = document.getElementById('view-' + id);
       if (vw) vw.style.display  = id === v ? '' : 'none';
@@ -3855,6 +3948,7 @@
     if (v === 'today')       renderToday();
     if (v === 'deals' && !allDeals.length) loadDeals();
     if (v === 'noshow')      renderNoshow();
+    if (v === 'closed-alarms') renderClosedAlarms();
     if (v === 'cancelled')   loadCancelledDeals();
     if (v === 'won')         loadWonAlarms();
     if (v === 'rm-overview') loadRmOverview();
@@ -4217,6 +4311,13 @@
     const headers = csvRow(['Hasta','Danışman','Takım','Bölge','Ref Alan','Planlanan Tarih','Gelemedi Tarihi','Not']);
     const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),a.region,a.reference_field,a.reference_date,a.closed_at,a.note]))];
     downloadCsv(rows, `noshow_raporu_${new Date().toISOString().slice(0,10)}.csv`);
+  }
+
+  function exportClosedAlarms() {
+    const data = allAlarms.filter(a => a.status === 'closed');
+    const headers = csvRow(['Hasta','Danışman','Takım','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Not']);
+    const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),a.alarm_type,a.reference_date,a.closed_at,a.closed_by,a.note]))];
+    downloadCsv(rows, `kapatilan_alarmlar_${new Date().toISOString().slice(0,10)}.csv`);
   }
 
   function exportCancelled() {

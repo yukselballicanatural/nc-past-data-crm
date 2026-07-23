@@ -249,6 +249,11 @@
           No-show
           <span id="noshowAlarmBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;border-radius:9999px;font-size:9px;font-weight:800;padding:1px 6px;min-width:20px;text-align:center">0</span>
         </button>
+        <button onclick="switchView('closed-alarms')" class="nav-btn" id="nav-closed-alarms">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          Kapatılan Alarmlar
+          <span id="closedAlarmBadge" style="display:none;margin-left:auto;background:#64748b;color:#fff;border-radius:9999px;font-size:9px;font-weight:800;padding:1px 6px;min-width:20px;text-align:center">0</span>
+        </button>
         <button onclick="switchView('cancelled-alarms')" class="nav-btn" id="nav-cancelled-alarms">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
           İptal Alarmları
@@ -1125,6 +1130,41 @@
     </div>
   </div>
 
+  <!-- ════════════════ KAPATILAN ALARMLAR VIEW ════════════════ -->
+  <div id="view-closed-alarms" class="hidden">
+    <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+      <div>
+        <h2 class="text-xl font-bold text-white">Kapatılan Alarmlar</h2>
+        <p class="text-xs text-slate-400 mt-0.5">"Kapatıldı" durumuna alınan alarmlar — tüm bölgeler/sistem geneli (deal'in Zoho stage'ini değil, sadece alarmın kapanışını gösterir)</p>
+      </div>
+      <div class="flex gap-2 flex-wrap">
+        <input id="closedAlarmsSearch" placeholder="Hasta, danışman..." oninput="_dbRenderAdminClosedAlarms()" class="filter-select" style="width:170px">
+        <select id="closedAlarmsOwnerFilter" onchange="renderAdminClosedAlarms()" class="filter-select" style="width:170px">
+          <option value="">Tüm Deal Owner'lar</option>
+        </select>
+      </div>
+    </div>
+    <div style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b">
+      <table style="width:100%;border-collapse:collapse">
+        <thead>
+          <tr style="background:#0f172a">
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Hasta</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Danışman</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Takım</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Bölge</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Alarm Tipi</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Kapatılma Tarihi</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Kapatan</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Not</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Aksiyon</th>
+          </tr>
+        </thead>
+        <tbody id="closedAlarmsTbody"></tbody>
+      </table>
+      <div id="closedAlarmsEmpty" style="display:none;text-align:center;padding:40px 16px;color:#475569;font-size:13px">Kapatılan alarm bulunamadı.</div>
+    </div>
+  </div>
+
   <!-- ════════════════ İPTAL ALARMLARI VIEW ════════════════ -->
   <div id="view-cancelled-alarms" class="hidden">
     <div class="mb-4">
@@ -1780,6 +1820,13 @@
         if (noshowCount > 0) { noshowBadge.textContent = noshowCount; noshowBadge.style.display = 'inline-block'; }
         else noshowBadge.style.display = 'none';
       }
+      // Kapatılan Alarmlar menü rozeti — aynı desen
+      const closedBadge = document.getElementById('closedAlarmBadge');
+      if (closedBadge) {
+        const closedCount = all.filter(a => a.status === 'closed').length;
+        if (closedCount > 0) { closedBadge.textContent = closedCount; closedBadge.style.display = 'inline-block'; }
+        else closedBadge.style.display = 'none';
+      }
     }
 
     async function loadAdminAlarms(silent) {
@@ -2063,6 +2110,48 @@
           <button onclick="openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
         </td>
       </tr>`).join('');
+    }
+
+    // ── Kapatılan Alarmlar (G — "Kapatıldı" statüsü aldıktan sonra alarm
+    // sekmelerinden kaybolan kayıtların "nereye gittiğini" gösteren rapor) ──
+    // No-show raporuyla BİREBİR aynı desen, sadece status==='closed' filtresi.
+    let _closedAlarmsOwnersPopulated = false;
+    function _closedAlarmsPopulateOwnerFilter() {
+      if (_closedAlarmsOwnersPopulated) return;
+      const sel = document.getElementById('closedAlarmsOwnerFilter');
+      if (!sel) return;
+      const owners = [...new Set(adminAllAlarms.filter(a => a.status === 'closed').map(a => a.deal_owner).filter(Boolean))].sort();
+      if (!owners.length) return;
+      sel.innerHTML = `<option value="">${I18N.t("Tüm Deal Owner'lar")}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
+      _closedAlarmsOwnersPopulated = true;
+    }
+    function renderAdminClosedAlarms() {
+      let data = adminAllAlarms.filter(a => a.status === 'closed').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+      _closedAlarmsPopulateOwnerFilter();
+      const ownerSel = document.getElementById('closedAlarmsOwnerFilter');
+      if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
+      const search = (document.getElementById('closedAlarmsSearch')?.value || '').toLowerCase().trim();
+      if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
+      const tbody = document.getElementById('closedAlarmsTbody');
+      const empty = document.getElementById('closedAlarmsEmpty');
+      if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+      empty.style.display = 'none';
+      tbody.innerHTML = data.map(a => {
+        const tm = _amTypeMeta(a.alarm_type, false);
+        return `<tr>
+        <td style="padding:8px 10px;font-size:11px;font-weight:600;color:#f1f5f9;border-bottom:1px solid #0f172a">${fmt(a.deal_name)}</td>
+        <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.deal_owner)}</td>
+        <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.team)}</td>
+        <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.region)}</td>
+        <td style="padding:8px 10px;font-size:10px;border-bottom:1px solid #0f172a;white-space:nowrap"><span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:#1e293b;color:${tm.color}">${tm.label}</span></td>
+        <td style="padding:8px 10px;font-size:10px;color:#cbd5e1;border-bottom:1px solid #0f172a;white-space:nowrap">${_amFmtDate(a.closed_at)}</td>
+        <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a;white-space:nowrap">${fmt(a.closed_by)}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #0f172a;text-align:center">${_noteBtn(a.note)}</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">
+          <button onclick="openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
+        </td>
+      </tr>`;
+      }).join('');
     }
 
     // ── Aktivite / İşlem Geçmişi (G8) ─────────────────────────────────
@@ -3593,6 +3682,7 @@
     const _dbFilterTeamList      = _debounce(() => filterTeamList(), 200);
     const _dbRenderAdminToday    = _debounce(() => renderAdminToday(), 250);
     const _dbRenderAdminNoshow   = _debounce(() => renderAdminNoshow(), 250);
+    const _dbRenderAdminClosedAlarms = _debounce(() => renderAdminClosedAlarms(), 250);
     const _dbCaApplyFilters      = _debounce(() => _caApplyFilters(), 250);
     const _dbWaApplyFilters      = _debounce(() => _waApplyFilters(), 250);
     const _dbRenderAdminActivity = _debounce(() => renderAdminActivity(), 250);
@@ -3862,7 +3952,7 @@
       // Users ve System Logs admin'e özel — RM bu sayfalara geçemez
       if (window.isRM && (v === 'users' || v === 'logs')) return;
       _currentView = v;
-      ['deals','summary','users','logs','alarms-monitor','today','noshow','cancelled-alarms','won-alarms','activity'].forEach(name => {
+      ['deals','summary','users','logs','alarms-monitor','today','noshow','closed-alarms','cancelled-alarms','won-alarms','activity'].forEach(name => {
         document.getElementById('view-' + name).classList.toggle('hidden', name !== v);
         const nb = document.getElementById('nav-' + name); if (nb) nb.classList.toggle('active', name === v);
       });
@@ -3878,6 +3968,7 @@
       // (kullanıcı "Yükleniyor" görmez), sonra arka planda sessizce tazelenir.
       else if (v === 'today') { renderAdminToday(); loadAdminAlarms(true).then(renderAdminToday); }
       else if (v === 'noshow') { renderAdminNoshow(); loadAdminAlarms(true).then(renderAdminNoshow); }
+      else if (v === 'closed-alarms') { renderAdminClosedAlarms(); loadAdminAlarms(true).then(renderAdminClosedAlarms); }
       else if (v === 'cancelled-alarms') { renderAdminCancelledAlarms(); loadAdminCancelledDeals(); }
       else if (v === 'won-alarms') { renderAdminWonAlarms(); loadAdminWonAlarms(); }
       else if (v === 'activity') loadAdminActivity();
@@ -3885,7 +3976,7 @@
       // takım liderinin aksiyonları (sonuç girme, Gelemedi/İptal işaretleme
       // vb.) admin tarafında sayfayı terk edip geri dönmeye gerek kalmadan
       // görünsün. Deals/Analytics/Users/Logs bunun dışında.
-      const alarmDependentViews = new Set(['alarms-monitor','today','noshow','cancelled-alarms','won-alarms']);
+      const alarmDependentViews = new Set(['alarms-monitor','today','noshow','closed-alarms','cancelled-alarms','won-alarms']);
       if (alarmDependentViews.has(v)) _startLiveAlarmRefresh(); else _stopLiveAlarmRefresh();
     }
 
@@ -3910,6 +4001,7 @@
         if (_currentView === 'alarms-monitor') { await loadAdminAlarms(true); renderAdminAlarmTable(); }
         else if (_currentView === 'today')     { await loadAdminAlarms(true); renderAdminToday(); }
         else if (_currentView === 'noshow')    { await loadAdminAlarms(true); renderAdminNoshow(); }
+        else if (_currentView === 'closed-alarms') { await loadAdminAlarms(true); renderAdminClosedAlarms(); }
         else if (_currentView === 'cancelled-alarms') await loadAdminCancelledDeals();
         else if (_currentView === 'won-alarms')       await loadAdminWonAlarms();
       }, 60000);
