@@ -354,6 +354,14 @@
         <input type="date" id="alarmCreatedTo" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Created Time — bitiş">
         <button onclick="NCDatePicker.setValue('alarmCreatedFrom','');NCDatePicker.setValue('alarmCreatedTo','')" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Created tarih filtresini temizle">✕</button>
       </div>
+      <select id="alarmCreatedYearFilter" class="filter-sel" onchange="updateTabCounts();renderAlarms()" style="width:110px" title="Oluşturulma Yılı">
+        <option value="">Yıl: Tümü</option>
+        <option value="2022">2022</option>
+        <option value="2023">2023</option>
+        <option value="2024">2024</option>
+        <option value="2025">2025</option>
+        <option value="2026">2026</option>
+      </select>
     </div>
 
     <!-- Sub-tabs — sadece Tablo görünümünde anlamlı, Kanban tüm durumları zaten tek seferde gösterir -->
@@ -726,6 +734,7 @@
           <tr>
             <th>#</th>
             <th>Hasta</th>
+            <th>Deal ID</th>
             <th>Danışman</th>
             <th>Takım</th>
             <th>Alarm Tipi</th>
@@ -1696,6 +1705,10 @@
       'arrival_missing':     { label:I18N.t('Tarih Eksik'),         bg:'#450a0a', color:'#f87171' },
       'today_patient':       { label:I18N.t('Bugün Gelecek'),       bg:'#052e16', color:'#4ade80' },
       'no_show':             { label:I18N.t('Gelemedi'),            bg:'#450a0a', color:'#f87171' },
+      // Artık yeni alarm üretmeyen kaldırılmış bir tip — sadece geçmiş
+      // kayıtların (Kapatılan Alarmlar raporu) düzgün bir etiketle
+      // görünmesi için burada tutuluyor.
+      'payment_tracking':    { label:I18N.t('Payment Takip'),       bg:'#2e1065', color:'#c084fc' },
     };
     if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(type)) {
       return { label: I18N.t('Gecikmiş'), bg:'#450a0a', color:'#f87171' };
@@ -1899,6 +1912,13 @@
       if (crFrom && cr < crFrom) return false;
       if (crTo && cr > crTo) return false;
       return true;
+    });
+
+    // Oluşturulma Yılı filtresi
+    const crYear = document.getElementById('alarmCreatedYearFilter')?.value || '';
+    if (crYear) data = data.filter(a => {
+      const cr = dealFinanceMap[a.deal_id]?.created;
+      return cr && cr.substring(0, 4) === crYear;
     });
 
     return data;
@@ -3194,16 +3214,18 @@
     if (_closedAlarmsOwnersPopulated) return;
     const sel = document.getElementById('closedAlarmsOwnerFilter');
     if (!sel) return;
-    const owners = [...new Set(allAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').map(a => a.deal_owner).filter(Boolean))].sort();
+    const owners = [...new Set(allAlarms.filter(a => a.status === 'closed').map(a => a.deal_owner).filter(Boolean))].sort();
     if (!owners.length) return;
     sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
     _closedAlarmsOwnersPopulated = true;
   }
 
   function renderClosedAlarms() {
-    // payment_tracking artık üretilmeyen kaldırılmış bir alarm tipi — eski
-    // kayıtlardan kalmış olsa bile bu raporda görünmesin.
-    let data = allAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+    // Bu rapor TÜM kapatılmış alarmları gösterir — eski payment_tracking
+    // tipi de dahil (o tip artık yeni üretilmiyor ama geçmiş kayıt olarak
+    // sayılmalı, aksi halde rozet sayısıyla (139) listedeki satır sayısı
+    // (ör. 18) tutarsız görünür).
+    let data = allAlarms.filter(a => a.status === 'closed').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
     _closedAlarmsPopulateOwnerFilter();
     const ownerSel = document.getElementById('closedAlarmsOwnerFilter');
     if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
@@ -3218,6 +3240,7 @@
       return `<tr>
       <td style="color:#475569;font-size:10px">${i+1}</td>
       <td style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(a.deal_name)}</a></td>
+      <td style="font-size:10px;font-family:monospace;white-space:nowrap">${a.deal_id ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted">${dealFinanceMap[a.deal_id]?.ref || a.deal_id} ↗</a>` : '—'}</td>
       <td style="color:#94a3b8;font-size:11px;white-space:nowrap">${fmt(a.deal_owner)}</td>
       <td style="color:#94a3b8;font-size:10px;white-space:nowrap">${fmt((typeof TeamMap!=='undefined' && TeamMap.normalize(a.team)) || a.team)}</td>
       <td style="white-space:nowrap"><span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span></td>
@@ -4292,7 +4315,7 @@
   }
 
   function exportClosedAlarms() {
-    const data = allAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking');
+    const data = allAlarms.filter(a => a.status === 'closed');
     const headers = csvRow(['Hasta','Danışman','Takım','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Not']);
     const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),a.alarm_type,a.reference_date,a.closed_at,a.closed_by,a.note]))];
     downloadCsv(rows, `kapatilan_alarmlar_${new Date().toISOString().slice(0,10)}.csv`);

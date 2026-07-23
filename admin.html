@@ -1010,6 +1010,18 @@
             <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (baş.)</label><input type="date" id="amCreatedFrom" onchange="renderAdminAlarmTable()"></div>
             <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (bit.)</label><input type="date" id="amCreatedTo" onchange="renderAdminAlarmTable()"></div>
           </div>
+          <div class="flex items-end gap-2">
+            <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Yıl</label>
+              <select id="amCreatedYearFilter" class="filter-select" onchange="renderAdminAlarmTable()" style="width:90px">
+                <option value="">Tümü</option>
+                <option value="2022">2022</option>
+                <option value="2023">2023</option>
+                <option value="2024">2024</option>
+                <option value="2025">2025</option>
+                <option value="2026">2026</option>
+              </select>
+            </div>
+          </div>
         </div>
       </div>
       <div class="am-table-wrap" style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b">
@@ -1147,6 +1159,7 @@
         <thead>
           <tr style="background:#0f172a">
             <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Hasta</th>
+            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Deal ID</th>
             <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Danışman</th>
             <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Takım</th>
             <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Bölge</th>
@@ -1765,6 +1778,9 @@
         'arrival_missing':    { label:I18N.t('Tarih Eksik'),         color:'#f87171' },
         'today_patient':      { label:I18N.t('Bugün Gelecek'),       color:'#4ade80' },
         'no_show':            { label:I18N.t('Gelemedi'),            color:'#f87171' },
+        // Artık yeni alarm üretmeyen kaldırılmış bir tip — sadece geçmiş
+        // kayıtların (Kapatılan Alarmlar raporu) düzgün etiketle görünmesi için.
+        'payment_tracking':   { label:I18N.t('Payment Takip'),       color:'#c084fc' },
       };
       if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(type)) {
         return { label: I18N.t('Gecikmiş'), color:'#f87171' };
@@ -1837,9 +1853,7 @@
       if (!adminAllAlarms.length) {
         const cached = await _getCached(_alarmsCacheKey(), _ALARMS_TTL);
         if (cached && cached.length) {
-          // payment_tracking artık üretilmeyen kaldırılmış bir alarm tipi —
-          // eski cache'te/DB'de kalmış olsa bile hiçbir sayaca/tabloya girmesin.
-          adminAllAlarms = cached.filter(a => a.alarm_type !== 'payment_tracking');
+          adminAllAlarms = cached;
           updateAdminAlarmKPIs();
           renderRegionPanels();
           populateAdminAlarmFilters();
@@ -1872,7 +1886,7 @@
           ));
           rest.forEach(p => { if (Array.isArray(p)) all.push(...p); });
         }
-        adminAllAlarms = all.filter(a => a.alarm_type !== 'payment_tracking');
+        adminAllAlarms = all;
         updateAdminAlarmKPIs();
         renderRegionPanels();
         if (!silent) {
@@ -2119,15 +2133,16 @@
       if (_closedAlarmsOwnersPopulated) return;
       const sel = document.getElementById('closedAlarmsOwnerFilter');
       if (!sel) return;
-      const owners = [...new Set(adminAllAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').map(a => a.deal_owner).filter(Boolean))].sort();
+      const owners = [...new Set(adminAllAlarms.filter(a => a.status === 'closed').map(a => a.deal_owner).filter(Boolean))].sort();
       if (!owners.length) return;
       sel.innerHTML = `<option value="">${I18N.t("Tüm Deal Owner'lar")}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
       _closedAlarmsOwnersPopulated = true;
     }
     function renderAdminClosedAlarms() {
-      // payment_tracking artık üretilmeyen kaldırılmış bir alarm tipi — eski
-      // kayıtlardan kalmış olsa bile bu raporda görünmesin.
-      let data = adminAllAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+      // Bu rapor TÜM kapatılmış alarmları gösterir — eski payment_tracking
+      // tipi de dahil (geçmiş kayıt olarak sayılmalı, aksi halde rozet
+      // sayısıyla listedeki satır sayısı tutarsız görünür).
+      let data = adminAllAlarms.filter(a => a.status === 'closed').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
       _closedAlarmsPopulateOwnerFilter();
       const ownerSel = document.getElementById('closedAlarmsOwnerFilter');
       if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
@@ -2139,8 +2154,11 @@
       empty.style.display = 'none';
       tbody.innerHTML = data.map(a => {
         const tm = _amTypeMeta(a.alarm_type, false);
+        const closedInfo = _amDealInfoFor(a.deal_id) || {};
+        const closedRef = closedInfo.ref || '';
         return `<tr>
         <td style="padding:8px 10px;font-size:11px;font-weight:600;color:#f1f5f9;border-bottom:1px solid #0f172a">${fmt(a.deal_name)}</td>
+        <td style="padding:8px 10px;font-size:10px;font-family:monospace;border-bottom:1px solid #0f172a;white-space:nowrap">${a.deal_id ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted">${closedRef || a.deal_id} ↗</a>` : '—'}</td>
         <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.deal_owner)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.team)}</td>
         <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.region)}</td>
@@ -3004,8 +3022,9 @@
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
 
       return adminAllAlarms.filter(a => {
-        // payment_tracking artık üretilmeyen kaldırılmış bir alarm tipi —
-        // eski kayıtlardan kalmış olsa bile hiçbir yerde gösterilmesin.
+        // payment_tracking artık yeni üretilmeyen kaldırılmış bir alarm tipi —
+        // AKTİF Alarm İzleme tablosunda (bu fonksiyon) görünmesin. Kapatılan
+        // Alarmlar raporu bilerek bunu HARİÇ TUTMUYOR (geçmiş kayıt sayılır).
         if (a.alarm_type === 'payment_tracking') return false;
         if (region && a.region !== region) return false;
         if (team   && (TeamMap.normalize(a.team) || a.team) !== team) return false;
@@ -3025,6 +3044,11 @@
           if (!ct) return false;
           if (cFrom && ct < parseDateString(cFrom)) return false;
           if (cTo && ct > parseDateString(cTo)) return false;
+        }
+        const cYear = document.getElementById('amCreatedYearFilter')?.value || '';
+        if (cYear) {
+          const ctStr = _amDealCreatedTimeFor(a.deal_id);
+          if (!ctStr || String(ctStr).substring(0, 4) !== cYear) return false;
         }
         if (search) {
           const txt = [a.deal_name,a.deal_owner,a.team,a.region].join(' ').toLowerCase();
@@ -3084,7 +3108,7 @@
       // toplamlar SABİT kalır (önceden sayfa değiştikçe/zaman geçtikçe
       // anlamsızca zıplıyordu, çünkü allDeals arka planda parça parça
       // yükleniyordu ve her render'da yeniden toplanıyordu).
-      const sig = ['amFilterRegion','amFilterTeam','amFilterOwner','amFilterType','amFilterStatus','amFilterPft','amFilterThresh','amDateFrom','amDateTo','amCreatedFrom','amCreatedTo','amSearch']
+      const sig = ['amFilterRegion','amFilterTeam','amFilterOwner','amFilterType','amFilterStatus','amFilterPft','amFilterThresh','amDateFrom','amDateTo','amCreatedFrom','amCreatedTo','amCreatedYearFilter','amSearch']
         .map(id => document.getElementById(id)?.value || '').join('|');
       if (!_dealsLoadInProgress && (sig !== _aaTotalsSig || allDeals.length !== _aaTotalsDealsLen)) {
         _amRenderAlarmTotals(data);
