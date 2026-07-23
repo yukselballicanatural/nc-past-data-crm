@@ -191,6 +191,10 @@
         <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
         <span>Aktivite</span>
       </button>
+      <button onclick="switchView('team-members')" class="nav-btn" id="nav-team-members">
+        <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 100-8 4 4 0 000 8zm6 3v-2a4 4 0 00-3-3.87m-1-4.13a4 4 0 010 7.75"/></svg>
+        <span>Takımımdaki Kişiler</span>
+      </button>
       <button onclick="switchView('rm-overview')" class="nav-btn" id="nav-rm-overview" style="display:none">
         <svg class="h-4 w-4" style="flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
         <span>Yönetim Özeti</span>
@@ -879,6 +883,17 @@
       <div id="tlActivityLoading" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">Yükleniyor...</div>
       <div id="tlActivityEmpty" style="display:none;text-align:center;padding:50px 16px;color:#475569;font-size:13px">Kayıtlı aksiyon bulunamadı.</div>
     </div>
+  </div>
+
+  <!-- ── VIEW: TAKIMIMDAKI KİŞİLER ── -->
+  <div id="view-team-members" style="display:none">
+    <div style="margin-bottom:20px">
+      <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Takımımdaki Kişiler</h2>
+      <p style="font-size:11px;color:#64748b;margin:3px 0 0">Takımındaki danışmanların WhatsApp numaraları — bir numara girip kaydettikten sonra "WhatsApp'tan Yaz" ile o kişiyle sohbet doğrudan açılır.</p>
+    </div>
+    <div id="tmLoading" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">Yükleniyor...</div>
+    <div id="tmEmpty" style="display:none;text-align:center;padding:50px 16px;color:#475569;font-size:13px">Takımında kayıtlı kişi bulunamadı.</div>
+    <div id="tmGrid" style="display:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
   </div>
 
 </main>
@@ -3669,6 +3684,94 @@
   // takıma ait deal_id'ler allAlarms'tan (zaten takıma/bölgeye kısıtlı)
   // alınıp filtrelenir, hasta adı da oradan eşlenir.
   let _tlActivityRows = [];
+  // ── Takımımdaki Kişiler (WhatsApp telefon rehberi) ────────────────
+  // Users tablosu tamamen kilitli (bkz. proje hafızası: users_table_security_gap)
+  // — bu yüzden telefon numaraları anon key ile değil, sadece bu sayfanın
+  // kullandığı yetkilendirilmiş api/team-members.js (service_role, token'daki
+  // kullanıcının GÜNCEL takımıyla server-side kapsamlanmış) üzerinden okunur/yazılır.
+  let _teamMembers = [];
+
+  async function loadTeamMembers() {
+    const loading = document.getElementById('tmLoading');
+    const empty   = document.getElementById('tmEmpty');
+    const grid    = document.getElementById('tmGrid');
+    loading.style.display = 'block'; empty.style.display = 'none'; grid.style.display = 'none';
+    try {
+      const token = (currentUser && currentUser.token) || '';
+      const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+      _teamMembers = data.members || [];
+      loading.style.display = 'none';
+      renderTeamMembers();
+    } catch(e) {
+      loading.style.display = 'none';
+      empty.textContent = I18N.t('Yükleme hatası: ') + e.message;
+      empty.style.display = 'block';
+    }
+  }
+
+  function renderTeamMembers() {
+    const grid  = document.getElementById('tmGrid');
+    const empty = document.getElementById('tmEmpty');
+    if (!_teamMembers.length) { grid.style.display = 'none'; empty.style.display = 'block'; return; }
+    empty.style.display = 'none';
+    grid.style.display = 'grid';
+    grid.innerHTML = _teamMembers.map((m, i) => {
+      const initials = (m.fullName || m.username || '?').trim().charAt(0).toUpperCase() || '?';
+      return `<div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:16px">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#0d9488,#0f766e);color:#fff;font-weight:800;font-size:13px;display:flex;align-items:center;justify-content:center;flex-shrink:0">${fmt(initials)}</div>
+          <div style="min-width:0">
+            <div style="font-size:13px;font-weight:700;color:#f1f5f9;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmt(m.fullName)}</div>
+            <div style="font-size:10px;color:#64748b">${fmt(m.role)}</div>
+          </div>
+        </div>
+        <input type="tel" id="tmPhone-${i}" value="${fmt(m.phone)}" placeholder="+90 5xx xxx xx xx" class="filter-inp" style="width:100%;box-sizing:border-box;margin-bottom:8px">
+        <div style="display:flex;gap:6px">
+          <button onclick="saveMemberPhone(${i})" style="flex:1;padding:8px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Kaydet</button>
+          <button onclick="openMemberWhatsApp(${i})" style="flex:1;padding:8px;background:#166534;border:none;border-radius:8px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">WhatsApp'tan Yaz</button>
+        </div>
+      </div>`;
+    }).join('');
+    I18N.translateDOM(grid);
+  }
+
+  async function saveMemberPhone(i) {
+    const m = _teamMembers[i];
+    if (!m) return;
+    const input = document.getElementById('tmPhone-' + i);
+    const phone = input.value.trim();
+    try {
+      const token = (currentUser && currentUser.token) || '';
+      const r = await fetch('/api/team-members', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify({ username: m.username, phone }),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+      m.phone = phone;
+      showNotice('Telefon numarası kaydedildi.', 'success');
+    } catch(e) {
+      showNotice('Kaydedilemedi: ' + e.message, 'error');
+    }
+  }
+
+  // Telefon numarasını wa.me formatına çevirir — sadece rakamlar kalır
+  // (boşluk/parantez/tire/artı işareti atılır); wa.me bunları kabul etmiyor.
+  function _waDigits(phone) {
+    return String(phone || '').replace(/[^\d]/g, '');
+  }
+
+  function openMemberWhatsApp(i) {
+    const m = _teamMembers[i];
+    if (!m) return;
+    const digits = _waDigits(m.phone);
+    if (!digits) { showNotice('Bu kişi için kayıtlı telefon numarası yok.', 'error'); return; }
+    window.open(`https://wa.me/${digits}`, '_blank', 'noopener');
+  }
+
   async function loadTlActivity() {
     const loading = document.getElementById('tlActivityLoading');
     const empty = document.getElementById('tlActivityEmpty');
@@ -3740,7 +3843,7 @@
 
   function switchView(v) {
     activeView = v;
-    const views = ['alarms','today','deals','noshow','cancelled','won','rm-overview','activity'];
+    const views = ['alarms','today','deals','noshow','cancelled','won','rm-overview','activity','team-members'];
     views.forEach(id => {
       const vw = document.getElementById('view-' + id);
       if (vw) vw.style.display  = id === v ? '' : 'none';
@@ -3756,6 +3859,7 @@
     if (v === 'won')         loadWonAlarms();
     if (v === 'rm-overview') loadRmOverview();
     if (v === 'activity')    loadTlActivity();
+    if (v === 'team-members') loadTeamMembers();
   }
 
   // ── Payment / Aktivite Yok listesi ──────────────────────────────
@@ -4163,6 +4267,11 @@
         const miniRM = document.getElementById('mini-nav-rm-overview');
         if (navRM)  { navRM.style.display  = 'flex'; }
         if (miniRM) { miniRM.style.display = 'flex'; }
+        // "Takımımdaki Kişiler" tek bir takımın Users satırlarına (Takim Adi
+        // eşleşmesi) göre çalışıyor — RM'nin team alanı bir bölge adı olduğu
+        // için bu sayfa RM için anlamlı değil, gizle.
+        const navTM = document.getElementById('nav-team-members');
+        if (navTM) navTM.style.display = 'none';
         switchView('rm-overview');
       }
 

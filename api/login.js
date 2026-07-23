@@ -79,11 +79,13 @@ export default async function handler(req, res) {
 
     // admin/super-admin ise, Users sayfasının service_role gerektiren
     // uçlarını (api/admin-users.js) çağırabilmesi için imzalı bir token
-    // ekle. Diğer roller için gereksiz — token yine de üretilse zararsız
-    // olurdu ama sadece ihtiyacı olana veriliyor.
+    // ekle. team-leader/regional-manager için de (api/team-members.js —
+    // "Takımımdaki Kişiler" sayfası) aynı token gerekiyor. Agent için
+    // gereksiz — token yine de üretilse zararsız olurdu ama sadece
+    // ihtiyacı olana veriliyor.
     const AUTH_SECRET = process.env.AUTH_TOKEN_SECRET;
     const role = normalizeRole(user['Role']);
-    if (AUTH_SECRET && (role === 'admin' || role === 'super-admin')) {
+    if (AUTH_SECRET && ['admin', 'super-admin', 'team-leader', 'regional-manager'].includes(role)) {
       user.token = signToken({ u: user['Username'], r: role, exp: Date.now() + TOKEN_TTL_MS }, AUTH_SECRET);
     }
 
