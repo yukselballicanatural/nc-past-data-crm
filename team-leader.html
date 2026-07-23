@@ -1767,9 +1767,10 @@
     const today = new Date(); today.setHours(0,0,0,0);
     const activeStatuses = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
     return allAlarms.filter(a => {
-      // Payment Takip alarm tipi ve motoru tamamen kaldırıldı — böyle bir alarm
-      // tipi artık üretilmiyor; eski kayıtlardan kalmış olabilecek satırlar da
-      // (varsa) hiçbir sekmede/raporda gösterilmesin.
+      // Payment Takip alarm tipi ve motoru kaldırıldı — bu fonksiyon SADECE
+      // AKTİF sekmeleri (Açık/Bugün/Yaklaşan/Eksik Tarih/Gecikmiş) besliyor,
+      // bu yüzden burada hariç tutuluyor. Kapatılan Alarmlar raporu bilerek
+      // bunu HARİÇ TUTMUYOR — geçmiş kayıt olarak sayılır (renderClosedAlarms).
       if (a.alarm_type === 'payment_tracking') return false;
       switch(tab) {
         case 'all':         return activeStatuses.has(a.status);
