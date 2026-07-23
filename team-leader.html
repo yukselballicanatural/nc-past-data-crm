@@ -1802,7 +1802,7 @@
       switch(tab) {
         case 'all':         return activeStatuses.has(a.status);
         case 'open':        return a.status === 'open' || a.status === 'seen';
-        case 'today':       return isToday(a) && activeStatuses.has(a.status);
+        case 'today':       return isToday(a) && (activeStatuses.has(a.status) || a.status === 'no_show');
         case 'approaching': return ['arrival_approaching','visit_approaching'].includes(a.alarm_type) && activeStatuses.has(a.status) && (liveDaysRemaining(a) || 0) > 0;
         case 'missing':     return a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status);
         case 'overdue':     return isOverdue(a);
