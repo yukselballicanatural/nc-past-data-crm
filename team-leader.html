@@ -321,6 +321,9 @@
       <select id="alarmConsultantFilter" class="filter-sel" onchange="updateTabCounts();renderAlarms()" style="width:170px">
         <option value="">Danışman: Tümü</option>
       </select>
+      <select id="alarmStageFilter" class="filter-sel" onchange="updateTabCounts();renderAlarms()" style="width:170px">
+        <option value="">Stage: Tümü</option>
+      </select>
       <select id="alarmSortSel" class="filter-sel" onchange="alarmSortCol=null;renderAlarms()" style="width:180px">
         <option value="created_desc">En Yeni Önce</option>
         <option value="days_asc">Kalan Gün (Acil Önce)</option>
@@ -1705,10 +1708,6 @@
       'arrival_missing':     { label:I18N.t('Tarih Eksik'),         bg:'#450a0a', color:'#f87171' },
       'today_patient':       { label:I18N.t('Bugün Gelecek'),       bg:'#052e16', color:'#4ade80' },
       'no_show':             { label:I18N.t('Gelemedi'),            bg:'#450a0a', color:'#f87171' },
-      // Artık yeni alarm üretmeyen kaldırılmış bir tip — sadece geçmiş
-      // kayıtların (Kapatılan Alarmlar raporu) düzgün bir etiketle
-      // görünmesi için burada tutuluyor.
-      'payment_tracking':    { label:I18N.t('Payment Takip'),       bg:'#2e1065', color:'#c084fc' },
     };
     if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(type)) {
       return { label: I18N.t('Gecikmiş'), bg:'#450a0a', color:'#f87171' };
@@ -1767,10 +1766,8 @@
     const today = new Date(); today.setHours(0,0,0,0);
     const activeStatuses = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
     return allAlarms.filter(a => {
-      // Payment Takip alarm tipi ve motoru kaldırıldı — bu fonksiyon SADECE
-      // AKTİF sekmeleri (Açık/Bugün/Yaklaşan/Eksik Tarih/Gecikmiş) besliyor,
-      // bu yüzden burada hariç tutuluyor. Kapatılan Alarmlar raporu bilerek
-      // bunu HARİÇ TUTMUYOR — geçmiş kayıt olarak sayılır (renderClosedAlarms).
+      // Payment Takip artık geçerli bir alarm tipi sayılmıyor — geçmiş
+      // kayıtları da dahil hiçbir yerde (Kapatılan Alarmlar raporu dahil) gösterilmesin.
       if (a.alarm_type === 'payment_tracking') return false;
       switch(tab) {
         case 'all':         return activeStatuses.has(a.status);
@@ -1884,6 +1881,10 @@
     // Danışman filtresi
     const consultantF = document.getElementById('alarmConsultantFilter')?.value || '';
     if (consultantF) data = data.filter(a => (a.deal_owner || '') === consultantF);
+
+    // Stage filtresi
+    const stageF = document.getElementById('alarmStageFilter')?.value || '';
+    if (stageF) data = data.filter(a => (dealFinanceMap[a.deal_id]?.stage || '') === stageF);
 
     // Payment / Flight Ticket filtresi
     const pftF = document.getElementById('alarmPftFilter')?.value || '';
@@ -2159,10 +2160,10 @@
       else nbN.style.display = 'none';
     }
 
-    // Kapatılan Alarmlar menü rozeti — aynı desen
+    // Kapatılan Alarmlar menü rozeti — payment_tracking hariç (bkz. renderClosedAlarms)
     const nbC = document.getElementById('navBadgeClosedAlarms');
     if (nbC) {
-      const closedCnt = allAlarms.filter(a => a.status === 'closed').length;
+      const closedCnt = allAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').length;
       if (closedCnt > 0) { nbC.textContent = closedCnt; nbC.style.display = 'inline-flex'; }
       else nbC.style.display = 'none';
     }
@@ -2186,6 +2187,14 @@
     sel.innerHTML = `<option value="">${I18N.t('Danışman: Tümü')}</option>` +
       sorted.map(([name, s]) => `<option value="${fmt(name)}">${fmt(name)} (${s.total}${s.overdue > 0 ? ' ⚠' + s.overdue : ''})</option>`).join('');
     if (cur && byOwner[cur]) sel.value = cur;
+    // Stage dropdown'ını da doldur
+    const stageSel = document.getElementById('alarmStageFilter');
+    if (stageSel) {
+      const curStage = stageSel.value;
+      const stages = [...new Set(allAlarms.map(a => dealFinanceMap[a.deal_id]?.stage).filter(Boolean))].sort();
+      stageSel.innerHTML = `<option value="">${I18N.t('Stage: Tümü')}</option>` + stages.map(s => `<option value="${s}">${s}</option>`).join('');
+      if (curStage) stageSel.value = curStage;
+    }
   }
 
   // ── Alarm subtab değiştir ────────────────────────────────────────
@@ -3215,18 +3224,17 @@
     if (_closedAlarmsOwnersPopulated) return;
     const sel = document.getElementById('closedAlarmsOwnerFilter');
     if (!sel) return;
-    const owners = [...new Set(allAlarms.filter(a => a.status === 'closed').map(a => a.deal_owner).filter(Boolean))].sort();
+    const owners = [...new Set(allAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').map(a => a.deal_owner).filter(Boolean))].sort();
     if (!owners.length) return;
     sel.innerHTML = `<option value="">${I18N.t('Tüm Danışmanlar')}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
     _closedAlarmsOwnersPopulated = true;
   }
 
   function renderClosedAlarms() {
-    // Bu rapor TÜM kapatılmış alarmları gösterir — eski payment_tracking
-    // tipi de dahil (o tip artık yeni üretilmiyor ama geçmiş kayıt olarak
-    // sayılmalı, aksi halde rozet sayısıyla (139) listedeki satır sayısı
-    // (ör. 18) tutarsız görünür).
-    let data = allAlarms.filter(a => a.status === 'closed').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+    // Payment Takip artık geçerli bir alarm tipi sayılmıyor — geçmiş
+    // kayıtları da dahil hiçbir yerde (bu rapor dahil) gösterilmesin.
+    // Rozet (navBadgeClosedAlarms) de aynı hariç tutmayı uygular, sayılar tutarlı kalır.
+    let data = allAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
     _closedAlarmsPopulateOwnerFilter();
     const ownerSel = document.getElementById('closedAlarmsOwnerFilter');
     if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
@@ -4316,7 +4324,7 @@
   }
 
   function exportClosedAlarms() {
-    const data = allAlarms.filter(a => a.status === 'closed');
+    const data = allAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking');
     const headers = csvRow(['Hasta','Danışman','Takım','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Not']);
     const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),a.alarm_type,a.reference_date,a.closed_at,a.closed_by,a.note]))];
     downloadCsv(rows, `kapatilan_alarmlar_${new Date().toISOString().slice(0,10)}.csv`);

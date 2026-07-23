@@ -984,6 +984,12 @@
         </div>
         <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
           <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Stage</label>
+            <select id="amFilterStage" onchange="renderAdminAlarmTable()" class="filter-select">
+              <option value="">Tüm Stage'ler</option>
+            </select>
+          </div>
+          <div>
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Payment / Ticket</label>
             <select id="amFilterPft" onchange="renderAdminAlarmTable()" class="filter-select">
               <option value="">Tümü</option>
@@ -1778,9 +1784,6 @@
         'arrival_missing':    { label:I18N.t('Tarih Eksik'),         color:'#f87171' },
         'today_patient':      { label:I18N.t('Bugün Gelecek'),       color:'#4ade80' },
         'no_show':            { label:I18N.t('Gelemedi'),            color:'#f87171' },
-        // Artık yeni alarm üretmeyen kaldırılmış bir tip — sadece geçmiş
-        // kayıtların (Kapatılan Alarmlar raporu) düzgün etiketle görünmesi için.
-        'payment_tracking':   { label:I18N.t('Payment Takip'),       color:'#c084fc' },
       };
       if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(type)) {
         return { label: I18N.t('Gecikmiş'), color:'#f87171' };
@@ -1834,10 +1837,10 @@
         if (noshowCount > 0) { noshowBadge.textContent = noshowCount; noshowBadge.style.display = 'inline-block'; }
         else noshowBadge.style.display = 'none';
       }
-      // Kapatılan Alarmlar menü rozeti — aynı desen
+      // Kapatılan Alarmlar menü rozeti — payment_tracking hariç (bkz. renderAdminClosedAlarms)
       const closedBadge = document.getElementById('closedAlarmBadge');
       if (closedBadge) {
-        const closedCount = all.filter(a => a.status === 'closed').length;
+        const closedCount = all.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').length;
         if (closedCount > 0) { closedBadge.textContent = closedCount; closedBadge.style.display = 'inline-block'; }
         else closedBadge.style.display = 'none';
       }
@@ -2133,16 +2136,16 @@
       if (_closedAlarmsOwnersPopulated) return;
       const sel = document.getElementById('closedAlarmsOwnerFilter');
       if (!sel) return;
-      const owners = [...new Set(adminAllAlarms.filter(a => a.status === 'closed').map(a => a.deal_owner).filter(Boolean))].sort();
+      const owners = [...new Set(adminAllAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').map(a => a.deal_owner).filter(Boolean))].sort();
       if (!owners.length) return;
       sel.innerHTML = `<option value="">${I18N.t("Tüm Deal Owner'lar")}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
       _closedAlarmsOwnersPopulated = true;
     }
     function renderAdminClosedAlarms() {
-      // Bu rapor TÜM kapatılmış alarmları gösterir — eski payment_tracking
-      // tipi de dahil (geçmiş kayıt olarak sayılmalı, aksi halde rozet
-      // sayısıyla listedeki satır sayısı tutarsız görünür).
-      let data = adminAllAlarms.filter(a => a.status === 'closed').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+      // Payment Takip artık geçerli bir alarm tipi sayılmıyor — geçmiş
+      // kayıtları da dahil hiçbir yerde (bu rapor dahil) gösterilmesin.
+      // Rozet (closedAlarmBadge) de aynı hariç tutmayı uygular, sayılar tutarlı kalır.
+      let data = adminAllAlarms.filter(a => a.status === 'closed' && a.alarm_type !== 'payment_tracking').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
       _closedAlarmsPopulateOwnerFilter();
       const ownerSel = document.getElementById('closedAlarmsOwnerFilter');
       if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
@@ -3011,6 +3014,7 @@
       const team   = document.getElementById('amFilterTeam')?.value || '';
       const owner  = document.getElementById('amFilterOwner')?.value || '';
       const type   = document.getElementById('amFilterType').value;
+      const stage  = document.getElementById('amFilterStage')?.value || '';
       const status = document.getElementById('amFilterStatus').value;
       const pft    = document.getElementById('amFilterPft')?.value || '';
       const thresh = document.getElementById('amFilterThresh')?.value || '';
@@ -3022,14 +3026,14 @@
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
 
       return adminAllAlarms.filter(a => {
-        // payment_tracking artık yeni üretilmeyen kaldırılmış bir alarm tipi —
-        // AKTİF Alarm İzleme tablosunda (bu fonksiyon) görünmesin. Kapatılan
-        // Alarmlar raporu bilerek bunu HARİÇ TUTMUYOR (geçmiş kayıt sayılır).
+        // payment_tracking artık geçerli bir alarm tipi sayılmıyor — geçmiş
+        // kayıtları da dahil hiçbir yerde (Kapatılan Alarmlar raporu dahil) gösterilmesin.
         if (a.alarm_type === 'payment_tracking') return false;
         if (region && a.region !== region) return false;
         if (team   && (TeamMap.normalize(a.team) || a.team) !== team) return false;
         if (owner  && a.deal_owner !== owner) return false;
         if (type   && a.alarm_type !== type) return false;
+        if (stage  && (_amDealInfoFor(a.deal_id)?.stage || '') !== stage) return false;
         if (status === 'active'  && !active.has(a.status)) return false;
         if (status === 'open'    && a.status !== 'open') return false;
         if (status === 'overdue' && !_amIsOverdue(a)) return false;
@@ -3071,6 +3075,8 @@
       };
       fill('amFilterTeam', teams, "Tüm Team Leader'lar");
       fill('amFilterOwner', owners, "Tüm Deal Owner'lar");
+      const stages = [...new Set(adminAllAlarms.map(a => _amDealInfoFor(a.deal_id)?.stage).filter(Boolean))].sort();
+      fill('amFilterStage', stages, "Tüm Stage'ler");
     }
 
     // Alarm Listesi sayfalaması — binlerce filtrelenmiş satırı tek seferde
@@ -3108,7 +3114,7 @@
       // toplamlar SABİT kalır (önceden sayfa değiştikçe/zaman geçtikçe
       // anlamsızca zıplıyordu, çünkü allDeals arka planda parça parça
       // yükleniyordu ve her render'da yeniden toplanıyordu).
-      const sig = ['amFilterRegion','amFilterTeam','amFilterOwner','amFilterType','amFilterStatus','amFilterPft','amFilterThresh','amDateFrom','amDateTo','amCreatedFrom','amCreatedTo','amCreatedYearFilter','amSearch']
+      const sig = ['amFilterRegion','amFilterTeam','amFilterOwner','amFilterType','amFilterStage','amFilterStatus','amFilterPft','amFilterThresh','amDateFrom','amDateTo','amCreatedFrom','amCreatedTo','amCreatedYearFilter','amSearch']
         .map(id => document.getElementById(id)?.value || '').join('|');
       if (!_dealsLoadInProgress && (sig !== _aaTotalsSig || allDeals.length !== _aaTotalsDealsLen)) {
         _amRenderAlarmTotals(data);
