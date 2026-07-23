@@ -3906,8 +3906,10 @@
     const phoneCell = document.getElementById('tmPhoneCell-' + i);
     const emailCell = document.getElementById('tmEmailCell-' + i);
     const editBtn   = document.getElementById('tmEditBtn-' + i);
-    phoneCell.innerHTML = `<input type="tel" id="tmPhone-${i}" value="${fmt(m.phone)}" placeholder="+90 5xx xxx xx xx" class="filter-inp" style="width:155px;box-sizing:border-box">`;
-    emailCell.innerHTML = `<input type="email" id="tmEmail-${i}" value="${fmt(m.email)}" placeholder="ornek@mail.com" class="filter-inp" style="width:190px;box-sizing:border-box">`;
+    // Kayıtlı telefon varsa +90 prefixini çıkar, sadece 10 haneli kısmı göster
+    const phoneSuffix = (m.phone || '').replace(/^\+90\s*/, '');
+    phoneCell.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px"><span style="color:#64748b;font-size:12px;font-weight:600;white-space:nowrap">+90</span><input type="tel" id="tmPhone-${i}" value="${_escHtml(phoneSuffix)}" placeholder="5xx xxx xx xx" maxlength="13" class="filter-inp" style="width:130px;box-sizing:border-box"></span>`;
+    emailCell.innerHTML = `<input type="email" id="tmEmail-${i}" value="${_escHtml(m.email || '')}" placeholder="ornek@mail.com" class="filter-inp" style="width:190px;box-sizing:border-box">`;
     editBtn.style.display = 'none';
     const td = editBtn.parentElement;
     const saveSpan = document.createElement('span');
@@ -3915,7 +3917,6 @@
     saveSpan.innerHTML = `<button onclick="saveMember(${i})" style="padding:5px 12px;background:#0f766e;border:none;border-radius:7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">Kaydet</button><button onclick="cancelMember(${i})" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">İptal</button>`;
     td.insertBefore(saveSpan, editBtn);
     const phoneInp = document.getElementById('tmPhone-' + i);
-    if (phoneInp && !phoneInp.value) phoneInp.value = '+90 ';
     phoneInp && phoneInp.focus();
   }
 
@@ -3927,12 +3928,21 @@
     row.outerHTML = _tmRowHtml(m, i);
   }
 
-  function _validatePhone(raw) {
-    const v = raw.trim();
+  function _validatePhone(suffix) {
+    const v = suffix.trim();
     if (!v) return { ok: true, val: '' };
     const digits = v.replace(/[^\d]/g, '');
-    if (!v.startsWith('+90') || digits.length !== 12) {
-      return { ok: false, msg: 'Telefon +90 ile başlamalı ve 12 rakam içermeli (ör. +90 532 123 45 67).' };
+    if (digits.length !== 10) {
+      return { ok: false, msg: 'Telefon 10 rakam olmalı (ör. 532 123 45 67). +90 öneki otomatik eklenir.' };
+    }
+    return { ok: true, val: '+90' + digits };
+  }
+
+  function _validateEmail(raw) {
+    const v = raw.trim();
+    if (!v) return { ok: true, val: '' };
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) {
+      return { ok: false, msg: 'Geçerli bir e-posta adresi girin (ör. ad@alan.com).' };
     }
     return { ok: true, val: v };
   }
@@ -3941,10 +3951,13 @@
     const m = _teamMembers[i];
     if (!m) return;
     const rawPhone = (document.getElementById('tmPhone-' + i) || {}).value || '';
-    const email    = ((document.getElementById('tmEmail-' + i) || {}).value || '').trim();
+    const rawEmail = (document.getElementById('tmEmail-' + i) || {}).value || '';
     const phoneCheck = _validatePhone(rawPhone);
     if (!phoneCheck.ok) { showNotice(phoneCheck.msg, 'error'); return; }
+    const emailCheck = _validateEmail(rawEmail);
+    if (!emailCheck.ok) { showNotice(emailCheck.msg, 'error'); return; }
     const phone = phoneCheck.val;
+    const email = emailCheck.val;
     try {
       const token = (currentUser && currentUser.token) || '';
       const r = await fetch('/api/team-members', {
