@@ -10,6 +10,40 @@
   // Türkçe metin -> İngilizce çeviri. Anahtar bulunamazsa orijinal metin
   // aynen kullanılır (zaten İngilizce olan metinler için ekstra kayıt gerekmez).
   var DICT = {
+    // ── Genel eksik çeviriler (tam sistem taraması) ──────────────────
+    'Çıkış': 'Logout',
+    'Yıl': 'Year',
+    'Stage: Tümü': 'Stage: All',
+    'Yıl: Tümü': 'Year: All',
+    '— Alarmları': ' — Alarms',
+    'Telefon ve e-posta sütunlarını kendin doldur, kaydet butonuna bas.': 'Fill in the phone and email columns yourself, then press save.',
+    'Kayıtlı Sonuç': 'Recorded Result',
+    'Ödeme Tamamlandı': 'Payment Completed',
+    'Kısmi Ödeme Alındı': 'Partial Payment Received',
+    'Ödeme Sözü Alındı': 'Payment Promise Received',
+    'İndirim/Tutar Güncellendi (Yeniden Kontrol Et)': 'Discount/Amount Updated (Re-check)',
+    'Finansa Aktarıldı': 'Forwarded to Finance',
+    'Won Statüsü Hatalı': 'Won Status Incorrect',
+    'Oluşturulma tarih filtresini temizle': 'Clear the created-date filter',
+    'Ödeme durumu, aksiyon planı...': 'Payment status, action plan...',
+    'Natural Clinic &copy; 2026 &middot; İç Sistemler Portalı': 'Natural Clinic &copy; 2026 &middot; Internal Systems Portal',
+    'Bir gün seçince tüm sayfa (KPI kartları, bölge panelleri ve Alarm Listesi) sadece son N gün + önümüzdeki N gün içindeki alarmları gösterir': 'Selecting a day filters the whole page (KPI cards, region panels, and Alarm List) to only show alarms within the last N days + next N days',
+    '0 takım': '0 teams',
+    "Tüm Stage'ler": 'All Stages',
+    '±30 gün': '±30 days',
+    '±15 gün': '±15 days',
+    '±7 gün': '±7 days',
+    '±3 gün': '±3 days',
+    'Alarm motorunun bir sonraki çalışmasında': 'On the next run of the alarm engine,',
+    'hangi gün eşiklerinde yeni alarm üretileceğini': 'which day thresholds new alarms will be generated at',
+    "belirler. Bu ayarlar Alarm Listesi'ni filtrelemez.": "This setting does not filter the Alarm List.",
+
+    // ── No-show (Gelemedi) açıklama mini modalı ─────────────────────
+    'Gelemedi — Açıklama': 'No-show — Reason',
+    'Neden gelemedi?': 'Why didn\'t they come?',
+    'ör. hasta iptal etti, bilet sorunu, sağlık durumu…': 'e.g. patient cancelled, ticket issue, health condition…',
+    'Gelemedi Olarak İşaretle': 'Mark as No-show',
+
     // ── Ortak / genel ──────────────────────────────────────────────
     'Navigation': 'Navigation',
     'Logout': 'Logout',

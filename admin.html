@@ -2935,6 +2935,7 @@
           </td>
         </tr>`;
       }).join('');
+      I18N.translateDOM(tbody);
 
       pager.style.display = data.length > WA_PAGE_SIZE ? 'flex' : 'none';
       document.getElementById('wonAlarmPageInfo').textContent =

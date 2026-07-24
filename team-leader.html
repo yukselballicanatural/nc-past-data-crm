@@ -306,7 +306,6 @@
     <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap">
       <div>
         <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Alarmlar</h2>
-        <p style="font-size:11px;color:#64748b;margin:3px 0 0" id="alarmSubtitle">Takımın açık alarm kayıtları</p>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span id="engineStatus" style="font-size:10px;color:#475569"></span>
@@ -2416,16 +2415,6 @@
 
       allAlarms = all;
 
-      // Subtitle: hangi takımın alarmları gösterildiğini açıkça yaz
-      const subtitle = document.getElementById('alarmSubtitle');
-      if (subtitle) {
-        if (isRM) {
-          subtitle.textContent = `${getRegion(currentUser)} ${I18N.t('bölgesi alarmları')} — ${all.length} ${I18N.t('kayıt')}`;
-        } else {
-          subtitle.textContent = `${teamVal.trim() || '?'} ${I18N.t('takımı alarmları')} — ${all.length} ${I18N.t('kayıt')}`;
-        }
-      }
-
       notifyNewAlarms(all, isRM ? ('region_' + getRegion(currentUser)) : ('team_' + teamVal));
       updateTabCounts();
       renderAlarms();
@@ -3207,7 +3196,7 @@
     const stages = [...new Set(allDeals.map(d => d.stage).filter(s => s && !['Won','Cancelled'].includes(s)))].sort();
     const sel = document.getElementById('dealStageFilter');
     const cur = sel.value;
-    sel.innerHTML = '<option value="">Tüm Stageler</option>' + stages.map(s => `<option value="${s}">${s}</option>`).join('');
+    sel.innerHTML = `<option value="">${I18N.t('Tüm Stageler')}</option>` + stages.map(s => `<option value="${s}">${s}</option>`).join('');
     if (cur) sel.value = cur;
   }
 
@@ -4859,7 +4848,6 @@
       document.getElementById('roleLabel').textContent   = isRM ? 'Regional Manager' : I18N.t('Team Leader');
       document.getElementById('userAvatar').textContent  = (session.fullName || 'T')[0].toUpperCase();
       document.getElementById('miniAvatar').textContent  = (session.fullName || 'T')[0].toUpperCase();
-      document.getElementById('alarmSubtitle').textContent = isRM ? `${getRegion(session)} ${I18N.t('bölgesi alarmları')}` : `${session.team || ''} ${I18N.t('alarmları')}`;
       document.getElementById('todayDateLabel').textContent = new Date().toLocaleDateString(I18N.getLang() === 'en' ? 'en-US' : 'tr-TR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
       document.title = `CRM — ${isRM ? 'Regional Manager' : 'Team Leader'} · ${session.fullName || ''}`;
       document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
