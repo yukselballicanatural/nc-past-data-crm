@@ -4249,6 +4249,15 @@
     try {
       const token = (currentUser && currentUser.token) || '';
       const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
+      // Token eski bir oturumdan kalmışsa (ör. AUTH_TOKEN_SECRET sonradan
+      // eklendiğinde hâlâ açık kalan sekmeler) sunucu 401 döner — kafa
+      // karıştıran "Yetkisiz erişim" mesajı yerine kullanıcıyı otomatik
+      // olarak yeniden girişe yönlendir, yeni girişte taze token üretilir.
+      if (r.status === 401) {
+        sessionStorage.removeItem('nc_current_user');
+        window.location.href = 'index.html?relogin=1';
+        return;
+      }
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
       _teamMembers = data.members || [];

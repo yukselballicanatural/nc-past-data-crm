@@ -648,6 +648,12 @@
         window.location.href = 'apps.html';
       }
     } catch(e) { sessionStorage.removeItem('nc_current_user'); }
+
+    // Eski/geçersiz token yüzünden bir sayfa oturumu otomatik sonlandırıp
+    // buraya geri gönderdiyse, kullanıcıya nedenini açıkla.
+    if (new URLSearchParams(window.location.search).get('relogin') === '1') {
+      showAlert('Oturumunuz zaman aşımına uğradı. Lütfen tekrar giriş yapın.', 'error');
+    }
   </script>
 </body>
 </html>
