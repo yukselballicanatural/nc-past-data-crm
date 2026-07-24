@@ -3839,9 +3839,15 @@
 
     function exportAdminAlarms(format) {
       const data = filterAdminAlarms();
-      const headers = ['Hasta','Danışman','Takım','Bölge','Alarm Tipi','P/FT','Eşik','Alan','Tarih','Kalan','Durum','Not','Oluşturma','Kapatan','Kapatma Nedeni'];
-      const rows = data.map(a => [a.deal_name,a.deal_owner,a.team,a.region,a.alarm_type,a.payment_or_flight_ticket,a.threshold_days,a.reference_field,a.reference_date,a.days_remaining,a.status,a.note,a.created_at,a.closed_by,a.close_reason]);
-      NCExport.download(format || 'csv', headers, rows, 'alarmlar_admin');
+      const headers = ['Hasta','Danışman','Deal ID','Stage','Takım','Bölge','Alarm Tipi','P/FT','Eşik','Alan','Tarih','Kalan','Tutar','Ödenen','Durum','Sonuç Kodu','TL Notu','Oluşturma','Kapatan','Kapatma Nedeni'];
+      const rows = data.map(a => {
+        const info = _amDealInfoFor(a.deal_id) || {};
+        return [a.deal_name, a.deal_owner, info.ref || a.deal_id, info.stage, a.team, a.region,
+          _amTypeMeta(a.alarm_type, _amIsOverdue(a)).label, a.payment_or_flight_ticket, a.threshold_days,
+          a.reference_field, a.reference_date, a.days_remaining, info.amount, info.paid,
+          _amStatusMeta(a.status).label, a.result_code, a.note, a.created_at, a.closed_by, a.close_reason];
+      });
+      NCExport.download(format || 'csv', headers, rows, 'alarmlar_admin', 'Alarmlar');
     }
 
     function exportAdminToday(format) {
@@ -3853,9 +3859,13 @@
       if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
       const search = (document.getElementById('todaySearch')?.value || '').toLowerCase().trim();
       if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
-      const headers = ['Hasta','Danışman','Takım','P/FT','Durum','Not'];
-      const rows = data.map(a => [a.deal_name,a.deal_owner,a.team,a.payment_or_flight_ticket,a.status,a.note]);
-      NCExport.download(format || 'csv', headers, rows, 'bugun_gelecekler_admin');
+      const headers = ['Hasta','Danışman','Deal ID','Stage','Takım','Bölge','P/FT','Tutar','Ödenen','Kalan','Durum','Not'];
+      const rows = data.map(a => {
+        const info = _amDealInfoFor(a.deal_id) || {};
+        return [a.deal_name, a.deal_owner, info.ref || a.deal_id, info.stage, a.team, a.region,
+          a.payment_or_flight_ticket, info.amount, info.paid, info.unpaid, _amStatusMeta(a.status).label, a.note];
+      });
+      NCExport.download(format || 'csv', headers, rows, 'bugun_gelecekler_admin', 'Bugün Gelecek Hastalar');
     }
 
     function exportAdminNoshow(format) {
@@ -3864,9 +3874,13 @@
       if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
       const search = (document.getElementById('noshowSearch')?.value || '').toLowerCase().trim();
       if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
-      const headers = ['Hasta','Danışman','Takım','Bölge','Tarih','Not'];
-      const rows = data.map(a => [a.deal_name,a.deal_owner,(window.TeamMap && TeamMap.normalize(a.team))||a.team,a.region,a.reference_date,a.note]);
-      NCExport.download(format || 'csv', headers, rows, 'noshow_raporu_admin');
+      const headers = ['Hasta','Deal ID','Danışman','Takım','Bölge','Ref Alan','Tarih','Tutar','Ödenen','Kalan','Not'];
+      const rows = data.map(a => {
+        const info = _amDealInfoFor(a.deal_id) || {};
+        return [a.deal_name, info.ref || a.deal_id, a.deal_owner, (window.TeamMap && TeamMap.normalize(a.team))||a.team,
+          a.region, a.reference_field, a.reference_date, info.amount, info.paid, info.unpaid, a.note];
+      });
+      NCExport.download(format || 'csv', headers, rows, 'noshow_raporu_admin', 'No-show Raporu');
     }
 
     function exportAdminClosedAlarms(format) {
@@ -3875,23 +3889,33 @@
       if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
       const search = (document.getElementById('closedAlarmsSearch')?.value || '').toLowerCase().trim();
       if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
-      const headers = ['Hasta','Deal ID','Danışman','Takım','Bölge','Alarm Tipi','Kapatılma Tarihi','Kapatan','Not'];
-      const rows = data.map(a => [a.deal_name,a.deal_id,a.deal_owner,(window.TeamMap && TeamMap.normalize(a.team))||a.team,a.region,(a.alarm_type==='payment_tracking'?'':a.alarm_type),a.closed_at,a.closed_by,a.note]);
-      NCExport.download(format || 'csv', headers, rows, 'kapatilan_alarmlar_admin');
+      const headers = ['Hasta','Deal ID','Danışman','Takım','Bölge','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Sonuç Kodu','Not'];
+      const rows = data.map(a => {
+        const info = _amDealInfoFor(a.deal_id) || {};
+        const typeLabel = a.alarm_type === 'payment_tracking' ? '' : _amTypeMeta(a.alarm_type, false).label;
+        return [a.deal_name, info.ref || a.deal_id, a.deal_owner, (window.TeamMap && TeamMap.normalize(a.team))||a.team,
+          a.region, typeLabel, a.reference_date, a.closed_at, a.closed_by, a.result_code, a.note];
+      });
+      NCExport.download(format || 'csv', headers, rows, 'kapatilan_alarmlar_admin', 'Kapatılan Alarmlar');
     }
 
     function exportAdminCancelled(format) {
       const data = _caLastFiltered && _caLastFiltered.length ? _caLastFiltered : [];
-      const headers = ['Hasta','Deal ID','Bölge','Takım','Stage','Tutar','Ödenen','Created','Arrival','Sonuç Kodu'];
-      const rows = data.map(d => [d.deal_name,d.id,d._region,(window.TeamMap && TeamMap.normalize(d.team))||d.team,d.stage,d.amount,d.total_paid_amount,d.created_time,d.arrival_date,d.sub_code]);
-      NCExport.download(format || 'csv', headers, rows, 'iptal_alarmlari_admin');
+      const headers = ['Hasta','Danışman','Deal ID','Bölge','Takım','Stage','Tutar','Ödenen','Kalan','Oluşturulma','Arrival Date','Sonuç Kodu','Danışman Notu'];
+      const rows = data.map(d => {
+        const amount = d.amount ?? null, paid = d.total_paid_amount ?? null;
+        const remaining = (amount !== null && paid !== null) ? (amount - paid) : null;
+        return [d.deal_name, d.deal_owner, d.deal_id || d.id, d._region, (window.TeamMap && TeamMap.normalize(d.team))||d.team,
+          d.stage, amount, paid, remaining, d.created_time, d.arrival_date, d.sub_code, d.agent_note];
+      });
+      NCExport.download(format || 'csv', headers, rows, 'iptal_alarmlari_admin', 'İptal Edilenler');
     }
 
     function exportAdminWon(format) {
       const data = _waLastFiltered && _waLastFiltered.length ? _waLastFiltered : (adminWonMismatchDeals || []);
       const headers = ['Hasta','Danışman','Deal ID','Bölge','Takım','Arrival Date','Tutar','Ödenen','Fark','Sonuç Kodu'];
       const rows = data.map(d => [d.deal_name,d.deal_owner,d.deal_id,d._region,d.team,d.arrival_date,d._total,d._paid,d._diff,d.sub_code]);
-      NCExport.download(format || 'csv', headers, rows, 'won_alarmi_admin');
+      NCExport.download(format || 'csv', headers, rows, 'won_alarmi_admin', 'Won Alarmı');
     }
 
     // Sayfa başlıklarındaki "Export" butonları — bkz. export-util.js
@@ -5063,15 +5087,15 @@
 
     function exportDealsAdmin(format) {
       if (!filteredDeals.length) { showSiteNotice('No data to export.', 'warn'); return; }
-      const headers = ['Deal Name','Deal ID','Team','Agent','Stage','Language','Arrival Date','Visit 1','Visit 2','Visit 3','Deal Amount','Paid Amount','Unpaid Amount','Payment Status','Visit Status','Result Code','Sub Code','Agent Note','Status'];
+      const headers = ['Deal Name','Deal ID','Team','Agent','Stage','Language','Arrival Date','Oluşturulma','Visit 1','Visit 2','Visit 3','Deal Amount','Paid Amount','Unpaid Amount','Payment Status','Visit Status','Result Code','Sub Code','Agent Note','Status'];
       const rows = filteredDeals.map(d => [
         d['Deal Name']||'', d['DealID']||'', d['Team Group']||'', d['Deal Owner Name']||'',
-        d['Stage']||'', d['Language']||'', d['Arrival Date']||'', d['1. Visit Date']||'',
+        d['Stage']||'', d['Language']||'', d['Arrival Date']||'', d['Created Time']||'', d['1. Visit Date']||'',
         d['2. Visit Date']||'', d['3. Visit Date']||'', d['Deal Amount']||0, d['Paid Amount']||0,
         d['Unpaid Amount']||0, d['Payment Status']||'', d['Visit Status']||'',
         d.result_code||'', d.sub_code||'', d.agent_note||'', d.status||'',
       ]);
-      NCExport.download(format || 'csv', headers, rows, 'deal_listesi_admin');
+      NCExport.download(format || 'csv', headers, rows, 'deal_listesi_admin', 'Deal Listesi');
     }
 
     // Analytics açıkken sadece küçük özeti (RPC) yenile — 49K satırlık deal
