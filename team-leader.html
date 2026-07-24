@@ -6,6 +6,10 @@
   <title>Natural Clinic — Team Leader Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
+  <!-- Export (CSV/XLSX/PDF/HTML) için — bkz. NCExport (i18n.js sonrası tanımlanır) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
   <style>
     /* Tüm tablolardaki sütun başlıkları (th) kırmızı — hangi sınıf/inline
        stil kullanılırsa kullanılsın tek noktadan geçerli olsun diye !important */
@@ -317,9 +321,7 @@
           <svg style="width:13px;height:13px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
           Alarmları Güncelle
         </button>
-        <button onclick="exportAlarms()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;transition:all 0.15s" onmouseover="this.style.background='#1e3a5f';this.style.borderColor='#1e40af';this.style.color='#60a5fa'" onmouseout="this.style.background='#1e293b';this.style.borderColor='#334155';this.style.color='#94a3b8'">
-          Export CSV
-        </button>
+        <span id="alarmsExportMount"></span>
       </div>
     </div>
 
@@ -477,7 +479,7 @@
           <option value="Payment">Payment</option>
           <option value="Flight Ticket">Flight Ticket</option>
         </select>
-        <button onclick="exportToday()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Export CSV</button>
+        <span id="todayExportMount"></span>
       </div>
     </div>
     <div id="todayLoading" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px 0;gap:12px">
@@ -505,6 +507,7 @@
             <button onclick="setDealsViewMode('kanban')" id="dealsViewBtnKanban" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:transparent;color:#94a3b8;transition:all .15s">▦ Kanban</button>
           </div>
           <button onclick="loadDeals(true)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">↻ Yenile</button>
+          <span id="dealsExportMount"></span>
         </div>
       </div>
       <div class="filter-row">
@@ -708,7 +711,7 @@
         <select id="noshowOwnerFilter" class="filter-sel" onchange="renderNoshow()" style="width:170px">
           <option value="">Tüm Danışmanlar</option>
         </select>
-        <button onclick="exportNoshow()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Export CSV</button>
+        <span id="noshowExportMount"></span>
       </div>
     </div>
     <div id="noshowTableWrap" style="overflow-x:auto;border-radius:14px;border:1px solid #1e293b;background:#0f172a">
@@ -745,7 +748,7 @@
         <select id="closedAlarmsOwnerFilter" class="filter-sel" onchange="renderClosedAlarms()" style="width:170px">
           <option value="">Tüm Danışmanlar</option>
         </select>
-        <button onclick="exportClosedAlarms()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Export CSV</button>
+        <span id="closedAlarmsExportMount"></span>
       </div>
     </div>
     <div id="closedAlarmsTableWrap" style="overflow-x:auto;border-radius:14px;border:1px solid #1e293b;background:#0f172a">
@@ -777,7 +780,7 @@
         <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">İptal Edilenler</h2>
         <p style="font-size:11px;color:#64748b;margin:3px 0 0">Stage'i Cancelled olan dealler</p>
       </div>
-      <button onclick="exportCancelled()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Export CSV</button>
+      <span id="cancelledExportMount"></span>
     </div>
     <!-- Filtreler -->
     <div style="background:#0f172a;border:1px solid #1e293b;border-radius:14px;padding:14px 16px;margin-bottom:14px">
@@ -840,7 +843,10 @@
           <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Won Alarmı</h2>
           <p style="font-size:11px;color:#64748b;margin:3px 0 0">Stage'i "Won" olup ödenen tutar paket tutarına eşit olmayan (eksik veya fazla ödenmiş) dealler</p>
         </div>
-        <button onclick="_waResetFilters()" style="font-size:11px;font-weight:700;color:#818cf8;background:none;border:none;cursor:pointer;flex-shrink:0">Temizle</button>
+        <div style="display:flex;gap:10px;align-items:center;flex-shrink:0">
+          <span id="wonExportMount"></span>
+          <button onclick="_waResetFilters()" style="font-size:11px;font-weight:700;color:#818cf8;background:none;border:none;cursor:pointer">Temizle</button>
+        </div>
       </div>
       <div class="filter-row">
         <div class="filter-group" style="flex:1 1 200px;min-width:200px">
@@ -959,9 +965,12 @@
 
   <!-- ── VIEW: TAKIMIMDAKI KİŞİLER ── -->
   <div id="view-team-members" style="display:none">
-    <div style="margin-bottom:20px">
-      <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Takımımdaki Kişiler</h2>
-      <p style="font-size:11px;color:#64748b;margin:3px 0 0">Telefon ve e-posta sütunlarını kendin doldur, kaydet butonuna bas.</p>
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap">
+      <div>
+        <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Takımımdaki Kişiler</h2>
+        <p style="font-size:11px;color:#64748b;margin:3px 0 0">Telefon ve e-posta sütunlarını kendin doldur, kaydet butonuna bas.</p>
+      </div>
+      <span id="teamMembersExportMount"></span>
     </div>
     <div id="tmLoading" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">Yükleniyor...</div>
     <div id="tmEmpty" style="display:none;text-align:center;padding:50px 16px;color:#475569;font-size:13px">Takımında kayıtlı kişi bulunamadı.</div>
@@ -1321,6 +1330,7 @@
 <script src="i18n.js"></script>
 <script src="team-map.js"></script>
 <script src="alarm-engine.js"></script>
+<script src="export-util.js"></script>
 <script>
   let SUPABASE_URL = '';
   let SUPABASE_KEY = '';
@@ -4758,10 +4768,11 @@
     } catch(e) { showNotice('Eskale hatası: ' + e.message, 'error'); }
   }
 
-  function exportRmCsv() {
-    const headers = csvRow(['Hasta','Danışman','Takım','Bölge','Alarm Tipi','Alan','Tarih','Kalan Gün','Durum','Not','Oluşturma']);
-    const rows = [headers, ...allAlarms.map(a => csvRow([a.deal_name,a.deal_owner,a.team,a.region,a.alarm_type,a.reference_field,a.reference_date,a.days_remaining,a.status,a.note,a.created_at]))];
-    downloadCsv(rows, `rm_alarmlar_${new Date().toISOString().slice(0,10)}.csv`);
+  function exportRmCsv(format) {
+    const data = allAlarms;
+    const headers = ['Hasta','Danışman','Takım','Bölge','Alarm Tipi','Alan','Tarih','Kalan Gün','Durum','Not','Oluşturma'];
+    const rows = data.map(a => [a.deal_name,a.deal_owner,a.team,a.region,a.alarm_type,a.reference_field,a.reference_date,a.days_remaining,a.status,a.note,a.created_at]);
+    NCExport.download(format || 'csv', headers, rows, 'rm_alarmlar');
   }
 
   // ── Sidebar toggle ───────────────────────────────────────────────
@@ -4786,48 +4797,83 @@
   // ── Logout ───────────────────────────────────────────────────────
   function doLogout() { sessionStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
 
-  // ── Export helpers ───────────────────────────────────────────────
-  function csvRow(cols) { return cols.map(c => `"${String(c ?? '').replace(/"/g,'""')}"`).join(','); }
-
-  function downloadCsv(rows, filename) {
-    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-    a.download = filename; document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  }
-
-  function exportAlarms() {
+  // ── Export helpers (CSV/XLSX/PDF/HTML — bkz. export-util.js) ──────
+  function exportAlarms(format) {
     const data = filterAlarms(activeAlarmTab);
-    const headers = csvRow(['Hasta','Danışman','Takım','Alarm Tipi','Alan','Tarih','Kalan Gün','Durum','Not','Oluşturma']);
-    const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,a.team,a.alarm_type,a.reference_field,a.reference_date,a.days_remaining,a.status,a.note,a.created_at]))];
-    downloadCsv(rows, `alarmlar_${new Date().toISOString().slice(0,10)}.csv`);
+    const headers = ['Hasta','Danışman','Takım','Alarm Tipi','Alan','Tarih','Kalan Gün','Durum','Not','Oluşturma'];
+    const rows = data.map(a => [a.deal_name,a.deal_owner,a.team,a.alarm_type,a.reference_field,a.reference_date,a.days_remaining,a.status,a.note,a.created_at]);
+    NCExport.download(format || 'csv', headers, rows, 'alarmlar');
   }
 
-  function exportToday() {
+  function exportToday(format) {
     const data = filterAlarms('today');
-    const headers = csvRow(['Hasta','Danışman','Alan','Durum','Not']);
-    const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,a.reference_field,a.status,a.note]))];
-    downloadCsv(rows, `bugun_gelecekler_${new Date().toISOString().slice(0,10)}.csv`);
+    const headers = ['Hasta','Danışman','Alan','Durum','Not'];
+    const rows = data.map(a => [a.deal_name,a.deal_owner,a.reference_field,a.status,a.note]);
+    NCExport.download(format || 'csv', headers, rows, 'bugun_gelecekler');
   }
 
-  function exportNoshow() {
+  function exportNoshow(format) {
     const data = allAlarms.filter(a => a.status === 'no_show');
-    const headers = csvRow(['Hasta','Danışman','Takım','Bölge','Ref Alan','Planlanan Tarih','Gelemedi Tarihi','Not']);
-    const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),a.region,a.reference_field,a.reference_date,a.closed_at,a.note]))];
-    downloadCsv(rows, `noshow_raporu_${new Date().toISOString().slice(0,10)}.csv`);
+    const headers = ['Hasta','Danışman','Takım','Bölge','Ref Alan','Planlanan Tarih','Gelemedi Tarihi','Not'];
+    const rows = data.map(a => [a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),a.region,a.reference_field,a.reference_date,a.closed_at,a.note]);
+    NCExport.download(format || 'csv', headers, rows, 'noshow_raporu');
   }
 
-  function exportClosedAlarms() {
+  function exportClosedAlarms(format) {
     const data = allAlarms.filter(a => a.status === 'closed');
-    const headers = csvRow(['Hasta','Danışman','Takım','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Not']);
-    const rows = [headers, ...data.map(a => csvRow([a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),(a.alarm_type==='payment_tracking'?'':a.alarm_type),a.reference_date,a.closed_at,a.closed_by,a.note]))];
-    downloadCsv(rows, `kapatilan_alarmlar_${new Date().toISOString().slice(0,10)}.csv`);
+    const headers = ['Hasta','Danışman','Takım','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Not'];
+    const rows = data.map(a => [a.deal_name,a.deal_owner,(TeamMap.normalize(a.team)||a.team),(a.alarm_type==='payment_tracking'?'':a.alarm_type),a.reference_date,a.closed_at,a.closed_by,a.note]);
+    NCExport.download(format || 'csv', headers, rows, 'kapatilan_alarmlar');
   }
 
-  function exportCancelled() {
+  function exportCancelled(format) {
     const data = cancelledDealsList || [];
-    const headers = csvRow(['Hasta','Danışman','Takım','Stage','Arrival Date','Tutar','Ödenen']);
-    const rows = [headers, ...data.map(d => csvRow([d.deal_name,d.deal_owner,(TeamMap.normalize(d.team)||d.team),d.stage,d.arrival_date,d.amount,d.total_paid_amount]))];
-    downloadCsv(rows, `iptal_edilenler_${new Date().toISOString().slice(0,10)}.csv`);
+    const headers = ['Hasta','Danışman','Takım','Stage','Arrival Date','Tutar','Ödenen'];
+    const rows = data.map(d => [d.deal_name,d.deal_owner,(TeamMap.normalize(d.team)||d.team),d.stage,d.arrival_date,d.amount,d.total_paid_amount]);
+    NCExport.download(format || 'csv', headers, rows, 'iptal_edilenler');
+  }
+
+  // Deal Listesi — o anki filtrelenmiş tabloyu (allDeals, server-side sayfa) değil,
+  // aktif filtrelere uyan TAM seti export etmek için Kanban'ın kullandığı
+  // _tlKanbanDeals (tüm sayfalar çekilmiş hali) kullanılır; boşsa mevcut sayfa (allDeals).
+  function exportDeals(format) {
+    const data = (_tlKanbanDeals && _tlKanbanDeals.length) ? _tlKanbanDeals : (allDeals || []);
+    const headers = ['Hasta','Danışman','Takım','Stage','Arrival Date','Tutar','Ödenen'];
+    const rows = data.map(d => [d.deal_name,d.deal_owner,d.team,d.stage,d.arrival_date,d.amount,d.total_paid_amount]);
+    NCExport.download(format || 'csv', headers, rows, 'deal_listesi');
+  }
+
+  function exportWonAlarms(format) {
+    const data = _waLastFiltered && _waLastFiltered.length ? _waLastFiltered : (wonMismatchDeals || []);
+    const headers = ['Hasta','Danışman','Deal ID','Arrival Date','Tutar','Ödenen','Fark','Sonuç Kodu'];
+    const rows = data.map(d => [d.deal_name,d.deal_owner,d.deal_id,d.arrival_date,d._total,d._paid,d._diff,d.sub_code]);
+    NCExport.download(format || 'csv', headers, rows, 'won_alarmi');
+  }
+
+  function exportTeamMembers(format) {
+    const data = _teamMembers || [];
+    const headers = ['Ad Soyad','Kullanıcı Adı','Rol','Telefon','E-posta'];
+    const rows = data.map(m => [m.fullName, m.username, m.role, m.phone, m.email]);
+    NCExport.download(format || 'csv', headers, rows, 'takimdaki_kisiler');
+  }
+
+  // Sayfa başlıklarındaki "Export" butonları — 8 sayfa, tek noktadan
+  // (bkz. export-util.js: NCExport.renderButton) mount edilir.
+  function mountExportButtons() {
+    const map = {
+      alarmsExportMount:       'exportAlarms',
+      todayExportMount:        'exportToday',
+      dealsExportMount:        'exportDeals',
+      noshowExportMount:       'exportNoshow',
+      closedAlarmsExportMount: 'exportClosedAlarms',
+      cancelledExportMount:    'exportCancelled',
+      wonExportMount:          'exportWonAlarms',
+      teamMembersExportMount:  'exportTeamMembers',
+    };
+    for (const [mountId, fnName] of Object.entries(map)) {
+      const el = document.getElementById(mountId);
+      if (el) el.innerHTML = NCExport.renderButton(mountId + 'Menu', fnName);
+    }
   }
 
   // ── Init ─────────────────────────────────────────────────────────
@@ -4853,6 +4899,7 @@
       document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
       const miniLangLabel = document.getElementById('miniLangLabel');
       if (miniLangLabel) miniLangLabel.textContent = I18N.getLang().toUpperCase();
+      mountExportButtons();
 
       // Alarmları yükle
       await loadAlarms();
