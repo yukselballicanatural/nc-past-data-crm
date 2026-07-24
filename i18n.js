@@ -697,6 +697,24 @@
     'Stage\'i Cancelled olan dealler': 'Deals with stage Cancelled',
     'Takım liderlerinin ve yöneticilerin alarmlar üzerinde yaptığı tüm aksiyonlar (Hasta Geldi, Muayene, İşlemlerde, Gelmedi, Kapatma, Not vb.)': 'All actions taken by team leaders and admins on alarms (Arrived, Examined, In Progress, No-show, Closed, Note, etc.)',
     'Takımındaki alarmlar üzerinde yapılan tüm aksiyonlar (Hasta Geldi, Muayene, İşlemlerde, Gelmedi, Kapatma, Not vb.) — kim, ne zaman, hangi durum': 'All actions taken on your team\'s alarms (Arrived, Examined, In Progress, No-show, Closed, Note, etc.) — who, when, what status',
+    // WhatsApp: eksik telefon numarası hızlı ekleme modalı
+    'Telefon Numarası Gerekli': 'Phone Number Required',
+    'için kayıtlı telefon numarası yok. WhatsApp mesajı gönderebilmek için önce bir numara ekleyin.': 'has no phone number on file. Add a number first to send a WhatsApp message.',
+    'için kayıtlı telefon numarası yok.': 'has no phone number on file.',
+    'Telefon Numarası': 'Phone Number',
+    'Kaydet ve Gönder': 'Save & Send',
+    'Telefon numarası gerekli.': 'Phone number is required.',
+    // Takımımdaki Kişiler (team-leader.html) + admin/RM eşdeğeri
+    'Ad Soyad': 'Full Name',
+    'Telefon': 'Phone',
+    'Düzelt': 'Edit',
+    'Kaydedildi.': 'Saved.',
+    'Kayıt bulunamadı.': 'No records found.',
+    'Tüm takımların danışman telefon/e-posta bilgileri.': 'Consultant phone/email details for all teams.',
+    'bölgesi danışman telefon/e-posta bilgileri.': 'region consultant phone/email details.',
+    'İsim, takım, rol ara...': 'Search name, team, role...',
+    'Telefon 10 rakam olmalı (ör. 532 123 45 67). +90 öneki otomatik eklenir.': 'Phone number must be 10 digits (e.g. 532 123 45 67). The +90 prefix is added automatically.',
+    'Geçerli bir e-posta adresi girin (ör. ad@alan.com).': 'Enter a valid email address (e.g. name@domain.com).',
   };
 
   function getLang() {

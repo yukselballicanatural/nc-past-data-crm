@@ -181,6 +181,8 @@
     #wonAlarmModal.open { display:flex; }
     #wonResultModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
     #wonResultModal.open { display:flex; }
+    #amWaPhoneModal { display:none; position:fixed; inset:0; z-index:10000; align-items:center; justify-content:center; padding:16px; }
+    #amWaPhoneModal.open { display:flex; }
     #engineSettingsModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
     #engineSettingsModal.open { display:flex; }
     .am-icon-btn { width:34px; height:34px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#94a3b8; transition:all .15s; cursor:pointer; font-size:15px; }
@@ -273,6 +275,10 @@
         <button onclick="switchView('activity')" class="nav-btn" id="nav-activity">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
           Aktivite
+        </button>
+        <button onclick="switchView('team-members')" class="nav-btn" id="nav-team-members">
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+          Takımımdaki Kişiler
         </button>
       </div>
 
@@ -681,6 +687,47 @@
         </table>
       </div>
       <div id="usersEmpty" class="hidden text-center py-12 text-slate-500 text-sm">No users match your filter.</div>
+    </div>
+
+    <!-- ===== TAKIMIMDAKI KISILER VIEW (admin/super-admin: tüm takımlar, RM: kendi bölgesi) ===== -->
+    <div id="view-team-members" class="hidden">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-xl font-bold text-white">Takımımdaki Kişiler</h2>
+          <p class="text-[11px] text-slate-500 mt-1" id="tmScopeLabel">Tüm takımların danışman telefon/e-posta bilgileri.</p>
+        </div>
+        <div class="flex gap-2 flex-wrap items-center">
+          <span id="teamMembersExportMount"></span>
+          <button onclick="loadAdminTeamMembers()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700">↻ Yenile</button>
+        </div>
+      </div>
+      <div class="mb-4 flex flex-wrap gap-2">
+        <input type="text" id="tmSearch" oninput="renderAdminTeamMembers()" placeholder="İsim, takım, rol ara..." class="filter-input" style="max-width:320px">
+        <select id="tmTeamFilter" class="filter-select" style="max-width:220px" onchange="renderAdminTeamMembers()">
+          <option value="">Tüm Takımlar</option>
+        </select>
+      </div>
+      <div id="tmLoading" class="flex flex-col items-center py-16 gap-4">
+        <div class="spinner-anim"></div>
+        <p class="text-slate-400 text-sm">Yükleniyor…</p>
+      </div>
+      <div id="tmTableWrap" class="hidden overflow-auto rounded-xl border border-gray-800">
+        <table class="tbl w-full">
+          <thead>
+            <tr class="text-slate-400">
+              <th style="width:36px">#</th>
+              <th>Ad Soyad</th>
+              <th>Takım</th>
+              <th>Rol</th>
+              <th>Telefon</th>
+              <th>E-posta</th>
+              <th style="width:110px">İşlem</th>
+            </tr>
+          </thead>
+          <tbody id="tmBody"></tbody>
+        </table>
+      </div>
+      <div id="tmEmpty" class="hidden text-center py-12 text-slate-500 text-sm">Kayıt bulunamadı.</div>
     </div>
 
     <!-- ===== LOGS VIEW ===== -->
@@ -1680,6 +1727,25 @@
         <a id="wrmZohoLink" href="#" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#818cf8;font-size:12px;font-weight:700;text-decoration:none">Zoho'da Aç ↗</a>
         <button id="wrmSaveBtn" onclick="_wrmSaveResult()" style="flex:1;padding:11px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kaydet</button>
         <button onclick="closeWonResultModal()" style="flex:1;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">Kapat</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- WhatsApp gönderiminde numarası olmayan danışman için hızlı numara ekleme -->
+  <div id="amWaPhoneModal">
+    <div class="modal-backdrop" onclick="_amWaPhoneModalClose()"></div>
+    <div class="modal-panel" style="max-width:380px">
+      <h3 style="font-size:15px;font-weight:700;color:#f1f5f9;margin:0 0 4px">Telefon Numarası Gerekli</h3>
+      <div style="font-size:11px;color:#64748b;margin-bottom:14px"><span id="amWaPhoneOwnerName">—</span> için kayıtlı telefon numarası yok. WhatsApp mesajı gönderebilmek için önce bir numara ekleyin.</div>
+      <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;display:block;margin-bottom:6px">Telefon Numarası</label>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px">
+        <span style="color:#64748b;font-size:12px;font-weight:600">+90</span>
+        <input type="tel" id="amWaPhoneInput" placeholder="5xx xxx xx xx" maxlength="13" style="background:#111827;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:9px 12px;font-size:12px;flex:1;box-sizing:border-box">
+      </div>
+      <div id="amWaPhoneError" style="display:none;color:#f87171;font-size:11px;font-weight:600;margin-bottom:8px"></div>
+      <div style="display:flex;gap:10px">
+        <button onclick="_amWaPhoneModalClose()" style="flex:1;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">İptal</button>
+        <button id="amWaPhoneSaveBtn" onclick="_amWaPhoneModalSave()" style="flex:1;padding:11px;background:#166534;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kaydet ve Gönder</button>
       </div>
     </div>
   </div>
@@ -3661,6 +3727,7 @@
     function _amWaDigits(phone) {
       return String(phone || '').replace(/[^\d]/g, '');
     }
+    let _amTeamMembers = null;
     async function sendAdminResultCodeWhatsApp(alarm, resultCode, note) {
       try {
         const ownerName = (alarm.deal_owner || '').trim();
@@ -3669,19 +3736,245 @@
         const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
         const data = await r.json().catch(() => ({}));
         const members = data.members || [];
+        _amTeamMembers = members;
         const member = members.find(m => (m.fullName || '').trim().toLowerCase() === ownerName.toLowerCase());
         const digits = member ? _amWaDigits(member.phone) : '';
-        if (!digits) { showSiteNotice(`${ownerName} ${I18N.t('için kayıtlı telefon numarası yok, WhatsApp mesajı gönderilemedi.')}`, 'error'); return; }
-        const dealLink = alarm.deal_id ? `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${alarm.deal_id}` : '';
-        const lines = [
-          'Alarm Result Code Update',
-          `Deal: ${alarm.deal_name || '-'}`,
-          dealLink ? `Link: ${dealLink}` : '',
-          `Result Code: ${resultCode}`,
-          note ? `Note: ${note}` : '',
-        ].filter(Boolean);
-        window.open(`https://wa.me/${digits}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
+        if (!digits) {
+          if (!member || !member.username) {
+            showSiteNotice(`${ownerName} ${I18N.t('için kayıtlı telefon numarası yok, WhatsApp mesajı gönderilemedi.')}`, 'error');
+            return;
+          }
+          _amWaPendingCtx = { alarm, resultCode, note, member };
+          _amOpenWaPhoneModal(member);
+          return;
+        }
+        _amOpenWhatsAppLink(alarm, resultCode, note, digits);
       } catch(e) { /* WhatsApp yönlendirmesi ana kayıt akışını bozmasın */ }
+    }
+
+    function _amOpenWhatsAppLink(alarm, resultCode, note, digits) {
+      const dealLink = alarm.deal_id ? `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${alarm.deal_id}` : '';
+      const lines = [
+        'Alarm Result Code Update',
+        `Deal: ${alarm.deal_name || '-'}`,
+        dealLink ? `Link: ${dealLink}` : '',
+        `Result Code: ${resultCode}`,
+        note ? `Note: ${note}` : '',
+      ].filter(Boolean);
+      window.open(`https://wa.me/${digits}?text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
+    }
+
+    // Danışmanın telefonu Takımımdaki Kişiler'de kayıtlı değilse, WhatsApp
+    // linkini açmadan önce burada hızlıca girilebilir — kaydedilen numara
+    // aynı api/team-members.js üzerinden Users.Phone'a yazıldığı için
+    // Takımımdaki Kişiler sayfasında da otomatik görünür.
+    let _amWaPendingCtx = null;
+    function _amValidatePhone(suffix) {
+      const v = String(suffix || '').trim();
+      if (!v) return { ok: false, msg: I18N.t('Telefon numarası gerekli.') };
+      const digits = v.replace(/[^\d]/g, '');
+      if (digits.length !== 10) {
+        return { ok: false, msg: 'Telefon 10 rakam olmalı (ör. 532 123 45 67). +90 öneki otomatik eklenir.' };
+      }
+      return { ok: true, val: '+90' + digits };
+    }
+    function _amOpenWaPhoneModal(member) {
+      document.getElementById('amWaPhoneOwnerName').textContent = member.fullName || member.username;
+      document.getElementById('amWaPhoneInput').value = '';
+      document.getElementById('amWaPhoneError').style.display = 'none';
+      document.getElementById('amWaPhoneModal').classList.add('open');
+      setTimeout(() => { const inp = document.getElementById('amWaPhoneInput'); if (inp) inp.focus(); }, 50);
+    }
+    function _amWaPhoneModalClose() {
+      document.getElementById('amWaPhoneModal').classList.remove('open');
+      _amWaPendingCtx = null;
+    }
+    async function _amWaPhoneModalSave() {
+      if (!_amWaPendingCtx) return;
+      const raw = document.getElementById('amWaPhoneInput').value || '';
+      const check = _amValidatePhone(raw);
+      const errEl = document.getElementById('amWaPhoneError');
+      if (!check.ok || !check.val) {
+        errEl.textContent = check.msg || I18N.t('Telefon numarası gerekli.');
+        errEl.style.display = 'block';
+        return;
+      }
+      const btn = document.getElementById('amWaPhoneSaveBtn');
+      const orig = btn.textContent;
+      btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
+      try {
+        const token = (currentUser && currentUser.token) || '';
+        const { alarm, resultCode, note, member } = _amWaPendingCtx;
+        const r = await fetch('/api/team-members', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ username: member.username, phone: check.val, email: member.email || '' }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+        member.phone = check.val;
+        const cached = (_amTeamMembers || []).find(m => m.username === member.username);
+        if (cached) cached.phone = check.val;
+        document.getElementById('amWaPhoneModal').classList.remove('open');
+        _amOpenWhatsAppLink(alarm, resultCode, note, _amWaDigits(check.val));
+        _amWaPendingCtx = null;
+      } catch(e) {
+        errEl.textContent = I18N.t('Kaydedilemedi: ') + e.message;
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false; btn.textContent = orig;
+      }
+    }
+
+    // ── Takımımdaki Kişiler (admin/super-admin: TÜM takımlar, RM: kendi
+    // bölgesi) — api/team-members.js rol bazlı kapsıyor, burada sadece
+    // gösterim. _amTeamMembers dizisi WhatsApp telefon aramasıyla PAYLAŞILIR
+    // — burada girilen numara aynı anda WA gönderiminde de kullanılabilir hale gelir.
+    let _amTmTeamsPopulated = false;
+    async function loadAdminTeamMembers() {
+      const loading = document.getElementById('tmLoading');
+      const empty   = document.getElementById('tmEmpty');
+      const wrap    = document.getElementById('tmTableWrap');
+      loading.classList.remove('hidden'); empty.classList.add('hidden'); wrap.classList.add('hidden');
+      try {
+        const token = (currentUser && currentUser.token) || '';
+        const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
+        if (r.status === 401) {
+          sessionStorage.removeItem('nc_current_user');
+          window.location.href = 'index.html?relogin=1';
+          return;
+        }
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+        _amTeamMembers = data.members || [];
+        document.getElementById('tmScopeLabel').textContent = window.isRM
+          ? `${data.team || window.rmRegion || ''} ${I18N.t('bölgesi danışman telefon/e-posta bilgileri.')}`
+          : I18N.t('Tüm takımların danışman telefon/e-posta bilgileri.');
+        _amTmPopulateTeamFilter();
+        loading.classList.add('hidden');
+        renderAdminTeamMembers();
+      } catch(e) {
+        loading.classList.add('hidden');
+        empty.textContent = I18N.t('Yükleme hatası: ') + e.message;
+        empty.classList.remove('hidden');
+      }
+    }
+
+    function _amTmPopulateTeamFilter() {
+      const sel = document.getElementById('tmTeamFilter');
+      if (!sel) return;
+      const teams = [...new Set((_amTeamMembers || []).map(m => m.team).filter(Boolean))].sort();
+      const cur = sel.value;
+      sel.innerHTML = `<option value="">${I18N.t('Tüm Takımlar')}</option>` + teams.map(t => `<option value="${_escHtml(t)}">${_escHtml(t)}</option>`).join('');
+      sel.value = teams.includes(cur) ? cur : '';
+    }
+
+    function _amTmRowHtml(m, i) {
+      const rowBg = i % 2 === 0 ? '' : 'background:#0a1120';
+      const phoneDisplay = m.phone || '<span style="color:#334155">—</span>';
+      const emailDisplay = m.email || '<span style="color:#334155">—</span>';
+      return `<tr id="tmRow-${i}" style="${rowBg};border-bottom:1px solid #1e293b">
+        <td style="padding:8px 12px;color:#475569;font-size:11px;white-space:nowrap">${i + 1}</td>
+        <td style="padding:8px 12px;color:#f1f5f9;font-weight:600;white-space:nowrap">${_escHtml(m.fullName)}</td>
+        <td style="padding:8px 12px;color:#64748b;font-size:11px;white-space:nowrap">${_escHtml(m.team)}</td>
+        <td style="padding:8px 12px;color:#64748b;white-space:nowrap">${_escHtml(m.role)}</td>
+        <td id="tmPhoneCell-${i}" style="padding:8px 12px;color:#cbd5e1;white-space:nowrap;min-width:170px">${phoneDisplay}</td>
+        <td id="tmEmailCell-${i}" style="padding:8px 12px;color:#cbd5e1;min-width:200px">${emailDisplay}</td>
+        <td style="padding:8px 12px;white-space:nowrap;text-align:right">
+          <button onclick="editAdminMember(${i})" id="tmEditBtn-${i}" style="padding:5px 12px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">Düzelt</button>
+          <button onclick="openAdminMemberWhatsApp(${i})" style="padding:5px 10px;background:#166534;border:none;border-radius:7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">WA</button>
+        </td>
+      </tr>`;
+    }
+
+    let _amTmFiltered = [];
+    function renderAdminTeamMembers() {
+      const wrap  = document.getElementById('tmTableWrap');
+      const tbody = document.getElementById('tmBody');
+      const empty = document.getElementById('tmEmpty');
+      const search = (document.getElementById('tmSearch').value || '').trim().toLowerCase();
+      const teamF  = document.getElementById('tmTeamFilter').value;
+      _amTmFiltered = (_amTeamMembers || []).filter(m => {
+        if (teamF && m.team !== teamF) return false;
+        if (search && ![m.fullName, m.team, m.role, m.username].join(' ').toLowerCase().includes(search)) return false;
+        return true;
+      });
+      if (!_amTmFiltered.length) { wrap.classList.add('hidden'); empty.classList.remove('hidden'); return; }
+      empty.classList.add('hidden');
+      wrap.classList.remove('hidden');
+      tbody.innerHTML = _amTmFiltered.map((m, i) => _amTmRowHtml(m, i)).join('');
+      I18N.translateDOM(tbody);
+    }
+
+    function editAdminMember(i) {
+      const m = _amTmFiltered[i];
+      if (!m) return;
+      const phoneCell = document.getElementById('tmPhoneCell-' + i);
+      const emailCell = document.getElementById('tmEmailCell-' + i);
+      const editBtn   = document.getElementById('tmEditBtn-' + i);
+      const phoneSuffix = (m.phone || '').replace(/^\+90\s*/, '');
+      phoneCell.innerHTML = `<span style="display:inline-flex;align-items:center;gap:4px"><span style="color:#64748b;font-size:12px;font-weight:600;white-space:nowrap">+90</span><input type="tel" id="tmPhone-${i}" value="${_escHtml(phoneSuffix)}" placeholder="5xx xxx xx xx" maxlength="13" style="background:#111827;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:6px 8px;font-size:11px;width:130px;box-sizing:border-box"></span>`;
+      emailCell.innerHTML = `<input type="email" id="tmEmail-${i}" value="${_escHtml(m.email || '')}" placeholder="ornek@mail.com" style="background:#111827;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:6px 8px;font-size:11px;width:190px;box-sizing:border-box">`;
+      editBtn.style.display = 'none';
+      const td = editBtn.parentElement;
+      const saveSpan = document.createElement('span');
+      saveSpan.id = 'tmSaveCancel-' + i;
+      saveSpan.innerHTML = `<button onclick="saveAdminMember(${i})" style="padding:5px 12px;background:#0f766e;border:none;border-radius:7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">Kaydet</button><button onclick="cancelAdminMember(${i})" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">İptal</button>`;
+      td.insertBefore(saveSpan, editBtn);
+      const phoneInp = document.getElementById('tmPhone-' + i);
+      phoneInp && phoneInp.focus();
+    }
+
+    function cancelAdminMember(i) {
+      const row = document.getElementById('tmRow-' + i);
+      if (!row) return;
+      const m = _amTmFiltered[i];
+      row.outerHTML = _amTmRowHtml(m, i);
+    }
+
+    async function saveAdminMember(i) {
+      const m = _amTmFiltered[i];
+      if (!m) return;
+      const rawPhone = (document.getElementById('tmPhone-' + i) || {}).value || '';
+      const rawEmail = (document.getElementById('tmEmail-' + i) || {}).value || '';
+      const phoneCheck = rawPhone.trim() ? _amValidatePhone(rawPhone) : { ok: true, val: '' };
+      if (!phoneCheck.ok) { showSiteNotice(phoneCheck.msg, 'error'); return; }
+      const email = rawEmail.trim();
+      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        showSiteNotice('Geçerli bir e-posta adresi girin (ör. ad@alan.com).', 'error');
+        return;
+      }
+      const phone = phoneCheck.val;
+      try {
+        const token = (currentUser && currentUser.token) || '';
+        const r = await fetch('/api/team-members', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+          body: JSON.stringify({ username: m.username, phone, email }),
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+        m.phone = phone; m.email = email;
+        const row = document.getElementById('tmRow-' + i);
+        if (row) row.outerHTML = _amTmRowHtml(m, i);
+        showSiteNotice('Kaydedildi.', 'success');
+      } catch(e) {
+        showSiteNotice('Kaydedilemedi: ' + e.message, 'error');
+      }
+    }
+
+    function openAdminMemberWhatsApp(i) {
+      const m = _amTmFiltered[i];
+      if (!m) return;
+      const digits = _amWaDigits(m.phone);
+      if (!digits) { showSiteNotice(`${m.fullName} ${I18N.t('için kayıtlı telefon numarası yok.')}`, 'error'); return; }
+      window.open(`https://wa.me/${digits}`, '_blank', 'noopener');
+    }
+
+    function exportTeamMembersAdmin(format) {
+      const headers = ['Ad Soyad','Takım','Rol','Telefon','E-posta'];
+      const rows = (_amTmFiltered.length ? _amTmFiltered : (_amTeamMembers || [])).map(m => [m.fullName, m.team, m.role, m.phone, m.email]);
+      NCExport.download(format || 'csv', headers, rows, 'takimdaki_kisiler', 'Takımımdaki Kişiler');
     }
 
     // Admin: mevcut notu sil (yanlışlıkla eklenen/test notlarını temizlemek için)
@@ -3928,6 +4221,7 @@
         closedAlarmsExportMount: 'exportAdminClosedAlarms',
         cancelledExportMount:    'exportAdminCancelled',
         wonExportMount:          'exportAdminWon',
+        teamMembersExportMount: 'exportTeamMembersAdmin',
       };
       for (const [mountId, fnName] of Object.entries(map)) {
         const el = document.getElementById(mountId);
@@ -4429,7 +4723,7 @@
       // Users ve System Logs admin'e özel — RM bu sayfalara geçemez
       if (window.isRM && (v === 'users' || v === 'logs')) return;
       _currentView = v;
-      ['deals','summary','users','logs','alarms-monitor','today','noshow','closed-alarms','cancelled-alarms','won-alarms','activity'].forEach(name => {
+      ['deals','summary','users','logs','alarms-monitor','today','noshow','closed-alarms','cancelled-alarms','won-alarms','activity','team-members'].forEach(name => {
         document.getElementById('view-' + name).classList.toggle('hidden', name !== v);
         const nb = document.getElementById('nav-' + name); if (nb) nb.classList.toggle('active', name === v);
       });
@@ -4439,6 +4733,7 @@
       if (v === 'alarms-monitor') { loadAdminAlarms(); _amRenderDayFilterChips(); }
       if (v === 'users') loadUsers();
       else if (v === 'logs') loadLogs();
+      else if (v === 'team-members') loadAdminTeamMembers();
       // Bu dört sayfanın verisi girişte (init) arka planda önceden yükleniyor
       // (bkz. loadAdminAlarms/loadAdminCancelledDeals/loadAdminWonAlarms init
       // çağrıları) — sayfaya girer girmez ELDEKİ veriyle ANINDA render edilir
@@ -6562,6 +6857,10 @@
         addLog('LOGIN', window.isRM ? `Regional Manager panele giriş yaptı (${window.rmRegion})` : 'Admin panele giriş yapıldı');
         document.getElementById('langToggleMount').innerHTML = I18N.renderToggleButton();
         mountAdminExportButtons();
+        // Sayfa yüklendiğindeki STATİK metni (sidebar, başlıklar, tablo
+        // sütun başlıkları, modal iskeletleri) çevir — dinamik olarak
+        // render edilen içerik zaten kendi translateDOM çağrısını yapıyor.
+        I18N.translateDOM(document.body);
         ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo', 'logDateFrom', 'logDateTo', 'caArrFrom', 'caArrTo', 'caCreatedFrom', 'caCreatedTo', 'waArrFrom', 'waArrTo', 'waCreatedFrom', 'waCreatedTo', 'actDateFrom', 'actDateTo'].forEach(id => NCDatePicker.attach(id));
         _anPopulateTeamOptions();
         loadDeals();

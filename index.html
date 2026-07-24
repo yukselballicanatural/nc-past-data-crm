@@ -652,7 +652,7 @@
     // Eski/geçersiz token yüzünden bir sayfa oturumu otomatik sonlandırıp
     // buraya geri gönderdiyse, kullanıcıya nedenini açıkla.
     if (new URLSearchParams(window.location.search).get('relogin') === '1') {
-      showAlert('Oturumunuz zaman aşımına uğradı. Lütfen tekrar giriş yapın.', 'error');
+      showAlert('Your session has expired. Please sign in again.', 'error');
     }
   </script>
 </body>
