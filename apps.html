@@ -293,7 +293,10 @@
       key: 'dashboard',
       name: 'Natural Clinic Dashboard',
       desc: 'Genel performans ve raporlama',
-      status: 'soon',
+      // Sadece admin/super-admin için aktif — takım lideri/RM'de "Yakında" görünmeye devam eder.
+      status: (currentUser.role === 'admin' || currentUser.role === 'super-admin') ? 'active' : 'soon',
+      url: 'https://nc-dashboards.vercel.app/',
+      sameTab: true, // ayrı sekme değil, alt domain gibi aynı sekmede açılsın
       accent: '#34d399',
       accentBg: 'rgba(52,211,153,0.12)',
       iconBg: 'linear-gradient(135deg, #059669 0%, #064e3b 100%)',
@@ -339,7 +342,11 @@
     const app = APPS.find(a => a.key === key);
     if (!app) return;
     if (app.key === 'alarm') { window.location.href = alarmSystemUrl(); return; }
-    if (app.url) { window.open(app.url, '_blank', 'noopener'); return; }
+    if (app.url) {
+      if (app.sameTab) { window.location.href = app.url; return; }
+      window.open(app.url, '_blank', 'noopener');
+      return;
+    }
   }
 
   function showSoonToast(name) {
