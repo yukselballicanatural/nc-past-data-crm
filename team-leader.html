@@ -1666,11 +1666,10 @@
 
       ['__section__', 'Kişi Bilgileri'],
       ['İletişim', rv(raw.Contact_Name)],
-      ['E-posta', raw.Email],
       ['Pasaport', raw.Passport],
       ['Ülke', raw.Country_Name],
       ['Dil', raw.Language],
-      ['Yetişkin / Çocuk', (raw.Adults || raw.Children) ? `${raw.Adults ?? 0} / ${raw.Children ?? 0}` : null],
+      ['Yetişkin Sayısı', raw.Adults],
       ['Yolcu Sayısı', raw.No_of_Passengers],
 
       ['__section__', 'Tarihler'],
@@ -1690,7 +1689,6 @@
       ['Varış Havalimanı', rv(raw.Arrival_Airport)],
       ['Dönüş Havalimanı', rv(raw.Return_Airport)],
       ['Transfer Tipi', raw.Transfer_Type],
-      ['Doktor', raw.Doctor],
       ['Booking Service', raw.Booking_Service],
       ['Booking ID', raw.Booking_ID],
       ['Invoice ID', raw.Invoice_ID],

@@ -207,6 +207,7 @@
     'Ülke': 'Country',
     'Dil': 'Language',
     'Yetişkin / Çocuk': 'Adults / Children',
+    'Yetişkin Sayısı': 'Number of Adults',
     'Yolcu Sayısı': 'Passenger Count',
     'Tarihler': 'Dates',
     'Seyahat / Otel': 'Travel / Hotel',
