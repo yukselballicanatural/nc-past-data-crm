@@ -1722,3 +1722,28 @@ html[data-theme="dark"] .td-pill-noshow {
 }
 html[data-theme="dark"] .td-empty-title { color: #a9b4c8; }
 html[data-theme="dark"] .td-empty-sub { color: #6d7a91; }
+
+/* ═════════════════════════════════════════════════════════════════════
+   27. ÜLKE DAĞILIMI — 46'nın koyu ikizi.
+   ═════════════════════════════════════════════════════════════════════ */
+html[data-theme="dark"] .ng-label {
+  background: rgba(16, 22, 36, 0.88);
+  -webkit-backdrop-filter: blur(12px) saturate(165%);
+  backdrop-filter: blur(12px) saturate(165%);
+  border: 1px solid var(--d-edge-soft);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+}
+html[data-theme="dark"] .ng-label-name { color: #b6c1d4; }
+html[data-theme="dark"] .ng-label-val { color: #2dd4bf; }
+html[data-theme="dark"] .ng-coverage {
+  background: rgba(45, 212, 191, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.3);
+  color: #2dd4bf;
+}
+html[data-theme="dark"] .ng-rank-no { color: #6d7a91; }
+html[data-theme="dark"] .ng-rank-name { color: #e6ebf5; }
+html[data-theme="dark"] .ng-rank-bar { background: rgba(255, 255, 255, 0.07); }
+html[data-theme="dark"] .ng-rank-val { color: #e6ebf5; }
+html[data-theme="dark"] .ng-rank-pct { color: #7d8ba3; }
+html[data-theme="dark"] .ng-rank-more,
+html[data-theme="dark"] .ng-fallback { color: #7d8ba3; }

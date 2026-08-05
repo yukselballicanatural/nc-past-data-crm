@@ -18,6 +18,9 @@
   <!-- Analitik ekranının SVG grafikleri — tek kaynak, iki render yolu da
        (RPC özeti + istemci hesabı) buradan çiziyor. -->
   <script src="analytics-charts.js"></script>
+  <!-- Donen dunya: cobe (WebGL) yerel paket + vanilya sarmalayici -->
+  <script src="cobe-bundle.js"></script>
+  <script src="globe-analytics.js"></script>
   <!-- PDF export için (xlsx zaten yukarıda cdn.sheetjs.com'dan yükleniyor) -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
@@ -792,6 +795,27 @@
         <h3 class="text-sm font-bold text-white mb-1">Dil Dağılımı</h3>
         <p class="text-[10px] text-slate-500 mb-4">Bir dilin üzerine gelin — halkada o dilim öne çıkar.</p>
         <div id="langChart"></div>
+      </div>
+
+      <!-- Ülke Dağılımı — dönen dünya.
+           Kaynak alan: deals.raw->>Country_Name. Bu alan TÜM deallerde dolu
+           DEĞİL (ölçüldü: 5014 deal'in 1336'sında var), o yüzden kapsam
+           başlığın altında açıkça yazılıyor — rakamı "tüm dealler" sanmak
+           yanlış olurdu. Dil bilgisinden ülke TAHMİN EDİLMİYOR: İngilizce
+           konuşan hasta İngiltere'den olmak zorunda değil, uydurma coğrafya
+           üretmek yerine yalnızca gerçek ülke alanı kullanılıyor. -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-5" id="countryGlobeCard">
+        <div class="flex items-start justify-between gap-3 flex-wrap mb-1">
+          <div>
+            <h3 class="text-sm font-bold text-white mb-1">Ülke Dağılımı</h3>
+            <p class="text-[10px] text-slate-500">Dünyayı sürükleyip döndürebilirsiniz — nokta büyüklüğü deal sayısıyla ölçekli.</p>
+          </div>
+          <span class="ng-coverage" id="globeCoverage"></span>
+        </div>
+        <div class="ng-layout">
+          <div class="ng-globe-wrap" id="countryGlobe"></div>
+          <div class="ng-rank" id="countryRank"></div>
+        </div>
       </div>
     </div>
 
@@ -6978,6 +7002,19 @@
       // görünsün. Deals/Analytics/Users/Logs bunun dışında.
       const alarmDependentViews = new Set(['alarms-monitor','today','closed-alarms','cancelled-alarms','won-alarms']);
       if (alarmDependentViews.has(v)) _startLiveAlarmRefresh(); else _stopLiveAlarmRefresh();
+      // Ülke küresi: WebGL yalnızca canvas'ın ÖLÇÜSÜ varken kurulabiliyor.
+      // Analitik gizliyken render edildiyse kurulum atlanmış olur; sayfaya
+      // geçildiği an burada garanti altına alınır (ResizeObserver'a tek
+      // başına güvenmek yetmiyordu).
+      if (v === 'summary' && typeof _anRenderCountryGlobe === 'function') {
+        requestAnimationFrame(() => _anRenderCountryGlobe());
+      } else if (typeof _ncGlobe !== 'undefined' && _ncGlobe) {
+        // Analitikten çıkıldı: cobe kendi render döngüsünü sürüyor ve sayfa
+        // gizliyken de her karede WebGL çizmeye devam ederdi. Bağlamı bırak;
+        // geri dönülünce isRunning() false olduğu için yeniden kurulur.
+        _ncGlobe.destroy();
+        _ncGlobe = null;
+      }
     }
 
     // ── Alarm Monitoring: canlı saat ──
@@ -7950,6 +7987,97 @@
       });
     }
 
+    // ── Ülke Dağılımı: dönen dünya ────────────────────────────────────
+    // Kaynak: deals.raw->>Country_Name (mapDeals'te 'Country'). Bu alan tüm
+    // deallerde dolu DEĞİL — kapsam ekranda yazılıyor, rakam "tüm dealler"
+    // sanılmasın. Dilden ülke TAHMİN EDİLMİYOR (bkz. HTML'deki not).
+    // var (let DEĞİL) BİLEREK: switchView bu satırlardan ÖNCE tanımlı ve
+    // küreyi bırakmak için _ncGlobe'a bakıyor. `let` ile, betik gövdesi
+    // değerlendirilmeden önce bir çağrı gelirse TDZ hatası olur — `typeof`
+    // bile TDZ'de ReferenceError atar. `var` hoist edilir, undefined okunur.
+    var _ncGlobe = null;
+    var _globeSig = '';
+    function _anRenderCountryGlobe() {
+      const host = document.getElementById('countryGlobe');
+      const rankEl = document.getElementById('countryRank');
+      const covEl = document.getElementById('globeCoverage');
+      if (!host || !rankEl) return;
+
+      const counts = {};
+      let withCountry = 0;
+      allDeals.forEach(d => {
+        const c = (d['Country'] || '').replace(/\s+/g, ' ').trim();
+        if (!c) return;
+        withCountry++;
+        counts[c] = (counts[c] || 0) + 1;
+      });
+      const rows = Object.entries(counts)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+
+      // Koordinat haritasında olmayan ülkeler küreye konamaz — sessizce
+      // yutmak yerine sayısı kapsam etiketinde görünür.
+      const placed = [], missing = [];
+      rows.forEach(r => {
+        const loc = NCGlobe.coordsFor(r.name);
+        if (loc) placed.push({ label: r.name, value: r.value, location: loc });
+        else missing.push(r);
+      });
+
+      if (covEl) {
+        const total = allDeals.length;
+        let txt = `${withCountry.toLocaleString('tr-TR')} / ${total.toLocaleString('tr-TR')} ` +
+                  `${I18N.t("deal'de ülke bilgisi var")} · ${rows.length} ${I18N.t('ülke')}`;
+        if (missing.length) txt += ` · ${missing.length} ${I18N.t('ülke haritada yok')}`;
+        covEl.textContent = txt;
+      }
+
+      // Sıralı döküm — küre yalnızca ilk 6'yı etiketliyor, tam liste burada
+      const maxV = placed.length ? placed[0].value : (rows[0] ? rows[0].value : 1);
+      rankEl.innerHTML = rows.length ? rows.slice(0, 12).map((r, i) => {
+        const pct = withCountry ? (r.value / withCountry * 100) : 0;
+        const w = maxV ? Math.max(2, r.value / maxV * 100) : 0;
+        const off = NCGlobe.coordsFor(r.name) ? '' : ' ng-rank-row-off';
+        return `<div class="ng-rank-row${off}">
+          <span class="ng-rank-no">${i + 1}</span>
+          <span class="ng-rank-name" title="${fmt(r.name)}">${fmt(r.name)}</span>
+          <span class="ng-rank-bar"><i style="width:${w.toFixed(1)}%"></i></span>
+          <span class="ng-rank-val">${r.value}</span>
+          <span class="ng-rank-pct">${pct.toFixed(1)}%</span>
+        </div>`;
+      }).join('') + (rows.length > 12
+        ? `<div class="ng-rank-more">+${rows.length - 12} ${I18N.t('ülke daha')}</div>` : '')
+        : `<div class="ng-rank-more">${I18N.t('Ülke verisi yok.')}</div>`;
+
+      // Küre WebGL bağlamı tutuyor: veri gerçekten değişmedikçe yeniden
+      // kurmak boşa GPU maliyeti (deals parça parça iniyor, bu fonksiyon
+      // her partide çağrılabiliyor).
+      const sig = placed.map(p => p.label + ':' + p.value).join('|') +
+                  '#' + (document.documentElement.getAttribute('data-theme') || '');
+      // isRunning() ŞART: Analitik görünümü gizliyken de render edilebiliyor,
+      // o an canvas'ın genişliği 0 olduğu için küre kurulmuyor (ResizeObserver
+      // yoluna düşüyor). Yalnızca imzaya bakıp dönersek, kullanıcı sayfaya
+      // geçtiğinde bir daha denenmiyor ve küre hiç görünmüyordu.
+      if (sig === _globeSig && _ncGlobe && _ncGlobe.isRunning()) return;
+      _globeSig = sig;
+      if (_ncGlobe) { _ncGlobe.destroy(); _ncGlobe = null; }
+      _ncGlobe = NCGlobe.mount(host, {
+        markers: placed,
+        labelCount: 6,
+        errorText: I18N.t('Dünya görünümü yüklenemedi (WebGL kapalı olabilir).'),
+        emptyText: I18N.t('Ülke verisi yok.'),
+      });
+    }
+
+    // Tema değişince küre yeniden kurulmalı: kara/deniz/ışıma renkleri
+    // WebGL'e kuruluşta veriliyor, sonradan güncellenmiyor.
+    function _anOnThemeChangeGlobe() {
+      const card = document.getElementById('countryGlobeCard');
+      if (!card || !card.offsetParent) return;
+      _globeSig = '';
+      _anRenderCountryGlobe();
+    }
+
     // Dil halkasi ayri: dil dokumu filtreden BAGIMSIZ, tembel yukleniyor
     // ve geldiginde yalnizca kendi grafigini gunceller.
     function _anRenderLangDonut(langs) {
@@ -8062,6 +8190,8 @@
       const langMap = {};
       data.forEach(d => { const l = d['Language']||I18N.t('Bilinmiyor'); langMap[l] = (langMap[l]||0)+1; });
       _anRenderLangDonut(Object.entries(langMap).map(([lang, cnt]) => ({ lang, cnt })));
+      // Ulke kuresi: dil halkasi gibi filtre-BAGIMSIZ, tum 2026 deallerinden.
+      _anRenderCountryGlobe();
 
       // Odemesi tamamlanan: Stage Won VE odenen >= tutar (agentMap ile ayni olcut)
       const wonPaid = data.filter(d => {
@@ -8276,6 +8406,8 @@
     // ham değerleri karşılaştırıyor) — sadece ekrandaki etiket Türkçeleşiyor.
     function _renderLangChartOnly(langs) {
       _anRenderLangDonut(langs);
+      // Ulke kuresi: dil halkasi gibi filtre-BAGIMSIZ, tum 2026 deallerinden.
+      _anRenderCountryGlobe();
     }
 
     async function _loadLanguageBreakdownIfNeeded() {
@@ -8894,6 +9026,7 @@
           'Deal Owner Name': row.deal_owner || '',
           'Stage':    row.stage || '',
           'Language': row.rawLang || '',
+          'Country':  row.rawCountry || '',
           'Payment Or Flight Ticket': row.payment_or_flight_ticket || '',
           'Deal Amount':  dealAmount,
           'Paid Amount':  paidAmount,
@@ -8992,7 +9125,7 @@
     // çekmek her satırda büyük JSONB'yi parse ettirip DB'yi zorluyor (statement timeout / 500).
     const _DEALS_SELECT = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,remaining_amount,' +
       'arrival_date,visit_date_1,visit_date_2,visit_date_3,payment_or_flight_ticket,created_time,' +
-      'result_codes,rawLang:raw->>Language';
+      'result_codes,rawLang:raw->>Language,rawCountry:raw->>Country_Name';
 
     // onBatch(rows) her parça indikçe çağrılır — böylece tablo hepsi
     // inmeden önce, ilk 100 satırla hemen dolmaya başlar.
@@ -9425,6 +9558,9 @@
     }
     // Grafikler/tablolar yeniden olcsun
     window.dispatchEvent(new Event('resize'));
+    // Kure: kara/deniz/isima renkleri WebGL'e KURULUSTA veriliyor, sonradan
+    // guncellenmiyor — tema degisince yeniden kurulmasi gerekiyor.
+    if (typeof _anOnThemeChangeGlobe === 'function') _anOnThemeChangeGlobe();
   }
   (function () {
     var sw = document.getElementById('themeSwitch');

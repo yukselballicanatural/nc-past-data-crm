@@ -796,6 +796,17 @@
     'Deal Sayısına Göre En İyi Danışmanlar': 'Top Agents by Deals',
     'Sonuç': 'Results',
     'Dil Dağılımı': 'Language Breakdown',
+    // Ülke Dağılımı — dönen dünya
+    'Ülke Dağılımı': 'Country Breakdown',
+    'Dünyayı sürükleyip döndürebilirsiniz — nokta büyüklüğü deal sayısıyla ölçekli.':
+      'Drag the globe to rotate — dot size scales with deal count.',
+    "deal'de ülke bilgisi var": 'deals have a country',
+    'ülke': 'countries',
+    'ülke haritada yok': 'countries not on the map',
+    'ülke daha': 'more countries',
+    'Ülke verisi yok.': 'No country data.',
+    'Dünya görünümü yüklenemedi (WebGL kapalı olabilir).':
+      'Could not load the globe (WebGL may be disabled).',
     'Henüz sonuç kodu girilmedi.': 'No result codes entered yet.',
     'Tüm Takım Liderleri': 'All Team Leaders',
     'Temizle': 'Clear',

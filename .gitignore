@@ -12,3 +12,6 @@ node_modules
 # (icinde calisan bir test hesabi sifresi var). Yerelde durur, SQL Editor'de
 # elle calistirilir. Gecmisten de temizlendi: bkz. backup-before-publish dali.
 demo_team_leader_seed.sql
+
+# Gecici olcum/onizleme dosyalari
+scratchpad/
