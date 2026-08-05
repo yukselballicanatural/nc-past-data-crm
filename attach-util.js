@@ -168,7 +168,9 @@ window.NCAttach = (function () {
     }
     window._ncDocPasteHandler = function (e) {
       const textarea = document.getElementById(textareaId);
-      if (!textarea || textarea.offsetParent === null) return;
+      if (!textarea) return;
+      const r = textarea.getBoundingClientRect();
+      if (!r.width && !r.height) return; // modal kapalı
       const items = (e.clipboardData || {}).items;
       if (!items) return;
       const images = Array.from(items)
