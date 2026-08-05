@@ -288,6 +288,10 @@ export default async function handler(req, res) {
       let members;
       let scopeLabel;
       let unplaced = [];
+      // Dizin, kapsamlanmış listeyle AYNI çözümlemeyi kullansın diye dışarıda
+      // tutuluyor — ikinci kez resolveZohoTeam çağırmak (deal yedeği olmadan)
+      // iki yerde farklı takım üretebilirdi.
+      let resolvedAll = null;
       if (zohoRows.length) {
         // ── Takım çözümlemesi ───────────────────────────────────────────
         // Kadroda kalan (ayrılmamış) herkes için takımı ÖNCE belirle, kapsamı
@@ -346,6 +350,7 @@ export default async function handler(req, res) {
           status:   p.z.status || '',
         }));
 
+        resolvedAll = resolved;
         const scoped = scopeZoho(resolved);
         scopeLabel = scoped.scopeLabel;
         members = scoped.rows
@@ -432,12 +437,44 @@ export default async function handler(req, res) {
         }));
       }
 
+      // ── Sahip → güncel takım dizini ───────────────────────────────────
+      // KAPSAMDAN BAĞIMSIZ: her çağırana TÜM kadronun ad→takım eşlemesi
+      // döner. Sebebi: bir deal/alarm satırının hangi takıma AİT olduğunu
+      // artık sahibinin GÜNCEL takımı belirliyor (bkz. panellerdeki
+      // effectiveTeam). Farah'ın paneli, Marco'nun Moutaharrik'e geçtiğini
+      // bilmeden onun satırlarını listesinden düşüremez.
+      //
+      // GİZLİLİK: yalnızca görünen ad + kanonik takım adı. Telefon, e-posta,
+      // rol, kıdem, Zoho id — hiçbiri yok. Bu ikisi zaten deals/alarms
+      // tablolarında anon key'e açık (deal_owner, team), yani yeni bir bilgi
+      // sızdırmıyor; sadece hangi eşleşmenin GÜNCEL olduğunu söylüyor.
+      const directory = [];
+      {
+        const seenDir = new Set();
+        const push = (name, team) => {
+          const k = nameKey(name);
+          if (!k || seenDir.has(k) || !team) return;
+          seenDir.add(k);
+          directory.push({ name: String(name).trim(), team });
+        };
+        if (resolvedAll) {
+          for (const p of resolvedAll) if (p.team) push(p.z.full_name, p.team);
+        }
+        // Aynada olmayan ama Users'ta aktif duranlar
+        for (const u of userRows) {
+          if (u['is_active'] === false) continue;
+          const t = normalizeTeam(String(u['Takim Adi'] || '').trim());
+          if (t) push(u['Deal Owner Name'] || u['Username'], t);
+        }
+      }
+
       members.sort((a, b) =>
         (a.team || '').localeCompare(b.team || '') || a.fullName.localeCompare(b.fullName));
       res.status(200).json({
         team: scopeLabel,
         members,
         source: zohoRows.length ? 'zoho_users' : 'Users',
+        directory,
         // Takıma bağlanamayanlar yalnızca admin'e — bu bir veri bakımı
         // uyarısı, takım liderinin ekranında karşılığı yok.
         unplaced: ['admin', 'super-admin'].includes(claims.r) ? unplaced : [],

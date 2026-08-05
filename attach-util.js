@@ -159,14 +159,16 @@ window.NCAttach = (function () {
       <div id="${mountId}"></div>`;
   }
 
-  // Bir textarea'ya paste olayı bağlar: kullanıcı görsel yapıştırınca
-  // handleFiles ile aynı yükleme akışını tetikler.
-  // Modal her açılışında tekrar çağrılır — eski listener'ı kaldırır.
+  // Modal açıkken document seviyesinde paste dinler. Textarea focus'lu olmasa
+  // bile (kullanıcı dropdown, buton vs. kullandıktan sonra Ctrl+V) çalışır.
+  // textareaId'nin offsetParent'i null değilse modal açık demektir.
   function bindPaste(textareaId, alarmId, mountId) {
-    const el = document.getElementById(textareaId);
-    if (!el) return;
-    if (el._ncPasteHandler) el.removeEventListener('paste', el._ncPasteHandler);
-    el._ncPasteHandler = function (e) {
+    if (window._ncDocPasteHandler) {
+      document.removeEventListener('paste', window._ncDocPasteHandler);
+    }
+    window._ncDocPasteHandler = function (e) {
+      const textarea = document.getElementById(textareaId);
+      if (!textarea || textarea.offsetParent === null) return;
       const items = (e.clipboardData || {}).items;
       if (!items) return;
       const images = Array.from(items)
@@ -177,7 +179,7 @@ window.NCAttach = (function () {
       e.preventDefault();
       handleFiles(alarmId, mountId, images);
     };
-    el.addEventListener('paste', el._ncPasteHandler);
+    document.addEventListener('paste', window._ncDocPasteHandler);
   }
 
   return { init, load, handleFiles, remove, renderWidget, bindPaste };

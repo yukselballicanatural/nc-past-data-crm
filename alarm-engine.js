@@ -706,13 +706,35 @@ window.AlarmEngine = (function () {
     const H  = { apikey: KEY, Authorization: 'Bearer ' + KEY };
     const PH = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
 
+    // Bir alarmın TAKIMI, deal satırındaki (bayat olabilen) `team` alanı değil
+    // SAHİBİNİN GÜNCEL TAKIMI. deals.team kaydın oluştuğu andaki takımı taşıyor
+    // ve Zoho tarafında güncellenmiyor: kişi takım değiştirince tüm geçmişi eski
+    // takımın adıyla kalıyordu. Canlı vaka — Marco Rahimi Farah Team'de
+    // danışmanken Moutaharrik Team'in lideri oldu; 43 alarmının TAMAMI
+    // "Farah Team - Morocco" diyordu, yani kendi panelinde görünmüyor, Farah'ın
+    // panelinde ise artık ona ait olmayan kayıtlar duruyordu.
+    //
+    // Düzeltme burada (motorda) yapılıyor çünkü kalıcı: alarms.team bir kez
+    // doğru yazılınca tüm paneller, rozetler, KPI'lar ve sorgular kendiliğinden
+    // takip ediyor — her panelde ayrı istemci mantığı gerekmiyor.
+    //
+    // Dizin yoksa (NCOwnerTeam yüklenmemiş) eski davranışa düşülür; hiçbir
+    // alarm yanlış takıma yazılmaz, sadece düzeltme o turda yapılmaz.
+    const ownerTeamOf = (owner) => {
+      try {
+        if (typeof NCOwnerTeam === 'undefined' || !NCOwnerTeam.ready()) return null;
+        return NCOwnerTeam.teamOf(owner);
+      } catch (e) { return null; }
+    };
+
     const want = new Map();
     for (const d of deals) {
+      const team = ownerTeamOf(d.deal_owner) || canonicalTeam(d.team);
       want.set(String(d.id), {
         deal_name:  d.deal_name  || '',
         deal_owner: d.deal_owner || '',
-        team:       canonicalTeam(d.team),
-        region:     getRegion(d.team),
+        team,
+        region:     getRegion(team),
       });
     }
     const ids = [...want.keys()];

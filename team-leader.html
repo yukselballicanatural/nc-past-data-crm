@@ -1565,6 +1565,7 @@
 <script src="net-util.js"></script>
 <script src="i18n.js"></script>
 <script src="team-map.js"></script>
+<script src="owner-team.js"></script>
 <!-- Alarm durum kumeleri: adminle ayni sayiyi vermesi buna bagli -->
 <script src="alarm-status.js"></script>
 <script src="alarm-engine.js"></script>
@@ -6168,6 +6169,12 @@
 
       // (RM nav ayarı ve kayıtlı görünüme geçiş yukarıya, loadAlarms'tan
       //  ÖNCESİNE taşındı — yanlış sayfa hiç boyanmasın.)
+
+      // Sahip → güncel takım dizini. Motor alarmların TAKIMINI buna göre
+      // yazıyor (bkz. alarm-engine.js syncAlarmDealFields), o yüzden motordan
+      // ÖNCE hazır olmalı — yoksa motor o turda eski davranışa düşer ve
+      // takım değiştirmiş kişilerin alarmları eski takımda kalır.
+      await NCOwnerTeam.load((currentUser && currentUser.token) || '').catch(() => {});
 
       // Alarm motorunu arka planda çalıştır (15 dakikada bir otomatik)
       runEngine(false);
