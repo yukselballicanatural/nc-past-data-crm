@@ -3072,3 +3072,58 @@ html[data-theme="light"] .am-alarm-tbl thead th {
   font-size: 9.5px !important;
   letter-spacing: .06em;
 }
+
+/* ═════════════════════════════════════════════════════════════════════
+   44. ALARM DETAY POPUP'I (#adminAlarmModal)
+   HATA: not kutusu açık temada SİYAH kalıyordu. Zemini satır içi
+   <style> bloğundaki `textarea.aam-note { background:#111827 }` veriyor;
+   tema katmanının [style*="background:#111827"] eşlemeleri yalnızca
+   STYLE ÖZNİTELİĞİNE bakar, stylesheet kuralını göremez. Bu yüzden
+   sınıfın kendisi için açık tema karşılığı yazılmalı.
+   Özgüllük: kaynak kural (0,1,1); buradaki (0,2,1) — güvenle kazanır.
+   ═════════════════════════════════════════════════════════════════════ */
+
+/* Geometri temadan bağımsız */
+.aam-sec {
+  font-size: 9px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .08em; margin-bottom: 8px;
+  display: flex; align-items: center; gap: 6px;
+}
+.aam-sec::before {
+  content: ''; width: 3px; height: 11px; border-radius: 2px;
+  background: linear-gradient(180deg, #14b8a6, #0d9488); flex-shrink: 0;
+}
+.aam-tl-row {
+  display: flex; align-items: center; gap: 8px; padding: 5px 0;
+}
+.aam-tl-row:last-child { border-bottom: 0 !important; }
+.aam-tl-dot {
+  width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.05);
+}
+.aam-hist-row { padding: 7px 0; }
+.aam-hist-row:last-child { border-bottom: 0 !important; }
+
+/* ── Açık tema ─────────────────────────────────────────────────────── */
+html[data-theme="light"] textarea.aam-note {
+  background: rgba(255, 255, 255, 0.66) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  backdrop-filter: blur(16px) saturate(170%);
+  border: 1px solid var(--edge-soft) !important;
+  color: var(--ink) !important;
+  border-radius: 13px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+html[data-theme="light"] textarea.aam-note::placeholder { color: var(--ink-3); }
+html[data-theme="light"] textarea.aam-note:focus {
+  background: rgba(255, 255, 255, 0.82) !important;
+  border-color: rgba(13, 148, 136, 0.5) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75),
+              0 0 0 3px rgba(13, 148, 136, 0.13);
+}
+html[data-theme="light"] .aam-sec { color: var(--ink-2) !important; }
+html[data-theme="light"] .aam-tl-row,
+html[data-theme="light"] .aam-hist-row {
+  border-bottom: 1px solid rgba(23, 43, 99, 0.045);
+}

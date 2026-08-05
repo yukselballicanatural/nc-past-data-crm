@@ -1629,3 +1629,31 @@ html[data-theme="dark"] .am-alarm-tbl thead th {
   font-size: 9.5px !important;
   letter-spacing: .06em;
 }
+
+/* ═════════════════════════════════════════════════════════════════════
+   25. ALARM DETAY POPUP'I — 44'ün koyu ikizi.
+   Not kutusu koyu temada da satır içi #111827 opak kutuydu; panelin cam
+   yüzeyiyle uyumsuzdu. Aynı sınıf üzerinden cam karşılığı veriliyor.
+   ═════════════════════════════════════════════════════════════════════ */
+html[data-theme="dark"] textarea.aam-note {
+  background: rgba(255, 255, 255, 0.045) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(165%);
+  backdrop-filter: blur(16px) saturate(165%);
+  border: 1px solid var(--d-edge-soft) !important;
+  color: #e6ebf5 !important;
+  border-radius: 13px !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+}
+html[data-theme="dark"] textarea.aam-note::placeholder { color: #6d7a91; }
+html[data-theme="dark"] textarea.aam-note:focus {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(45, 212, 191, 0.45) !important;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07),
+              0 0 0 3px rgba(45, 212, 191, 0.15);
+}
+html[data-theme="dark"] .aam-sec { color: #8b98ad !important; }
+html[data-theme="dark"] .aam-tl-row,
+html[data-theme="dark"] .aam-hist-row {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.055);
+}

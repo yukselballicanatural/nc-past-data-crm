@@ -1824,7 +1824,7 @@
       </div>
 
       <!-- Deal Detayları — All Deals sayfasındaki gibi tam bilgi -->
-      <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Deal Detayları</div>
+      <div class="aam-sec">Deal Detayları</div>
       <div class="aam-info-grid mb-5" id="aamDealDetailGrid">
         <div class="aam-info-card"><div class="aam-info-label">Deal ID</div><div class="aam-info-val" id="aamDealRef">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Stage</div><div class="aam-info-val" id="aamDealStage">—</div></div>
@@ -1837,7 +1837,7 @@
         <div class="aam-info-card"><div class="aam-info-label">Visit Status</div><div class="aam-info-val" id="aamDealVisitStatus">—</div></div>
       </div>
 
-      <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:8px">Alarm Detayları</div>
+      <div class="aam-sec">Alarm Detayları</div>
       <div class="aam-info-grid mb-5">
         <div class="aam-info-card"><div class="aam-info-label">Alarm Tipi</div><div class="aam-info-val" id="aamAlarmType">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Durum</div><div class="aam-info-val" id="aamAlarmStatus">—</div></div>
@@ -1848,13 +1848,13 @@
       </div>
 
       <div style="background:#0b1220;border:1px solid #1e293b;border-radius:10px;padding:10px 14px;margin-bottom:14px">
-        <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Durum Zaman Çizelgesi</div>
+        <div class="aam-sec" style="margin-bottom:6px">Durum Zaman Çizelgesi</div>
         <div id="aamTimelineBody"></div>
       </div>
 
       <div id="aamExistingNoteWrap" style="display:none;background:#1e293b;border:1px solid #334155;border-radius:10px;padding:10px 12px;margin-bottom:14px;overflow:hidden">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-          <div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Mevcut Not</div>
+          <div class="aam-sec" style="margin-bottom:0">Mevcut Not</div>
           <button onclick="deleteAdminAlarmNote()" style="padding:2px 8px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:9px;font-weight:700;cursor:pointer;flex-shrink:0">Notu Sil</button>
         </div>
         <div style="font-size:12px;color:#cbd5e1;word-break:break-word;overflow-wrap:anywhere;white-space:pre-wrap" id="aamExistingNote"></div>
@@ -4922,8 +4922,11 @@
         { time: a.closed_at,   label: I18N.t('Kapatıldı') + (a.close_reason ? ' — '+fmt(I18N.t(a.close_reason)) : ''), color:'#94a3b8' },
       ].filter(t => !!t.time);
       document.getElementById('aamTimelineBody').innerHTML = tlItems.length ?
-        tlItems.map(t => `<div style="display:flex;align-items:center;gap:8px;padding:4px 0;border-bottom:1px solid #0f172a">
-          <span style="width:6px;height:6px;border-radius:50%;background:${t.color};flex-shrink:0"></span>
+        // Ayirici satir ici DEGIL sinifla: satir ici #0f172a acik temada
+        // neredeyse siyah cikiyordu ve tema esleme kurallari border rengine
+        // dokunmaz (bkz. alarm listesi tablosunda ayni kusur).
+        tlItems.map(t => `<div class="aam-tl-row">
+          <span class="aam-tl-dot" style="background:${t.color}"></span>
           <span style="font-size:11px;color:${t.color};font-weight:600;flex:1">${t.label}</span>
           <span style="font-size:10px;color:#475569">${_amFmtDateTime(t.time)}</span>
         </div>`).join('') :
@@ -5013,7 +5016,7 @@
         if (!Array.isArray(logs) || !logs.length) return;
         const actionLabels = { status_change:I18N.t('Durum Değişti'), note:I18N.t('Not Eklendi'), closed:I18N.t('Kapatıldı'), reopened:I18N.t('Yeniden Açıldı'), created:I18N.t('Oluşturuldu'), auto_closed:I18N.t('Otomatik Kapatıldı'), whatsapp_sent:I18N.t('WhatsApp Gönderildi') };
         list.innerHTML = logs.map(l => `
-          <div style="padding:6px 0;border-bottom:1px solid #0f172a">
+          <div class="aam-hist-row">
             <div style="display:flex;justify-content:space-between;gap:8px">
               <span style="font-size:10px;font-weight:700;color:#2dd4bf">${fmt(actionLabels[l.action_type] || l.action_type)}${l.new_status && l.new_status !== l.old_status ? ' → ' + fmt(_amStatusMeta(l.new_status).label || l.new_status) : ''}</span>
               <span style="font-size:9px;color:#475569;white-space:nowrap">${_amFmtDateTime(l.created_at)}</span>
