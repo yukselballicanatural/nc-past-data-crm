@@ -1661,6 +1661,18 @@ html[data-theme="dark"] .aam-hist-row {
 /* ═════════════════════════════════════════════════════════════════════
    26. BUGÜN GELECEKLER — 45'in koyu ikizi.
    ═════════════════════════════════════════════════════════════════════ */
+/* Tablo paneli — açık temadaki .td-wrap yüzeyinin karşılığı. Koyu temada
+   paylaşılan yüzey zaten yeterince opak duruyordu; buradaki iş yalnızca
+   kenar/gölge ile paneli zeminden ayırmak. */
+html[data-theme="dark"] .td-wrap {
+  border: 1px solid var(--d-edge-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05),
+              0 12px 34px rgba(0, 0, 0, 0.4);
+}
+html[data-theme="dark"] .td-stat-money { border-left: 1px solid var(--d-edge-soft); }
+html[data-theme="dark"] .td-seg .td-btn + .td-btn {
+  box-shadow: inset 1px 0 0 rgba(255, 255, 255, 0.09);
+}
 html[data-theme="dark"] .td-stat {
   background: rgba(255, 255, 255, 0.045);
   -webkit-backdrop-filter: blur(18px) saturate(170%);

@@ -1057,6 +1057,10 @@
         <div>
           <h2 style="font-size:20px;font-weight:800;color:#f1f5f9;margin:0;letter-spacing:-0.01em">Günlük Ekip Girişi</h2>
           <p style="font-size:11px;color:#64748b;margin:3px 0 0">Her gün için ayrı, sıfırdan bir sayfa. Önceki günleri tarih filtresinden görebilirsin.</p>
+          <!-- Bu sayfadaki kişi sayısı ile Takımımdaki Kişiler'deki sayı
+               eşitlenmediğinde fark SEBEBİYLE birlikte burada yazılır; eskiden
+               iki sayfa sessizce farklı sayı gösteriyordu. -->
+          <p id="depRosterNote" style="font-size:10.5px;color:#64748b;margin:4px 0 0;display:none"></p>
         </div>
       </div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
@@ -4828,6 +4832,54 @@
   // çağrısı yapmıyor — yalnızca TTL dolduğunda tazeleniyor.
   const _DEP_MEMBERS_TTL = 5 * 60 * 1000;
   let _depMembersAt = 0;
+  // Takımımdaki Kişiler ile bu sayfa arasındaki fark — uzlaştırma notu için.
+  let _depRoster = { total: 0, listed: 0, bosses: [], dupes: [], noKey: [] };
+
+  // ── Günlük girişe girecek kişiler — TEK TANIM ────────────────────────
+  // Bu filtre ÜÇ yerde kopyalanmıştı (loadDailyEntry, girişteki ön ısıtma) ve
+  // kopyalar birbirinden farklıydı: ön ısıtmada tekrar eden kullanıcı adlarını
+  // ayıklayan Set YOKTU. Yani liste hangi yoldan geldiyse sayı değişiyordu ve
+  // Takımımdaki Kişiler'le hiç uyuşmuyordu. Artık tek kaynak.
+  //
+  // Yöneticiler dışarıda: günlük performans (görüşme, teklif, satış) danışman
+  // metriği — takım liderinin kendisi için satır açılmıyor. Fark artık
+  // gizlenmiyor, sayfanın başlığında gerekçesiyle yazıyor.
+  function _depEligible(allMembers) {
+    const me = String((currentUser && currentUser.username) || '').toLowerCase();
+    const isBoss = role => /leader|lider|manager|müdür|mudur|admin|yönetici|yonetici/i.test(String(role || ''));
+    const seen = new Set();
+    const bosses = [], dupes = [], noKey = [];
+    const out = [];
+    for (const m of (allMembers || [])) {
+      const u = String(m.username || '').toLowerCase();
+      if (!u) { noKey.push(m.fullName || '—'); continue; }
+      if (u === me || isBoss(m.role) || isBoss(m.zohoRole)) { bosses.push(m.fullName || m.username); continue; }
+      // Aynı anahtar iki kişiye düşerse ikisi de daily_performance'ta AYNI
+      // satıra yazardı (entry_date+username benzersiz) — biri sessizce
+      // kaybolmasın diye ayıklanıp notta adıyla bildiriliyor.
+      if (seen.has(u)) { dupes.push(m.fullName || m.username); continue; }
+      seen.add(u);
+      out.push(m);
+    }
+    _depRoster = { total: (allMembers || []).length, listed: out.length, bosses, dupes, noKey };
+    return out;
+  }
+
+  function _depRenderRosterNote() {
+    const el = document.getElementById('depRosterNote');
+    if (!el) return;
+    const r = _depRoster;
+    const diff = r.total - r.listed;
+    if (!r.total || diff <= 0) { el.style.display = 'none'; return; }
+    const why = [];
+    if (r.bosses.length) why.push(I18N.t('{n} yönetici').replace('{n}', r.bosses.length) + ' (' + r.bosses.join(', ') + ')');
+    if (r.dupes.length)  why.push(I18N.t('{n} tekrar eden kayıt').replace('{n}', r.dupes.length) + ' (' + r.dupes.join(', ') + ')');
+    if (r.noKey.length)  why.push(I18N.t('{n} kullanıcı adı yok').replace('{n}', r.noKey.length) + ' (' + r.noKey.join(', ') + ')');
+    el.textContent = I18N.t('Takımımdaki Kişiler: {t} · burada {l} kişi')
+      .replace('{t}', r.total).replace('{l}', r.listed)
+      + (why.length ? ' — ' + why.join(', ') + ' ' + I18N.t('hariç') : '');
+    el.style.display = 'block';
+  }
 
   // Quick butonlar tek giriş noktasından (setValue → change → depOnDateInputChange) geçsin
   function depSetQuickDate(deltaFromToday) {
@@ -4879,25 +4931,12 @@
         }
         const data = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
-        // Sadece agent'lar listelensin — TL'nin kendisi ve diğer lider/yönetici
-        // rolleri hariç. team-members.js ham "Role" değeri döndürdüğü için
-        // ('team-leader' normalize edilmiş değil) rol metnini geniş eşleştir,
-        // ayrıca her ihtimale karşı kullanıcı adına göre kendini de çıkar.
-        const _me = (currentUser.username || '').toLowerCase();
-        const _isBoss = role => /leader|lider|manager|müdür|mudur|admin|yönetici|yonetici/i.test(String(role || ''));
-        const _seenUsers = new Set();
-        members = (data.members || []).filter(m => {
-          const u = (m.username || '').toLowerCase();
-          // Danışmanlar panele girmiyor, login açılmıyor — "Users kaydı olmayanı
-          // atla" YAPILMIYOR. api/team-members.js her üye için kararlı bir
-          // username döndürüyor (Users varsa gerçek Username, yoksa Zoho
-          // adından türetilmiş) — daily_performance anahtarı bu.
-          // Yönetici kontrolü hem Users rolüne hem Zoho rolüne bakıyor: girişi
-          // olmayanda m.role boş gelir, lider ise zohoRole'de "Team Leader - X".
-          if (!u || u === _me || _isBoss(m.role) || _isBoss(m.zohoRole) || _seenUsers.has(u)) return false;
-          _seenUsers.add(u);
-          return true;
-        });
+        // Danışmanlar panele girmiyor, login açılmıyor — "Users kaydı olmayanı
+        // atla" YAPILMIYOR. api/team-members.js her üye için kararlı bir
+        // username döndürüyor (Users varsa gerçek Username, yoksa Zoho adından
+        // türetilmiş) — daily_performance anahtarı bu. Filtrenin tek tanımı
+        // _depEligible'da (bkz. oradaki not).
+        members = _depEligible(data.members || []);
         _depMembersCache = members;
         _depMembersAt = Date.now();
       }
@@ -4998,6 +5037,7 @@
     const tbody = document.getElementById('depTbody');
     const empty = document.getElementById('depEmpty');
     const card = document.getElementById('depReportCard');
+    _depRenderRosterNote();
     if (!depRows.length) { wrap.style.display = 'none'; empty.style.display = 'block'; empty.textContent = I18N.t('Takımında kayıtlı kişi bulunamadı.'); if (card) card.style.display = 'none'; return; }
     // Arama: ad soyad + kullanıcı adı; render sırasında master index (i) korunur
     // ki onchange/save/totals fonksiyonları her zaman depRows'a doğru indeksler.
@@ -5946,12 +5986,10 @@
           const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
           if (!r.ok) return;
           const data = await r.json().catch(() => ({}));
-          const _me = (currentUser.username || '').toLowerCase();
-          const _isBoss = role => /leader|lider|manager|müdür|mudur|admin|yönetici|yonetici/i.test(String(role || ''));
-          // bkz. loadDailyEntry'deki aynı filtre notu (Users rolü + Zoho rolü).
-          _depMembersCache = (data.members || []).filter(m =>
-            m.username && (m.username || '').toLowerCase() !== _me &&
-            !_isBoss(m.role) && !_isBoss(m.zohoRole));
+          // Filtre TEK tanımdan (_depEligible) — bu kopya eskiden tekrar eden
+          // kullanıcı adlarını ayıklamıyordu, yani ön ısıtmadan gelen liste
+          // loadDailyEntry'nin ürettiğinden farklı sayıda kişi içeriyordu.
+          _depMembersCache = _depEligible(data.members || []);
           _depMembersAt = Date.now();
         } catch(_e) {}
       })();

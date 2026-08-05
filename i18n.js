@@ -923,6 +923,12 @@
     'Geçerli bir e-posta adresi girin (ör. ad@alan.com).': 'Enter a valid email address (e.g. name@domain.com).',
     // Günlük Ekip Girişi (team-leader.html)
     'Günlük Ekip Girişi': 'Team Daily Entry',
+    // Kadro uzlaştırma notu — Takımımdaki Kişiler ile bu sayfa arasındaki fark
+    'Takımımdaki Kişiler: {t} · burada {l} kişi': 'My Team Members: {t} · {l} listed here',
+    '{n} yönetici': '{n} manager(s)',
+    '{n} tekrar eden kayıt': '{n} duplicate record(s)',
+    '{n} kullanıcı adı yok': '{n} without a username',
+    'hariç': 'excluded',
     'Her gün için ayrı, sıfırdan bir sayfa. Önceki günleri tarih filtresinden görebilirsin.': 'A fresh page for each day. Use the date filter to view previous days.',
     'Bugün': 'Today',
     'Dün': 'Yesterday',

@@ -2840,7 +2840,7 @@
         // alarmlarda eskiden Geri Al hiç çıkmıyordu, yani geri dönüşü yoktu.
         const outcomeBtns = ['arrived','examined','processing','no_show','closed','cancelled'].includes(a.status)
           ? `<button class="td-btn td-btn-undo" onclick="event.stopPropagation();adminUndoQuickAction('${a.id}')">${I18N.t('Geri Al')}</button>`
-          : `<div class="td-btn-row">
+          : `<div class="td-seg">
               <button class="td-btn td-btn-arrived" onclick="event.stopPropagation();promptAdminOutcome('${a.id}','arrived','${nm}')">${I18N.t('Hasta Geldi')}</button>
               <button class="td-btn td-btn-examined" onclick="event.stopPropagation();promptAdminOutcome('${a.id}','examined','${nm}')">${I18N.t('Muayene')}</button>
               <button class="td-btn td-btn-processing" onclick="event.stopPropagation();promptAdminOutcome('${a.id}','processing','${nm}')">${I18N.t('İşlemlerde')}</button>
