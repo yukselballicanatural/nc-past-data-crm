@@ -127,6 +127,46 @@
       align-items: center;
       justify-content: center;
       padding: 48px clamp(24px, 3.4vw, 56px);
+      overflow: hidden;
+    }
+    /* ── Işık küreleri: camın KIRACAĞI renk ───────────────────────────
+       Liquid Glass'ın şartı arkada kırılacak bir şey olması. Kartın
+       arkasında ağır ağır sürüklenen iki renk küresi var; blur onları
+       yumuşatınca cam canlı görünüyor. */
+    .panel-right::before, .panel-right::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(46px);
+    }
+    .panel-right::before {
+      width: 46%; padding-bottom: 46%;
+      top: 4%; right: -8%;
+      background: radial-gradient(circle at 35% 35%, rgba(139, 92, 246, .50), rgba(139, 92, 246, 0) 70%);
+      animation: orbA 17s var(--ease) infinite alternate;
+    }
+    .panel-right::after {
+      width: 52%; padding-bottom: 52%;
+      bottom: -6%; left: -10%;
+      background: radial-gradient(circle at 60% 40%, rgba(56, 189, 248, .42), rgba(56, 189, 248, 0) 70%);
+      animation: orbB 21s var(--ease) infinite alternate;
+    }
+    html[data-theme="dark"] .panel-right::before {
+      background: radial-gradient(circle at 35% 35%, rgba(139, 92, 246, .42), rgba(139, 92, 246, 0) 70%);
+    }
+    html[data-theme="dark"] .panel-right::after {
+      background: radial-gradient(circle at 60% 40%, rgba(13, 148, 136, .40), rgba(13, 148, 136, 0) 70%);
+    }
+    /* İlk kare GÖRÜNÜR durum olmalı — animasyon kapalıysa (reduced-motion
+       ya da statik render) küreler yine doğru yerde durur. */
+    @keyframes orbA {
+      from { transform: none; }
+      to   { transform: translate3d(-9%, 7%, 0) scale(1.14); }
+    }
+    @keyframes orbB {
+      from { transform: none; }
+      to   { transform: translate3d(11%, -8%, 0) scale(1.1); }
     }
     /* Fotoğraf ile sağ zemin arasında kılcal ışık kenarı */
     .panel-left::after {
@@ -228,37 +268,75 @@
        saturate() şart, yoksa cam gri plastik gibi okunuyor. */
     .right-inner {
       position: relative;
+      z-index: 1;                 /* ışık kürelerinin ÜSTÜNDE kalmalı */
       width: 100%;
-      max-width: 400px;
-      padding: clamp(30px, 3.4vw, 42px) clamp(26px, 2.8vw, 36px);
-      border-radius: 28px;
-      background: var(--g-1);
+      max-width: 408px;
+      padding: clamp(32px, 3.4vw, 44px) clamp(26px, 2.8vw, 36px);
+      border-radius: 30px;
       border: 1px solid var(--edge-soft);
       -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
       backdrop-filter: blur(var(--blur)) saturate(var(--sat));
-      box-shadow: var(--sh);
-      animation: cardIn .9s var(--ease) .14s both;
+      /* Sheen artık kartın kendi gölgesinde — ::before parlamaya ayrıldı */
+      box-shadow: var(--sh), var(--sheen);
+      animation: cardIn 1s var(--ease) .14s both;
     }
-    /* Sheen — camın üst kenarındaki ışık kırılması */
+    /* Camın kalınlık hissi: üstten aşağı hafif açılan yüzey */
+    html[data-theme="light"] .right-inner {
+      background: linear-gradient(158deg, rgba(255,255,255,.66) 0%, rgba(255,255,255,.44) 58%, rgba(255,255,255,.52) 100%);
+    }
+    html[data-theme="dark"] .right-inner {
+      background: linear-gradient(158deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.045) 58%, rgba(255,255,255,.07) 100%);
+    }
+    /* Sol üstten gelen ışık parlaması (specular) — camı düz yüzeyden
+       kurtaran şey bu; köşeye vuran ışık ve çapraz bir tarama. */
     .right-inner::before {
       content: '';
       position: absolute; inset: 0;
+      /* z-index:-1 ŞART: parlama METNİN ALTINDA kalmalı. Kart backdrop-filter
+         yüzünden kendi yığın bağlamını kurduğu için -1 dışına taşmaz. */
+      z-index: -1;
       border-radius: inherit;
-      box-shadow: var(--sheen);
       pointer-events: none;
+      background:
+        radial-gradient(70% 46% at 14% 0%, rgba(255,255,255,.34), rgba(255,255,255,0) 68%),
+        linear-gradient(115deg, rgba(255,255,255,.16) 0%, rgba(255,255,255,0) 34%);
+    }
+    html[data-theme="dark"] .right-inner::before {
+      background:
+        radial-gradient(70% 46% at 14% 0%, rgba(255,255,255,.13), rgba(255,255,255,0) 68%),
+        linear-gradient(115deg, rgba(255,255,255,.07) 0%, rgba(255,255,255,0) 34%);
     }
     /* Kartın üst kenarında ince altın çizgi: soğuk camda sıcak aksan */
     .right-inner::after {
       content: '';
-      position: absolute; top: 0; left: 22px; right: 22px;
+      position: absolute; top: 0; left: 26px; right: 26px;
       height: 2px;
       border-radius: 2px;
       background: linear-gradient(90deg,
-        rgba(201,169,127,0) 0%, rgba(201,169,127,.75) 50%, rgba(201,169,127,0) 100%);
+        rgba(201,169,127,0) 0%, rgba(201,169,127,.85) 50%, rgba(201,169,127,0) 100%);
       pointer-events: none;
     }
     @keyframes cardIn {
-      from { opacity: 0; transform: translateY(20px) scale(.98); }
+      from { opacity: 0; transform: translateY(24px) scale(.975); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* Kart içeriği sırayla belirir — form kurulurken akıyormuş hissi.
+       #alertBox'a DOKUNULMUYOR (kendi alertIn animasyonu var ve JS onu
+       display ile açıyor). */
+    .right-inner > .welcome-title,
+    .right-inner > .welcome-sub,
+    .right-inner form > .field-group,
+    .right-inner form > .btn-login {
+      animation: riseIn .7s var(--ease) both;
+    }
+    .right-inner > .welcome-title    { animation-delay: .30s; }
+    .right-inner > .welcome-sub      { animation-delay: .36s; }
+    .right-inner form > .field-group:nth-of-type(1) { animation-delay: .42s; }
+    .right-inner form > .field-group:nth-of-type(2) { animation-delay: .48s; }
+    .right-inner form > .btn-login   { animation-delay: .56s; }
+    @keyframes riseIn {
+      from { opacity: 0; transform: translateY(10px); }
       to   { opacity: 1; transform: none; }
     }
     .logo-mini { display: none; }   /* slab'de sol panel logoyu zaten taşıyor */
@@ -298,29 +376,51 @@
     }
     .field-input {
       width: 100%;
-      padding: 13px 14px 13px 38px;
+      padding: 14px 14px 14px 40px;
       font-family: inherit;
       font-size: 13.5px;
       color: var(--ink);
       background: var(--g-3);
-      -webkit-backdrop-filter: blur(12px) saturate(160%);
-      backdrop-filter: blur(12px) saturate(160%);
+      -webkit-backdrop-filter: blur(14px) saturate(170%);
+      backdrop-filter: blur(14px) saturate(170%);
       border: 1px solid var(--edge-soft);
-      border-radius: 13px;
+      border-radius: 15px;
       outline: none;
-      transition: border-color .18s var(--ease), box-shadow .18s var(--ease),
-                  background .18s var(--ease);
+      transition: border-color .2s var(--ease), box-shadow .2s var(--ease),
+                  background .2s var(--ease), transform .25s var(--spring);
     }
-    html[data-theme="light"] .field-input { box-shadow: inset 0 1px 2px rgba(23, 43, 99, 0.05); }
+    /* Girdinin kendisi de küçük bir cam parça: üstten ışık, içeriden derinlik */
+    html[data-theme="light"] .field-input {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.85), inset 0 2px 5px rgba(23, 43, 99, 0.055);
+    }
+    html[data-theme="dark"] .field-input {
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.10), inset 0 2px 6px rgba(0,0,0,.28);
+    }
     .field-input::placeholder { color: var(--ink-3); opacity: .75; }
-    html[data-theme="light"] .field-box:hover .field-input { background: rgba(255, 255, 255, 0.72); }
+    html[data-theme="light"] .field-box:hover .field-input { background: rgba(255, 255, 255, 0.74); }
     html[data-theme="dark"]  .field-box:hover .field-input { background: rgba(255, 255, 255, 0.13); }
-    /* Odak: görünür altın halka — outline kaldırıldığı için ŞART */
+    /* Odak: görünür altın halka — outline kaldırıldığı için ŞART.
+       Halkaya hafif bir yükselme ve altın parıltı eşlik ediyor. */
     .field-input:focus {
-      border-color: var(--gold-soft);
-      box-shadow: 0 0 0 4px var(--gold-dim);
+      border-color: var(--gold);
+      transform: translateY(-1px);
+    }
+    html[data-theme="light"] .field-input:focus {
+      background: rgba(255, 255, 255, 0.86);
+      box-shadow: 0 0 0 4px var(--gold-dim),
+                  0 8px 20px -8px rgba(201, 169, 127, .55),
+                  inset 0 1px 0 rgba(255,255,255,.95);
+    }
+    html[data-theme="dark"] .field-input:focus {
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 0 4px var(--gold-dim),
+                  0 8px 22px -8px rgba(201, 169, 127, .40),
+                  inset 0 1px 0 rgba(255,255,255,.16);
     }
     .field-box:focus-within .field-icon { color: var(--gold); }
+    /* Odaklanan alanın etiketi de aksana geçsin */
+    .field-group:focus-within .field-label { color: var(--gold); }
+    .field-label { transition: color .2s var(--ease); }
 
     .pw-toggle {
       position: absolute; right: 8px;
@@ -347,19 +447,35 @@
       color: #2a1f10;
       background: linear-gradient(135deg, #e3caa2 0%, var(--gold) 52%, #b8955f 100%);
       border: none;
-      border-radius: 13px;
+      border-radius: 15px;
       cursor: pointer;
+      position: relative;
+      overflow: hidden;          /* parlama taraması dışarı taşmasın */
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 6px 18px -4px rgba(201, 169, 127, 0.55),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.45);
-      transition: transform .18s var(--spring), box-shadow .18s var(--ease),
+      box-shadow: 0 8px 22px -6px rgba(201, 169, 127, 0.60),
+                  0 2px 6px -2px rgba(120, 90, 40, 0.30),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.50);
+      transition: transform .18s var(--spring), box-shadow .22s var(--ease),
                   filter .18s var(--ease);
     }
+    /* Üzerine gelince altın yüzeyde soldan sağa geçen ışık taraması */
+    .btn-login::before {
+      content: '';
+      position: absolute; top: 0; bottom: 0; left: -60%;
+      width: 45%;
+      background: linear-gradient(100deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.55) 50%, rgba(255,255,255,0) 100%);
+      transform: skewX(-18deg);
+      transition: left .55s var(--ease);
+      pointer-events: none;
+    }
+    .btn-login:hover::before { left: 115%; }
+    .btn-login:disabled::before { display: none; }
     .btn-login:hover {
       transform: translateY(-2px);
-      box-shadow: 0 12px 28px -6px rgba(201, 169, 127, 0.70),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.55);
-      filter: brightness(1.04);
+      box-shadow: 0 14px 32px -8px rgba(201, 169, 127, 0.78),
+                  0 2px 6px -2px rgba(120, 90, 40, 0.30),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.60);
+      filter: brightness(1.05);
     }
     .btn-login:active { transform: translateY(0) scale(0.99); }
     .btn-login:disabled {
