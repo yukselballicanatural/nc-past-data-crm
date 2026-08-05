@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
   <script src="net-util.js"></script>
+  <script src="row-cache.js"></script>
   <script src="i18n.js"></script>
   <script src="team-map.js"></script>
   <!-- Alarm durum kumeleri: iki panelin ayni sayiyi vermesi buna bagli -->
@@ -3067,13 +3068,36 @@
       sel.innerHTML = `<option value="">${I18N.t("Tüm Deal Owner'lar")}</option>` + owners.map(o => `<option value="${fmt(o)}">${fmt(o)}</option>`).join('');
       _closedAlarmsOwnersPopulated = true;
     }
-    // ── Kapalı alarmları TEMBEL yükle ─────────────────────────────────────
-    // loadAdminAlarms artık yalnızca aktif alarmları indiriyor (bkz. oradaki
-    // not). "Kapatılan Alarmlar" sayfası ise kapalı satırları gösteriyor —
-    // bunlar 20.870 satır, yani ilk açılışta indirilirse tüm kazanç kaybolur.
-    // Bu yüzden yalnızca o sayfaya girildiğinde, bir kez yükleniyor.
+    // ── Kapalı alarmlar: KALICI ÖNBELLEK + ARTIMLI SENKRON ────────────────
+    // loadAdminAlarms yalnızca aktif alarmları indiriyor. Kapalı satırlar
+    // ~21.000 tane ve her oturumda 21 sayfalı istekle yeniden indiriliyordu:
+    // sayfa çok geç açılıyor, menü rozeti de bu indirmeye bağlı olduğu için
+    // sayfaya girilmeden hiç görünmüyordu.
+    //
+    // Kapanmış bir alarm bir daha değişmez — bu yüzden satırlar IndexedDB'de
+    // saklanıyor ve sonraki oturumlarda YALNIZCA yeni kapananlar çekiliyor
+    // (su işareti: önbellekteki en büyük closed_at).
+    //
+    // DOĞRULUK: önbelleğe körü körüne güvenilmiyor. Her senkronda sunucudaki
+    // TOPLAM SAYI (count=exact, limit=1 — tek satır iner) okunuyor; birleşmiş
+    // sayı uyuşmazsa (satır silinmiş, kapalı alarm yeniden açılmış, closed_at
+    // boş eski kayıtlar) önbellek atılıp sıfırdan indiriliyor. Yani önbellek
+    // bir hız katmanı; sayı her zaman sunucunun söylediği.
+    const _AM_CLOSED_FIELDS = [
+      'id','deal_id','deal_name','deal_owner','team','region',
+      'payment_or_flight_ticket','alarm_type','reference_field','reference_date',
+      'threshold_days','days_remaining','status','note','created_at','seen_at',
+      'actioned_at','closed_at','closed_by','close_reason','result_code','follow_up_date',
+    ].join(',');
+    // Alan listesi değişirse eski önbellek geçersiz olsun.
+    const _AM_CLOSED_CACHE_V = 1;
+    function _amClosedCacheKey() {
+      return 'closed_alarms:v' + _AM_CLOSED_CACHE_V + ':' + (window.isRM ? ('rm:' + (window.rmRegion || '')) : 'all');
+    }
+
     let _amClosedLoaded = false;
     let _amClosedLoading = null;
+
     async function _amEnsureClosedAlarms() {
       if (_amClosedLoaded) return;
       if (_amClosedLoading) return _amClosedLoading;
@@ -3083,26 +3107,76 @@
         const PAGE = 1000;
         // payment_tracking DAHİL: bu sayfa o tipteki eski kapalı satırları da
         // listeliyor (yalnızca "Alarm Tipi" hücresini boş bırakıyor).
-        const baseUrl = `${SUPABASE_URL}/rest/v1/alarms?order=closed_at.desc.nullslast,id.asc` +
-          `${regionQ}&status=eq.closed&limit=${PAGE}`;
-        try {
-          const first = await fetch(`${baseUrl}&offset=0`, { headers: { ...H, Prefer: 'count=exact' } });
-          if (!first.ok) return;
-          let all = await first.json();
-          const range = first.headers.get('content-range');
-          const total = range && range.includes('/') ? Number(range.split('/')[1]) : all.length;
-          if (total > all.length) {
+        const base = `${SUPABASE_URL}/rest/v1/alarms?select=${_AM_CLOSED_FIELDS}` +
+          `&order=closed_at.desc.nullslast,id.asc${regionQ}&status=eq.closed`;
+        const cacheKey = _amClosedCacheKey();
+
+        // Sunucudaki toplam kapalı alarm sayısı — tek satır indirir.
+        async function serverTotal() {
+          const r = await fetch(`${base}&limit=1&offset=0`,
+            { headers: { ...H, Prefer: 'count=exact' } });
+          if (!r.ok) return null;
+          await r.json().catch(() => null);
+          const cr = r.headers.get('content-range');
+          return cr && cr.includes('/') ? Number(cr.split('/')[1]) : null;
+        }
+
+        // Verilen filtreyle TÜM satırları sayfalı indir.
+        async function fetchAll(extraQ) {
+          const url = `${base}${extraQ || ''}&limit=${PAGE}`;
+          const first = await fetch(`${url}&offset=0`,
+            { headers: { ...H, Prefer: 'count=exact' } });
+          if (!first.ok) return null;
+          const out = await first.json();
+          if (!Array.isArray(out)) return null;
+          const cr = first.headers.get('content-range');
+          const total = cr && cr.includes('/') ? Number(cr.split('/')[1]) : out.length;
+          if (total > out.length) {
             const offsets = [];
             for (let off = PAGE; off < total; off += PAGE) offsets.push(off);
             // Eksik sayfa sessizce yutulmuyor (bkz. loadAdminAlarms'taki aynı not).
-            const rest = await Promise.all(offsets.map(off =>
-              NCNet.page(`${baseUrl}&offset=${off}`, H)
-            ));
-            rest.forEach(p => { if (Array.isArray(p)) all.push(...p); });
+            const rest = await Promise.all(offsets.map(off => NCNet.page(`${url}&offset=${off}`, H)));
+            rest.forEach(p => { if (Array.isArray(p)) out.push(...p); });
           }
+          return out;
+        }
+
+        try {
+          const cached = window.NCRowCache ? await NCRowCache.get(cacheKey) : null;
+          const total = await serverTotal();
+          let rows = null;
+
+          if (cached && cached.rows.length && cached.meta && cached.meta.watermark) {
+            // Artımlı: yalnızca su işaretinden SONRA kapananlar.
+            const wm = cached.meta.watermark;
+            const fresh = await fetchAll(`&closed_at=gt.${encodeURIComponent(wm)}`);
+            if (fresh) {
+              const byId = new Map(cached.rows.map(a => [String(a.id), a]));
+              for (const a of fresh) byId.set(String(a.id), a);
+              const merged = [...byId.values()];
+              // Sayı tutuyorsa önbellek güvenilir; tutmuyorsa tam yenile.
+              if (total == null || merged.length === total) rows = merged;
+            }
+          }
+
+          if (!rows) {
+            rows = await fetchAll('');
+            if (!rows) return;   // ağ hatası — aktif alarmlarla çalışmaya devam
+          }
+
+          // Su işareti: en büyük closed_at. (Boş closed_at'li eski kayıtlar
+          // artımlı sorguya girmez; onları yukarıdaki sayı kontrolü yakalar.)
+          let watermark = '';
+          for (const a of rows) {
+            if (a.closed_at && a.closed_at > watermark) watermark = a.closed_at;
+          }
+          if (window.NCRowCache && watermark) {
+            NCRowCache.put(cacheKey, rows, { watermark, count: rows.length });
+          }
+
           // Aktif listeyle birleştir — id'ye göre tekilleştir.
           const seen = new Set(_amAlarmsRaw.map(a => String(a.id)));
-          for (const a of all) if (!seen.has(String(a.id))) _amAlarmsRaw.push(a);
+          for (const a of rows) if (!seen.has(String(a.id))) _amAlarmsRaw.push(a);
           _amClosedLoaded = true;
           await _amApplyYearFilter();
         } catch (e) { /* sessiz — sayfa aktif alarmlarla çalışmaya devam eder */ }
@@ -3123,7 +3197,16 @@
       if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
       const tbody = document.getElementById('closedAlarmsTbody');
       const empty = document.getElementById('closedAlarmsEmpty');
-      if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
+      if (!data.length) {
+        tbody.innerHTML = '';
+        // Satırlar henüz inmediyse "bulunamadı" YANLIŞ bir ifade — sayfa
+        // boşmuş gibi görünüyordu, oysa indirme sürüyordu.
+        empty.textContent = _amClosedLoaded
+          ? I18N.t('Kapatılan alarm bulunamadı.')
+          : I18N.t('Yükleniyor...');
+        empty.style.display = 'block';
+        return;
+      }
       empty.style.display = 'none';
       tbody.innerHTML = data.map(a => {
         // "Payment Takip" artık geçerli bir alarm tipi sayılmıyor — bu tipteki
@@ -9500,6 +9583,16 @@
         // yüklenir — kullanıcı menüden tıkladığında "Yükleniyor" beklemeden,
         // rozet sayısı da menüde daha ilk açılışta hazır görünür.
         loadAdminWonAlarms();
+        // Kapatılan Alarmlar da girişte arka planda hazırlanır — rozetteki sayı
+        // sayfaya HİÇ girilmeden görünsün. Rozet, seçili yılın deal kümesine
+        // göre süzülmüş sayıyı gösterdiği için sunucudan tek bir COUNT ile
+        // hesaplanamıyor (sayfanın gösterdiği sayıdan farklı çıkardı) —
+        // satırlar gerekiyor. IndexedDB önbelleği sayesinde ilk oturumdan
+        // sonra bu neredeyse bedava; alarmlar inmeden başlatılmıyor ki
+        // _amApplyYearFilter boş listeyle çalışmasın.
+        Promise.resolve(_adminAlarmsReady)
+          .then(() => _amEnsureClosedAlarms())
+          .catch(() => {});
         // Günlük Ekip Girişi üye listesini arka planda ısıt (cold serverless
         // /api/team-members) — menüye girince "Yükleniyor" beklemesin.
         (async () => {
