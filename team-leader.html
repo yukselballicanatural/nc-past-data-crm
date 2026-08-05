@@ -1062,8 +1062,18 @@
       <div>
         <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Takımımdaki Kişiler</h2>
         <p style="font-size:11px;color:#64748b;margin:3px 0 0">Telefon ve e-posta sütunlarını kendin doldur, kaydet butonuna bas.</p>
+        <!-- Kadro CANLI: her açılışta Supabase'den (zoho_users aynası) çekilir,
+             hiçbir katmanda saklanmaz. Damga hangi ana ait olduğunu söyler;
+             "takımım güncel mi?" sorusunun cevabı gizli kalmasın. -->
+        <p id="tmFreshNote" style="font-size:10.5px;color:#64748b;margin:5px 0 0;display:none"></p>
       </div>
-      <span id="teamMembersExportMount"></span>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <button onclick="loadTeamMembers(true)" id="tmRefreshBtn" class="lq-btn" style="padding:7px 14px;background:#1e293b;border:1px solid #334155;border-radius:9px;color:#cbd5e1;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+          <svg style="width:13px;height:13px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M20 9A8 8 0 006.3 6.3M4 15a8 8 0 0013.7 2.7"/></svg>
+          Yenile
+        </button>
+        <span id="teamMembersExportMount"></span>
+      </div>
     </div>
     <div id="tmLoading" style="text-align:center;padding:40px 16px;color:#475569;font-size:12px">Yükleniyor...</div>
     <div id="tmEmpty" style="display:none;text-align:center;padding:50px 16px;color:#475569;font-size:13px">Takımında kayıtlı kişi bulunamadı.</div>
@@ -1371,6 +1381,7 @@
     <div style="margin-bottom:14px">
       <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;display:block;margin-bottom:6px">Açıklama</label>
       <textarea id="tlcaReasonNote" maxlength="500" placeholder="İptal nedenini kısaca açıkla..." class="filter-inp" style="width:100%;min-height:70px;resize:vertical;box-sizing:border-box"></textarea>
+      <div id="tlcaAttachWidget"></div>
       <div id="tlcaSaveError" style="display:none;color:#f87171;font-size:11px;font-weight:600;margin-top:6px"></div>
     </div>
     <div style="display:flex;gap:10px">
@@ -1420,6 +1431,7 @@
     <div style="margin-bottom:14px">
       <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase;display:block;margin-bottom:6px">Açıklama <span style="color:#f87171">*</span></label>
       <textarea id="wrReasonNote" maxlength="500" placeholder="Ödeme durumu, aksiyon planı..." class="filter-inp" style="width:100%;min-height:70px;resize:vertical;box-sizing:border-box"></textarea>
+      <div id="wrAttachWidget"></div>
       <div id="wrSaveError" style="display:none;color:#f87171;font-size:11px;font-weight:600;margin-top:6px"></div>
     </div>
     <button onclick="_wrSendWhatsApp()" style="width:100%;padding:11px;margin-bottom:10px;background:#052e16;border:1px solid #166534;border-radius:10px;color:#4ade80;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
@@ -4194,6 +4206,10 @@
     document.getElementById('tlcaSaveError').style.display = 'none';
     document.getElementById('tlCancelReasonModal').classList.add('open');
     document.body.style.overflow = 'hidden';
+    document.getElementById('tlcaAttachWidget').innerHTML =
+      NCAttach.renderWidget(`'${_jsStrAttr(String(d.id))}'`, 'tlcaAttachInput', 'tlcaAttachMount');
+    NCAttach.load(d.id, 'tlcaAttachMount');
+    NCAttach.bindPaste('tlcaReasonNote', d.id, 'tlcaAttachMount');
     _tlcaLoadLive(d.id);
   }
 
@@ -4324,6 +4340,10 @@
     document.getElementById('wrSaveError').style.display = 'none';
     document.getElementById('tlWonResultModal').classList.add('open');
     document.body.style.overflow = 'hidden';
+    document.getElementById('wrAttachWidget').innerHTML =
+      NCAttach.renderWidget(`'${_jsStrAttr(String(d.id))}'`, 'wrAttachInput', 'wrAttachMount');
+    NCAttach.load(d.id, 'wrAttachMount');
+    NCAttach.bindPaste('wrReasonNote', d.id, 'wrAttachMount');
     _wrOnResultCodeChange();
   }
   function _wrRefreshReasonCard(d) {
@@ -4720,14 +4740,47 @@
   let _teamMembers = [];
   let _tmEditingIndex = -1; // aynı anda sadece bir satır düzenlenebilsin diye
 
-  async function loadTeamMembers() {
+  // Kadronun hangi ana ait olduğu + zayıf sinyalle yerleştirilenlerin sayısı.
+  let _tmMeta = { fetchedAt: '', guessed: 0 };
+
+  function _tmRenderFreshNote() {
+    const el = document.getElementById('tmFreshNote');
+    if (!el) return;
+    const bits = [];
+    if (_tmMeta.fetchedAt) {
+      const d = new Date(_tmMeta.fetchedAt);
+      if (!isNaN(d)) {
+        const hh = String(d.getHours()).padStart(2, '0');
+        const mm = String(d.getMinutes()).padStart(2, '0');
+        const ss = String(d.getSeconds()).padStart(2, '0');
+        bits.push(I18N.t('Supabase’den canlı çekildi: ') + hh + ':' + mm + ':' + ss);
+      }
+    }
+    // Takımı Zoho'da yazılı DEĞİL, en son deal'inden tahmin edilen kişiler.
+    // Sessizce göstermek "bu kim, neden burada" sorusunu doğuruyordu.
+    if (_tmMeta.guessed) {
+      bits.push(_tmMeta.guessed + I18N.t(' kişinin takımı Zoho’da yazılı değil, son deal’inden tahmin edildi (★ işaretli)'));
+    }
+    if (!bits.length) { el.style.display = 'none'; return; }
+    el.textContent = bits.join('  ·  ');
+    el.style.display = 'block';
+  }
+
+  async function loadTeamMembers(force) {
     const loading = document.getElementById('tmLoading');
     const empty   = document.getElementById('tmEmpty');
     const wrap    = document.getElementById('tmTableWrap');
+    const btn     = document.getElementById('tmRefreshBtn');
+    if (btn) { btn.disabled = true; btn.style.opacity = '.55'; }
     loading.style.display = 'block'; empty.style.display = 'none'; if (wrap) wrap.style.display = 'none';
+    // "Yenile" iki sayfayı birlikte tazeler: Günlük Ekip Girişi'nin kadro
+    // önbelleği de düşer, yoksa iki sayfa farklı sayı gösterebilir.
+    if (force) { try { _depInvalidateMembers(); } catch (e) {} }
     try {
       const token = (currentUser && currentUser.token) || '';
-      const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
+      // cache:'no-store' — araya giren HTTP cache kadroyu dondurmasın.
+      const r = await fetch('/api/team-members', {
+        headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
       // Token eski bir oturumdan kalmışsa (ör. AUTH_TOKEN_SECRET sonradan
       // eklendiğinde hâlâ açık kalan sekmeler) sunucu 401 döner — kafa
       // karıştıran "Yetkisiz erişim" mesajı yerine kullanıcıyı otomatik
@@ -4740,12 +4793,19 @@
       const data = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
       _teamMembers = data.members || [];
+      _tmMeta = {
+        fetchedAt: data.fetchedAt || '',
+        guessed: _teamMembers.filter(m => m.teamSource === 'deals').length,
+      };
       loading.style.display = 'none';
       renderTeamMembers();
+      _tmRenderFreshNote();
     } catch(e) {
       loading.style.display = 'none';
       empty.textContent = I18N.t('Yükleme hatası: ') + e.message;
       empty.style.display = 'block';
+    } finally {
+      if (btn) { btn.disabled = false; btn.style.opacity = ''; }
     }
   }
 
@@ -4911,8 +4971,14 @@
   // danışman eklenmesi, takım değişikliği, ayrılma). Süresiz cache'te sekme
   // açık kaldığı sürece liste bayat kalıyordu. Tarih değiştirmek hâlâ ağ
   // çağrısı yapmıyor — yalnızca TTL dolduğunda tazeleniyor.
-  const _DEP_MEMBERS_TTL = 5 * 60 * 1000;
+  // 60 sn: kadro Zoho aynasından geliyor ve gün içinde değişiyor. Tarih
+  // değiştirmek yine ağ çağrısı yapmıyor (sadece TTL dolunca tazelenir), ama
+  // liderin gördüğü liste bir dakikadan fazla bayat kalmıyor.
+  const _DEP_MEMBERS_TTL = 60 * 1000;
   let _depMembersAt = 0;
+  // Takımımdaki Kişiler'de "Yenile"ye basılınca burası da tazelenmeli —
+  // iki sayfanın kaynağı aynı uç, farklı sayı göstermeleri hataydı.
+  function _depInvalidateMembers() { _depMembersCache = null; _depMembersAt = 0; }
   // Takımımdaki Kişiler ile bu sayfa arasındaki fark — uzlaştırma notu için.
   let _depRoster = { total: 0, listed: 0, bosses: [], dupes: [], noKey: [] };
 
