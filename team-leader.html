@@ -4,6 +4,27 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Natural Clinic — Team Leader Dashboard</title>
+  <!-- Görünüm tohumu — İLK BOYAMADAN ÖNCE. Varsayılan görünüm (#view-alarms)
+       HTML'de görünür; kayıtlı görünüme geçiş init sonrası oluyordu, yani
+       Alarmlar bir kare boyanıp sonra sıçrıyordu. Bu stil elemanlar
+       ayrıştırılmadan doğru görünürlüğü veriyor ve init'te switchView
+       sınıfları kurduktan hemen sonra kaldırılıyor.
+       (bkz. admin.html'deki aynı tohum) -->
+  <script>
+    (function () {
+      try {
+        var v = sessionStorage.getItem('nc_tl_view');
+        var ok = ['today','deals','closed-alarms','cancelled','won',
+                  'rm-overview','activity','team-members','daily-entry'];
+        if (!v || ok.indexOf(v) < 0) return;   // 'alarms' zaten varsayılan
+        var s = document.createElement('style');
+        s.id = 'ncViewSeed';
+        s.textContent = '#view-alarms{display:none !important}' +
+                        '#view-' + v + '{display:block !important}';
+        document.head.appendChild(s);
+      } catch (e) {}
+    })();
+  </script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
   <!-- Export (CSV/XLSX/PDF/HTML) için — bkz. NCExport (i18n.js sonrası tanımlanır) -->
@@ -279,6 +300,23 @@
         <span id="navBadgeRM" class="badge-cnt ml-auto" style="background:#f97316;color:#fff;display:none">0</span>
       </button>
     </div>
+    <!-- Menü vurgusu tohumu — bkz. admin.html'deki aynı not. Gövdeyi
+         <head>'deki stil ayarlıyor; 'active' sınıfı ise init'e kadar yanlış
+         düğmede kalıyordu. RM'ye özel düğme burada henüz display:none;
+         switchView init'te onu görünür yapıyor, vurgu doğru kalıyor. -->
+    <script>
+      (function () {
+        try {
+          var v = sessionStorage.getItem('nc_tl_view');
+          if (!v || v === 'alarms') return;
+          var target = document.getElementById('nav-' + v);
+          if (!target) return;
+          var cur = document.querySelector('.nav-btn.active');
+          if (cur) cur.classList.remove('active');
+          target.classList.add('active');
+        } catch (e) {}
+      })();
+    </script>
     <!-- Sidebar KPIs -->
     <div style="margin-top:16px;border-top:1px solid #1e293b;padding-top:14px">
       <div style="font-size:9px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:0.8px;margin-bottom:8px">Alarm Özeti</div>
@@ -5327,6 +5365,14 @@
     } catch (e) {}
     // Alarm listesi rozetleri/şeridi her sayfada görünür durumda
     try { renderConsultantStrip(); } catch (e) {}
+    _tlRenderActiveView();
+  });
+
+  // Bulunulan görünümü ELDEKİ veriyle yeniden çizer — ağ çağrısı yok.
+  // İki yerden çağrılıyor: dil değişimi ve veri yüklemesi tamamlandığında.
+  // (loadAlarms yalnızca 'today' görünümünü yeniden çiziyordu; kayıtlı
+  //  görünüm 'closed-alarms' gibi bir sayfaysa veri gelince tazelenmiyordu.)
+  function _tlRenderActiveView() {
     const R = {
       'alarms':         () => renderAlarms(),
       'today':          () => renderToday(),
@@ -5341,7 +5387,7 @@
     };
     const fn = R[activeView];
     if (fn) { try { fn(); } catch (e) {} }
-  });
+  }
 
   // ── Payment / Aktivite Yok listesi ──────────────────────────────
   // Server-side: aktif stage + Payment + Last Activity boş dealler (PDF 7.6)
@@ -6023,8 +6069,35 @@
       // render edilen içerik zaten kendi translateDOM çağrısını yapıyor.
       I18N.translateDOM(document.body);
 
+      // ── Kayıtlı görünüme, VERİ YÜKLEMESİNDEN ÖNCE geç ────────────────
+      // Eskiden geçiş loadAlarms'tan SONRA yapılıyordu: Alarmlar sayfası
+      // boyanıyor, veri iniyor, sonra kayıtlı sayfaya sıçranıyordu.
+      // Kayıt, switchView'den ÖNCE okunmalı (switchView kaydı güncelliyor).
+      const _savedView = _tlRestoreView();
+      if (isRM) {
+        const navRM  = document.getElementById('nav-rm-overview');
+        const miniRM = document.getElementById('mini-nav-rm-overview');
+        if (navRM)  { navRM.style.display  = 'flex'; }
+        if (miniRM) { miniRM.style.display = 'flex'; }
+        // "Takımımdaki Kişiler" tek bir takımın Users satırlarına (Takim Adi
+        // eşleşmesi) göre çalışıyor — RM'nin team alanı bir bölge adı olduğu
+        // için bu sayfa RM için anlamlı değil, gizle.
+        const navTM = document.getElementById('nav-team-members');
+        if (navTM) navTM.style.display = 'none';
+      }
+      const _initialView = _savedView || (isRM ? 'rm-overview' : 'alarms');
+      if (_initialView !== 'alarms') switchView(_initialView);
+      else activeView = 'alarms';
+      // <head>'deki tohum stili kalksın — switchView görünürlüğü zaten kurdu,
+      // stil kalsaydı bu sayfa bir daha gizlenemezdi.
+      const _seed = document.getElementById('ncViewSeed');
+      if (_seed) _seed.remove();
+
       // Alarmları yükle
       await loadAlarms();
+      // Veri geldi: bulunulan görünümü tazele (loadAlarms tek başına yalnızca
+      // 'today' görünümünü yeniden çiziyor).
+      _tlRenderActiveView();
 
       // İptal Edilenler / Won Alarmı menü rozetleri de diğer alarm
       // sayfaları gibi girişte arka planda önceden yüklenir — kullanıcı
@@ -6051,29 +6124,8 @@
         } catch(_e) {}
       })();
 
-      // Kayıtlı görünüm, AŞAĞIDAKİ switchView çağrılarından ÖNCE okunmalı —
-      // switchView kaydı güncelliyor, sonra okursak kendi yazdığımızı okuruz.
-      const _savedView = _tlRestoreView();
-
-      // RM için özel nav + default view
-      if (isRM) {
-        const navRM  = document.getElementById('nav-rm-overview');
-        const miniRM = document.getElementById('mini-nav-rm-overview');
-        if (navRM)  { navRM.style.display  = 'flex'; }
-        if (miniRM) { miniRM.style.display = 'flex'; }
-        // "Takımımdaki Kişiler" tek bir takımın Users satırlarına (Takim Adi
-        // eşleşmesi) göre çalışıyor — RM'nin team alanı bir bölge adı olduğu
-        // için bu sayfa RM için anlamlı değil, gizle.
-        const navTM = document.getElementById('nav-team-members');
-        if (navTM) navTM.style.display = 'none';
-        switchView('rm-overview');
-      }
-
-      // Yenilemeden sonra kullanıcıyı bıraktığı sayfada başlat. RM'nin
-      // varsayılanı yukarıda rm-overview'a ayarlandı; kayıt varsa o kazanır
-      // (kayıt _tlRestoreView içinde role göre doğrulanıyor).
-      const _defaultView = isRM ? 'rm-overview' : 'alarms';
-      if (_savedView && _savedView !== _defaultView) switchView(_savedView);
+      // (RM nav ayarı ve kayıtlı görünüme geçiş yukarıya, loadAlarms'tan
+      //  ÖNCESİNE taşındı — yanlış sayfa hiç boyanmasın.)
 
       // Alarm motorunu arka planda çalıştır (15 dakikada bir otomatik)
       runEngine(false);

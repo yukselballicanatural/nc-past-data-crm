@@ -6,6 +6,30 @@
   <title>Natural Clinic CRM - Admin Dashboard</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <!-- Görünüm tohumu — İLK BOYAMADAN ÖNCE çalışmalı.
+       Varsayılan görünüm (#view-deals) HTML'de görünür durumda; kayıtlı
+       görünüme geçiş ise ancak init() çalıştıktan sonra oluyordu. Arada
+       "Tüm Deal'ler" bir kare boyanıp sonra sıçrıyordu.
+       Burada, view elemanları henüz AYRIŞTIRILMADAN, doğru görünürlüğü
+       veren bir <style> enjekte ediliyor: yanlış sayfa hiç boyanmıyor.
+       Bu stil, init içinde switchView sınıfları doğru kurduktan hemen
+       sonra kaldırılıyor (yoksa sonraki gezinmeleri kilitlerdi). -->
+  <script>
+    (function () {
+      try {
+        var v = sessionStorage.getItem('nc_admin_view');
+        var ok = ['summary','users','logs','alarms-monitor','today','closed-alarms',
+                  'cancelled-alarms','won-alarms','activity','team-members',
+                  'daily-entry','tl-usage'];
+        if (!v || ok.indexOf(v) < 0) return;   // 'deals' zaten varsayılan
+        var s = document.createElement('style');
+        s.id = 'ncViewSeed';
+        s.textContent = '#view-deals{display:none !important}' +
+                        '#view-' + v + '{display:block !important}';
+        document.head.appendChild(s);
+      } catch (e) {}
+    })();
+  </script>
   <script src="net-util.js"></script>
   <script src="row-cache.js"></script>
   <script src="i18n.js"></script>
@@ -372,6 +396,25 @@
           Günlük Ekip Girişi
         </button>
       </div>
+      <!-- Menü vurgusu tohumu: <head>'deki stil GÖVDEYİ doğru sayfaya
+           ayarlıyor ama 'active' sınıfı HTML'de #nav-deals üzerinde duruyor
+           ve init'e kadar orada kalıyordu — bir kare yanlış menü vurgulu
+           görünüyordu. Burası düğmeler AYRIŞTIRILDIKTAN hemen sonra çalışır;
+           sınıfı taşımak, active görünümünü CSS'te tekrar yazmaktan (tema
+           katmanlarıyla birlikte) çok daha az kırılgan. -->
+      <script>
+        (function () {
+          try {
+            var v = sessionStorage.getItem('nc_admin_view');
+            if (!v || v === 'deals') return;
+            var target = document.getElementById('nav-' + v);
+            if (!target) return;
+            var cur = document.querySelector('.nav-btn.active');
+            if (cur) cur.classList.remove('active');
+            target.classList.add('active');
+          } catch (e) {}
+        })();
+      </script>
 
       <div class="space-y-2 pt-3 border-t border-gray-800">
         <div class="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Sistem Özeti</div>
@@ -9633,6 +9676,13 @@
         // Kayıtlı görünüm, herhangi bir switchView çağrısından ÖNCE okunmalı —
         // switchView kaydı güncelliyor, sonra okursak kendi yazdığımızı okuruz.
         const _savedView = _amRestoreView();
+        // Görünüm geçişi veri yükleyicilerinden ÖNCE: kullanıcı baktığı sayfayı
+        // beklesin, sırada olmayan bir sayfanın yüklemesini değil. <head>'deki
+        // tohum stili de burada kalkıyor — switchView sınıfları zaten kurdu,
+        // stil kalsaydı sonraki gezinmelerde bu sayfa gizlenemezdi.
+        if (_savedView && _savedView !== 'deals') switchView(_savedView);
+        const _seed = document.getElementById('ncViewSeed');
+        if (_seed) _seed.remove();
         loadDeals();
         const _adminAlarmsReady = loadAdminAlarms();
         loadAdminCancelledDeals();
@@ -9647,10 +9697,6 @@
         // yüklenir — kullanıcı menüden tıkladığında "Yükleniyor" beklemeden,
         // rozet sayısı da menüde daha ilk açılışta hazır görünür.
         loadAdminWonAlarms();
-        // Yenilemeden sonra kullanıcıyı bıraktığı sayfada başlat. Varsayılan
-        // görünüm HTML'de 'deals' olduğu için yalnızca farklıysa geçiliyor;
-        // switchView o sayfanın kendi yükleyicisini zaten tetikliyor.
-        if (_savedView && _savedView !== 'deals') switchView(_savedView);
         // Kapatılan Alarmlar da girişte arka planda hazırlanır — rozetteki sayı
         // sayfaya HİÇ girilmeden görünsün. Rozet, seçili yılın deal kümesine
         // göre süzülmüş sayıyı gösterdiği için sunucudan tek bir COUNT ile
