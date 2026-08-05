@@ -575,6 +575,13 @@
     "Zoho'da aktif değil": 'Not active in Zoho',
     'Takımı uyuşmuyor': 'Team mismatch',
     'takım yok': 'no team',
+    // Takıma bağlanamayanlar (api/team-members.js → unplaced)
+    '{n} kişi hiçbir takıma bağlanamadı.': '{n} people could not be matched to any team.',
+    'Takıma bağlanamadı': 'Could not be matched to a team',
+    'Zoho rolü': 'Zoho role',
+    'Zoho takımı': 'Zoho team',
+    "Zoho'daki takım/rol adı tanınan takımlardan biriyle eşleşmiyor — Zoho tarafında düzeltilmeli.":
+      'The team/role name in Zoho does not match any known team — it needs fixing on the Zoho side.',
     'Girişi kapat': 'Disable login',
     'Girişi Kapat': 'Disable Login',
     'Çıkış tarihi {d}': 'Exit date {d}',

@@ -59,6 +59,31 @@ for (const [canonical, aliases] of Object.entries(TEAM_ALIASES)) {
 // deals.team → kanonik satış takımı; tanınmıyorsa null (yazılmaz).
 function normalizeTeam(t) { return ALIAS_INDEX[tkey(t)] || null; }
 
+// Serbest metnin içinde takım adı geçiyor mu — belirsizse null.
+// (api/team-members.js'deki looseTeam ile aynı mantık; Users."Takim Adi"
+//  yetkilendirme alanı olduğu için belirsiz eşleşme asla yazılmaz.)
+const ALIAS_KEYS = Object.keys(ALIAS_INDEX).sort((a, b) => b.length - a.length);
+function looseTeam(t) {
+  const k = tkey(t);
+  if (k.length < 4) return null;
+  let hit = null;
+  for (const ak of ALIAS_KEYS) {
+    if (ak.length < 4 || !k.includes(ak)) continue;
+    const c = ALIAS_INDEX[ak];
+    if (!hit) hit = c;
+    else if (hit !== c) return null;
+  }
+  return hit;
+}
+
+// zoho_users satırının söylediği takım. Şemadaki `team` kolonu okunmuyordu;
+// role bir görev unvanı olduğunda kişi hiçbir takıma bağlanamıyordu.
+function zohoTeamOf(z) {
+  if (!z) return null;
+  return normalizeTeam(z.team) || normalizeTeam(z.role)
+      || looseTeam(z.team) || looseTeam(z.role) || null;
+}
+
 function nameKey(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
 
 // Takım lideri / bölge yöneticisi / admin rollerinin takımı, sahip oldukları
@@ -144,7 +169,7 @@ export default async function handler(req, res) {
     const zoho = new Map();      // nameKey → zoho_users satırı
     {
       const zr = await fetchAllPaged(
-        'zoho_users?select=id,full_name,original_agent_name,email,role,region,status,exit_date,phone,mobile&order=id.asc');
+        'zoho_users?select=id,full_name,original_agent_name,email,role,team,region,status,exit_date,phone,mobile&order=id.asc');
       if (zr.ok) {
         for (const z of zr.rows) {
           const k = nameKey(z.full_name);
@@ -236,7 +261,7 @@ export default async function handler(req, res) {
       // ── Takım ──
       // Kaynak tercihi: zoho_users.role (doğrudan bilgi) > en son deal (vekil).
       let target = null, source = null, dealCount = null, lastDealDate = null;
-      const zTeam = z && normalizeTeam(z.role);
+      const zTeam = zohoTeamOf(z);
       if (zTeam) {
         // Zoho doğrudan söylüyor — yönetici rolü istisnasına GEREK YOK, çünkü
         // liderin role'ü de ("Team Leader - X") kendi takımına iniyor.

@@ -4821,7 +4821,13 @@
   let depDate = _depToday();
   let depRows = [];        // { username, fullName, ...günlük alanlar, _dirty } — tam liste (master)
   let depLoaded = false;
-  let _depMembersCache = null;   // /api/team-members bir kez çekilip saklanır
+  let _depMembersCache = null;   // /api/team-members çekilip saklanır
+  // Cache SÜRESİZ değil: kadro Zoho'dan geliyor ve gün içinde değişiyor (yeni
+  // danışman eklenmesi, takım değişikliği, ayrılma). Süresiz cache'te sekme
+  // açık kaldığı sürece liste bayat kalıyordu. Tarih değiştirmek hâlâ ağ
+  // çağrısı yapmıyor — yalnızca TTL dolduğunda tazeleniyor.
+  const _DEP_MEMBERS_TTL = 5 * 60 * 1000;
+  let _depMembersAt = 0;
 
   // Quick butonlar tek giriş noktasından (setValue → change → depOnDateInputChange) geçsin
   function depSetQuickDate(deltaFromToday) {
@@ -4859,9 +4865,13 @@
       // /api/team-members (cold serverless + 2000 satır) beklenmez, sadece
       // o güne ait daily_performance sorgulanır → tarih geçişi anında olur.
       let members = _depMembersCache;
+      if (members && Date.now() - _depMembersAt > _DEP_MEMBERS_TTL) members = null;
       if (!members) {
         const token = (currentUser && currentUser.token) || '';
-        const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
+        // cache:'no-store' — araya giren HTTP cache'i kadro listesini
+        // dondurmasın; tazelik bu sayfanın tüm amacı.
+        const r = await fetch('/api/team-members', {
+          headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
         if (r.status === 401) {
           sessionStorage.removeItem('nc_current_user');
           window.location.href = 'index.html?relogin=1';
@@ -4889,6 +4899,7 @@
           return true;
         });
         _depMembersCache = members;
+        _depMembersAt = Date.now();
       }
 
       // Kayıtlı günlük veriler — team filtresine güvenme (login'deki ham
@@ -5941,6 +5952,7 @@
           _depMembersCache = (data.members || []).filter(m =>
             m.username && (m.username || '').toLowerCase() !== _me &&
             !_isBoss(m.role) && !_isBoss(m.zohoRole));
+          _depMembersAt = Date.now();
         } catch(_e) {}
       })();
 
