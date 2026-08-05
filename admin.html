@@ -9,6 +9,8 @@
   <script src="net-util.js"></script>
   <script src="i18n.js"></script>
   <script src="team-map.js"></script>
+  <!-- Alarm durum kumeleri: iki panelin ayni sayiyi vermesi buna bagli -->
+  <script src="alarm-status.js"></script>
   <script src="alarm-engine.js"></script>
   <script src="export-util.js"></script>
   <script src="attach-util.js"></script>
@@ -1166,9 +1168,13 @@
       </div>
     </div>
 
-    <!-- KPI Cards — 7 kart (Payment Takip alarm tipi/motoru kaldırıldı) -->
-    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-6">
+    <!-- KPI Cards — 8 kart. mk1 artik SADECE open+seen sayiyor (takim lideri
+         panelindeki ayni isimli KPI ile birebir); aksiyon alinmis ama
+         kapanmamis olanlar mk6'ya ayrildi. Ikisinin toplami = tablonun
+         "Aktif (kapali haric)" satir sayisi. -->
+    <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
       <div class="am-kpi text-center am-critical" style="--am-glow:#fbbf24"><div class="am-kpi-icon">🔔</div><div class="am-kpi-val text-amber-400" id="mk1">0</div><div class="am-kpi-label">Açık Alarm</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#2dd4bf"><div class="am-kpi-icon">🏃</div><div class="am-kpi-val text-teal-400" id="mk6">0</div><div class="am-kpi-label">Aksiyon Alındı</div></div>
       <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-icon">📅</div><div class="am-kpi-val text-cyan-400" id="mk2">0</div><div class="am-kpi-label">Bugün Gelecek</div></div>
       <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-icon">⏱️</div><div class="am-kpi-val text-red-400" id="mk3">0</div><div class="am-kpi-label">Gecikmiş</div></div>
       <div class="am-kpi text-center" style="--am-glow:#94a3b8"><div class="am-kpi-icon">❔</div><div class="am-kpi-val text-slate-400" id="mk4">0</div><div class="am-kpi-label">Eksik Tarih</div></div>
@@ -2373,7 +2379,7 @@
       // filtre (aktif statüler + no_show), sayfaya hiç girilmeden de doğru sayı görünsün.
       const todayBadge = document.getElementById('todayAlarmBadge');
       if (todayBadge) {
-        const activeSet = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+        const activeSet = AlarmStatus.activeSet();
         const todayCount = all.filter(a => _amIsToday(a) && (activeSet.has(a.status) || a.status === 'no_show')).length;
         if (todayCount > 0) { todayBadge.textContent = todayCount; todayBadge.style.display = 'inline-block'; }
         else todayBadge.style.display = 'none';
@@ -2546,10 +2552,14 @@
       // Gün filtresi aktifse KPI kartları da o pencereye göre hesaplanır —
       // chip'e basınca sadece tablo değil üstteki rakamlar da değişir.
       const a = _amDayWindowAlarms();
-      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
-      // "Açık Alarm" = kapatılmamış TOPLAM alarm sayısı — sadece open/seen değil,
-      // henüz closed/cancelled/no_show olmamış tüm durumlar (active seti).
-      document.getElementById('mk1').textContent = a.filter(x => active.has(x.status)).length;
+      const active = AlarmStatus.activeSet();
+      // "Açık Alarm" = ÜZERİNDE HENÜZ AKSİYON ALINMAMIŞ alarm (open + seen).
+      // Eskiden 7 aktif durumun tamamını sayıyordu; takım liderinin panelindeki
+      // aynı isimli KPI open+seen saydığı için iki panel farklı rakam veriyordu
+      // (Ahmed Anwar: admin 109 / TL 106 — fark 3 'arrived' satırıydı, canlı
+      // veriyle ölçüldü). Aksiyon alınmış ama kapanmamış olanlar mk6'da.
+      document.getElementById('mk1').textContent = a.filter(x => AlarmStatus.isOpen(x.status)).length;
+      document.getElementById('mk6').textContent = a.filter(x => AlarmStatus.isActioned(x.status)).length;
       document.getElementById('mk2').textContent = a.filter(x => _amIsToday(x) && active.has(x.status)).length;
       document.getElementById('mk3').textContent = a.filter(x => _amIsOverdue(x)).length;
       document.getElementById('mk4').textContent = a.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
@@ -2563,7 +2573,8 @@
       const sOpen = document.getElementById('sAlarmOpen');
       if (sOpen) {
         const all = adminAllAlarms;
-        sOpen.textContent    = all.filter(x => active.has(x.status)).length;
+        // "Açık" etiketi taşıyor — mk1 ve TL'nin "Açık" sekmesiyle aynı tanım
+        sOpen.textContent    = all.filter(x => AlarmStatus.isOpen(x.status)).length;
         document.getElementById('sAlarmToday').textContent   = all.filter(x => _amIsToday(x) && active.has(x.status)).length;
         document.getElementById('sAlarmOverdue').textContent = all.filter(x => _amIsOverdue(x)).length;
         document.getElementById('sAlarmMissing').textContent = all.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
@@ -2577,8 +2588,10 @@
       ['Istanbul','Morocco'].forEach(region => {
         const prefix = region === 'Istanbul' ? 'ist' : 'mor';
         const ra = source.filter(a => a.region === region);
-        const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
-        const openCount    = ra.filter(a => active.has(a.status) && a.status !== 'arrived' && a.status !== 'examined').length;
+        const active = AlarmStatus.activeSet();
+        // Eskiden "aktif eksi arrived/examined" idi — panelde ucuncu bir
+        // "acik" tanimi. Artik mk1/TL ile ayni: open + seen.
+        const openCount    = ra.filter(a => AlarmStatus.isOpen(a.status)).length;
         const overdueCount = ra.filter(a => _amIsOverdue(a)).length;
         const noshowCount  = ra.filter(a => a.status === 'no_show').length;
         ['Open','Overdue','Noshow'].forEach((suffix, i) => {
@@ -2600,7 +2613,7 @@
         ra.filter(a => active.has(a.status)).forEach(a => {
           const t = (window.TeamMap && TeamMap.normalize(a.team)) || a.team || '—';
           if (!teams[t]) teams[t] = { open:0, overdue:0, label:t, leader:'' };
-          if (a.status === 'open') teams[t].open++;
+          if (AlarmStatus.isOpen(a.status)) teams[t].open++;
           if (_amIsOverdue(a)) teams[t].overdue++;
         });
         const teamEntries = Object.entries(teams).sort((a,b) => (b[1].open + b[1].overdue) - (a[1].open + a[1].overdue));
@@ -2706,7 +2719,7 @@
     }
 
     function renderAdminToday() {
-      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+      const active = AlarmStatus.activeSet();
       let data = adminAllAlarms.filter(a => _amIsToday(a) && (active.has(a.status) || a.status === 'no_show'));
       const pftSel = document.getElementById('todayPftFilter');
       if (pftSel && pftSel.value) data = data.filter(a => a.payment_or_flight_ticket === pftSel.value);
@@ -3296,7 +3309,7 @@
 
     // Takım -> anlık aktif alarm sayısı (payment_tracking ve kapalı/iptal hariç)
     function _tlWorkloadByTeam() {
-      const ACTIVE = new Set(['open', 'seen', 'in_progress', 'escalated', 'arrived', 'examined', 'processing']);
+      const ACTIVE = AlarmStatus.activeSet();
       const m = {};
       (adminAllAlarms || []).forEach(a => {
         if (!ACTIVE.has(a.status)) return;
@@ -4651,7 +4664,7 @@
       const cFrom  = document.getElementById('amCreatedFrom')?.value || '';
       const cTo    = document.getElementById('amCreatedTo')?.value || '';
       const search = (document.getElementById('amSearch').value || '').toLowerCase();
-      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+      const active = AlarmStatus.activeSet();
 
       return adminAllAlarms.filter(a => {
         // payment_tracking artık geçerli bir alarm tipi sayılmıyor — geçmiş
@@ -4663,7 +4676,10 @@
         if (type   && a.alarm_type !== type) return false;
         if (stage  && (_amDealInfoFor(a.deal_id)?.stage || '') !== stage) return false;
         if (status === 'active'  && !active.has(a.status)) return false;
-        if (status === 'open'    && a.status !== 'open') return false;
+        // 'seen' de "Açık" sayılır: TL'nin "Açık" sekmesi open+seen. Eskiden
+        // burada yalnız 'open' vardı, yani aynı adı taşıyan iki filtre farklı
+        // satır kümesi döndürüyordu.
+        if (status === 'open'    && !AlarmStatus.isOpen(a.status)) return false;
         if (status === 'overdue' && !_amIsOverdue(a)) return false;
         if (status === 'no_show' && a.status !== 'no_show') return false;
         if (status === 'closed'  && a.status !== 'closed') return false;
@@ -6122,7 +6138,7 @@
     }
 
     function exportAdminToday(format) {
-      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+      const active = AlarmStatus.activeSet();
       let data = adminAllAlarms.filter(a => _amIsToday(a) && (active.has(a.status) || a.status === 'no_show'));
       const pftSel = document.getElementById('todayPftFilter');
       if (pftSel && pftSel.value) data = data.filter(a => a.payment_or_flight_ticket === pftSel.value);
@@ -6278,7 +6294,7 @@
     // TL / Bölge bazlı alarm performans raporu (PDF Bölüm 14)
     // Artık ortak export menüsünü kullanıyor — eskiden yalnızca CSV veriyordu.
     function exportAlarmPerformance(format) {
-      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+      const active = AlarmStatus.activeSet();
       const teams = {};
       adminAllAlarms.forEach(a => {
         const t = (window.TeamMap && TeamMap.normalize(a.team)) || a.team || '—';
@@ -6302,7 +6318,7 @@
 
     // Region bazlı alarm performans raporu (PDF Bölüm 14 — TL'den ayrı, bölge özeti)
     function exportRegionPerformance(format) {
-      const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+      const active = AlarmStatus.activeSet();
       const regions = {};
       adminAllAlarms.forEach(a => {
         const r = a.region || I18N.t('Bilinmiyor');

@@ -1523,6 +1523,8 @@
 <script src="net-util.js"></script>
 <script src="i18n.js"></script>
 <script src="team-map.js"></script>
+<!-- Alarm durum kumeleri: adminle ayni sayiyi vermesi buna bagli -->
+<script src="alarm-status.js"></script>
 <script src="alarm-engine.js"></script>
 <script src="export-util.js"></script>
 <script src="attach-util.js"></script>
@@ -2117,14 +2119,14 @@
   // ── Alarm tablosunu filtrele ─────────────────────────────────────
   function filterAlarms(tab) {
     const today = new Date(); today.setHours(0,0,0,0);
-    const activeStatuses = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+    const activeStatuses = AlarmStatus.activeSet();
     return allAlarms.filter(a => {
       // Payment Takip artık geçerli bir alarm tipi sayılmıyor — geçmiş
       // kayıtları da dahil hiçbir yerde (Kapatılan Alarmlar raporu dahil) gösterilmesin.
       if (a.alarm_type === 'payment_tracking') return false;
       switch(tab) {
         case 'all':         return activeStatuses.has(a.status);
-        case 'open':        return a.status === 'open' || a.status === 'seen';
+        case 'open':        return AlarmStatus.isOpen(a.status);
         case 'today':       return isToday(a) && (activeStatuses.has(a.status) || a.status === 'no_show');
         case 'approaching': return ['arrival_approaching','visit_approaching'].includes(a.alarm_type) && activeStatuses.has(a.status) && (liveDaysRemaining(a) || 0) > 0;
         case 'missing':     return a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status);
@@ -5283,8 +5285,8 @@
   }
 
   function renderRmKpis() {
-    const activeStatuses = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
-    const open      = allAlarms.filter(a => ['open','seen'].includes(a.status)).length;
+    const activeStatuses = AlarmStatus.activeSet();
+    const open      = allAlarms.filter(a => AlarmStatus.isOpen(a.status)).length;
     const today     = allAlarms.filter(a => isToday(a) && activeStatuses.has(a.status)).length;
     const overdue   = allAlarms.filter(a => isOverdue(a)).length;
     const missing   = allAlarms.filter(a => a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status)).length;
@@ -5314,7 +5316,7 @@
   }
 
   function renderRmTeamCards() {
-    const activeStatuses = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+    const activeStatuses = AlarmStatus.activeSet();
     const region = getRegion(currentUser);
 
     // Bölgedeki TÜM TL takımlarıyla başla — alarmı olmayan takımlar da görünsün
@@ -5330,7 +5332,7 @@
       if (teams[t].closed === undefined) { teams[t].closed = 0; teams[t].grand = 0; }
       teams[t].grand++;
       if (activeStatuses.has(a.status)) teams[t].total++;
-      if (['open','seen'].includes(a.status)) teams[t].open++;
+      if (AlarmStatus.isOpen(a.status)) teams[t].open++;
       if (isOverdue(a)) teams[t].overdue++;
       if (isToday(a) && activeStatuses.has(a.status)) teams[t].today++;
       if (a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status)) teams[t].missing++;
@@ -5405,7 +5407,7 @@
   }
 
   function renderRmTeamAlarmTable(teamName) {
-    const activeStatuses = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+    const activeStatuses = AlarmStatus.activeSet();
     // Alias adla kayıtlı eski alarmları da kapsa
     const data = allAlarms.filter(a => (TeamMap.normalize(a.team) || a.team) === teamName && (activeStatuses.has(a.status) || isOverdue(a)));
     const tbody = document.getElementById('rmTeamAlarmTbody');
@@ -5445,7 +5447,7 @@
     const search     = (document.getElementById('rmAlarmSearch').value || '').toLowerCase();
     const teamFilt   = document.getElementById('rmTeamFilter').value;
     const statusFilt = document.getElementById('rmStatusFilter').value;
-    const activeStatuses = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
+    const activeStatuses = AlarmStatus.activeSet();
 
     return allAlarms.filter(a => {
       if (teamFilt && (TeamMap.normalize(a.team) || a.team) !== teamFilt) return false;
