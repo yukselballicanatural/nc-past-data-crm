@@ -2936,9 +2936,17 @@ html[data-theme="light"] .ac-key { color: var(--ink-2); }
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 10px 18px;
-  margin-top: 12px;
+  /* Serit ONCE tablonun ALTINDAYDI, o yuzden yalnizca margin-top vardi.
+     Yukari tasindiktan sonra alt bosluk kalmadi: iki yuvarlak cam kenar
+     sifir aralikla birbirine yapisip "ic ice girmis" gorunuyordu.
+     Ayrica backdrop-filter yigin baglami yaratir ve .am-table-wrap
+     z-index:1 tasidigi icin tablo seridin UZERINE boyaniyordu — serit
+     kendi z-index'ini almali. */
+  margin: 12px 0 14px;
   padding: 10px 16px;
   border-radius: 14px;
+  position: relative;
+  z-index: 2;
 }
 .am-totals-count { font-size: 11.5px; font-weight: 650; }
 .am-totals-figs { display: flex; flex-wrap: wrap; gap: 8px 22px; }
