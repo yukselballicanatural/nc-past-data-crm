@@ -1173,11 +1173,11 @@
          kapanmamis olanlar mk6'ya ayrildi. Ikisinin toplami = tablonun
          "Aktif (kapali haric)" satir sayisi. -->
     <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 mb-6">
-      <div class="am-kpi text-center am-critical" style="--am-glow:#fbbf24"><div class="am-kpi-icon">🔔</div><div class="am-kpi-val text-amber-400" id="mk1">0</div><div class="am-kpi-label">Açık Alarm</div></div>
+      <div class="am-kpi text-center am-critical" style="--am-glow:#fbbf24" onclick="_amKpiFilter('open')" role="button" tabindex="0" title="Tabloda göster"><div class="am-kpi-icon">🔔</div><div class="am-kpi-val text-amber-400" id="mk1">0</div><div class="am-kpi-label">Açık Alarm</div></div>
       <div class="am-kpi text-center" style="--am-glow:#2dd4bf"><div class="am-kpi-icon">🏃</div><div class="am-kpi-val text-teal-400" id="mk6">0</div><div class="am-kpi-label">Aksiyon Alındı</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-icon">📅</div><div class="am-kpi-val text-cyan-400" id="mk2">0</div><div class="am-kpi-label">Bugün Gelecek</div></div>
-      <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-icon">⏱️</div><div class="am-kpi-val text-red-400" id="mk3">0</div><div class="am-kpi-label">Gecikmiş</div></div>
-      <div class="am-kpi text-center" style="--am-glow:#94a3b8"><div class="am-kpi-icon">❔</div><div class="am-kpi-val text-slate-400" id="mk4">0</div><div class="am-kpi-label">Eksik Tarih</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#22d3ee" onclick="_amKpiFilter('today')" role="button" tabindex="0" title="Tabloda göster"><div class="am-kpi-icon">📅</div><div class="am-kpi-val text-cyan-400" id="mk2">0</div><div class="am-kpi-label">Bugün Gelecek</div></div>
+      <div class="am-kpi text-center am-critical" style="--am-glow:#f87171" onclick="_amKpiFilter('overdue')" role="button" tabindex="0" title="Tabloda göster"><div class="am-kpi-icon">⏱️</div><div class="am-kpi-val text-red-400" id="mk3">0</div><div class="am-kpi-label">Gecikmiş</div></div>
+      <div class="am-kpi text-center" style="--am-glow:#94a3b8" onclick="_amKpiFilter('missing')" role="button" tabindex="0" title="Tabloda göster"><div class="am-kpi-icon">❔</div><div class="am-kpi-val text-slate-400" id="mk4">0</div><div class="am-kpi-label">Eksik Tarih</div></div>
       <div class="am-kpi text-center am-critical" style="--am-glow:#f87171"><div class="am-kpi-icon">🚫</div><div class="am-kpi-val text-red-400" id="mk5">0</div><div class="am-kpi-label">Bugün Gelemeyen</div></div>
       <div class="am-kpi text-center" style="--am-glow:#fbbf24"><div class="am-kpi-icon">⏳</div><div class="am-kpi-val text-amber-400" id="mk7">0</div><div class="am-kpi-label">Yaklaşan</div></div>
       <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-icon">✈️</div><div class="am-kpi-val text-cyan-400" id="mk8">0</div><div class="am-kpi-label">FT Takip</div></div>
@@ -3100,7 +3100,7 @@
         // "Payment Takip" artık geçerli bir alarm tipi sayılmıyor — bu tipteki
         // eski kayıtlarda Alarm Tipi hücresi boş bırakılır, satırın kendisi silinmez.
         const isPaymentTracking = a.alarm_type === 'payment_tracking';
-        const tm = isPaymentTracking ? null : _amTypeMeta(a.alarm_type, false);
+        const tm = isPaymentTracking ? null : _amTypeMeta(AlarmStatus.effectiveType(a), false);
         const closedInfo = _amDealInfoFor(a.deal_id) || {};
         const closedRef = closedInfo.ref || '';
         return `<tr>
@@ -4729,7 +4729,7 @@
         if (region && a.region !== region) return false;
         if (team   && (TeamMap.normalize(a.team) || a.team) !== team) return false;
         if (owner  && a.deal_owner !== owner) return false;
-        if (type   && a.alarm_type !== type) return false;
+        if (type   && AlarmStatus.effectiveType(a) !== type) return false;
         if (stage  && (_amDealInfoFor(a.deal_id)?.stage || '') !== stage) return false;
         if (status === 'active'  && !active.has(a.status)) return false;
         // 'seen' de "Açık" sayılır: TL'nin "Açık" sekmesi open+seen. Eskiden
@@ -4844,7 +4844,7 @@
         const sm  = _amStatusMeta(a.status);
         const days = _amDaysUntil(a.reference_date);
         const overdue = _amIsOverdue(a);
-        const tm  = _amTypeMeta(a.alarm_type, overdue);
+        const tm  = _amTypeMeta(AlarmStatus.effectiveType(a), overdue);
         const daysTxt = days === null ? '—' : days < 0 ? `<span style="color:#f87171;font-weight:700">${Math.abs(days)}g ${I18N.t('GEÇ')}</span>` : days === 0 ? `<span style="color:#4ade80;font-weight:800">${I18N.t('BUGÜN')}</span>` : days <= 3 ? `<span style="color:#f87171">${days}g</span>` : days <= 7 ? `<span style="color:#fb923c">${days}g</span>` : `<span style="color:#60a5fa">${days}g</span>`;
         // Gecikmis satir vurgusu satir ici renk yerine SINIF: satir ici
         // rgba(127,29,29,.12) acik temada camurlu koyu kirmizi cikiyordu ve
@@ -4901,7 +4901,7 @@
         case 'ref':    return (info.ref || a.deal_id || '').toLowerCase();
         case 'stage':  return (info.stage || '').toLowerCase();
         case 'team':   return (a.team || '').toLowerCase();
-        case 'type':   return _amTypeMeta(a.alarm_type, _amIsOverdue(a)).label.toLowerCase();
+        case 'type':   return _amTypeMeta(AlarmStatus.effectiveType(a), _amIsOverdue(a)).label.toLowerCase();
         case 'date':   return a.reference_date || '';
         case 'days':   { const d = _amDaysUntil(a.reference_date); return d === null ? 999999 : d; }
         case 'amount': return info.amount || 0;
@@ -5013,7 +5013,7 @@
       const zohoLink = document.getElementById('aamZohoLink');
       if (a.deal_id) { zohoLink.href = `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}`; zohoLink.style.display = ''; }
       else { zohoLink.style.display = 'none'; }
-      const tm = _amTypeMeta(a.alarm_type, _amIsOverdue(a));
+      const tm = _amTypeMeta(AlarmStatus.effectiveType(a), _amIsOverdue(a));
       const sm = _amStatusMeta(a.status);
       document.getElementById('aamDealName').textContent  = a.deal_name || '—';
       document.getElementById('aamDealOwner').textContent = `${a.deal_owner||'—'} · ${a.team||'—'} · ${a.region||'—'}`;
@@ -6186,7 +6186,7 @@
       const rows = data.map(a => {
         const info = _amDealInfoFor(a.deal_id) || {};
         return [a.deal_name, a.deal_owner, info.ref || a.deal_id, info.stage, a.team, a.region,
-          _amTypeMeta(a.alarm_type, _amIsOverdue(a)).label, a.payment_or_flight_ticket, a.threshold_days,
+          _amTypeMeta(AlarmStatus.effectiveType(a), _amIsOverdue(a)).label, a.payment_or_flight_ticket, a.threshold_days,
           a.reference_field, a.reference_date, a.days_remaining, info.amount, info.paid,
           _amStatusMeta(a.status).label, a.result_code, a.note, a.created_at, a.closed_by, a.close_reason];
       });
@@ -6220,7 +6220,7 @@
       const headers = ['Hasta','Deal ID','Danışman','Takım','Bölge','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Sonuç Kodu','Not'];
       const rows = data.map(a => {
         const info = _amDealInfoFor(a.deal_id) || {};
-        const typeLabel = a.alarm_type === 'payment_tracking' ? '' : _amTypeMeta(a.alarm_type, false).label;
+        const typeLabel = a.alarm_type === 'payment_tracking' ? '' : _amTypeMeta(AlarmStatus.effectiveType(a), false).label;
         return [a.deal_name, info.ref || a.deal_id, a.deal_owner, (window.TeamMap && TeamMap.normalize(a.team))||a.team,
           a.region, typeLabel, a.reference_date, a.closed_at, a.closed_by, a.result_code, a.note];
       });
@@ -6443,7 +6443,7 @@
       if (region) list = list.filter(a => a.region === region);
       if (team)   list = list.filter(a => (TeamMap.normalize(a.team) || a.team) === team);
       if (owner)  list = list.filter(a => a.deal_owner === owner);
-      if (type)   list = list.filter(a => a.alarm_type === type);
+      if (type)   list = list.filter(a => AlarmStatus.effectiveType(a) === type);
       if (stage)  list = list.filter(a => (_amDealInfoFor(a.deal_id)?.stage || '') === stage);
       if (pft)    list = list.filter(a => a.payment_or_flight_ticket === pft);
       if (search) list = list.filter(a => [a.deal_name, a.deal_owner, a.team, a.region].join(' ').toLowerCase().includes(search));
@@ -6505,6 +6505,33 @@
       updateAdminAlarmKPIs();
       renderRegionPanels();
       renderAdminAlarmTable();
+    }
+
+    // KPI kartına basınca tablo o kümeye filtrelenir. "Bugün gelecekler
+    // tabloda görünmüyor" şikayetinin iki nedeni vardı: (1) Tip filtresi
+    // depolanan alarm_type'a bakıyordu, o da alarmın doğduğu anda donduğu için
+    // bugün gelecek hastaların HİÇBİRİ 'today_patient' taşımıyordu (canlı
+    // ölçüm: 9 hastanın 0'ı) — artık AlarmStatus.effectiveType ile canlı
+    // hesaplanıyor; (2) kartlardan tabloya geçiş yoktu, rakamı görüp
+    // satırlarına inmenin yolu yoktu.
+    // Yalnızca kartın sayımıyla BİREBİR aynı kümeyi veren filtreler bağlandı:
+    // mk5 (Bugün Gelemeyen) kasten dışarıda — status=no_show TÜM no_show'ları
+    // getirir, kart ise yalnızca bugün kapananları sayıyor.
+    function _amKpiFilter(kind) {
+      const set = (id, v) => { const el = document.getElementById(id); if (el) el.value = v; };
+      const map = {
+        open:    ['',                 'open'],
+        today:   ['today_patient',    'active'],
+        overdue: ['',                 'overdue'],
+        missing: ['arrival_missing',  'active'],
+      };
+      const m = map[kind];
+      if (!m) return;
+      set('amFilterType', m[0]);
+      set('amFilterStatus', m[1]);
+      _amOnScopeFilterChange();
+      const wrap = document.querySelector('#view-alarms-monitor .am-alarm-wrap');
+      if (wrap) wrap.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
     const _dbAmScopeFilterChange = _debounce(() => _amOnScopeFilterChange(), 300);
 

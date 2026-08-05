@@ -2209,7 +2209,7 @@
       case 'deal_name':         return (a.deal_name || '').toLowerCase();
       case 'deal_ref':          return (dealFinanceMap[a.deal_id]?.ref || String(a.deal_id || '')).toLowerCase();
       case 'stage':             return (_tlDealStage(a.deal_id) || '').toLowerCase();
-      case 'alarm_type':        return alarmTypeMeta(a.alarm_type, isOverdue(a)).label.toLowerCase();
+      case 'alarm_type':        return alarmTypeMeta(AlarmStatus.effectiveType(a), isOverdue(a)).label.toLowerCase();
       case 'reference_field':   return fieldLabel(a.reference_field).toLowerCase();
       case 'reference_date':    return a.reference_date || '';
       case 'created':           return dealFinanceMap[a.deal_id]?.created || '';
@@ -2334,7 +2334,7 @@
 
     tbody.innerHTML = data.map((a, i) => {
       const overdue = isOverdue(a);
-      const tm     = alarmTypeMeta(a.alarm_type, overdue);
+      const tm     = alarmTypeMeta(AlarmStatus.effectiveType(a), overdue);
       const sm     = statusMeta(a.status);
       const rowBg   = overdue ? 'rgba(127,29,29,0.12)' : isToday(a) ? 'rgba(5,46,22,0.2)' : '';
       const urgCls  = getRowUrgencyClass(a);
@@ -2411,9 +2411,13 @@
   // ile aynı "gecikmişse Gecikmiş say" mantığı, ama burada gruplama ANAHTARI
   // için kullanılıyor (i18n'e göre değişen label değil, sabit key).
   function _effectiveAlarmTypeKey(a) {
+    // Depolanan alarm_type alarmın doğduğu anda donuyor — bugün gelecek hasta
+    // hâlâ 'arrival_approaching' taşıyıp yanlış kolona düşüyordu. Tarih bazlı
+    // tipler AlarmStatus.effectiveType ile canlı hesaplanır.
+    const t = AlarmStatus.effectiveType(a);
     const overdue = isOverdue(a);
-    if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(a.alarm_type)) return 'overdue';
-    return a.alarm_type || 'unknown';
+    if (overdue && AlarmStatus.DATE_TYPES.has(t)) return 'overdue';
+    return t || 'unknown';
   }
 
   // Kanban — Alarm Tipine göre ayrı sütunlar (Bugün Gelecek / Arrival Yaklaşıyor /
@@ -2920,7 +2924,7 @@
 
   function openAlarmModal(a) {
     currentAlarm = a;
-    const tm = alarmTypeMeta(a.alarm_type, isOverdue(a));
+    const tm = alarmTypeMeta(AlarmStatus.effectiveType(a), isOverdue(a));
     const sm = statusMeta(a.status);
     document.getElementById('modalDealName').innerHTML = a.deal_id
       ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''" title="${I18N.t("Zoho'da Aç")}">${fmt(a.deal_name) || '—'} ↗</a>`
@@ -3881,7 +3885,7 @@
       dmAl.innerHTML = `<p style="color:#475569;font-size:12px">${I18N.t('Bu deal için aktif alarm yok.')}</p>`;
     } else {
       dmAl.innerHTML = dealAlarms.map(a => {
-        const tm = alarmTypeMeta(a.alarm_type, isOverdue(a));
+        const tm = alarmTypeMeta(AlarmStatus.effectiveType(a), isOverdue(a));
         const sm = statusMeta(a.status);
         return `<div style="background:#111827;border:1px solid #1e293b;border-radius:10px;padding:10px 12px;margin-bottom:6px;display:flex;align-items:center;gap:10px;flex-wrap:wrap">
           <span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${tm.bg};color:${tm.color}">${tm.label}</span>
@@ -3936,7 +3940,7 @@
       // "Payment Takip" artık geçerli bir alarm tipi sayılmıyor — bu tipteki
       // eski kayıtlarda Alarm Tipi hücresi boş bırakılır, satırın kendisi silinmez.
       const isPaymentTracking = a.alarm_type === 'payment_tracking';
-      const tm = isPaymentTracking ? null : alarmTypeMeta(a.alarm_type, false);
+      const tm = isPaymentTracking ? null : alarmTypeMeta(AlarmStatus.effectiveType(a), false);
       return `<tr>
       <td style="color:#475569;font-size:10px">${i+1}</td>
       <td style="font-weight:600;color:#f1f5f9;font-size:12px;white-space:nowrap"><a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#818cf8'" onmouseout="this.style.color=''">${fmt(a.deal_name)}</a></td>
@@ -5445,7 +5449,7 @@
     empty.style.display = 'none';
     tbody.innerHTML = data.map((a, i) => {
       const overdue = isOverdue(a);
-      const tm = alarmTypeMeta(a.alarm_type, overdue);
+      const tm = alarmTypeMeta(AlarmStatus.effectiveType(a), overdue);
       const sm = statusMeta(a.status);
       const rowBg = overdue ? 'rgba(127,29,29,0.12)' : isToday(a) ? 'rgba(5,46,22,0.2)' : '';
       const safeId = a.id;
@@ -5501,7 +5505,7 @@
 
     tbody.innerHTML = data.map((a, i) => {
       const overdue = isOverdue(a);
-      const tm = alarmTypeMeta(a.alarm_type, overdue);
+      const tm = alarmTypeMeta(AlarmStatus.effectiveType(a), overdue);
       const sm = statusMeta(a.status);
       const rowBg = overdue ? 'rgba(127,29,29,0.12)' : isToday(a) ? 'rgba(5,46,22,0.2)' : '';
       return `<tr onclick="openAlarmById('${a.id}')" style="${rowBg ? 'background:'+rowBg : ''}">
@@ -5599,7 +5603,7 @@
     const rows = data.map(a => {
       const fin = dealFinanceMap[a.deal_id] || {};
       return [a.deal_name, a.deal_owner, fin.ref || a.deal_id, fin.stage || '', a.team,
-        alarmTypeMeta(a.alarm_type, isOverdue(a)).label, fieldLabel(a.reference_field),
+        alarmTypeMeta(AlarmStatus.effectiveType(a), isOverdue(a)).label, fieldLabel(a.reference_field),
         a.reference_date, fin.created, liveDaysRemaining(a), statusMeta(a.status).label,
         a.payment_or_flight_ticket, fin.total, fin.paid, fin.remaining, a.note];
     });
@@ -5622,7 +5626,7 @@
     const headers = ['Hasta','Deal ID','Danışman','Takım','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Sonuç Kodu','Not'];
     const rows = data.map(a => {
       const fin = dealFinanceMap[a.deal_id] || {};
-      const typeLabel = a.alarm_type === 'payment_tracking' ? '' : alarmTypeMeta(a.alarm_type, false).label;
+      const typeLabel = a.alarm_type === 'payment_tracking' ? '' : alarmTypeMeta(AlarmStatus.effectiveType(a), false).label;
       return [a.deal_name, fin.ref || a.deal_id, a.deal_owner, (TeamMap.normalize(a.team)||a.team), typeLabel,
         a.reference_date, a.closed_at, a.closed_by, a.result_code, a.note];
     });

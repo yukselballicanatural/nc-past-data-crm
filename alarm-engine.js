@@ -773,6 +773,71 @@ window.AlarmEngine = (function () {
     return updated;
   }
 
+  // alarm_type'ı reference_date'e göre tazele.
+  //
+  // NEDEN: computeAlarms tarih bazlı alarmlarda dedup_key'e tipi/eşiği DAHİL
+  // ETMİYOR (`${deal}_${field}_${tarih}`) — kasıtlı, yoksa hasta yaklaştıkça
+  // aynı hasta için ikinci kart açılıyordu. Ama insert ignore-duplicates
+  // olduğu için satır bir kez yazıldıktan sonra alarm_type de donuyor:
+  // 30 gün önce 'arrival_approaching' olarak açılan alarm, hasta BUGÜN gelse
+  // bile hâlâ 'arrival_approaching' görünüyor. Canlı ölçüm (2026-08-05):
+  // bugün gelecek 9 aktif alarmın HİÇBİRİ 'today_patient' taşımıyordu,
+  // buna karşılık 47 satır o etiketi taşıyordu (38'i geçmiş günlerden kalma).
+  //
+  // Tip kümesi içinde kalındığı için diğer adımlar etkilenmiyor:
+  // closeStaleDateAlarms ve closeDuplicateAlarms sorgularında üç tarih tipinin
+  // ÜÇÜ de var, dedup_key değişmiyor, yeni satır doğmuyor.
+  async function syncAlarmTypes(BASE, KEY) {
+    const H  = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+    const PH = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+    const ACTIVE = 'in.(open,seen,in_progress,escalated,arrived,examined,processing)';
+
+    const rows = [];
+    let offset = 0;
+    while (true) {
+      const r = await fetch(
+        `${BASE}/rest/v1/alarms?status=${ACTIVE}` +
+        `&alarm_type=in.(arrival_approaching,visit_approaching,today_patient)` +
+        `&reference_date=not.is.null&select=id,alarm_type,reference_field,reference_date` +
+        `&limit=1000&offset=${offset}`,
+        { headers: H }
+      );
+      if (!r.ok) break;
+      const batch = await r.json();
+      if (!Array.isArray(batch) || !batch.length) break;
+      rows.push(...batch);
+      if (batch.length < 1000) break;
+      offset += 1000;
+    }
+    if (!rows.length) return 0;
+
+    // Hedef tipe göre grupla — tip başına tek PATCH grubu
+    const byType = new Map();
+    for (const a of rows) {
+      const d = daysUntil(a.reference_date);
+      if (d === null) continue;
+      const want = d === 0
+        ? 'today_patient'
+        : (a.reference_field === 'arrival_date' ? 'arrival_approaching' : 'visit_approaching');
+      if (want === a.alarm_type) continue;
+      if (!byType.has(want)) byType.set(want, []);
+      byType.get(want).push(a.id);
+    }
+    if (!byType.size) return 0;
+
+    let updated = 0;
+    for (const [want, ids] of byType) {
+      for (let i = 0; i < ids.length; i += 100) {
+        const idList = ids.slice(i, i + 100).join(',');
+        const r = await fetch(`${BASE}/rest/v1/alarms?id=in.(${idList})`, {
+          method: 'PATCH', headers: PH, body: JSON.stringify({ alarm_type: want }),
+        });
+        if (r.ok) updated += Math.min(100, ids.length - i);
+      }
+    }
+    return updated;
+  }
+
   // ── Ana çalıştırma — her zaman TÜM takımlar için üretir ─────────
   const _t = (s) => (typeof I18N !== 'undefined' ? I18N.t(s) : s);
   async function run(BASE, KEY, opts = {}) {
@@ -792,6 +857,10 @@ window.AlarmEngine = (function () {
     // çalışır: sonraki adımlar team/region'a göre sorgu atıyor.
     if (onProgress) onProgress(_t('Deal bilgileri alarmlara işleniyor...'));
     const syncedCount = await syncAlarmDealFields(BASE, KEY, deals);
+    // alarm_type de doniyordu: bugun gelecek hasta hala 'yaklasiyor' etiketi
+    // tasiyordu (bkz. syncAlarmTypes). Tarihe gore yeniden etiketle.
+    if (onProgress) onProgress(_t('Alarm tipleri tazeleniyor...'));
+    const retypedCount = await syncAlarmTypes(BASE, KEY);
     // Arrival/Visit tarihi değişen veya silinen deallerin ESKİ (artık tarihi
     // uyuşmayan) alarmlarını kapat — bkz. Zoho_Deals_Alarm_Yonetimi.md
     if (onProgress) onProgress(_t('Tarihi değişen alarmlar kapatılıyor...'));
@@ -812,8 +881,8 @@ window.AlarmEngine = (function () {
     // stage / silinmiş) açık alarmlarını kapat — bkz. closeOutOfScopeAlarms.
     if (onProgress) onProgress(_t('Kapsam dışı dealler için alarmlar kapatılıyor...'));
     const outOfScopeCount = await closeOutOfScopeAlarms(BASE, KEY, deals);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, ...result };
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, retyped: retypedCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, syncAlarmDealFields };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, syncAlarmDealFields, syncAlarmTypes };
 })();
