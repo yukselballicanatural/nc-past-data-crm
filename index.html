@@ -23,60 +23,56 @@
   <style>
     /* ═══════════════════════════════════════════════════════════════════
        GİRİŞ EKRANI — Liquid Glass
-       Kompozisyon: fotoğraf TAM EKRAN zemin, üstünde mesh gradient ve yavaş
-       süzülen ışık bulutları; form ORTADA yüzen tek bir cam kart.
-       (Önceki yan yana iki panel düzeni bırakıldı — kart artık gerçekten
-        "havada duran cam levha" gibi okunuyor.)
+       Panellerdeki cam dilinin (liquid-glass.css / -dark.css) giriş ekranı
+       karşılığı. Sınıf ve id adları DEĞİŞMEDİ — JS onlara bağlı.
 
-       Sınıf ve id adları DEĞİŞMEDİ — JS onlara bağlı. Düzen tamamen CSS ile
-       kuruldu: .panel-left fixed tam ekran zemine, .panel-right ortadaki
-       karta dönüştü.
-
-       Marka altını (#c9a97f) korunuyor: soğuk mor/mavi camın üstünde sıcak
-       altın kasıtlı bir kontrast.
+       Cam efektinin şartı arkada kırılacak RENK olması: zemin canlı bir
+       mesh gradient, slab yarı saydam. Marka altını (#c9a97f) korunuyor —
+       soğuk mor/mavi camın üstünde sıcak altın kasıtlı bir kontrast.
        ═══════════════════════════════════════════════════════════════════ */
 
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
       --gold:      #c9a97f;
-      --gold-lt:   #e3caa2;
-      --gold-dk:   #b8955f;
-      --gold-soft: rgba(201, 169, 127, 0.30);
-      --gold-dim:  rgba(201, 169, 127, 0.13);
+      --gold-soft: rgba(201, 169, 127, 0.28);
+      --gold-dim:  rgba(201, 169, 127, 0.12);
       --ease:      cubic-bezier(.22, 1, .36, 1);
       --spring:    cubic-bezier(.34, 1.4, .56, 1);
-      --card-r:    30px;
+      --slab-r:    30px;
     }
 
+    /* ── Açık tema (varsayılan) ─────────────────────────────────────── */
     html[data-theme="light"] {
-      --card:      rgba(255, 255, 255, 0.46);
-      --card-in:   rgba(255, 255, 255, 0.60);
-      --edge:      rgba(255, 255, 255, 0.62);
+      --g-1: rgba(255, 255, 255, 0.54);
+      --g-3: rgba(255, 255, 255, 0.58);
+      --edge: rgba(255, 255, 255, 0.55);
       --edge-soft: rgba(255, 255, 255, 0.34);
-      --sheen: inset 0 1px 0 0 rgba(255, 255, 255, 0.92),
-               inset 0 0 0 1px rgba(255, 255, 255, 0.22),
-               inset 0 -1px 0 0 rgba(255, 255, 255, 0.14);
-      --sh: 0 10px 30px rgba(10, 16, 40, 0.18), 0 50px 110px -24px rgba(10, 16, 40, 0.45);
+      --sheen: inset 0 1px 0 0 rgba(255, 255, 255, 0.85),
+               inset 0 0 0 1px rgba(255, 255, 255, 0.20);
+      --sh: 0 8px 24px rgba(23, 43, 99, 0.10), 0 40px 90px -20px rgba(23, 43, 99, 0.32);
       --ink:   #12141a;
       --ink-2: #4b5364;
-      --ink-3: #6f7789;
-      --scrim: 0.30;
+      --ink-3: #7c8496;
+      --blur: 30px;
+      --sat: 190%;
     }
     html[data-theme="dark"] {
-      --card:      rgba(255, 255, 255, 0.075);
-      --card-in:   rgba(255, 255, 255, 0.10);
-      --edge:      rgba(255, 255, 255, 0.20);
-      --edge-soft: rgba(255, 255, 255, 0.11);
-      --sheen: inset 0 1px 0 0 rgba(255, 255, 255, 0.16),
-               inset 0 0 0 1px rgba(255, 255, 255, 0.05);
-      --sh: 0 12px 34px rgba(0, 0, 0, 0.55), 0 56px 120px -26px rgba(0, 0, 0, 0.80);
-      --ink:   #f4f7fb;
-      --ink-2: #b3bccd;
-      --ink-3: #8b95a8;
-      --scrim: 0.62;
+      --g-1: rgba(255, 255, 255, 0.065);
+      --g-3: rgba(255, 255, 255, 0.09);
+      --edge: rgba(255, 255, 255, 0.17);
+      --edge-soft: rgba(255, 255, 255, 0.10);
+      --sheen: inset 0 1px 0 0 rgba(255, 255, 255, 0.14),
+               inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+      --sh: 0 10px 30px rgba(0, 0, 0, 0.50), 0 48px 110px -24px rgba(0, 0, 0, 0.72);
+      --ink:   #f2f5fa;
+      --ink-2: #a9b4c8;
+      --ink-3: #78849c;
+      --blur: 30px;
+      --sat: 175%;
     }
 
+    /* ── Zemin: mesh gradient ───────────────────────────────────────── */
     html { height: 100%; }
     html[data-theme="light"] { background: #cfdcfa; }
     html[data-theme="dark"]  { background: #070b14; }
@@ -90,213 +86,209 @@
       justify-content: center;
       padding: 26px;
       color: var(--ink);
-      position: relative;
+      background-repeat: no-repeat;
+      background-size: 100% 100%;
       overflow-x: hidden;
     }
-
-    /* ── ZEMİN 1: fotoğraf tam ekran ────────────────────────────────────
-       .panel-left artık bir kolon değil, sabit tam ekran zemin katmanı. */
-    .panel-left {
-      position: fixed;
-      inset: 0;
-      z-index: 0;
-      overflow: hidden;
+    html[data-theme="light"] body {
+      background-image:
+        radial-gradient(1250px 900px at 6%   0%,  rgba(37, 99, 235, 0.55),  transparent 62%),
+        radial-gradient(1050px 820px at 97%  4%,  rgba(139, 92, 246, 0.52), transparent 60%),
+        radial-gradient(1150px 900px at 92% 70%,  rgba(13, 148, 136, 0.48), transparent 62%),
+        radial-gradient(980px  820px at 2%   72%, rgba(79, 70, 229, 0.44),  transparent 60%),
+        radial-gradient(900px  760px at 44%  36%, rgba(56, 189, 248, 0.34), transparent 64%),
+        radial-gradient(760px  640px at 62%  98%, rgba(236, 72, 153, 0.18), transparent 62%),
+        linear-gradient(158deg, #d3e1fb 0%, #d6d9fa 46%, #cfe9f2 100%);
     }
-    .panel-left-img {
-      position: absolute; inset: -2%;
-      width: 104%; height: 104%;
-      object-fit: cover;
-      /* Hafif bulanıklık: fotoğraf hâlâ tanınıyor ama kart öne çıkıyor.
-         Camın kıracağı RENK bu katmandan geliyor. */
-      filter: saturate(1.12) contrast(1.04);
-      transform: scale(1.02);
-      animation: bgDrift 46s ease-in-out infinite alternate;
-    }
-    html[data-theme="light"] .panel-left-img { filter: blur(7px) saturate(1.18) contrast(1.02) brightness(1.04); }
-    html[data-theme="dark"]  .panel-left-img { filter: blur(6px) saturate(1.06) contrast(1.05) brightness(0.68); }
-    @keyframes bgDrift {
-      from { transform: scale(1.02) translate3d(0, 0, 0); }
-      to   { transform: scale(1.09) translate3d(-1.4%, -1%, 0); }
-    }
-    .panel-left-fallback {
-      display: none;
-      position: absolute; inset: 0;
-      background: linear-gradient(155deg, #1b2540 0%, #16233c 50%, #101a2e 100%);
+    html[data-theme="dark"] body {
+      background-image:
+        radial-gradient(1250px 900px at 6%   0%,  rgba(37, 99, 235, 0.30),  transparent 60%),
+        radial-gradient(1050px 820px at 97%  4%,  rgba(139, 92, 246, 0.26), transparent 58%),
+        radial-gradient(1150px 900px at 92% 70%,  rgba(13, 148, 136, 0.24), transparent 60%),
+        radial-gradient(980px  820px at 2%   72%, rgba(79, 70, 229, 0.22),  transparent 58%),
+        radial-gradient(900px  760px at 44%  36%, rgba(56, 189, 248, 0.14), transparent 62%),
+        linear-gradient(158deg, #0a1020 0%, #080d1a 46%, #0a0f1e 100%);
     }
 
-    /* ── ZEMİN 2: mesh gradient (fotoğrafın üstünde) ───────────────────
-       Cam ancak arkasında RENK varsa cam gibi durur; fotoğraf tek başına
-       yeterli değil, paletin kendisi bu katmandan geliyor. */
-    .panel-left-overlay {
-      position: absolute; inset: 0;
-      mix-blend-mode: normal;
-    }
-    html[data-theme="light"] .panel-left-overlay {
-      background:
-        radial-gradient(1250px 900px at 6%   0%,  rgba(37, 99, 235, 0.50),  transparent 62%),
-        radial-gradient(1050px 820px at 97%  4%,  rgba(139, 92, 246, 0.46), transparent 60%),
-        radial-gradient(1150px 900px at 92% 70%,  rgba(13, 148, 136, 0.42), transparent 62%),
-        radial-gradient(980px  820px at 2%   72%, rgba(79, 70, 229, 0.40),  transparent 60%),
-        radial-gradient(760px  640px at 62%  98%, rgba(236, 72, 153, 0.16), transparent 62%),
-        linear-gradient(158deg, rgba(211,225,251,.80) 0%, rgba(214,217,250,.74) 46%, rgba(207,233,242,.80) 100%);
-    }
-    html[data-theme="dark"] .panel-left-overlay {
-      background:
-        radial-gradient(1250px 900px at 6%   0%,  rgba(37, 99, 235, 0.34),  transparent 60%),
-        radial-gradient(1050px 820px at 97%  4%,  rgba(139, 92, 246, 0.30), transparent 58%),
-        radial-gradient(1150px 900px at 92% 70%,  rgba(13, 148, 136, 0.26), transparent 60%),
-        radial-gradient(980px  820px at 2%   72%, rgba(79, 70, 229, 0.24),  transparent 58%),
-        linear-gradient(158deg, rgba(10,16,32,.72) 0%, rgba(8,13,26,.66) 46%, rgba(10,15,30,.72) 100%);
-    }
-
-    /* ── ZEMİN 3: yavaş süzülen ışık bulutları ─────────────────────────
-       "Liquid"in canlı kısmı: camın arkasındaki renk YAVAŞÇA hareket eder,
-       kart sabit dururken arkasındaki ışık kayar. Çok yavaş (28-34s) ve
-       düşük opaklıkta — fark edilir ama dikkat dağıtmaz. */
-    .panel-left-overlay-bottom {
-      position: absolute; inset: -20%;
-      pointer-events: none;
-      background:
-        radial-gradient(closest-side, rgba(94, 234, 212, 0.34), transparent 70%) 18% 26% / 46% 52% no-repeat,
-        radial-gradient(closest-side, rgba(167, 139, 250, 0.32), transparent 70%) 82% 18% / 42% 46% no-repeat,
-        radial-gradient(closest-side, rgba(96, 165, 250, 0.28), transparent 70%) 70% 84% / 50% 48% no-repeat;
-      filter: blur(30px);
-      animation: auroraDrift 32s ease-in-out infinite alternate;
-    }
-    html[data-theme="dark"] .panel-left-overlay-bottom { opacity: .72; }
-    @keyframes auroraDrift {
-      from { transform: translate3d(0, 0, 0) scale(1); }
-      to   { transform: translate3d(3.2%, -2.6%, 0) scale(1.14); }
-    }
-
-    /* ── Marka: zeminin sol altında ─────────────────────────────────── */
-    .panel-left-content {
-      position: fixed;
-      left: clamp(24px, 4vw, 56px);
-      bottom: clamp(24px, 4vh, 48px);
-      z-index: 2;
-      max-width: 46ch;
-      animation: fadeUp 1s var(--ease) .5s both;
-      pointer-events: none;
-    }
-    /* Logonun arkasinda yumusak, kenarsiz bir karartma: acik temada beyaz
-       marka metni acik fotograf uzerinde kayboluyordu. Elipsi genis ve
-       tamamen saydamlasan bir radial oldugu icin "kutu" gibi gorunmuyor. */
-    .panel-left-content::before {
-      content: '';
-      position: absolute;
-      left: -14%; right: -22%; top: -34%; bottom: -46%;
-      background: radial-gradient(60% 60% at 26% 60%, rgba(6, 10, 22, 0.62), transparent 72%);
-      filter: blur(6px);
-      z-index: -1;
-      pointer-events: none;
-    }
-    .logo-hero { display: flex; align-items: baseline; gap: 3px; margin-bottom: 10px; }
-    .logo-hero-natural {
-      font-family: 'Cormorant Garamond', Georgia, serif;
-      font-size: clamp(34px, 3.6vw, 48px);
-      font-weight: 300; line-height: 1;
-      letter-spacing: -0.005em;
-      /* Zemin fotoğrafı üzerinde her koşulda okunur kalsın */
-      color: #fff;
-      text-shadow: 0 2px 18px rgba(6, 10, 22, 0.55);
-    }
-    .logo-hero-natural em { font-style: italic; }
-    .logo-hero-dot { color: var(--gold); }
-    .logo-hero-clinic {
-      font-family: 'Inter', sans-serif;
-      font-size: clamp(10px, .95vw, 12px);
-      font-weight: 500;
-      letter-spacing: 0.30em;
-      text-transform: lowercase;
-      color: var(--gold);
-      padding-bottom: 3px;
-      text-shadow: 0 2px 12px rgba(6, 10, 22, 0.55);
-    }
-    .tagline {
-      font-size: 12px; line-height: 1.7; font-weight: 300;
-      color: rgba(255, 255, 255, 0.82);
-      text-shadow: 0 1px 12px rgba(6, 10, 22, 0.6);
-    }
-    .tagline-dots { display: flex; gap: 7px; margin-top: 16px; }
-    .tagline-dot {
-      width: 24px; height: 2px; border-radius: 2px;
-      background: rgba(255, 255, 255, 0.28);
-    }
-    .tagline-dot:first-child { background: var(--gold); width: 38px; }
-
-    /* ── KART: ortada yüzen cam levha ──────────────────────────────── */
-    .panel-right {
+    /* ── Slab: iki panel BİRLİKTE tek bir cam levha ──────────────────
+       Ortak kap yok (HTML'e eleman eklemiyoruz), o yüzden iki panel
+       kendi köşelerini yuvarlayıp yan yana tek levha gibi duruyor. */
+    .panel-left, .panel-right {
       position: relative;
-      z-index: 3;
-      width: 100%;
-      max-width: 428px;
-      padding: clamp(34px, 3.4vw, 46px) clamp(26px, 3vw, 40px);
-      border-radius: var(--card-r);
-      background: var(--card);
-      -webkit-backdrop-filter: blur(46px) saturate(200%);
-      backdrop-filter: blur(46px) saturate(200%);
-      border: 1px solid var(--edge-soft);
+      height: min(640px, calc(100vh - 52px));
       box-shadow: var(--sh);
-      animation: cardIn 1s var(--spring) both;
-      overflow: hidden;
+      animation: slabIn 0.9s var(--ease) both;
     }
-    /* Sheen: üst kenarda biriken ışık + iç çerçeve. Kalınlık hissini bu verir. */
+    .panel-left {
+      flex: 0 0 clamp(320px, 52vw, 660px);
+      border-radius: var(--slab-r) 0 0 var(--slab-r);
+      overflow: hidden;
+      border: 1px solid var(--edge-soft);
+      border-right: none;
+    }
+    .panel-right {
+      flex: 0 1 clamp(360px, 34vw, 470px);
+      border-radius: 0 var(--slab-r) var(--slab-r) 0;
+      border: 1px solid var(--edge-soft);
+      border-left: none;
+      background: var(--g-1);
+      -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+      backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px clamp(28px, 3.4vw, 46px);
+      animation-delay: .06s;
+    }
+    /* Sheen ve iki panel arasındaki kılcal ayırıcı */
     .panel-right::before {
       content: '';
       position: absolute; inset: 0;
       border-radius: inherit;
       box-shadow: var(--sheen);
       pointer-events: none;
-      z-index: 1;
     }
-    /* Kartın üst kenarında altın ışık çizgisi — ortadan parlak, uçlarda erir */
-    .panel-right::after {
+    .panel-left::after {
       content: '';
-      position: absolute; top: 0; left: 12%; right: 12%;
-      height: 1px;
-      background: linear-gradient(90deg, transparent, var(--gold), transparent);
-      opacity: .85;
+      position: absolute; top: 0; right: 0; bottom: 0;
+      width: 1px;
+      background: var(--edge-soft);
+      z-index: 3;
+    }
+    /* Slab'in ÜST kenarında ince altın çizgi: soğuk camda sıcak bir aksan.
+       İki panele ayrı ayrı veriliyor çünkü ortak bir kap yok (HTML'e eleman
+       eklemiyoruz); ikisi birleşince tek bir çizgi olarak okunuyor. */
+    .panel-left::before, .panel-right::after {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 2px;
+      z-index: 4;
       pointer-events: none;
+    }
+    .panel-left::before {
+      background: linear-gradient(90deg, rgba(201,169,127,0) 0%, rgba(201,169,127,.55) 60%, rgba(201,169,127,.8) 100%);
+      border-top-left-radius: var(--slab-r);
+    }
+    .panel-right::after {
+      background: linear-gradient(90deg, rgba(201,169,127,.8) 0%, rgba(201,169,127,.45) 55%, rgba(201,169,127,0) 100%);
+      border-top-right-radius: var(--slab-r);
+    }
+
+    @keyframes slabIn {
+      from { opacity: 0; transform: translateY(22px) scale(.985); }
+      to   { opacity: 1; transform: none; }
+    }
+
+    /* ── Sol panel: fotoğraf ─────────────────────────────────────────── */
+    .panel-left-img {
+      position: absolute; inset: 0;
+      width: 100%; height: 100%;
+      object-fit: cover;
+      /* Fotoğraf zemin paletiyle uyuşsun: hafif soğutma + doygunluk */
+      filter: saturate(1.10) contrast(1.05);
+      transform: scale(1.02);
+    }
+    .panel-left-fallback {
+      display: none;
+      position: absolute; inset: 0;
+      background: linear-gradient(155deg, #1b2540 0%, #16233c 50%, #101a2e 100%);
+    }
+    /* Üstten mor/mavi duotone — fotoğrafı cam paletine bağlar */
+    .panel-left-overlay {
+      position: absolute; inset: 0;
+      background:
+        radial-gradient(120% 90% at 15% 10%, rgba(79, 70, 229, 0.16), transparent 62%),
+        radial-gradient(110% 80% at 90% 20%, rgba(139, 92, 246, 0.13), transparent 64%),
+        linear-gradient(180deg, rgba(8, 12, 24, 0.10) 0%, rgba(8, 12, 24, 0.00) 46%, rgba(8, 12, 24, 0.55) 100%);
+    }
+    /* Alt yazı bloğu için ekstra okunurluk katmanı */
+    .panel-left-overlay-bottom {
+      position: absolute; left: 0; right: 0; bottom: 0;
+      height: 70%;
+      background: linear-gradient(180deg, transparent 0%, rgba(6, 9, 18, 0.55) 45%, rgba(6, 9, 18, 0.92) 100%);
+    }
+    .panel-left-content {
+      position: absolute;
+      left: clamp(26px, 3vw, 44px);
+      right: clamp(26px, 3vw, 44px);
+      bottom: clamp(30px, 4vh, 48px);
       z-index: 2;
+      animation: contentIn .9s var(--ease) .28s both;
     }
-    @keyframes cardIn {
-      from { opacity: 0; transform: translateY(26px) scale(.96); filter: blur(8px); }
-      to   { opacity: 1; transform: none; filter: none; }
-    }
-    @keyframes fadeUp {
+    @keyframes contentIn {
       from { opacity: 0; transform: translateY(14px); }
       to   { opacity: 1; transform: none; }
     }
 
-    .right-inner { position: relative; z-index: 3; width: 100%; }
-    .logo-mini { display: none; }
+    .logo-hero {
+      display: flex; align-items: baseline; gap: 3px;
+      margin-bottom: 14px;
+    }
+    .logo-hero-natural {
+      font-family: 'Cormorant Garamond', Georgia, serif;
+      font-size: clamp(38px, 4.4vw, 56px);
+      font-weight: 300;
+      line-height: 1;
+      color: #fff;
+      letter-spacing: -0.005em;
+    }
+    .logo-hero-natural em { font-style: italic; }
+    .logo-hero-dot { color: var(--gold); }
+    .logo-hero-clinic {
+      font-family: 'Inter', sans-serif;
+      font-size: clamp(11px, 1.05vw, 13px);
+      font-weight: 500;
+      letter-spacing: 0.30em;
+      text-transform: lowercase;
+      color: var(--gold);
+      padding-bottom: 4px;
+    }
+    .tagline {
+      font-size: 12.5px;
+      line-height: 1.75;
+      font-weight: 300;
+      color: rgba(255, 255, 255, 0.80);
+      max-width: 42ch;
+    }
+    .tagline-dots {
+      display: flex; gap: 7px; margin-top: 20px;
+    }
+    .tagline-dot {
+      width: 26px; height: 2px; border-radius: 2px;
+      background: rgba(255, 255, 255, 0.22);
+    }
+    .tagline-dot:first-child { background: var(--gold); width: 40px; }
+
+    /* ── Sağ panel: form ────────────────────────────────────────────── */
+    .right-inner {
+      width: 100%;
+      max-width: 340px;
+      animation: contentIn .8s var(--ease) .18s both;
+    }
+    .logo-mini { display: none; }   /* slab'de sol panel logoyu zaten taşıyor */
 
     .welcome-title {
       font-family: 'Cormorant Garamond', Georgia, serif;
-      font-size: clamp(30px, 3vw, 37px);
+      font-size: 34px;
       font-weight: 400;
       letter-spacing: -0.015em;
       color: var(--ink);
       margin-bottom: 6px;
-      animation: fadeUp .7s var(--ease) .22s both;
     }
     .welcome-sub {
       font-size: 12.5px;
       color: var(--ink-3);
-      margin-bottom: 28px;
-      animation: fadeUp .7s var(--ease) .28s both;
+      margin-bottom: 26px;
+      font-weight: 400;
     }
 
-    /* Alanlar sırayla girer (stagger) — kart oturduktan sonra içerik dolar */
-    .field-group { margin-bottom: 15px; animation: fadeUp .7s var(--ease) both; }
-    .field-group:nth-of-type(1) { animation-delay: .34s; }
-    .field-group:nth-of-type(2) { animation-delay: .40s; }
-
+    .field-group { margin-bottom: 15px; }
     .field-label {
       display: block;
-      font-size: 9px; font-weight: 800;
-      letter-spacing: 0.12em; text-transform: uppercase;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.11em;
+      text-transform: uppercase;
       color: var(--ink-3);
       margin-bottom: 7px;
     }
@@ -306,7 +298,7 @@
       display: flex; align-items: center;
       color: var(--ink-3);
       pointer-events: none;
-      transition: color .2s var(--ease);
+      transition: color .18s var(--ease);
     }
     .field-input {
       width: 100%;
@@ -314,26 +306,24 @@
       font-family: inherit;
       font-size: 13.5px;
       color: var(--ink);
-      background: var(--card-in);
-      -webkit-backdrop-filter: blur(14px) saturate(165%);
-      backdrop-filter: blur(14px) saturate(165%);
+      background: var(--g-3);
+      -webkit-backdrop-filter: blur(12px) saturate(160%);
+      backdrop-filter: blur(12px) saturate(160%);
       border: 1px solid var(--edge-soft);
       border-radius: 13px;
       outline: none;
-      transition: border-color .2s var(--ease), box-shadow .25s var(--ease),
-                  background .2s var(--ease);
+      transition: border-color .18s var(--ease), box-shadow .18s var(--ease),
+                  background .18s var(--ease);
     }
-    html[data-theme="light"] .field-input { box-shadow: inset 0 1px 2px rgba(23, 43, 99, 0.06); }
-    .field-input::placeholder { color: var(--ink-3); opacity: .7; }
-    html[data-theme="light"] .field-box:hover .field-input { background: rgba(255, 255, 255, 0.76); }
-    html[data-theme="dark"]  .field-box:hover .field-input { background: rgba(255, 255, 255, 0.15); }
-    /* Odak halkası: outline kaldırıldığı için görünür bir işaret ŞART */
+    html[data-theme="light"] .field-input { box-shadow: inset 0 1px 2px rgba(23, 43, 99, 0.05); }
+    .field-input::placeholder { color: var(--ink-3); opacity: .75; }
+    html[data-theme="light"] .field-box:hover .field-input { background: rgba(255, 255, 255, 0.72); }
+    html[data-theme="dark"]  .field-box:hover .field-input { background: rgba(255, 255, 255, 0.13); }
+    /* Odak: görünür altın halka — outline kaldırıldığı için ŞART */
     .field-input:focus {
       border-color: var(--gold-soft);
       box-shadow: 0 0 0 4px var(--gold-dim);
     }
-    html[data-theme="light"] .field-input:focus { background: rgba(255, 255, 255, 0.86); }
-    html[data-theme="dark"]  .field-input:focus { background: rgba(255, 255, 255, 0.17); }
     .field-box:focus-within .field-icon { color: var(--gold); }
 
     .pw-toggle {
@@ -348,115 +338,59 @@
     }
     .pw-toggle:hover { color: var(--ink); background: var(--gold-dim); }
 
-    /* ── Giriş butonu — altın gradient + hover'da ışık süzülmesi ─────── */
+    /* ── Giriş butonu ───────────────────────────────────────────────── */
     .btn-login {
-      position: relative;
-      overflow: hidden;
       width: 100%;
-      margin-top: 12px;
+      margin-top: 10px;
       padding: 14px 18px;
       font-family: inherit;
-      font-size: 12px; font-weight: 800;
-      letter-spacing: 0.10em; text-transform: uppercase;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.09em;
+      text-transform: uppercase;
       color: #2a1f10;
-      background: linear-gradient(135deg, var(--gold-lt) 0%, var(--gold) 52%, var(--gold-dk) 100%);
-      border: none; border-radius: 13px;
+      background: linear-gradient(135deg, #e3caa2 0%, var(--gold) 52%, #b8955f 100%);
+      border: none;
+      border-radius: 13px;
       cursor: pointer;
       display: flex; align-items: center; justify-content: center;
-      box-shadow: 0 8px 22px -6px rgba(201, 169, 127, 0.62),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.48);
-      transition: transform .2s var(--spring), box-shadow .2s var(--ease), filter .2s var(--ease);
-      animation: fadeUp .7s var(--ease) .46s both;
+      box-shadow: 0 6px 18px -4px rgba(201, 169, 127, 0.55),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.45);
+      transition: transform .18s var(--spring), box-shadow .18s var(--ease),
+                  filter .18s var(--ease);
     }
-    /* Işık süzülmesi: hover'da butonun üzerinden parlak bir şerit geçer */
-    .btn-login::after {
-      content: '';
-      position: absolute; top: 0; bottom: 0; left: -60%;
-      width: 45%;
-      background: linear-gradient(100deg, transparent, rgba(255,255,255,.55), transparent);
-      transform: skewX(-18deg);
-      transition: left .55s var(--ease);
-      pointer-events: none;
-    }
-    .btn-login:hover::after { left: 120%; }
     .btn-login:hover {
       transform: translateY(-2px);
-      box-shadow: 0 14px 32px -8px rgba(201, 169, 127, 0.78),
-                  inset 0 1px 0 rgba(255, 255, 255, 0.58);
-      filter: brightness(1.05);
+      box-shadow: 0 12px 28px -6px rgba(201, 169, 127, 0.70),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.55);
+      filter: brightness(1.04);
     }
-    .btn-login:active { transform: translateY(0) scale(.99); }
-    .btn-login:disabled { opacity: .6; cursor: not-allowed; transform: none; filter: none; }
-    .btn-login:disabled::after { display: none; }
+    .btn-login:active { transform: translateY(0) scale(0.99); }
+    .btn-login:disabled {
+      opacity: 0.6; cursor: not-allowed;
+      transform: none; filter: none;
+    }
     .btn-login:focus-visible { box-shadow: 0 0 0 4px var(--gold-dim); }
 
-    /* Kalan eski sınıflar (HTML'de kullanılmıyor ama stil kaybolmasın) */
-    .divider-line { height: 1px; margin: 22px 0 16px; background: var(--edge-soft); }
+    /* Alt bilgi alanı (varsa) */
+    .divider-line {
+      height: 1px; margin: 22px 0 16px;
+      background: var(--edge-soft);
+    }
     .admin-area { text-align: center; }
     .admin-label {
       font-size: 9px; font-weight: 800; letter-spacing: .1em;
-      text-transform: uppercase; color: var(--ink-3); margin-bottom: 8px;
+      text-transform: uppercase; color: var(--ink-3);
+      margin-bottom: 8px;
     }
     .admin-chip {
-      display: inline-block; padding: 5px 12px; border-radius: 9999px;
-      font-size: 10.5px; font-weight: 700; color: var(--ink-2);
-      background: var(--card-in); border: 1px solid var(--edge-soft);
-    }
-
-    /* ── DİL + TEMA ANAHTARI (sağ üst, cam) ─────────────────────────── */
-    .lg-switch {
-      position: fixed;
-      top: clamp(18px, 2.4vh, 28px);
-      right: clamp(18px, 2vw, 30px);
-      z-index: 10;
-      display: flex; align-items: center; gap: 8px;
-      animation: fadeUp .8s var(--ease) .6s both;
-    }
-    .lg-pill {
-      display: flex; align-items: center; gap: 2px;
-      padding: 3px;
-      border-radius: 9999px;
-      background: var(--card);
-      -webkit-backdrop-filter: blur(24px) saturate(190%);
-      backdrop-filter: blur(24px) saturate(190%);
-      border: 1px solid var(--edge-soft);
-      box-shadow: var(--sheen), 0 6px 18px -6px rgba(10, 16, 40, 0.35);
-    }
-    .lg-pill button {
-      border: none; background: transparent; cursor: pointer;
-      font-family: inherit; font-size: 10.5px; font-weight: 800;
-      letter-spacing: .06em;
-      color: var(--ink-3);
-      padding: 6px 13px;
-      border-radius: 9999px;
-      transition: background .2s var(--ease), color .2s var(--ease), transform .25s var(--spring);
-    }
-    .lg-pill button:hover { color: var(--ink); }
-    .lg-pill button:active { transform: scale(.94); }
-    .lg-pill button.on {
-      color: #2a1f10;
-      background: linear-gradient(135deg, var(--gold-lt), var(--gold));
-      box-shadow: 0 3px 10px -2px rgba(201, 169, 127, .6), inset 0 1px 0 rgba(255,255,255,.45);
-    }
-    .lg-icon-btn {
-      width: 34px; height: 34px;
-      display: flex; align-items: center; justify-content: center;
-      border: 1px solid var(--edge-soft);
-      border-radius: 9999px;
-      background: var(--card);
-      -webkit-backdrop-filter: blur(24px) saturate(190%);
-      backdrop-filter: blur(24px) saturate(190%);
+      display: inline-block;
+      padding: 5px 12px; border-radius: 9999px;
+      font-size: 10.5px; font-weight: 700;
       color: var(--ink-2);
-      cursor: pointer;
-      box-shadow: var(--sheen), 0 6px 18px -6px rgba(10, 16, 40, 0.35);
-      transition: color .2s var(--ease), transform .25s var(--spring), background .2s var(--ease);
+      background: var(--g-3);
+      border: 1px solid var(--edge-soft);
     }
-    .lg-icon-btn:hover { color: var(--gold); transform: translateY(-1px); }
-    .lg-icon-btn:active { transform: scale(.92); }
-    .lg-icon-btn .ic-sun  { display: none; }
-    .lg-icon-btn .ic-moon { display: block; }
-    html[data-theme="dark"] .lg-icon-btn .ic-sun  { display: block; }
-    html[data-theme="dark"] .lg-icon-btn .ic-moon { display: none; }
 
     /* ── Hata uyarısı ───────────────────────────────────────────────── */
     #alertBox {
@@ -464,15 +398,17 @@
       margin-bottom: 16px;
       padding: 11px 14px;
       border-radius: 12px;
-      font-size: 12px; font-weight: 600; line-height: 1.5;
-      background: rgba(239, 68, 68, 0.12);
-      border: 1px solid rgba(239, 68, 68, 0.32);
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.5;
+      background: rgba(239, 68, 68, 0.10);
+      border: 1px solid rgba(239, 68, 68, 0.30);
       -webkit-backdrop-filter: blur(10px);
       backdrop-filter: blur(10px);
-      animation: alertIn .34s var(--spring) both;
+      animation: alertIn .3s var(--spring) both;
     }
-    html[data-theme="light"] #alertBox { color: #a71d1d; }
-    html[data-theme="dark"]  #alertBox { color: #fda4a4; }
+    html[data-theme="light"] #alertBox { color: #b91c1c; }
+    html[data-theme="dark"]  #alertBox { color: #fca5a5; }
     @keyframes alertIn {
       from { opacity: 0; transform: translateY(-6px); }
       to   { opacity: 1; transform: none; }
@@ -487,14 +423,14 @@
       padding: 20px 20px 18px;
       border-radius: 20px;
       border: 1px solid var(--edge-soft);
-      background: var(--card);
-      -webkit-backdrop-filter: blur(30px) saturate(190%);
-      backdrop-filter: blur(30px) saturate(190%);
+      background: var(--g-1);
+      -webkit-backdrop-filter: blur(26px) saturate(180%);
+      backdrop-filter: blur(26px) saturate(180%);
       box-shadow: var(--sh), var(--sheen);
       display: flex; gap: 14px; align-items: flex-start;
       transform: translateX(calc(100% + 48px));
       opacity: 0;
-      transition: transform .45s var(--ease), opacity .35s ease;
+      transition: transform 0.45s var(--ease), opacity 0.35s ease;
       pointer-events: none;
       overflow: hidden;
     }
@@ -510,7 +446,8 @@
     .toast-body { min-width: 0; }
     .toast-label {
       font-size: 9px; font-weight: 800; letter-spacing: .1em;
-      text-transform: uppercase; color: var(--gold); margin-bottom: 4px;
+      text-transform: uppercase; color: var(--gold);
+      margin-bottom: 4px;
     }
     .toast-name {
       font-size: 14px; font-weight: 700; color: var(--ink);
@@ -520,14 +457,14 @@
     /* DİKKAT: JS bu çubuğa 'toast-drain' animasyonunu atıyor
        (showToast → progress.style.animation). Animasyon scaleX ile
        çalıştığı için genişlik %100 ve transform-origin sol OLMAK ZORUNDA —
-       width:0 bırakılsa çubuk hiç görünmez. */
+       width:0 bıraksaydım çubuk hiç görünmezdi. */
     .toast-progress {
       position: absolute; left: 0; bottom: 0; height: 2px;
       width: 100%;
       transform-origin: left;
       animation: none;
       border-radius: 0 0 20px 20px;
-      background: linear-gradient(90deg, var(--gold), var(--gold-lt));
+      background: linear-gradient(90deg, var(--gold), #e3caa2);
     }
     @keyframes toast-drain { from { transform: scaleX(1); } to { transform: scaleX(0); } }
 
@@ -543,31 +480,120 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Dar ekran ──────────────────────────────────────────────────── */
-    @media (max-width: 720px) {
-      body { padding: 18px; align-items: flex-end; }
-      .panel-right { max-width: 100%; margin-bottom: 4vh; }
-      /* Markayı kartın ÜSTÜNE al — sol altta kartla çakışıyordu */
-      .panel-left-content {
-        position: fixed;
-        left: 22px; right: 22px; bottom: auto;
-        top: clamp(70px, 12vh, 120px);
-        max-width: none;
+    /* ── Dar ekran: slab tek kolona iner ────────────────────────────── */
+    @media (max-width: 900px) {
+      body { padding: 16px; align-items: stretch; }
+      .panel-left, .panel-right {
+        flex: none;
+        height: auto;
+        border: 1px solid var(--edge-soft);
       }
-      .tagline-dots { display: none; }
+      .panel-left {
+        border-radius: var(--slab-r) var(--slab-r) 0 0;
+        border-bottom: none;
+        min-height: 230px;
+      }
+      .panel-right {
+        border-radius: 0 0 var(--slab-r) var(--slab-r);
+        border-top: none;
+        padding: 32px 24px 36px;
+      }
+      .panel-left::after { display: none; }
+      body { flex-direction: column; justify-content: center; }
+      .logo-hero-natural { font-size: 40px; }
+      .welcome-title { font-size: 29px; }
     }
     @media (max-width: 560px) {
       #loginToast { left: 16px; right: 16px; width: auto; bottom: 16px; }
-      .lg-switch { top: 14px; right: 14px; }
     }
 
     /* ── Hareket azaltma tercihi ────────────────────────────────────── */
     @media (prefers-reduced-motion: reduce) {
       *, *::before, *::after {
         animation-duration: .001s !important;
-        animation-iteration-count: 1 !important;
         transition-duration: .001s !important;
       }
+    }
+
+    /* ═══════════════════════════════════════════════════════════════════
+       DİL + TEMA ANAHTARI (sağ üst, cam pill)
+       Dil nc_lang'a, tema nc_theme'e yazılır — panellerle AYNI anahtarlar,
+       yani burada TR seçilirse panel de Türkçe açılır.
+       ═══════════════════════════════════════════════════════════════════ */
+    .lg-switch {
+      position: fixed;
+      top: clamp(16px, 2.2vh, 26px);
+      right: clamp(16px, 2vw, 28px);
+      z-index: 50;
+      display: flex; align-items: center; gap: 8px;
+      animation: swIn .8s var(--ease) .5s both;
+    }
+    @keyframes swIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+
+    .lg-pill {
+      display: flex; align-items: center; gap: 2px;
+      padding: 3px;
+      border-radius: 9999px;
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      backdrop-filter: blur(24px) saturate(190%);
+    }
+    html[data-theme="light"] .lg-pill {
+      background: rgba(255, 255, 255, 0.52);
+      border: 1px solid var(--edge-soft);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 6px 18px -6px rgba(10,16,40,.30);
+    }
+    html[data-theme="dark"] .lg-pill {
+      background: rgba(255, 255, 255, 0.09);
+      border: 1px solid var(--edge-soft);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 6px 20px -6px rgba(0,0,0,.6);
+    }
+    .lg-pill button {
+      border: none; background: transparent; cursor: pointer;
+      font-family: inherit; font-size: 10.5px; font-weight: 800;
+      letter-spacing: .06em;
+      color: var(--ink-3);
+      padding: 6px 13px;
+      border-radius: 9999px;
+      transition: background .2s var(--ease), color .2s var(--ease), transform .25s var(--spring);
+    }
+    .lg-pill button:hover { color: var(--ink); }
+    .lg-pill button:active { transform: scale(.94); }
+    .lg-pill button.on {
+      color: #2a1f10;
+      background: linear-gradient(135deg, #e3caa2, var(--gold));
+      box-shadow: 0 3px 10px -2px rgba(201,169,127,.6), inset 0 1px 0 rgba(255,255,255,.45);
+    }
+
+    .lg-icon-btn {
+      width: 34px; height: 34px;
+      display: flex; align-items: center; justify-content: center;
+      border-radius: 9999px;
+      cursor: pointer;
+      color: var(--ink-2);
+      -webkit-backdrop-filter: blur(24px) saturate(190%);
+      backdrop-filter: blur(24px) saturate(190%);
+      transition: color .2s var(--ease), transform .25s var(--spring), background .2s var(--ease);
+    }
+    html[data-theme="light"] .lg-icon-btn {
+      background: rgba(255, 255, 255, 0.52);
+      border: 1px solid var(--edge-soft);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.85), 0 6px 18px -6px rgba(10,16,40,.30);
+    }
+    html[data-theme="dark"] .lg-icon-btn {
+      background: rgba(255, 255, 255, 0.09);
+      border: 1px solid var(--edge-soft);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.14), 0 6px 20px -6px rgba(0,0,0,.6);
+    }
+    .lg-icon-btn:hover { color: var(--gold); transform: translateY(-1px); }
+    .lg-icon-btn:active { transform: scale(.92); }
+    .lg-icon-btn .ic-sun  { display: none; }
+    .lg-icon-btn .ic-moon { display: block; }
+    html[data-theme="dark"] .lg-icon-btn .ic-sun  { display: block; }
+    html[data-theme="dark"] .lg-icon-btn .ic-moon { display: none; }
+
+    /* Anahtar sağ üstte; dar ekranda slab'in üstüne binmesin */
+    @media (max-width: 900px) {
+      .lg-switch { top: 12px; right: 12px; }
     }
   </style>
 </head>
