@@ -1607,7 +1607,9 @@
   // deals.deal_owner ve alarms.deal_owner ile AYNI değer uzayı.
   function _tlOwnerName() {
     if (!currentUser || currentUser.role === 'regional-manager') return '';
-    return String(currentUser.fullName || '').trim();
+    // Çift tırnak/ters eğik çizgi PostgREST filtresini bozar; adlarda
+    // beklenmiyor ama gelirse filtreyi sessizce kırmasın diye ayıklanıyor.
+    return String(currentUser.fullName || '').trim().replace(/["\\]/g, '');
   }
   // 'team.in.("A","B"),deal_owner.eq."Ad"' — or(...) İÇİ, baştaki & yok.
   function _tlScopeOrInner(aliases) {
@@ -4067,21 +4069,14 @@
       const orInner = 'stage.ilike.*cancel*,result_code.ilike.8.*';
       const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,payment_or_flight_ticket,created_time,result_code,sub_code,agent_note';
       const PAGE = 1000;
-      // DİKKAT: burada zaten bir or= var. Kapsam da or= üretiyor ve aynı
-      // sorguda İKİ or= parametresi olamaz (biri sessizce kaybolur, yani
-      // İptal Edilenler listesi ya kapsamsız ya filtresiz gelirdi).
-      // İkisini and=( or(...), or(...) ) ile iç içe yaz — PostgREST bunu
-      // destekliyor ve niyet ("hem iptal koşulu HEM kapsam") açık kalıyor.
-      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
-      if (!isRM && currentUser.team) {
-        baseUrl += '&and=' + encodeURIComponent(
-          '(or(' + orInner + '),or(' + _tlScopeOrInner(TeamMap.aliasesFor(currentUser.team)) + '))');
-      } else if (isRM) {
-        baseUrl += '&or=' + encodeURIComponent('(' + orInner + ')') +
-          `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
-      } else {
-        baseUrl += '&or=' + encodeURIComponent('(' + orInner + ')');
-      }
+      // NOT: bu sorguda İKİ tane or= oluyor (iptal koşulu + kapsam). Bu
+      // güvenli: PostgREST tekrarlanan or= parametrelerini AND'liyor, biri
+      // kaybolmuyor. Canlı veriyle doğrulandı — iptal 4188, kapsam 64,
+      // ikisi birlikte 10.
+      const orParam = encodeURIComponent('(' + orInner + ')');
+      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?or=${orParam}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
+      if (!isRM && currentUser.team) baseUrl += _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
+      else if (isRM) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
 
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'count=exact' };
       const first = await fetch(`${baseUrl}&offset=0`, { headers: H });
