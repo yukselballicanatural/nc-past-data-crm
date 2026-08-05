@@ -686,6 +686,93 @@ window.AlarmEngine = (function () {
     return closed;
   }
 
+  // Alarm satırındaki deal ANLIK KOPYASINI (deal_name/deal_owner/team/region)
+  // deal'in güncel hâliyle eşitle.
+  //
+  // NEDEN: insertAlarms `resolution=ignore-duplicates` ile yazıyor — dedup_key
+  // zaten varsa satır OLDUĞU GİBİ bırakılıyor. Yani bu alanlar alarmın
+  // oluşturulduğu ANDA dondurulmuş oluyor ve bir daha hiç güncellenmiyordu.
+  // Zoho'da hastanın adı değişse, deal başka bir danışmana/takıma geçse bile
+  // alarm eski adı ve eski owner'ı göstermeye devam ediyordu. Canlı veride
+  // ölçüldü: Mihoubi takımının 152 aktif alarmından 4'ü bayattı, biri BUGÜN
+  // gelecek hastaydı (deal 645008001068794036 — Zoho'da aynı sabah
+  // güncellenmiş, deals tablosu doğru, alarms satırı eski).
+  //
+  // team alanı ayrıca YÖNLENDİRMEYİ belirliyor: takım liderinin paneli
+  // alarmları sunucu tarafında `team=in.(kendi aliasları)` ile çekiyor. Bayat
+  // team demek, başka takıma geçmiş bir deal'in alarmının ESKİ liderde kalıp
+  // YENİ liderde hiç görünmemesi demekti.
+  async function syncAlarmDealFields(BASE, KEY, deals) {
+    const H  = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+    const PH = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+
+    const want = new Map();
+    for (const d of deals) {
+      want.set(String(d.id), {
+        deal_name:  d.deal_name  || '',
+        deal_owner: d.deal_owner || '',
+        team:       canonicalTeam(d.team),
+        region:     getRegion(d.team),
+      });
+    }
+    const ids = [...want.keys()];
+    if (!ids.length) return 0;
+
+    const ACTIVE = 'in.(open,seen,in_progress,escalated,arrived,examined,processing)';
+    const rows = [];
+    for (let i = 0; i < ids.length; i += 200) {
+      const idList = ids.slice(i, i + 200).join(',');
+      const r = await fetch(
+        `${BASE}/rest/v1/alarms?status=${ACTIVE}&deal_id=in.(${idList})` +
+        `&select=id,deal_id,deal_name,deal_owner,team,region&limit=5000`,
+        { headers: H }
+      );
+      if (!r.ok) continue;
+      const batch = await r.json();
+      if (Array.isArray(batch)) rows.push(...batch);
+    }
+    if (!rows.length) return 0;
+
+    // Bir deal'in alarmlarından HERHANGİ BİRİ bayatsa o deal'in TÜM aktif
+    // alarmları tam payload'la yazılır. Alarm başına farklı yama üretip deal
+    // bazında gruplamak, aynı deal'in farklı derecede bayat satırlarında
+    // eksik yamaya yol açıyordu.
+    const stale = new Map();               // deal_id -> alarm id listesi
+    for (const a of rows) {
+      const w = want.get(String(a.deal_id));
+      if (!w) continue;
+      const differs =
+        (a.deal_name  || '') !== w.deal_name  ||
+        (a.deal_owner || '') !== w.deal_owner ||
+        (a.team       || '') !== w.team       ||
+        (a.region     || '') !== w.region;
+      if (!differs) continue;
+      const k = String(a.deal_id);
+      if (!stale.has(k)) stale.set(k, []);
+      stale.get(k).push(a.id);
+    }
+    if (!stale.size) return 0;
+
+    let updated = 0;
+    for (const [dealId, alarmIds] of stale) {
+      const w = want.get(dealId);
+      // assigned_to da team'e bağlı (computeAlarms'ta öyle kuruluyor) ve
+      // başka hiçbir yerde okunmuyor/yazılmıyor — birlikte taşınması güvenli.
+      const payload = {
+        deal_name: w.deal_name, deal_owner: w.deal_owner,
+        team: w.team, region: w.region, assigned_to: w.team,
+      };
+      for (let i = 0; i < alarmIds.length; i += 100) {
+        const idList = alarmIds.slice(i, i + 100).join(',');
+        const r = await fetch(`${BASE}/rest/v1/alarms?id=in.(${idList})`, {
+          method: 'PATCH', headers: PH, body: JSON.stringify(payload),
+        });
+        if (r.ok) updated += Math.min(100, alarmIds.length - i);
+      }
+    }
+    return updated;
+  }
+
   // ── Ana çalıştırma — her zaman TÜM takımlar için üretir ─────────
   const _t = (s) => (typeof I18N !== 'undefined' ? I18N.t(s) : s);
   async function run(BASE, KEY, opts = {}) {
@@ -699,6 +786,12 @@ window.AlarmEngine = (function () {
     for (const deal of deals) newAlarms.push(...computeAlarms(deal));
     if (onProgress) onProgress(`${newAlarms.length} ${_t('alarm kaydediliyor (dedup aktif)...')}`);
     const result = await insertAlarms(BASE, KEY, newAlarms);
+    // Var olan alarmların deal anlık kopyasını (isim/owner/takım/bölge)
+    // güncelle — insert `ignore-duplicates` olduğu için bu alanlar aksi hâlde
+    // alarmın doğduğu andaki değerde donuyor. Kapatma adımlarından ÖNCE
+    // çalışır: sonraki adımlar team/region'a göre sorgu atıyor.
+    if (onProgress) onProgress(_t('Deal bilgileri alarmlara işleniyor...'));
+    const syncedCount = await syncAlarmDealFields(BASE, KEY, deals);
     // Arrival/Visit tarihi değişen veya silinen deallerin ESKİ (artık tarihi
     // uyuşmayan) alarmlarını kapat — bkz. Zoho_Deals_Alarm_Yonetimi.md
     if (onProgress) onProgress(_t('Tarihi değişen alarmlar kapatılıyor...'));
@@ -719,8 +812,8 @@ window.AlarmEngine = (function () {
     // stage / silinmiş) açık alarmlarını kapat — bkz. closeOutOfScopeAlarms.
     if (onProgress) onProgress(_t('Kapsam dışı dealler için alarmlar kapatılıyor...'));
     const outOfScopeCount = await closeOutOfScopeAlarms(BASE, KEY, deals);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, ...result };
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, syncAlarmDealFields };
 })();

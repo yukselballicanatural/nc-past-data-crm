@@ -1832,7 +1832,11 @@
       try {
         // arrival_date + created_time de çekiliyor — Alarmlar sayfasındaki
         // Arrival Date / Created Time filtreleri (G2) bunları kullanır.
-        const url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_id,amount,total_paid_amount,stage,arrival_date,created_time&id=in.(${chunk.join(',')})`;
+        // deal_name/deal_owner DA cekiliyor: alarms satirindaki ayni alanlar
+        // alarmin dogdugu anda donmus bir ANLIK KOPYA ve motor
+        // ignore-duplicates ile yazdigi icin guncellenmiyordu (bkz.
+        // _tlSyncAlarmSnapshots). deals tablosu Zoho'nun guncel halidir.
+        const url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_id,deal_name,deal_owner,amount,total_paid_amount,stage,arrival_date,created_time&id=in.(${chunk.join(',')})`;
         const r = await fetch(url, { headers: H });
         if (!r.ok) return;
         const rows = await r.json();
@@ -1845,7 +1849,7 @@
           const arrival = d.arrival_date ? String(d.arrival_date).split('T')[0] : null;
           const created = d.created_time ? String(d.created_time).split('T')[0] : null;
           // raw alanını koru — modal daha önce çekip cache'lediyse silinmesin
-          dealFinanceMap[d.id] = { ...(dealFinanceMap[d.id] || {}), total, paid, remaining, pct, stage: d.stage, isWon, arrival, created, ref: d.deal_id || '' };
+          dealFinanceMap[d.id] = { ...(dealFinanceMap[d.id] || {}), total, paid, remaining, pct, stage: d.stage, isWon, arrival, created, ref: d.deal_id || '', name: d.deal_name || '', owner: d.deal_owner || '' };
         });
       } catch(e) { /* finans bilgisi opsiyonel, sessiz geç */ }
     }));
@@ -2629,6 +2633,29 @@
     } catch(e) {}
   }
 
+  // Alarm satırındaki deal anlık kopyasını (hasta adı / danışman) canlı deals
+  // verisiyle eşitle. alarms.deal_name & deal_owner alarmın ÜRETİLDİĞİ anda
+  // yazılıyor ve motor `ignore-duplicates` ile yazdığı için bir daha
+  // güncellenmiyordu: Zoho'da hastanın adı değişse ya da deal başka bir
+  // danışmana geçse bile panel eskisini gösteriyordu. Motora kalıcı düzeltme
+  // eklendi (AlarmEngine.syncAlarmDealFields) ama o en fazla 15 dakikada bir
+  // çalışıyor — burası ekranı anında doğru gösterir.
+  // NOT: `team` KASITLI olarak tazelenmiyor. Bu panel alarmları sunucu
+  // tarafında kendi takım aliaslarıyla çekiyor; takımı burada değiştirmek satırı
+  // oturum ortasında listeden düşürürdü. Takım değişikliğini motor yazar,
+  // sonraki çekişte satır doğru panele gider.
+  // Admin tarafındaki eşi: _amSyncAlarmSnapshots.
+  function _tlSyncAlarmSnapshots() {
+    let n = 0;
+    allAlarms.forEach(a => {
+      const d = dealFinanceMap[a.deal_id];
+      if (!d) return;
+      if (d.name  && a.deal_name  !== d.name)  { a.deal_name  = d.name;  n++; }
+      if (d.owner && a.deal_owner !== d.owner) { a.deal_owner = d.owner; n++; }
+    });
+    return n;
+  }
+
   async function loadAlarms(silent = false) {
     // Cache'ten anında göster, ardından ağdan sessizce tazele (ilk çağrıda)
     if (!silent) {
@@ -2643,6 +2670,7 @@
         document.getElementById('alarmsKanbanView').style.display = _alarmsViewMode === 'kanban' ? 'block' : 'none';
         loadDealFinance(cached.map(a => a.deal_id)).then(() => {
           allAlarms = allAlarms.filter(a => _is2026Created((dealFinanceMap[a.deal_id] || {}).created));
+          _tlSyncAlarmSnapshots();
           updateTabCounts(); renderAlarms(); renderConsultantStrip();
           if (activeView === 'today') renderToday();
         }).catch(() => {});
@@ -2725,6 +2753,7 @@
           // (created null) korunur.
           const before = allAlarms.length;
           allAlarms = allAlarms.filter(a => _is2026Created((dealFinanceMap[a.deal_id] || {}).created));
+          _tlSyncAlarmSnapshots();
           if (allAlarms.length !== before) updateTabCounts();
           renderAlarms();
           renderConsultantStrip();

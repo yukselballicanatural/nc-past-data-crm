@@ -2428,10 +2428,59 @@
       return set;
     }
 
+    // Alarm satırındaki deal anlık kopyasını canlı deals verisiyle eşitle.
+    //
+    // alarms.deal_name / deal_owner / team / region alanları alarm ÜRETİLDİĞİ
+    // anda yazılıyor ve motor `ignore-duplicates` ile yazdığı için bir daha
+    // güncellenmiyordu. Zoho'da hastanın adı değişse, deal başka danışmana
+    // geçse bile panel eski değeri gösteriyordu (canlı veride ölçüldü: Mihoubi
+    // takımında 4 bayat satır, biri BUGÜN gelecek hasta).
+    //
+    // Motora da kalıcı düzeltme eklendi (AlarmEngine.syncAlarmDealFields) ama
+    // o en fazla 15 dakikada bir çalışıyor. Burası ekranı ANINDA doğru
+    // gösterir: deals verisi zaten yüklü, tek yapılması gereken onu kullanmak.
+    // Takım liderinin panelindeki eşi: _tlSyncAlarmSnapshots.
+    function _amSyncAlarmSnapshots() {
+      if (!allDeals.length) return 0;
+      let n = 0;
+      const patch = a => {
+        const info = _amDealInfoFor(a.deal_id);
+        if (!info) return;
+        if (info.name  && a.deal_name  !== info.name)  { a.deal_name  = info.name;  n++; }
+        if (info.owner && a.deal_owner !== info.owner) { a.deal_owner = info.owner; n++; }
+        // team/region DE tazeleniyor: adminin takım filtresi ve bölge
+        // panelleri bunları okuyor, bayat kalırsa deal eski takımda görünür.
+        if (info.team   && a.team   !== info.team)   { a.team   = info.team;   n++; }
+        if (info.region && a.region !== info.region) { a.region = info.region; n++; }
+      };
+      _amAlarmsRaw.forEach(patch);
+      return n;
+    }
+
+    // deals verisi (yeniden) yüklendiğinde çağrılır: alarm anlık kopyalarını
+    // tazele ve DEĞİŞEN varsa alarm ekranlarını yeniden çiz. Alarmlar deals'ten
+    // önce inebiliyor — o durumda ilk eşitleme burada olur.
+    let _amLastSyncDealsLen = -1;
+    function _amOnDealsLoaded() {
+      if (!_amAlarmsRaw.length || !allDeals.length) return;
+      if (allDeals.length === _amLastSyncDealsLen) return;
+      _amLastSyncDealsLen = allDeals.length;
+      if (!_amSyncAlarmSnapshots()) return;
+      // adminAllAlarms, _amAlarmsRaw ile AYNI nesnelere işaret ediyor (filter
+      // sığ kopya üretir), yani yamalar orada da görünür — yalnızca yeniden
+      // çizmek yeterli.
+      updateAdminAlarmKPIs();
+      renderRegionPanels();
+      if (typeof renderAdminAlarmTable === 'function') renderAdminAlarmTable();
+      const todayView = document.getElementById('view-today');
+      if (todayView && !todayView.classList.contains('hidden')) renderAdminToday();
+    }
+
     // adminAllAlarms'ı seçili yılın deal kümesine göre yeniden hesapla + render
     async function _amApplyYearFilter() {
       if (!_amAlarmsRaw.length) return;
       const set = await _amEnsureYearIds(amSelectedYear);
+      _amSyncAlarmSnapshots();
       adminAllAlarms = _amAlarmsRaw.filter(a => a.deal_id != null && set.has(String(a.deal_id)));
       updateAdminAlarmKPIs();
       renderRegionPanels();
@@ -4589,6 +4638,13 @@
             stage:  d['Stage'] || '',
             resultCode: d.result_code || '',
             paymentStatus: d['Payment Status'] || '',
+            // Alarm satirindaki bayat anlik kopyayi duzeltmek icin (bkz.
+            // _amSyncAlarmSnapshots): deals tablosu her zaman Zoho'nun
+            // guncel halidir, alarms satiri alarmin dogdugu anda donmustur.
+            name:   d['Deal Name'] || '',
+            owner:  d['Deal Owner Name'] || '',
+            team:   d['Team Group'] || '',
+            region: d['Region'] || '',
           });
         });
         _amDealInfoMapLen = allDeals.length;
@@ -9040,6 +9096,7 @@
         if (cached) {
           allDeals = cached;
           _applyAll();
+          _amOnDealsLoaded();
           spinEl.classList.add('hidden');
           cardEl.classList.remove('hidden');
           // Arka planda sessizce güncelle — kullanıcı eski (ama doğru) rakamları
@@ -9049,6 +9106,7 @@
             _setCache(_dealsCacheKey(), deals);
             allDeals = deals;
             _applyAll();
+            _amOnDealsLoaded();
             document.getElementById('lastRefresh').textContent = 'Updated: ' + new Date().toLocaleTimeString();
           }).catch(() => {});
           return;
@@ -9092,6 +9150,7 @@
         _dealsLoadInProgress = false;
         _setKpiLoadingState(false);
         _applyAll();
+        _amOnDealsLoaded();
       }
     }
 
