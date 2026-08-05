@@ -9678,18 +9678,19 @@
     }
 
     (async function init() {
+      // Auth kontrolü try/catch DIŞINDA
+      const session = JSON.parse(sessionStorage.getItem('nc_current_user') || 'null');
+      if (!session) { window.location.href = 'index.html'; return; }
+      if (session.role !== 'admin' && session.role !== 'super-admin' && session.role !== 'regional-manager') {
+        if (session.role === 'agent') window.location.href = 'agent.html';
+        else window.location.href = 'team-leader.html';
+        return;
+      }
+      window.isSuperAdmin = session.role === 'super-admin';
+      window.isRM = session.role === 'regional-manager';
+      currentUser = session;
       try {
         await _cfg;
-        const session = JSON.parse(sessionStorage.getItem('nc_current_user') || 'null');
-        if (!session) { window.location.href = 'index.html'; return; }
-        if (session.role !== 'admin' && session.role !== 'super-admin' && session.role !== 'regional-manager') {
-          if (session.role === 'agent') window.location.href = 'agent.html';
-          else window.location.href = 'team-leader.html';
-          return;
-        }
-        window.isSuperAdmin = session.role === 'super-admin';
-        window.isRM = session.role === 'regional-manager';
-        currentUser = session;
         if (window.isRM) {
           window.rmRegion = _rmGetRegion(session);
           window.rmTeams  = TeamMap.aliasesForRegion(window.rmRegion);
@@ -9773,7 +9774,10 @@
         // kendisi kontrol ediyor, burada sadece "hatırlatan" bir zamanlayıcı.
         setInterval(() => adminRunEngine(false), 15 * 60 * 1000);
         _startDealsLive();
-      } catch(e) { sessionStorage.removeItem('nc_current_user'); window.location.href = 'index.html'; }
+      } catch(e) {
+        console.error('[Admin init]', e);
+        try { showNotice('Sayfa yüklenirken hata oluştu. Lütfen yenileyin.', 'error'); } catch(_) {}
+      }
     })();
   </script>
 

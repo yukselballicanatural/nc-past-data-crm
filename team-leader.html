@@ -6156,14 +6156,16 @@
 
   // ── Init ─────────────────────────────────────────────────────────
   (async function init() {
+    // Auth kontrolü try/catch DIŞINDA: sadece oturum yoksa ya da yanlış
+    // role yönlendir — diğer hatalar kullanıcıyı çıkarmamalı.
+    const session = JSON.parse(sessionStorage.getItem('nc_current_user') || 'null');
+    if (!session) { window.location.href = 'index.html'; return; }
+    if (session.role === 'agent') { window.location.href = 'agent.html'; return; }
+    // RM'ler artık admin panelinin bölgeye kısıtlı halini kullanıyor
+    if (session.role === 'admin' || session.role === 'super-admin' || session.role === 'regional-manager') { window.location.href = 'admin.html'; return; }
+    currentUser = session;
     try {
       await _cfg;
-      const session = JSON.parse(sessionStorage.getItem('nc_current_user') || 'null');
-      if (!session) { window.location.href = 'index.html'; return; }
-      if (session.role === 'agent') { window.location.href = 'agent.html'; return; }
-      // RM'ler artık admin panelinin bölgeye kısıtlı halini kullanıyor
-      if (session.role === 'admin' || session.role === 'super-admin' || session.role === 'regional-manager') { window.location.href = 'admin.html'; return; }
-      currentUser = session;
       const isRM = session.role === 'regional-manager';
       addLog('LOGIN', `Giriş yapıldı — ${isRM ? 'Regional Manager' : 'Team Leader'}`);
 
@@ -6257,8 +6259,10 @@
       _startLiveRefresh();
       _startDealsLive();
     } catch(e) {
-      sessionStorage.removeItem('nc_current_user');
-      window.location.href = 'index.html';
+      // Ağ / render hatası — oturumu silme, sadece bildir.
+      // (Gerçek auth hatası zaten try bloğu dışında, yukarıda yakalanıyor.)
+      console.error('[TL init]', e);
+      try { showNotice('Sayfa yüklenirken hata oluştu. Lütfen yenileyin.', 'error'); } catch(_) {}
     }
   })();
 
