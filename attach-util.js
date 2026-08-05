@@ -140,5 +140,26 @@ window.NCAttach = (function () {
       <div id="${mountId}"></div>`;
   }
 
-  return { init, load, handleFiles, remove, renderWidget };
+  // Bir textarea'ya paste olayı bağlar: kullanıcı görsel yapıştırınca
+  // handleFiles ile aynı yükleme akışını tetikler.
+  // Modal her açılışında tekrar çağrılır — eski listener'ı kaldırır.
+  function bindPaste(textareaId, alarmId, mountId) {
+    const el = document.getElementById(textareaId);
+    if (!el) return;
+    if (el._ncPasteHandler) el.removeEventListener('paste', el._ncPasteHandler);
+    el._ncPasteHandler = function (e) {
+      const items = (e.clipboardData || {}).items;
+      if (!items) return;
+      const images = Array.from(items)
+        .filter(i => i.kind === 'file' && i.type.startsWith('image/'))
+        .map(i => i.getAsFile())
+        .filter(Boolean);
+      if (!images.length) return;
+      e.preventDefault();
+      handleFiles(alarmId, mountId, images);
+    };
+    el.addEventListener('paste', el._ncPasteHandler);
+  }
+
+  return { init, load, handleFiles, remove, renderWidget, bindPaste };
 })();

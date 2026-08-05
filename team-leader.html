@@ -1589,6 +1589,39 @@
     return String(created).slice(0, 10) >= CREATED_2026_MIN;
   }
 
+  // ── Kapsam: takım + KENDİ sahibi olduğu kayıtlar ────────────────────
+  // Takım lideri panelinde her şey `team` alanına göre kapsamlanıyordu. Ama
+  // bir kişi takım değiştirdiğinde (danışmanken başka bir takıma lider olmak
+  // gibi) ESKİ kayıtları eski takımın adıyla kalıyor ve kendi panelinde hiç
+  // görünmüyor.
+  //
+  // Somut vaka (canlı veriyle ölçüldü): Marco Rahimi, Farah Team'de
+  // danışmanken Moutaharrik Team'in lideri oldu. Sahibi olduğu 56 deal'in
+  // 55'i ve 43 alarmın tamamı hâlâ team='Farah Team - Morocco' taşıyor —
+  // yani kendi müşterilerini kendi panelinde göremiyordu.
+  //
+  // Çözüm: kapsam "takımım VEYA sahibi ben olduğum" olur. Sahiplik zaten
+  // kişinin kendi verisi, yetki genişlemesi değil.
+  //
+  // deal_owner ile eşleşen değer Users."Deal Owner Name" (session.fullName) —
+  // deals.deal_owner ve alarms.deal_owner ile AYNI değer uzayı.
+  function _tlOwnerName() {
+    if (!currentUser || currentUser.role === 'regional-manager') return '';
+    return String(currentUser.fullName || '').trim();
+  }
+  // 'team.in.("A","B"),deal_owner.eq."Ad"' — or(...) İÇİ, baştaki & yok.
+  function _tlScopeOrInner(aliases) {
+    const inList = 'team.in.(' + (aliases || []).map(v => '"' + v + '"').join(',') + ')';
+    const me = _tlOwnerName();
+    return me ? inList + ',deal_owner.eq."' + me + '"' : inList;
+  }
+  // Sorguya eklenecek hazır parametre. Sahip adı yoksa eski davranış (team=in).
+  function _tlScopeParam(aliases) {
+    const me = _tlOwnerName();
+    if (!me) return '&team=' + TeamMap.inFilter(aliases);
+    return '&or=' + encodeURIComponent('(' + _tlScopeOrInner(aliases) + ')');
+  }
+
   let currentUser = null;
   let allAlarms   = [];
   let allDeals    = [];
@@ -2738,17 +2771,18 @@
         showNotice('Uyarı: Kullanıcı kayıtında Takim Adi alanı boş. Tüm alarmlar gösterilecek.', 'error');
       }
 
-      // TL: takımın tüm yazım varyantlarını kapsa (eski alarmlar alias adla kayıtlı olabilir)
-      let teamParam = null;
+      // TL: takımın tüm yazım varyantlarını kapsa (eski alarmlar alias adla
+      // kayıtlı olabilir) + KENDİ sahibi olduğu alarmlar (bkz. _tlScopeParam).
+      let scopeParam = null;
       if (!isRM && teamVal) {
-        teamParam = TeamMap.inFilter(TeamMap.aliasesFor(teamVal));
+        scopeParam = _tlScopeParam(TeamMap.aliasesFor(teamVal));
       }
 
       const PAGE = 500;
       const buildAlarmsUrl = (off) => {
         let url = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc,id.asc&limit=${PAGE}&offset=${off}`;
-        if (teamParam) {
-          url += `&team=${teamParam}`;
+        if (scopeParam) {
+          url += scopeParam;
         } else if (isRM) {
           url += `&region=eq.${encodeURIComponent(getRegion(currentUser))}`;
         }
@@ -2993,6 +3027,7 @@
     document.getElementById('alarmAttachWidget').innerHTML =
       NCAttach.renderWidget(`'${_jsStrAttr(String(a.id))}'`, 'alarmAttachInput', 'alarmAttachMount');
     NCAttach.load(a.id, 'alarmAttachMount');
+    NCAttach.bindPaste('noteInput', a.id, 'alarmAttachMount');
   }
 
   // alarm_logs tablosundan aksiyon geçmişini yükle (tablo yoksa bölüm gizli kalır)
@@ -3561,7 +3596,7 @@
       let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date,payment_or_flight_ticket,raw&order=${orderParam},id.asc&limit=${DEAL_PAGE_SIZE}&offset=${offset}${DEALS_2026_Q}`;
       // Rol bazlı kapsam: TL kendi takımı (tüm yazım varyantları), RM kendi bölgesindeki tüm takımlar
       if (!isRM && currentUser.team) {
-        url += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+        url += _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
       } else if (isRM) {
         url += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
       }
@@ -3627,7 +3662,7 @@
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
       const isRM = currentUser.role === 'regional-manager';
       let url = `${SUPABASE_URL}/rest/v1/deals?select=stage&limit=1000${DEALS_2026_Q}`;
-      if (!isRM && currentUser.team) url += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+      if (!isRM && currentUser.team) url += _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
       else if (isRM) url += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
       const r = await fetch(url, { headers: H });
       if (!r.ok) return;
@@ -3684,7 +3719,7 @@
 
       // Sadece küçük alanları çek — raw'ın tamamı değil, JSON içinden seçilen değerler
       let base = `${SUPABASE_URL}/rest/v1/deals?select=amount,total_paid_amount,ramt:raw->>Amount,rpaid:raw->>Total_Paid_Amount,pft:raw->>Payment_Or_Flight_Ticket${DEALS_2026_Q}`;
-      if (!isRM && currentUser.team) base += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+      if (!isRM && currentUser.team) base += _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
       else if (isRM) base += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
       if (stage)  base += `&stage=eq.${encodeURIComponent(stage)}`;
       base += _dealSearchQuery(search);
@@ -3781,7 +3816,7 @@
       const { from: createdFrom, to: createdTo } = _dealCreatedRange();
       const PAGE = 1000;
       let baseUrl = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date,payment_or_flight_ticket,created_time&order=id.asc${DEALS_2026_Q}`;
-      if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+      if (!isRM && currentUser.team) baseUrl += _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
       else if (isRM) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
       if (stage)  baseUrl += `&stage=eq.${encodeURIComponent(stage)}`;
       baseUrl += _dealSearchQuery(search);
@@ -4029,12 +4064,24 @@
       const isRM = currentUser.role === 'regional-manager';
       // stage Cancelled (Zoho'dan) VEYA agent'ın kendi girdiği sonuç kodu
       // "8. Cancelled" olan dealler — bkz. admin.html'deki aynı düzeltme.
-      const orParam = encodeURIComponent('(stage.ilike.*cancel*,result_code.ilike.8.*)');
+      const orInner = 'stage.ilike.*cancel*,result_code.ilike.8.*';
       const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,payment_or_flight_ticket,created_time,result_code,sub_code,agent_note';
       const PAGE = 1000;
-      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?or=${orParam}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
-      if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
-      else if (isRM) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
+      // DİKKAT: burada zaten bir or= var. Kapsam da or= üretiyor ve aynı
+      // sorguda İKİ or= parametresi olamaz (biri sessizce kaybolur, yani
+      // İptal Edilenler listesi ya kapsamsız ya filtresiz gelirdi).
+      // İkisini and=( or(...), or(...) ) ile iç içe yaz — PostgREST bunu
+      // destekliyor ve niyet ("hem iptal koşulu HEM kapsam") açık kalıyor.
+      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
+      if (!isRM && currentUser.team) {
+        baseUrl += '&and=' + encodeURIComponent(
+          '(or(' + orInner + '),or(' + _tlScopeOrInner(TeamMap.aliasesFor(currentUser.team)) + '))');
+      } else if (isRM) {
+        baseUrl += '&or=' + encodeURIComponent('(' + orInner + ')') +
+          `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
+      } else {
+        baseUrl += '&or=' + encodeURIComponent('(' + orInner + ')');
+      }
 
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'count=exact' };
       const first = await fetch(`${baseUrl}&offset=0`, { headers: H });
@@ -4059,7 +4106,7 @@
       try {
         const knownIds = new Set(all.map(d => String(d.id)));
         let alarmUrl = `${SUPABASE_URL}/rest/v1/alarms?status=eq.cancelled&select=deal_id&limit=2000`;
-        if (!isRM && currentUser.team) alarmUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+        if (!isRM && currentUser.team) alarmUrl += _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
         else if (isRM) alarmUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
         const aR = await fetch(alarmUrl, { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
         if (aR.ok) {
@@ -4468,7 +4515,7 @@
       const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,created_time,result_code,sub_code,agent_note';
       const PAGE = 1000;
       let baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
-      if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+      if (!isRM && currentUser.team) baseUrl += _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
       else if (isRM) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
 
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'count=exact' };
@@ -5406,7 +5453,7 @@
           `&stage=${stageParam}&raw->>Payment_Or_Flight_Ticket=eq.Payment&raw->>Last_Activity_Time=is.null` +
           DEALS_2026_Q +
           `&order=id.asc&limit=${PAGE}&offset=${off}`;
-        if (!isRM && currentUser.team) url += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+        if (!isRM && currentUser.team) url += _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
         else if (isRM) url += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
         return url;
       };
@@ -6178,7 +6225,7 @@
     const isRM = currentUser.role === 'regional-manager';
     let scopeQuery = '';
     if (!isRM && currentUser.team) {
-      scopeQuery = `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
+      scopeQuery = _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
     } else if (isRM) {
       scopeQuery = `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
     }

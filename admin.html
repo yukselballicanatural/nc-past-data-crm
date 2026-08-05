@@ -5237,6 +5237,7 @@
       document.getElementById('aamAttachWidget').innerHTML =
         NCAttach.renderWidget(`'${_jsStrAttr(String(a.id))}'`, 'aamAttachInput', 'aamAttachMount');
       NCAttach.load(a.id, 'aamAttachMount');
+      NCAttach.bindPaste('aamNoteInput', a.id, 'aamAttachMount');
     }
 
     // Alarm modalı açılınca deal'in TÜM bilgilerini (All Deals sayfasındaki gibi)
