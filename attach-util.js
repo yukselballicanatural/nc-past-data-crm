@@ -61,6 +61,24 @@ window.NCAttach = (function () {
 
   function _escAttr(v) { return String(v == null ? '' : v).replace(/'/g, "\\'"); }
 
+  // Base64 hazır olunca anında küçük resim gösterir (upload bitmeden önce).
+  function _showLoadingThumb(mountId, b64) {
+    const mount = document.getElementById(mountId);
+    if (!mount) return;
+    let grid = mount.querySelector('.nc-attach-grid');
+    if (!grid) {
+      grid = document.createElement('div');
+      grid.className = 'nc-attach-grid';
+      grid.style.cssText = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:8px';
+      mount.appendChild(grid);
+    }
+    const thumb = document.createElement('div');
+    thumb.className = 'nc-attach-loading';
+    thumb.style.cssText = 'width:64px;height:64px;border-radius:8px;overflow:hidden;border:1px solid #334155;background:#0d1526;display:flex;align-items:center;justify-content:center;position:relative';
+    thumb.innerHTML = `<img src="${b64}" style="width:100%;height:100%;object-fit:cover;display:block;opacity:0.45"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center"><div style="width:14px;height:14px;border:2px solid #60a5fa;border-top-color:transparent;border-radius:9999px;animation:spin 0.7s linear infinite"></div></div>`;
+    grid.appendChild(thumb);
+  }
+
   // input[type=file] değişimini işler: her seçilen dosyayı sırayla yükler
   // (paralel değil — aynı klasöre çok sayıda eşzamanlı POST, Storage'da
   // gereksiz yarış koşuluna gerek bırakmasın diye).
@@ -87,6 +105,7 @@ window.NCAttach = (function () {
       }
       try {
         const b64 = await _readAsDataUrl(file);
+        _showLoadingThumb(mountId, b64); // anında önizleme
         const fetchFn = window.NCNet ? NCNet.fetch : fetch;
         const r = await fetchFn('/api/alarm-files', {
           method: 'POST',
