@@ -82,9 +82,8 @@
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       -webkit-font-smoothing: antialiased;
       display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 26px;
+      align-items: stretch;
+      justify-content: flex-start;
       color: var(--ink);
       background-repeat: no-repeat;
       background-size: 100% 100%;
@@ -110,72 +109,37 @@
         linear-gradient(158deg, #0a1020 0%, #080d1a 46%, #0a0f1e 100%);
     }
 
-    /* ── Slab: iki panel BİRLİKTE tek bir cam levha ──────────────────
-       Ortak kap yok (HTML'e eleman eklemiyoruz), o yüzden iki panel
-       kendi köşelerini yuvarlayıp yan yana tek levha gibi duruyor. */
+    /* ── Tam ekran bölme: solda fotoğraf, sağda cam form ─────────────
+       Kutu/levha YOK — iki panel de ekranı kenardan kenara doldurur.
+       Cam olan tek yüzey sağdaki form kartı (.right-inner). */
     .panel-left, .panel-right {
       position: relative;
-      height: min(640px, calc(100vh - 52px));
-      box-shadow: var(--sh);
-      animation: slabIn 0.9s var(--ease) both;
+      min-height: 100vh;
     }
     .panel-left {
-      flex: 0 0 clamp(320px, 52vw, 660px);
-      border-radius: var(--slab-r) 0 0 var(--slab-r);
+      flex: 0 0 58vw;
       overflow: hidden;
-      border: 1px solid var(--edge-soft);
-      border-right: none;
+      animation: photoIn 1.1s var(--ease) both;
     }
     .panel-right {
-      flex: 0 1 clamp(360px, 34vw, 470px);
-      border-radius: 0 var(--slab-r) var(--slab-r) 0;
-      border: 1px solid var(--edge-soft);
-      border-left: none;
-      background: var(--g-1);
-      -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
-      backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+      flex: 1 1 auto;
       display: flex;
       align-items: center;
       justify-content: center;
-      padding: 40px clamp(28px, 3.4vw, 46px);
-      animation-delay: .06s;
+      padding: 48px clamp(24px, 3.4vw, 56px);
     }
-    /* Sheen ve iki panel arasındaki kılcal ayırıcı */
-    .panel-right::before {
-      content: '';
-      position: absolute; inset: 0;
-      border-radius: inherit;
-      box-shadow: var(--sheen);
-      pointer-events: none;
-    }
+    /* Fotoğraf ile sağ zemin arasında kılcal ışık kenarı */
     .panel-left::after {
       content: '';
       position: absolute; top: 0; right: 0; bottom: 0;
       width: 1px;
-      background: var(--edge-soft);
+      background: linear-gradient(180deg,
+        rgba(201,169,127,.55) 0%, rgba(255,255,255,.22) 45%, rgba(201,169,127,.40) 100%);
       z-index: 3;
     }
-    /* Slab'in ÜST kenarında ince altın çizgi: soğuk camda sıcak bir aksan.
-       İki panele ayrı ayrı veriliyor çünkü ortak bir kap yok (HTML'e eleman
-       eklemiyoruz); ikisi birleşince tek bir çizgi olarak okunuyor. */
-    .panel-left::before, .panel-right::after {
-      content: '';
-      position: absolute; top: 0; left: 0; right: 0;
-      height: 2px;
-      z-index: 4;
-      pointer-events: none;
-    }
-    .panel-left::before {
-      background: linear-gradient(90deg, rgba(201,169,127,0) 0%, rgba(201,169,127,.55) 60%, rgba(201,169,127,.8) 100%);
-      border-top-left-radius: var(--slab-r);
-    }
-    .panel-right::after {
-      background: linear-gradient(90deg, rgba(201,169,127,.8) 0%, rgba(201,169,127,.45) 55%, rgba(201,169,127,0) 100%);
-      border-top-right-radius: var(--slab-r);
-    }
 
-    @keyframes slabIn {
-      from { opacity: 0; transform: translateY(22px) scale(.985); }
+    @keyframes photoIn {
+      from { opacity: 0; transform: scale(1.04); }
       to   { opacity: 1; transform: none; }
     }
 
@@ -259,11 +223,43 @@
     }
     .tagline-dot:first-child { background: var(--gold); width: 40px; }
 
-    /* ── Sağ panel: form ────────────────────────────────────────────── */
+    /* ── Sağ panel: CAM form kartı ───────────────────────────────────
+       Liquid Glass burada: yarı saydam yüzey + blur + saturate.
+       saturate() şart, yoksa cam gri plastik gibi okunuyor. */
     .right-inner {
+      position: relative;
       width: 100%;
-      max-width: 340px;
-      animation: contentIn .8s var(--ease) .18s both;
+      max-width: 400px;
+      padding: clamp(30px, 3.4vw, 42px) clamp(26px, 2.8vw, 36px);
+      border-radius: 28px;
+      background: var(--g-1);
+      border: 1px solid var(--edge-soft);
+      -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+      backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+      box-shadow: var(--sh);
+      animation: cardIn .9s var(--ease) .14s both;
+    }
+    /* Sheen — camın üst kenarındaki ışık kırılması */
+    .right-inner::before {
+      content: '';
+      position: absolute; inset: 0;
+      border-radius: inherit;
+      box-shadow: var(--sheen);
+      pointer-events: none;
+    }
+    /* Kartın üst kenarında ince altın çizgi: soğuk camda sıcak aksan */
+    .right-inner::after {
+      content: '';
+      position: absolute; top: 0; left: 22px; right: 22px;
+      height: 2px;
+      border-radius: 2px;
+      background: linear-gradient(90deg,
+        rgba(201,169,127,0) 0%, rgba(201,169,127,.75) 50%, rgba(201,169,127,0) 100%);
+      pointer-events: none;
+    }
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(20px) scale(.98); }
+      to   { opacity: 1; transform: none; }
     }
     .logo-mini { display: none; }   /* slab'de sol panel logoyu zaten taşıyor */
 
@@ -480,27 +476,19 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ── Dar ekran: slab tek kolona iner ────────────────────────────── */
+    /* ── Dar ekran: tek kolon, fotoğraf üstte ───────────────────────── */
     @media (max-width: 900px) {
-      body { padding: 16px; align-items: stretch; }
-      .panel-left, .panel-right {
-        flex: none;
-        height: auto;
-        border: 1px solid var(--edge-soft);
+      body { flex-direction: column; align-items: stretch; }
+      .panel-left, .panel-right { flex: none; min-height: 0; }
+      .panel-left { height: 34vh; min-height: 210px; }
+      .panel-right { padding: 26px 18px 34px; }
+      .panel-left::after {
+        top: auto; left: 0; right: 0; bottom: 0;
+        width: auto; height: 1px;
+        background: linear-gradient(90deg,
+          rgba(201,169,127,.20) 0%, rgba(201,169,127,.60) 50%, rgba(201,169,127,.20) 100%);
       }
-      .panel-left {
-        border-radius: var(--slab-r) var(--slab-r) 0 0;
-        border-bottom: none;
-        min-height: 230px;
-      }
-      .panel-right {
-        border-radius: 0 0 var(--slab-r) var(--slab-r);
-        border-top: none;
-        padding: 32px 24px 36px;
-      }
-      .panel-left::after { display: none; }
-      body { flex-direction: column; justify-content: center; }
-      .logo-hero-natural { font-size: 40px; }
+      .logo-hero-natural { font-size: 38px; }
       .welcome-title { font-size: 29px; }
     }
     @media (max-width: 560px) {
