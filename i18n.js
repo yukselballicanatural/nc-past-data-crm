@@ -805,6 +805,8 @@
     'ülke haritada yok': 'countries not on the map',
     'ülke daha': 'more countries',
     'Ülke verisi yok.': 'No country data.',
+    'Bu cihazda 3B dünya desteklenmiyor (WebGL yok) — düz harita gösteriliyor. Veriler aynı.':
+      'This device does not support the 3D globe (no WebGL) — showing a flat map instead. Same data.',
     'Dünya görünümü yüklenemedi (WebGL kapalı olabilir).':
       'Could not load the globe (WebGL may be disabled).',
     'Henüz sonuç kodu girilmedi.': 'No result codes entered yet.',

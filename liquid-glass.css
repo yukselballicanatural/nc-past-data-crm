@@ -3365,3 +3365,19 @@ html[data-theme="light"] .ng-rank-val { color: var(--ink); }
 html[data-theme="light"] .ng-rank-pct { color: var(--ink-3); }
 html[data-theme="light"] .ng-rank-more,
 html[data-theme="light"] .ng-fallback { color: var(--ink-3); }
+
+/* WebGL yoksa yedek DUZ HARITA cizer: kap kare degil 2:1 olmali,
+   yoksa harita kutunun ortasinda kalip alt/ust bosluk birakiyor. */
+.ng-globe-wrap.ng-flat { aspect-ratio: 2 / 1; }
+.ng-globe-wrap.ng-flat .ng-canvas { border-radius: 12px; cursor: default; }
+html[data-theme="light"] .ng-globe-wrap.ng-flat .ng-canvas { border: 1px solid var(--edge-soft); }
+html[data-theme="dark"]  .ng-globe-wrap.ng-flat .ng-canvas { border: 1px solid var(--d-edge-soft); }
+
+/* Duz harita modunda etiketler kitalarin ustune dusuyor: zemin daha opak
+   olmali, yoksa isimler haritayla karisiyor. */
+html[data-theme="light"] .ng-flat .ng-label { background: rgba(255,255,255,0.94); }
+html[data-theme="dark"]  .ng-flat .ng-label { background: rgba(8,12,20,0.92); }
+/* Yedek modu notu */
+.ng-mode-note { font-size: 9.5px; font-weight: 600; margin-top: 8px; display: block; }
+html[data-theme="light"] .ng-mode-note { color: var(--ink-3); }
+html[data-theme="dark"]  .ng-mode-note { color: #7d8ba3; }

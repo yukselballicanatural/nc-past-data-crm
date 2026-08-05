@@ -75,6 +75,12 @@ window.NCGlobe = (function () {
     'Bahamas': [25.03, -77.40], 'Puerto Rico': [18.22, -66.59]
   };
 
+  // Kita maskesi: 256x128 esdikdortgen (equirectangular), 1-bit, 1.1 KB.
+  // cobe kendi WebGL dokusu icin ayni gomulu PNG'i kullaniyor (MIT) —
+  // 2D yedekte de AYNI veriyi kullaniyoruz ki WebGL'i olmayan makinede
+  // kitalar kaybolmasin, yalnizca cizim yontemi degissin.
+  var MAP_URI = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAQAAAACAAQAAAADMzoqnAAAAAXNSR0IArs4c6QAABA5JREFUeNrV179uHEUAx/Hf3JpbF+E2VASBsmVKTBcpKJs3SMEDcDwBiVJAAewYEBUivIHT0uUBIt0YCovKD0CRjUC4QfHYh8hYXu+P25vZ2Zm9c66gMd/GJ/tz82d3bk8GN4SrByYF2366FNTACIAkivVAAazQdnf3MvAlbNUQfOPAdQDvSAimMWhwy4I2g4SU+Kp04ISLpPBAKLxPyic3O/CCi+Y7rUJbiodcpDOFY7CgxCEXmdYD2EYK2s5lApOx5pEDDYCUwM1XdJUwBV11QQMg59kePSCaPAASQMEL2hwo6TJFgxpg+TgC2ymXPbuvc40awr3D1QCFfbH9kcoqAOkZozpQo0aqAGQRKCog/+tjkgbNFEtg2FffBvBGlSxHoAaAa1u6X4PBAwDiR8FFsrQgeUhfJTSALaB9jy5NCybJPn1SVFiWk7ywN+KzhH1aKAuydhGkbEF4lWohLXDXavlyFgHY7LBnLRdlAP6BS5Cc8RfVDXbkwN/oIvmY+6obbNeBP0JwTuMGu9gTzy1Q4RS/cWpfzszeYwd+CAFrtBW/Hur0gLbJGlD+/OjVwe/drfBxkbbg63dndEDfiEBlAd7ac0BPe1D6Jd8dfbLH+RI0OzseFB5s01/M+gMdAeluLOCAuaUA9Lezo/vSgXoCX9rtEiXnp7Q1W/CNyWcd8DXoS6jH/YZ5vAJEWY2dXFQe2TUgaFaNejCzJ98g6HnlVrsE58sDcYqg+9XY75fPqdoh/kRQWiXKg8MWlJQxUFMPjqnyujhFBE7UxIMjyszk0QwQlFsezImsyvUYYYVED2pk6m0Tg8T04Fwjk2kdAwSACqlM6gRRt3vQYAFGX0Ah7Ebx1H+MDRI5ui0QldH4j7FGcm90XdxD2Jg1AOEAVAKhEFXSn4cKUELurIAKwJ3MArypPscQaLhJFICJ0ohjDySAdH8AhDtCiTuMycH8CXzhH9jUACAO5uMhoAwA5i+T6WAKmmAqnLy80wxHqIPFYpqCwxGaYLt4Dyievg5kEoVEUAhs6pqKgFtDQYOuaXypaWKQfIuwwoGSZgfLsu/XAtI8cGN+h7Cc1A5oLOMhwlIPXuhu48AIvsSBkvtV9wsJRKCyYLfq5lTrQMFd1a262oqBck9K1V0YjQg0iEYYgpS1A9GlXQV5cykwm4A7BzVsxQqo7E+zCegO7Ma7yKgsuOcfKbMBwLC8wvVNYDsANYalEpOAa6zpWjTeMKGwEwC1CiQewJc5EKfgy7GmRAZA4vUVGwE2dPM/g0xuAInE/yG5aZ8ISxWGfYigUVbdyBElTHh2uCwGdfCkOLGgQVBh3Ewp+/QK4CDlR5Ws/Zf7yhCf8pH7vinWAvoVCQ6zz0NX5V/6GkAVV+2/5qsJ/gU8bsxpM8IeAQAAAABJRU5ErkJggg==';
+
   var LOWER = {};
   for (var k in COORDS) LOWER[k.toLowerCase()] = COORDS[k];
 
@@ -97,6 +103,62 @@ window.NCGlobe = (function () {
     return { x: x * r, y: -y * r, facing: z };
   }
 
+  // ── Kita maskesini bir kez coz: [{lat,lon}] listesi ─────────────────
+  // Her karede maske pikseli okumak pahali; kara noktalari bir kez cikarilip
+  // saklaniyor, sonra yalnizca izdusum + cizim yapiliyor.
+  // Kita maskesini bir kez yukle. Nokta listesi cikarmiyoruz: 2D yedek artik
+  // DUZ HARITA ciziyor ve maskeyi dogrudan drawImage ile olcekliyor.
+  //
+  // Onceki deneme kureyi 2D'de nokta nokta yeniden ciziyordu. Sonuc
+  // olculdu ve ekran goruntusuyle bakildi: kutuplarda es merkezli halkalar,
+  // limbde sikisma, ortada bosluk — cografya yerine gurultu gibi duruyordu
+  // (esdikdortgen izgaranin izdusum kusuru; cos ile duzeltmek yetmedi).
+  // Duz harita hem gercek kitalari kusursuz verir hem de izdusum kusuru
+  // barindirmaz; ustelik donmedigi icin rAF'a hic ihtiyaci yok — arka plan
+  // sekmesinde/dusuk guc modunda rAF kisilsa bile bos kalmaz.
+  // #rrggbb -> [r,g,b]
+  function hexRGB(h) {
+    var n = parseInt(String(h).replace("#", ""), 16);
+    return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+  }
+
+  var _landImgPromise = null;
+  function loadLandImage() {
+    if (_landImgPromise) return _landImgPromise;
+    _landImgPromise = new Promise(function (resolve) {
+      var img = new Image();
+      img.onload = function () { resolve(img); };
+      img.onerror = function () { resolve(null); };
+      img.src = MAP_URI;
+    });
+    return _landImgPromise;
+  }
+  var _webglOk = null;
+  function webglOk() {
+    // Sonuc onbellege alinir: her mount'ta bir deneme baglami acip kapatmak
+    // gereksiz, bazi surucularde de maliyetli.
+    if (_webglOk !== null) return _webglOk;
+    _webglOk = _probeWebgl();
+    return _webglOk;
+  }
+  function _probeWebgl() {
+    try {
+      var c = document.createElement('canvas');
+      var gl = c.getContext('webgl', { failIfMajorPerformanceCaveat: false }) ||
+               c.getContext('experimental-webgl');
+      if (!gl) return false;
+      // Shader derleyebiliyor mu? Baglam var ama derleme yoksa cobe patlar.
+      var sh = gl.createShader(gl.FRAGMENT_SHADER);
+      if (!sh) return false;
+      gl.shaderSource(sh, 'void main(){gl_FragColor=vec4(1.0);}');
+      gl.compileShader(sh);
+      var ok = !!gl.getShaderParameter(sh, gl.COMPILE_STATUS);
+      var lose = gl.getExtension('WEBGL_lose_context');
+      if (lose) lose.loseContext();
+      return ok;
+    } catch (e) { return false; }
+  }
+
   // markers: [{ label, value, location:[lat,lon] }] — degere gore SIRALI gelmeli
   function mount(host, opts) {
     opts = opts || {};
@@ -106,9 +168,8 @@ window.NCGlobe = (function () {
       host.firstChild.textContent = msg;
       return null;
     };
-    if (typeof window.createGlobe !== 'function') {
-      return fail(opts.errorText || 'Dünya görünümü yüklenemedi.');
-    }
+    // createGlobe yoksa BURADA HATA VERILMEZ: 2D yedek devreye giriyor
+    // (bkz. init2D). Eskiden burada "yuklenemedi" yaziyordu.
     var markers = (opts.markers || []).filter(function (m) { return m.location; });
     if (!markers.length) return fail(opts.emptyText || 'Ülke verisi yok.');
 
@@ -136,10 +197,17 @@ window.NCGlobe = (function () {
     var speed = opts.speed != null ? opts.speed : 0.0025;
     var maxV = markers[0].value || 1;
 
+    var mode = '';        // 'gl' | '2d'
+    var raf2d = 0, frames = 0, landCount = -1;
+    var _draw = null, _ro2 = null;   // init2D icindeki draw2D'e mount kapsamindan erisim
+
     function init() {
       var width = canvas.offsetWidth;
-      if (!width || globe || destroyed) return;
+      if (!width || globe || mode === '2d' || destroyed) return;
       size = width;
+      // WebGL yok/bozuksa hic denemeden 2D'ye gec — hata mesaji yerine
+      // calisan bir kure. (Bazi kullanicilarda WebGL hic acilmiyor.)
+      if (typeof window.createGlobe !== 'function' || !webglOk()) return init2D();
       try {
         globe = window.createGlobe(canvas, {
           devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2),
@@ -153,6 +221,7 @@ window.NCGlobe = (function () {
           // "globe.update is not a function".
           onRender: function (state) {
             if (destroyed) return;
+            frames++;
             if (!paused) spin += speed;
             var p = spin + basePhi + dragPhi;
             var t = theta0 + baseTheta + dragTheta;
@@ -180,13 +249,149 @@ window.NCGlobe = (function () {
           })
         });
       } catch (e) {
-        return fail(opts.errorText || 'Dünya görünümü yüklenemedi.');
+        // cobe/phenomenon patladi (surucu, shader, bellek). Yine 2D'ye gec.
+        globe = null;
+        return init2D();
+      }
+      mode = 'gl';
+      // Baglam sonradan da kaybolabiliyor (surucu resetleri, sekme uyandirma).
+      // O anda ekranda donmus bir kure kalirdi; 2D'ye devrediyoruz.
+      canvas.addEventListener('webglcontextlost', function (ev) {
+        ev.preventDefault();
+        if (destroyed || mode !== 'gl') return;
+        if (globe) { try { globe.destroy(); } catch (e2) {} globe = null; }
+        mode = '';
+        init2D();
+      }, { once: true });
+      requestAnimationFrame(function () { canvas.style.opacity = '1'; });
+    }
+
+    // ── 2D YEDEK ────────────────────────────────────────────────────────
+    // WebGL yoksa kullaniciya hata yazmak yerine ayni kureyi canvas 2D ile
+    // ciziyoruz: AYNI kita maskesi (cobe'un gomulu PNG'si), ayni isaretciler,
+    // ayni surukle-dondur, ayni etiketler. Gorunum biraz daha yalin ama
+    // sayfa herkeste calisiyor ve veri okunabiliyor.
+    // ── 2D YEDEK: DUZ DUNYA HARITASI ────────────────────────────────────
+    // WebGL yoksa kullaniciya hata yazmak YERINE ayni veriyi calisan bir
+    // gorunumle veriyoruz: cobe'un gomulu kita maskesi olceklenip ciziliyor,
+    // isaretciler ayni deal sayilariyla ayni yerlere konuyor.
+    // Donmuyor: donme WebGL kuresinin marifeti, burada okunurluk daha onemli.
+    function init2D() {
+      if (destroyed || mode === '2d') return;
+      mode = '2d';
+      // Bir canvas'a IKI TUR baglam alinamaz: uzerinde WebGL kullanildiysa
+      // getContext('2d') null doner. WebGL'den 2D'ye dusuldugunde (baglam
+      // kaybi ya da cobe hatasi) bu yuzden hata yazisi cikiyordu — olculdu.
+      // Cozum: canvas dugumunu TAZESIYLE degistir.
+      var fresh = document.createElement('canvas');
+      fresh.className = canvas.className;
+      fresh.style.cssText = canvas.style.cssText;
+      canvas.parentNode.replaceChild(fresh, canvas);
+      canvas = fresh;                    // kapanislar bu degiskeni okuyor
+      var ctx = canvas.getContext('2d');
+      if (!ctx) return fail(opts.errorText || 'Dünya görünümü yüklenemedi.');
+      host.classList.add('ng-flat');          // en-boy 2:1'e gecer (CSS)
+      canvas.style.cursor = 'default';         // suruklenecek bir sey yok
+      var landImg = null;
+      loadLandImage().then(function (img) {
+        landImg = img;
+        landCount = img ? 1 : 0;
+        draw2D();                              // goruntu gelince HEMEN ciz
+      });
+
+      var C = dark
+        ? { sea: '#1d2637', land: '#8fb0d6', marker: '#2dd4bf', ring: 'rgba(45,212,191,0.28)', grid: 'rgba(255,255,255,0.05)' }
+        : { sea: '#e9f0fa', land: '#5b7ea8', marker: '#0d9488', ring: 'rgba(13,148,136,0.22)', grid: 'rgba(23,43,99,0.05)' };
+
+      // Maskeyi tek renge boya. Maske 1-bit GRI TONLAMA: kara beyaz, deniz
+      // siyah ve ALFA KANALI YOK.
+      // DIKKAT: burada 'source-in' KULLANILAMAZ — o mevcut icerigin ALFA'sina
+      // bakiyor, alfa da her yerde 255 oldugu icin tum dikdortgen kara rengine
+      // boyaniyordu (olculdu: ekran goruntusunde deniz hic gorunmedi).
+      // Dogrusu: alfayi PARLAKLIKTAN uretmek.
+      var tinted = null;
+      function tintedMask() {
+        if (tinted || !landImg) return tinted;
+        var t = document.createElement('canvas');
+        t.width = landImg.width; t.height = landImg.height;
+        var tc = t.getContext('2d');
+        tc.drawImage(landImg, 0, 0);
+        var id, rgb = hexRGB(C.land);
+        try { id = tc.getImageData(0, 0, t.width, t.height); } catch (e) { return null; }
+        var d = id.data;
+        for (var i = 0; i < d.length; i += 4) {
+          var isLand = d[i] > 100;               // beyaz = kara
+          d[i] = rgb[0]; d[i + 1] = rgb[1]; d[i + 2] = rgb[2];
+          d[i + 3] = isLand ? 255 : 0;
+        }
+        tc.putImageData(id, 0, 0);
+        tinted = t;
+        return tinted;
+      }
+
+      _draw = draw2D;
+      function draw2D() {
+        if (destroyed || mode !== '2d') return;
+        var w = canvas.offsetWidth;
+        if (!w) return;
+        frames++;
+        size = w;
+        var h = Math.round(w / 2);
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+          canvas.width = Math.round(w * dpr);
+          canvas.height = Math.round(h * dpr);
+        }
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, w, h);
+
+        // Deniz
+        ctx.fillStyle = C.sea;
+        ctx.fillRect(0, 0, w, h);
+
+        // Ekvator + baslangic meridyeni: haritanin yonunu belli eder
+        ctx.strokeStyle = C.grid;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(0, h / 2); ctx.lineTo(w, h / 2);
+        ctx.moveTo(w / 2, 0); ctx.lineTo(w / 2, h);
+        ctx.stroke();
+
+        // Kitalar — nearest-neighbour: 256x128 maske buyutulurken bulaniklasip
+        // kiyilar erimesin diye yumusatma KAPALI.
+        var tm = tintedMask();
+        if (tm) {
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(tm, 0, 0, w, h);
+          ctx.imageSmoothingEnabled = true;
+        }
+
+        // Isaretciler: kucukten buyuge, buyukler ustte kalsin
+        for (var j = markers.length - 1; j >= 0; j--) {
+          var m = markers[j];
+          var xy = flatXY(m.location[0], m.location[1], w, h);
+          var rel = Math.sqrt(m.value / maxV);
+          var rad = Math.max(2.5, (0.05 + rel * 0.16) * (h / 6));
+          ctx.beginPath(); ctx.arc(xy.x, xy.y, rad * 2.1, 0, Math.PI * 2);
+          ctx.fillStyle = C.ring; ctx.fill();
+          ctx.beginPath(); ctx.arc(xy.x, xy.y, rad, 0, Math.PI * 2);
+          ctx.fillStyle = C.marker; ctx.fill();
+        }
+        positionLabelsFlat(w, h);
+      }
+      draw2D();
+      // Kap yeniden boyutlandiginda tekrar ciz (donme yok, dolayisiyla dongu yok)
+      if (typeof ResizeObserver === 'function') {
+        var ro2 = new ResizeObserver(function () { draw2D(); });
+        ro2.observe(canvas);
+        _ro2 = ro2;
       }
       requestAnimationFrame(function () { canvas.style.opacity = '1'; });
     }
 
-
-    // Etiketi isaretcinin GERCEK ekran konumuna koy, arka yuze gecince soldur.
+    // KURE (WebGL) modunda etiket konumu: isaretcinin gercek ekran yeri,
+    // arka yuze gecince soluyor. Orijinal bilesen bunu CSS Anchor
+    // Positioning ile yapiyordu (Safari/Firefox'ta hic gorunmezdi).
     function positionLabels(p, t) {
       var w = canvas.offsetWidth;
       if (!w) return;
@@ -200,6 +405,27 @@ window.NCGlobe = (function () {
           (r + pr.y).toFixed(1) + 'px) translate(-50%,-150%)';
         el.style.opacity = vis.toFixed(3);
         el.style.filter = vis > 0.98 ? 'none' : 'blur(' + ((1 - vis) * 5).toFixed(2) + 'px)';
+      }
+    }
+
+    // Duz haritada enlem/boylam -> piksel
+    function flatXY(lat, lon, w, h) {
+      return { x: (lon + 180) / 360 * w, y: (90 - lat) / 180 * h };
+    }
+
+    // Duz haritada etiketler: hepsi gorunur, arka yuz kavrami yok
+    function positionLabelsFlat(w, h) {
+      for (var i = 0; i < labelled.length; i++) {
+        var m = labelled[i];
+        var xy = flatXY(m.location[0], m.location[1], w, h);
+        var el = m._el;
+        // Ardisik etiketleri dikeyde kaydir — Avrupa'da 3-4 ulke yan yana
+        // dusunce ustuste biniyor ve isimler okunmuyordu.
+        var lift = (i % 2 === 0) ? -150 : 40;
+        el.style.transform = 'translate(' + xy.x.toFixed(1) + 'px,' + xy.y.toFixed(1) +
+          'px) translate(-50%,' + lift + '%)';
+        el.style.opacity = '1';
+        el.style.filter = 'none';
       }
     }
 
@@ -234,9 +460,20 @@ window.NCGlobe = (function () {
       // Kure GERCEKTEN kuruldu mu? Cagiran, veri imzasi ayni diye yeniden
       // kurmayi atlarken buna bakmali: gorunum gizliyken (offsetWidth 0)
       // mount edilirse ResizeObserver yoluna dusuyor ve o an calismiyor.
-      isRunning: function () { return !!globe && !destroyed; },
+      isRunning: function () { return !destroyed && (!!globe || mode === '2d'); },
+      mode: function () { return mode; },
+      // Disaridan tek kare cizdirmek icin (2D yolunda; gl yolunda cobe surer)
+      redraw: function () { if (mode === '2d' && _draw) _draw(); },
+      // Destek icin: "bende gorunmuyor" durumunda hangi yolun secildigi,
+      // kac kare cizildigi ve kita maskesinin cozulup cozulmedigi.
+      debug: function () {
+        return { mode: mode, frames: frames, landLoaded: landCount === 1,
+                 webgl: webglOk(), cobe: typeof window.createGlobe === 'function' };
+      },
       destroy: function () {
         destroyed = true;
+        if (raf2d) cancelAnimationFrame(raf2d);
+        if (_ro2) { _ro2.disconnect(); _ro2 = null; }
         if (ro) ro.disconnect();
         if (globe) { try { globe.destroy(); } catch (e) {} }
         window.removeEventListener('pointermove', onMove);

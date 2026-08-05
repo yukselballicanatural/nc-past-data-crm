@@ -813,7 +813,12 @@
           <span class="ng-coverage" id="globeCoverage"></span>
         </div>
         <div class="ng-layout">
-          <div class="ng-globe-wrap" id="countryGlobe"></div>
+          <div>
+            <div class="ng-globe-wrap" id="countryGlobe"></div>
+            <!-- WebGL'i olmayan makinede duz harita cizilir; kullanici
+                 "bende neden farkli gorunuyor" diye sormasin diye yaziyoruz. -->
+            <span class="ng-mode-note" id="globeModeNote" style="display:none"></span>
+          </div>
           <div class="ng-rank" id="countryRank"></div>
         </div>
       </div>
@@ -8067,6 +8072,16 @@
         errorText: I18N.t('Dünya görünümü yüklenemedi (WebGL kapalı olabilir).'),
         emptyText: I18N.t('Ülke verisi yok.'),
       });
+
+      // Hangi yol secildi? WebGL yoksa duz harita ciziliyor — ayni veri, farkli
+      // gorunum. Bunu yazmazsak "bende dunya donuyor, meslektasimda harita
+      // cikiyor" sorusu kaciniilmaz.
+      const note = document.getElementById('globeModeNote');
+      if (note) {
+        const flat = _ncGlobe && _ncGlobe.mode() === '2d';
+        note.style.display = flat ? '' : 'none';
+        if (flat) note.textContent = I18N.t('Bu cihazda 3B dünya desteklenmiyor (WebGL yok) — düz harita gösteriliyor. Veriler aynı.');
+      }
     }
 
     // Tema değişince küre yeniden kurulmalı: kara/deniz/ışıma renkleri
