@@ -119,6 +119,10 @@
     'Ödeme / Bilet': 'Payment / Ticket',
     'Toplam Ödenen': 'Total Paid',
     'Toplam Kalan': 'Total Remaining',
+    // Bugün Gelecekler — özet şeridi + boş durum
+    'Toplam Hasta': 'Total Patients',
+    'Bekleyen': 'Pending',
+    'Filtreleri temizleyip tekrar deneyin.': 'Try clearing the filters.',
     // Analitik ekranının yeni grafikleri (analytics-charts.js)
     'Analitik & Özet': 'Analytics & Summary',
     'Dönüşüm Hunisi': 'Conversion Funnel',

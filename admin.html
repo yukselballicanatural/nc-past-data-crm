@@ -1391,9 +1391,14 @@
   <!-- ════════════════ BUGÜN GELECEKLER VIEW ════════════════ -->
   <div id="view-today" class="hidden">
     <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-      <div>
-        <h2 class="text-xl font-bold text-white">Bugün Gelecek Hastalar</h2>
-        <p class="text-xs text-slate-400 mt-0.5">Tüm bölgeler — sistem geneli</p>
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <div>
+          <h2 class="text-xl font-bold text-white">Bugün Gelecek Hastalar</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Tüm bölgeler — sistem geneli</p>
+        </div>
+        <!-- Bugunun tarihi: "bugun" listesine bakarken hangi gun oldugunu
+             gormek gerekiyor (gece yarisini gecmis sekmeler yaniltiyordu). -->
+        <span class="am-clock" id="todayDateChip"></span>
       </div>
       <div class="flex gap-2 flex-wrap">
         <input id="todaySearch" placeholder="Hasta, danışman..." oninput="_dbRenderAdminToday()" class="filter-select" style="width:170px">
@@ -1408,10 +1413,16 @@
         <span id="todayExportMount"></span>
       </div>
     </div>
-    <div class="am-table-wrap" style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b;max-height:calc(100vh - 260px)">
-      <table style="width:100%;border-collapse:collapse">
+    <!-- Sonuc dagilimi: 6 rakam tablonun USTUNDE. Eskiden tablonun altinda
+         tek satir "N hasta gosteriliyor" vardi ve uzun listede kayboluyordu. -->
+    <div class="td-stats" id="todayStats"></div>
+    <!-- Tablo Alarm Listesi'yle AYNI cam iskelet: .am-alarm-wrap (yapiskan
+         baslik + dikey kaydirma) + .am-alarm-tbl (border-collapse:separate,
+         ayrim cizgiyle degil yuzeyle). Satir ici #0f172a ayiricilar kaldirildi. -->
+    <div class="am-table-wrap am-alarm-wrap td-wrap">
+      <table class="am-alarm-tbl">
         <thead>
-          <tr style="background:#0f172a" id="todayHead">
+          <tr id="todayHead">
             <th class="am-th">#</th>
             <th class="am-th am-sort" data-col="name"   onclick="_tdSortBy('name')">Hasta<span class="am-sarrow"></span></th>
             <th class="am-th am-sort" data-col="ref"    onclick="_tdSortBy('ref')">Deal ID<span class="am-sarrow"></span></th>
@@ -1428,9 +1439,13 @@
         </thead>
         <tbody id="todayTbody"></tbody>
       </table>
-      <div id="todayEmpty" style="display:none;text-align:center;padding:40px 16px;color:#475569;font-size:13px">Bugün için programlanmış hasta bulunamadı.</div>
+      <div id="todayEmpty" class="td-empty" style="display:none">
+        <div class="td-empty-icon">📅</div>
+        <div class="td-empty-title">Bugün için programlanmış hasta bulunamadı.</div>
+        <div class="td-empty-sub">Filtreleri temizleyip tekrar deneyin.</div>
+      </div>
     </div>
-    <div class="mt-2 text-xs text-slate-500" id="todayCount"></div>
+    <div class="mt-2 text-xs text-slate-500" id="todayCount" style="display:none"></div>
   </div>
 
 
@@ -2657,6 +2672,39 @@
       _tdOwnersPopulated = true;
     }
 
+    // Bugunun sonuc dagilimi + para toplamlari — tablonun USTUNDEKI serit.
+    // Rakamlar tablonun o an FILTRELENMIS icerigiyle birebir ayni kumeden
+    // geliyor (data), yani seritteki toplam ile satir sayisi hep tutarli.
+    function _tdRenderStats(data) {
+      const host = document.getElementById('todayStats');
+      if (!host) return;
+      const n = s => data.filter(a => a.status === s).length;
+      const arrived = n('arrived'), examined = n('examined'),
+            processing = n('processing'), noShow = n('no_show');
+      const pending = data.length - arrived - examined - processing - noShow;
+      let amount = 0, paid = 0, unpaid = 0;
+      data.forEach(a => {
+        const info = _amDealInfoFor(a.deal_id) || {};
+        amount += Number(info.amount) || 0;
+        paid   += Number(info.paid) || 0;
+        unpaid += Number(info.unpaid) || 0;
+      });
+      const cell = (label, val, cls) =>
+        `<div class="td-stat ${cls}"><i>${I18N.t(label)}</i><strong>${val}</strong></div>`;
+      host.innerHTML =
+        cell('Toplam Hasta', data.length, 'td-stat-total') +
+        cell('Bekleyen', pending, 'td-stat-pending') +
+        cell('Hasta Geldi', arrived, 'td-stat-arrived') +
+        cell('Muayene', examined, 'td-stat-examined') +
+        cell('İşlemlerde', processing, 'td-stat-processing') +
+        cell('Gelemedi', noShow, 'td-stat-noshow') +
+        `<div class="td-stat-money">` +
+          cell('Toplam Tutar', fmtMoney(amount), 'td-stat-amount') +
+          cell('Toplam Ödenen', fmtMoney(paid), 'td-stat-paid') +
+          cell('Toplam Kalan', fmtMoney(unpaid), 'td-stat-unpaid') +
+        `</div>`;
+    }
+
     function renderAdminToday() {
       const active = new Set(['open','seen','in_progress','arrived','examined','processing','escalated']);
       let data = adminAllAlarms.filter(a => _amIsToday(a) && (active.has(a.status) || a.status === 'no_show'));
@@ -2675,19 +2723,22 @@
       const tbody = document.getElementById('todayTbody');
       const empty = document.getElementById('todayEmpty');
       document.getElementById('todayCount').textContent = `${data.length} ${I18N.t('hasta gösteriliyor')}`;
+      _tdRenderStats(data);
       if (!data.length) { tbody.innerHTML = ''; empty.style.display = 'block'; return; }
       empty.style.display = 'none';
 
       tbody.innerHTML = data.map((a, i) => {
         const sm = _amStatusMeta(a.status);
         const pftDisplay = a.payment_or_flight_ticket === 'Payment'
-          ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#2e1065;color:#c084fc;border:1px solid #4c1d95">Payment</span>'
+          ? '<span class="td-tag td-tag-pay">Payment</span>'
           : a.payment_or_flight_ticket === 'Flight Ticket'
-            ? '<span style="padding:2px 8px;border-radius:6px;font-size:9px;font-weight:800;background:#1e3a5f;color:#60a5fa;border:1px solid #1e40af">Flight Ticket</span>'
+            ? '<span class="td-tag td-tag-ft">Flight Ticket</span>'
             : '—';
         const info = _amDealInfoFor(a.deal_id) || {};
         const shortRef = info.ref || a.deal_id || '';
-        const bd = 'border-bottom:1px solid #0f172a';
+        // Ayirici satir ici DEGIL tema katmanindan: satir ici #0f172a acik
+        // temada neredeyse siyah bir izgara cikariyordu.
+        const bd = '';
         const dealIdCell = a.deal_id
           ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted" title="${I18N.t("Zoho'da Aç")}">${shortRef} ↗</a>`
           : '—';
@@ -2697,37 +2748,37 @@
         // 'cancelled' de listeye dahil: "İptal / Geçersiz" olarak kapatılan
         // alarmlarda eskiden Geri Al hiç çıkmıyordu, yani geri dönüşü yoktu.
         const outcomeBtns = ['arrived','examined','processing','no_show','closed','cancelled'].includes(a.status)
-          ? `<button onclick="event.stopPropagation();adminUndoQuickAction('${a.id}')" style="padding:3px 10px;background:#1e293b;border:1px solid #334155;border-radius:6px;color:#cbd5e1;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Geri Al')}</button>`
-          : `<div style="display:flex;gap:4px;flex-wrap:wrap">
-              <button onclick="event.stopPropagation();promptAdminOutcome('${a.id}','arrived','${nm}')" style="padding:3px 8px;background:#052e16;border:1px solid #166534;border-radius:6px;color:#4ade80;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap">${I18N.t('Hasta Geldi')}</button>
-              <button onclick="event.stopPropagation();promptAdminOutcome('${a.id}','examined','${nm}')" style="padding:3px 8px;background:#083344;border:1px solid #0e7490;border-radius:6px;color:#67e8f9;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap">${I18N.t('Muayene')}</button>
-              <button onclick="event.stopPropagation();promptAdminOutcome('${a.id}','processing','${nm}')" style="padding:3px 8px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap">${I18N.t('İşlemlerde')}</button>
-              <button onclick="event.stopPropagation();promptAdminOutcome('${a.id}','no_show','${nm}')" style="padding:3px 8px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap">${I18N.t('Gelemedi')}</button>
+          ? `<button class="td-btn td-btn-undo" onclick="event.stopPropagation();adminUndoQuickAction('${a.id}')">${I18N.t('Geri Al')}</button>`
+          : `<div class="td-btn-row">
+              <button class="td-btn td-btn-arrived" onclick="event.stopPropagation();promptAdminOutcome('${a.id}','arrived','${nm}')">${I18N.t('Hasta Geldi')}</button>
+              <button class="td-btn td-btn-examined" onclick="event.stopPropagation();promptAdminOutcome('${a.id}','examined','${nm}')">${I18N.t('Muayene')}</button>
+              <button class="td-btn td-btn-processing" onclick="event.stopPropagation();promptAdminOutcome('${a.id}','processing','${nm}')">${I18N.t('İşlemlerde')}</button>
+              <button class="td-btn td-btn-noshow" onclick="event.stopPropagation();promptAdminOutcome('${a.id}','no_show','${nm}')">${I18N.t('Gelemedi')}</button>
             </div>`;
         const isNoShow = a.status === 'no_show';
-        const rowBg = isNoShow ? 'background:rgba(127,29,29,0.14);' : '';
+        const rowCls = isNoShow ? ' am-row-overdue' : '';
         const statusCell = isNoShow
-          ? `<span style="display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:800;background:#450a0a;color:#f87171;border:1px solid #7f1d1d">✕ ${I18N.t('GELMEDİ')}</span>`
+          ? `<span class="td-pill td-pill-noshow">✕ ${I18N.t('GELMEDİ')}</span>`
           : `<span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:${sm.color}22;color:${sm.color}">${fmt(sm.label)}</span>`;
-        return `<tr style="cursor:pointer;${rowBg}" onclick="openAdminAlarmModal('${a.id}')">
-          <td style="padding:8px 10px;font-size:10px;color:#475569;${bd}">${i+1}</td>
-          <td style="padding:8px 10px;${bd}">
+        return `<tr class="am-alarm-row${rowCls}" style="cursor:pointer" onclick="openAdminAlarmModal('${a.id}')">
+          <td style="padding:9px 10px;font-size:10px;color:#475569">${i+1}</td>
+          <td style="padding:9px 10px">
             <div style="font-size:12px;font-weight:600;color:#f1f5f9;white-space:nowrap">${fmt(a.deal_name)}</div>
             <div style="font-size:10px;color:#0d9488;font-weight:600">${fmt(a.deal_owner)}</div>
           </td>
-          <td style="padding:8px 10px;font-size:10px;font-family:monospace;${bd};white-space:nowrap">${dealIdCell}</td>
-          <td style="padding:8px 10px;font-size:10px;color:#cbd5e1;${bd};white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis">${info.stage ? fmt(info.stage) : '—'}</td>
-          <td style="padding:8px 10px;font-size:10px;color:#94a3b8;${bd};white-space:nowrap">${fmt(a.team)}<br><span style="color:#64748b">${fmt(a.region)}</span></td>
-          <td style="padding:8px 10px;${bd};white-space:nowrap">${pftDisplay}</td>
-          <td style="padding:8px 10px;font-size:11px;color:#60a5fa;${bd};text-align:right;white-space:nowrap">${info.amount || info.amount === 0 ? fmtMoney(info.amount) : '—'}</td>
-          <td style="padding:8px 10px;font-size:11px;color:#4ade80;${bd};text-align:right;white-space:nowrap">${info.paid || info.paid === 0 ? fmtMoney(info.paid) : '—'}</td>
-          <td style="padding:8px 10px;font-size:11px;color:#f87171;${bd};text-align:right;white-space:nowrap">${info.unpaid || info.unpaid === 0 ? fmtMoney(info.unpaid) : '—'}</td>
-          <td style="padding:8px 10px;${bd};white-space:nowrap">${statusCell}</td>
-          <td style="padding:8px 10px;${bd};text-align:center">${_noteBtn(a.note)}</td>
-          <td style="padding:8px 10px;${bd}">
-            <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
+          <td style="padding:9px 10px;font-size:10px;font-family:monospace;white-space:nowrap">${dealIdCell}</td>
+          <td style="padding:9px 10px;font-size:10px;color:#cbd5e1;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis">${info.stage ? fmt(info.stage) : '—'}</td>
+          <td style="padding:9px 10px;font-size:10px;color:#94a3b8;white-space:nowrap">${fmt(a.team)}<br><span style="color:#64748b">${fmt(a.region)}</span></td>
+          <td style="padding:9px 10px;white-space:nowrap">${pftDisplay}</td>
+          <td style="padding:9px 10px;font-size:11px;color:#60a5fa;text-align:right;white-space:nowrap">${info.amount || info.amount === 0 ? fmtMoney(info.amount) : '—'}</td>
+          <td style="padding:9px 10px;font-size:11px;color:#4ade80;text-align:right;white-space:nowrap">${info.paid || info.paid === 0 ? fmtMoney(info.paid) : '—'}</td>
+          <td style="padding:9px 10px;font-size:11px;color:#f87171;text-align:right;white-space:nowrap">${info.unpaid || info.unpaid === 0 ? fmtMoney(info.unpaid) : '—'}</td>
+          <td style="padding:9px 10px;white-space:nowrap">${statusCell}</td>
+          <td style="padding:9px 10px;text-align:center">${_noteBtn(a.note)}</td>
+          <td style="padding:9px 10px">
+            <div class="td-btn-row">
               ${outcomeBtns}
-              <button onclick="event.stopPropagation();openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
+              <button class="td-btn td-btn-detail" onclick="event.stopPropagation();openAdminAlarmModal('${a.id}')">${I18N.t('Detay')}</button>
             </div>
           </td>
         </tr>`;
@@ -6834,6 +6885,14 @@
     setInterval(() => {
       const el = document.getElementById('amClock');
       if (el) el.textContent = new Date().toLocaleTimeString('tr-TR');
+      // Bugun Gelecekler tarih cipi: gece yarisini gecmis bir sekmede liste
+      // baska bir gune gecerken bunun gorunmesi lazim, o yuzden ayni tikta.
+      const td = document.getElementById('todayDateChip');
+      if (td) {
+        const loc = (localStorage.getItem('nc_lang') === 'en') ? 'en-GB' : 'tr-TR';
+        const s = new Date().toLocaleDateString(loc, { day: '2-digit', month: 'long', weekday: 'long' });
+        if (td.textContent !== s) td.textContent = s;
+      }
     }, 1000);
 
     // ── Takım liderlerinin/RM'lerin alarmlar üzerinde yaptığı aksiyonlar

@@ -1657,3 +1657,68 @@ html[data-theme="dark"] .aam-tl-row,
 html[data-theme="dark"] .aam-hist-row {
   border-bottom: 1px solid rgba(255, 255, 255, 0.055);
 }
+
+/* ═════════════════════════════════════════════════════════════════════
+   26. BUGÜN GELECEKLER — 45'in koyu ikizi.
+   ═════════════════════════════════════════════════════════════════════ */
+html[data-theme="dark"] .td-stat {
+  background: rgba(255, 255, 255, 0.045);
+  -webkit-backdrop-filter: blur(18px) saturate(170%);
+  backdrop-filter: blur(18px) saturate(170%);
+  border: 1px solid var(--d-edge-soft);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+}
+html[data-theme="dark"] .td-stat:hover {
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.09),
+              0 8px 22px rgba(0, 0, 0, 0.35);
+}
+html[data-theme="dark"] .td-stat i { color: #7d8ba3; }
+html[data-theme="dark"] .td-stat strong { color: #e6ebf5; }
+html[data-theme="dark"] .td-stat-arrived strong    { color: #4ade80; }
+html[data-theme="dark"] .td-stat-examined strong   { color: #67e8f9; }
+html[data-theme="dark"] .td-stat-processing strong { color: #2dd4bf; }
+html[data-theme="dark"] .td-stat-noshow strong     { color: #f87171; }
+html[data-theme="dark"] .td-stat-pending strong    { color: #fbbf24; }
+html[data-theme="dark"] .td-stat-amount strong     { color: #60a5fa; }
+html[data-theme="dark"] .td-stat-paid strong       { color: #4ade80; }
+html[data-theme="dark"] .td-stat-unpaid strong     { color: #f87171; }
+html[data-theme="dark"] .td-stat-arrived    { border-left: 3px solid rgba(74, 222, 128, 0.5); }
+html[data-theme="dark"] .td-stat-examined   { border-left: 3px solid rgba(103, 232, 249, 0.45); }
+html[data-theme="dark"] .td-stat-processing { border-left: 3px solid rgba(45, 212, 191, 0.5); }
+html[data-theme="dark"] .td-stat-noshow     { border-left: 3px solid rgba(248, 113, 113, 0.5); }
+html[data-theme="dark"] .td-stat-pending    { border-left: 3px solid rgba(251, 191, 36, 0.5); }
+html[data-theme="dark"] .td-stat-total      { border-left: 3px solid rgba(255, 255, 255, 0.22); }
+
+html[data-theme="dark"] .td-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--d-edge-soft);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+  backdrop-filter: blur(12px) saturate(160%);
+  color: #b6c1d4;
+}
+html[data-theme="dark"] .td-btn-arrived    { color: #4ade80; border-color: rgba(74, 222, 128, 0.3);  background: rgba(34, 197, 94, 0.12); }
+html[data-theme="dark"] .td-btn-arrived:hover    { background: rgba(34, 197, 94, 0.24); }
+html[data-theme="dark"] .td-btn-examined   { color: #67e8f9; border-color: rgba(103, 232, 249, 0.3); background: rgba(14, 165, 233, 0.13); }
+html[data-theme="dark"] .td-btn-examined:hover   { background: rgba(14, 165, 233, 0.26); }
+html[data-theme="dark"] .td-btn-processing { color: #2dd4bf; border-color: rgba(45, 212, 191, 0.3);  background: rgba(13, 148, 136, 0.15); }
+html[data-theme="dark"] .td-btn-processing:hover { background: rgba(13, 148, 136, 0.3); }
+html[data-theme="dark"] .td-btn-noshow     { color: #f87171; border-color: rgba(248, 113, 113, 0.3); background: rgba(239, 68, 68, 0.12); }
+html[data-theme="dark"] .td-btn-noshow:hover     { background: rgba(239, 68, 68, 0.24); }
+html[data-theme="dark"] .td-btn-detail     { color: #2dd4bf; border-color: rgba(45, 212, 191, 0.28); background: rgba(255, 255, 255, 0.05); }
+html[data-theme="dark"] .td-btn-detail:hover     { background: rgba(13, 148, 136, 0.22); }
+html[data-theme="dark"] .td-btn-undo:hover  { background: rgba(255, 255, 255, 0.1); }
+
+html[data-theme="dark"] .td-tag-pay {
+  background: rgba(147, 51, 234, 0.18); color: #c084fc;
+  border: 1px solid rgba(147, 51, 234, 0.35);
+}
+html[data-theme="dark"] .td-tag-ft {
+  background: rgba(37, 99, 235, 0.18); color: #60a5fa;
+  border: 1px solid rgba(37, 99, 235, 0.35);
+}
+html[data-theme="dark"] .td-pill-noshow {
+  background: rgba(239, 68, 68, 0.16); color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+html[data-theme="dark"] .td-empty-title { color: #a9b4c8; }
+html[data-theme="dark"] .td-empty-sub { color: #6d7a91; }
