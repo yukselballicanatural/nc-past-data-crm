@@ -577,6 +577,10 @@
     'takım yok': 'no team',
     // Takıma bağlanamayanlar (api/team-members.js → unplaced)
     '{n} kişi hiçbir takıma bağlanamadı.': '{n} people could not be matched to any team.',
+    // Kadro tazelik notu (TL + admin, aynı metin)
+    'Supabase’den canlı çekildi: ': 'Fetched live from Supabase: ',
+    ' kişinin takımı Zoho’da yazılı değil, son deal’inden tahmin edildi (★ işaretli)':
+      ' people have no team recorded in Zoho; it was inferred from their latest deal (marked ★)',
     'Takıma bağlanamadı': 'Could not be matched to a team',
     'Zoho rolü': 'Zoho role',
     'Zoho takımı': 'Zoho team',

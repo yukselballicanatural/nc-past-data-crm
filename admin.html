@@ -919,6 +919,8 @@
         <div>
           <h2 class="text-xl font-bold text-white">Takımımdaki Kişiler</h2>
           <p class="text-[11px] text-slate-500 mt-1" id="tmScopeLabel">Tüm takımların danışman telefon/e-posta bilgileri.</p>
+          <!-- Kadro CANLI: her açılışta Supabase'den çekilir, saklanmaz. -->
+          <p class="text-[10.5px] text-slate-500 mt-1" id="tmFreshNote" style="display:none"></p>
         </div>
         <div class="flex gap-2 flex-wrap items-center">
           <span id="teamMembersExportMount"></span>
@@ -5330,7 +5332,7 @@
         const ownerName = (alarm.deal_owner || '').trim();
         if (!ownerName) return;
         const token = (currentUser && currentUser.token) || '';
-        const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
+        const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
         const data = await r.json().catch(() => ({}));
         const members = data.members || [];
         _amTeamMembers = members;
@@ -5440,6 +5442,27 @@
     let _amTmTeamsPopulated = false;
     // force=true (↻ Yenile / senkron sonrası): takım uyuşmazlığı taraması da
     // throttle'a bakmadan yeniden çalışır.
+    // Kadronun tazelik damgası — TL panelindeki _tmRenderFreshNote'un eşi.
+    let _amTmMeta = { fetchedAt: '', guessed: 0 };
+    function _amTmRenderFreshNote() {
+      const el = document.getElementById('tmFreshNote');
+      if (!el) return;
+      const bits = [];
+      if (_amTmMeta.fetchedAt) {
+        const d = new Date(_amTmMeta.fetchedAt);
+        if (!isNaN(d)) {
+          const p = (n) => String(n).padStart(2, '0');
+          bits.push(I18N.t('Supabase’den canlı çekildi: ') + p(d.getHours()) + ':' + p(d.getMinutes()) + ':' + p(d.getSeconds()));
+        }
+      }
+      if (_amTmMeta.guessed) {
+        bits.push(_amTmMeta.guessed + I18N.t(' kişinin takımı Zoho’da yazılı değil, son deal’inden tahmin edildi (★ işaretli)'));
+      }
+      if (!bits.length) { el.style.display = 'none'; return; }
+      el.textContent = bits.join('  ·  ');
+      el.style.display = 'block';
+    }
+
     async function loadAdminTeamMembers(force) {
       const loading = document.getElementById('tmLoading');
       const empty   = document.getElementById('tmEmpty');
@@ -5447,7 +5470,9 @@
       loading.classList.remove('hidden'); empty.classList.add('hidden'); wrap.classList.add('hidden');
       try {
         const token = (currentUser && currentUser.token) || '';
-        const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
+        // cache:'no-store' — araya giren HTTP cache kadroyu dondurmasın.
+        const r = await fetch('/api/team-members', {
+          headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
         if (r.status === 401) {
           sessionStorage.removeItem('nc_current_user');
           window.location.href = 'index.html?relogin=1';
@@ -5457,6 +5482,13 @@
         if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
         _amTeamMembers = data.members || [];
         _amTmUnplaced = data.unplaced || [];
+        // Kadronun hangi ana ait olduğu + takımı tahminle yerleştirilenler.
+        // Bu ikisi TL panelindeki notun aynısı — iki panel aynı şeyi göstermeli.
+        _amTmMeta = {
+          fetchedAt: data.fetchedAt || '',
+          guessed: _amTeamMembers.filter(m => m.teamSource === 'deals').length,
+        };
+        _amTmRenderFreshNote();
         document.getElementById('tmScopeLabel').textContent = window.isRM
           ? `${data.team || window.rmRegion || ''} ${I18N.t('bölgesi danışman telefon/e-posta bilgileri.')}`
           : I18N.t('Tüm takımların danışman telefon/e-posta bilgileri.');
@@ -5790,7 +5822,11 @@
         : dash;
       return `<tr id="tmRow-${i}" style="${rowBg};border-bottom:1px solid #1e293b">
         <td style="padding:8px 12px;color:#475569;font-size:11px;white-space:nowrap">${i + 1}</td>
-        <td style="padding:8px 12px;color:#f1f5f9;font-weight:600;white-space:nowrap">${_escHtml(m.fullName)}</td>
+        <td style="padding:8px 12px;color:#f1f5f9;font-weight:600;white-space:nowrap">${_escHtml(m.fullName)}${
+          // Takımı Zoho'da yazılı değil, en son deal'inden tahmin edildi (TL panelindeki işaretin eşi).
+          m.teamSource === 'deals'
+            ? ` <span title="Takımı Zoho'da yazılı değil; en son deal'inden tahmin edildi" style="color:#f59e0b;font-size:11px">★</span>`
+            : ''}</td>
         <td style="padding:8px 12px;color:#94a3b8;font-size:11.5px;white-space:nowrap">${m.realName ? _escHtml(m.realName) : dash}</td>
         <td style="padding:8px 12px;color:#64748b;font-size:11px;white-space:nowrap">${_escHtml(m.team)}${_amTmDriftBadge(m, i)}</td>
         <td style="padding:8px 12px;white-space:nowrap">${seniority}</td>
@@ -5835,7 +5871,9 @@
     // (yeni danışman, takım değişikliği, ayrılma). Süresiz cache'te sekme açık
     // kaldığı sürece liste bayat kalıyordu. Tarih değiştirmek hâlâ ağ çağrısı
     // yapmıyor — yalnızca TTL dolduğunda tazeleniyor.
-    const _ADE_MEMBERS_TTL = 5 * 60 * 1000;
+    // 60 sn — TL panelindeki _DEP_MEMBERS_TTL ile AYNI olmalı, yoksa iki panel
+    // aynı gün için farklı kadro gösterebilir.
+    const _ADE_MEMBERS_TTL = 60 * 1000;
     let _adeMembersAt = 0;
 
     function _adePad(n) { return String(n).padStart(2, '0'); }
@@ -9715,7 +9753,7 @@
           try {
             if (_adeMembersCache) return;
             const token = (currentUser && currentUser.token) || '';
-            const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token } });
+            const r = await fetch('/api/team-members', { headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
             if (!r.ok) return;
             const data = await r.json().catch(() => ({}));
             const _isBoss = role => /leader|lider|manager|müdür|mudur|admin|yönetici|yonetici/i.test(String(role || ''));

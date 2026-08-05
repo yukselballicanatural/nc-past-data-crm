@@ -103,31 +103,56 @@ function looseTeam(t) {
 }
 
 // Bir zoho_users satırının takımı — sırayla, ilk kesin sinyal kazanır.
-// Tek bir alana (role) bakmak yetmiyordu: şemada duran `team` kolonu hiç
-// okunmuyordu ve role bir görev unvanı olduğunda kişi hiçbir takıma düşmüyordu.
+//
+// SIRA ÖNEMLİ ve BİLİNÇLİ: gerçeğin kaynağı ZOHO. Users."Takim Adi" ve deals.team
+// bizim kendi aynalarımız ve BAYATLAYABİLİR (deals.team satır oluşturulduğunda
+// donuyor, hiç güncellenmiyor). Eskiden Users, Zoho'nun serbest metninden ÖNCE
+// geliyordu; sonuç: Zoho'da "Sales Agent - Sara Team - Morocco" yazan biri,
+// Users'ta bayat "Farah Team" durduğu için Farah'ın listesinde çıkıyordu.
+// Artık Zoho'nun hem katı hem serbest metni, bizim aynalarımızı YENER.
 function resolveZohoTeam(z, usersRow, dealTeamByName) {
-  const strict = normalizeTeam(z.team) || normalizeTeam(z.role);
-  if (strict) return { team: strict, source: normalizeTeam(z.team) ? 'zoho.team' : 'zoho.role' };
-  // Users."Takim Adi" — api/sync-user-teams.js'in yazdığı ve yetkilendirmenin
-  // zaten dayandığı alan; burada da güvenilir.
+  // 1-2) Zoho'nun kendi alanları, birebir eşleşme
+  if (normalizeTeam(z.team)) return { team: normalizeTeam(z.team), source: 'zoho.team' };
+  if (normalizeTeam(z.role)) return { team: normalizeTeam(z.role), source: 'zoho.role' };
+  // 3-4) Zoho'nun serbest metni ("Sales Agent - Farah Team - Morocco (Junior)")
+  const looseT = looseTeam(z.team);
+  if (looseT) return { team: looseT, source: 'zoho.team~' };
+  const looseR = looseTeam(z.role);
+  if (looseR) return { team: looseR, source: 'zoho.role~' };
+  // 5) Kendi aynamız: Users."Takim Adi" (api/sync-user-teams.js yazıyor).
+  //    Yetkilendirme buna dayandığı için hâlâ değerli, ama Zoho konuştuysa
+  //    Zoho kazanır.
   const fromUsers = usersRow && normalizeTeam(usersRow['Takim Adi']);
   if (fromUsers) return { team: fromUsers, source: 'Users' };
-  const loose = looseTeam(z.team) || looseTeam(z.role);
-  if (loose) return { team: loose, source: 'metin' };
-  // En son çare: bu kişinin en son deal'indeki takım (api/sync-user-teams.js'in
-  // vekil kuralı). Yeni başlayan ve hiç deal'i olmayanlarda boş kalır.
+  // 6) En son çare: bu kişinin en son deal'indeki takım. EN BAYAT sinyal —
+  //    yanıt içinde teamSource='deals' olarak işaretlenir ve panelde
+  //    "tahmin" rozetiyle gösterilir.
   const fromDeals = dealTeamByName && dealTeamByName.get(nameKey(z.full_name));
   if (fromDeals) return { team: fromDeals, source: 'deals' };
   return { team: null, source: null };
 }
+
+// Kesin olarak "artık burada değil" diyen status değerleri. Liste AÇIK uçlu
+// tutuluyor (kapalı bir "active" kontrolü değil), çünkü bilinmeyen/boş bir
+// status kişiyi kadrodan DÜŞÜRMEMELİ: kanıt yokluğu, yokluk kanıtı değil.
+const INACTIVE_STATUS = new Set([
+  'inactive', 'disabled', 'deleted', 'left', 'leaver', 'passive', 'suspended',
+  'terminated', 'closed', 'false', 'no', '0',
+  'ayrildi', 'ayrıldı', 'pasif', 'silindi', 'iptal',
+]);
 
 // İşten ayrılmış mı?
 // DİKKAT: `status` tek başına yetmiyor — canlı veride exit_date'i geçmişte olan
 // 5 kişi hâlâ status='active' görünüyor (Max Halit 30.07, Tyler Karim 24.07,
 // Amury Blanchet 30.07, Zoe Lane 01.06, Nicholas Parker 06.05). Bu yüzden
 // exit_date asıl ölçüt, status ikincil.
+//
+// Eskiden `status !== 'active'` ise ayrılmış sayılıyordu; status'u BOŞ ya da
+// beklenmeyen bir yazımda ('Aktif', 'ACTIVE ', 'enabled', null) olan herkes
+// kadrodan sessizce düşüyordu — "eksik kişi" şikâyetinin ikinci sebebi bu.
 function isLeaver(z) {
-  if (String(z.status || '').toLowerCase() !== 'active') return true;
+  const st = String(z.status == null ? '' : z.status).trim().toLowerCase();
+  if (INACTIVE_STATUS.has(st)) return true;
   if (z.exit_date) {
     const d = new Date(z.exit_date);
     if (!isNaN(d) && d <= new Date()) return true;
@@ -163,6 +188,10 @@ function regionForRm(me) {
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  // Kadro her zaman Supabase'in O ANKİ hâli olmalı: ne tarayıcı ne Vercel
+  // kenarı bu yanıtı saklamasın. Zoho→Supabase senkronu bir kişiyi taşıdığı
+  // anda panel bir sonraki istekte yeni hâli görür.
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
 
   const SUPABASE_URL = process.env.SUPABASE_URL || FALLBACK_URL;
   const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -288,6 +317,7 @@ export default async function handler(req, res) {
       let members;
       let scopeLabel;
       let unplaced = [];
+      let conflicts = [];
       // Dizin, kapsamlanmış listeyle AYNI çözümlemeyi kullansın diye dışarıda
       // tutuluyor — ikinci kez resolveZohoTeam çağırmak (deal yedeği olmadan)
       // iki yerde farklı takım üretebilirdi.
@@ -303,10 +333,17 @@ export default async function handler(req, res) {
 
         // Katı sinyallerle (team / role / Users) yerleşemeyenler için son çare
         // deal taraması — YALNIZCA gerekliyse ve yalnızca o isimler için.
-        const needDeals = active.filter(z =>
-          !normalizeTeam(z.team) && !normalizeTeam(z.role) &&
-          !(usersByName.get(nameKey(z.full_name)) || {})['Takim Adi'] &&
-          !looseTeam(z.team) && !looseTeam(z.role));
+        // DİKKAT: bu koşul resolveZohoTeam'in 1-5. adımlarının AYNISI olmalı,
+        // yoksa deals taraması gereksiz çalışır ya da (daha kötüsü) gerekliyken
+        // çalışmaz. Users tarafında normalizeTeam kullanılıyor: tanınmayan bir
+        // yazım "takım var" sayılıp kişiyi yerleştirmesiz bırakmasın.
+        const needDeals = active.filter(z => {
+          if (normalizeTeam(z.team) || normalizeTeam(z.role)) return false;
+          if (looseTeam(z.team) || looseTeam(z.role)) return false;
+          const u = usersByName.get(nameKey(z.full_name));
+          if (u && normalizeTeam(u['Takim Adi'])) return false;
+          return true;
+        });
         const dealTeamByName = new Map();
         // 25'lik gruplar: tek büyük in.(...) hem URL'i şişirir hem de
         // limit=1000 penceresine çok sahip sığdığında eski deal'i olan kişinin
@@ -349,6 +386,25 @@ export default async function handler(req, res) {
           email:    p.z.email || '',
           status:   p.z.status || '',
         }));
+
+        // ── ÇELİŞKİ dökümü: Zoho bir takım diyor, Users başka bir takım ─────
+        // "Takımımda olmayan kişi görünüyor" şikâyetinin kaynağı tam olarak bu:
+        // biri Zoho'da takım değiştiriyor, Users'taki eski değer kalıyor.
+        // Artık Zoho kazanıyor (bkz. resolveZohoTeam), ama kayıt DÜZELTİLMESİ
+        // gerektiği için liste admin panelinde gösterilir — sessizce yutulmuyor.
+        conflicts = resolved
+          .map(p => {
+            const uTeam = p.u && normalizeTeam(p.u['Takim Adi']);
+            if (!p.team || !uTeam || uTeam === p.team) return null;
+            return {
+              fullName:  p.z.full_name || '',
+              zohoTeam:  p.team,          // uygulanan (Zoho) takım
+              usersTeam: uTeam,           // Users'taki bayat değer
+              username:  p.u['Username'] || '',
+              source:    p.teamSource || '',
+            };
+          })
+          .filter(Boolean);
 
         resolvedAll = resolved;
         const scoped = scopeZoho(resolved);
@@ -470,14 +526,21 @@ export default async function handler(req, res) {
 
       members.sort((a, b) =>
         (a.team || '').localeCompare(b.team || '') || a.fullName.localeCompare(b.fullName));
+      const isAdmin = ['admin', 'super-admin'].includes(claims.r);
       res.status(200).json({
         team: scopeLabel,
         members,
         source: zohoRows.length ? 'zoho_users' : 'Users',
         directory,
-        // Takıma bağlanamayanlar yalnızca admin'e — bu bir veri bakımı
-        // uyarısı, takım liderinin ekranında karşılığı yok.
-        unplaced: ['admin', 'super-admin'].includes(claims.r) ? unplaced : [],
+        // Kadro CANLI: her istek Supabase'e gidiyor, yanıt hiçbir katmanda
+        // saklanmıyor. Panel bu damgayı "son güncelleme" olarak gösteriyor.
+        fetchedAt: new Date().toISOString(),
+        counts: { zoho: zohoRows.length, users: userRows.length, listed: members.length },
+        // Takıma bağlanamayanlar ve Zoho↔Users çelişkileri yalnızca admin'e —
+        // bunlar veri bakımı uyarısı, takım liderinin ekranında karşılığı yok
+        // (ayrıca başka takımların kişilerini içerir).
+        unplaced:  isAdmin ? unplaced  : [],
+        conflicts: isAdmin ? conflicts : [],
       });
       return;
     }
