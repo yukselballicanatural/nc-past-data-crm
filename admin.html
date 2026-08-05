@@ -2414,7 +2414,7 @@
         const PAGE = 1000;
         let offset = 0;
         while (true) {
-          const url = `${SUPABASE_URL}/rest/v1/deals?select=id,created_time&created_time=gte.${from}&created_time=lt.${to}${teamQ}&limit=${PAGE}&offset=${offset}`;
+          const url = `${SUPABASE_URL}/rest/v1/deals?select=id,created_time&created_time=gte.${from}&created_time=lt.${to}${teamQ}&order=id.asc&limit=${PAGE}&offset=${offset}`;
           const r = await fetch(url, { headers: H });
           if (!r.ok) break;
           const rows = await r.json();
@@ -2557,7 +2557,7 @@
         const ACTIVE_Q = '&status=' + encodeURIComponent(
           'in.(open,seen,in_progress,escalated,arrived,examined,processing,no_show)') +
           '&alarm_type=neq.payment_tracking';
-        const baseUrl = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc${regionQ}${ACTIVE_Q}&limit=${PAGE}`;
+        const baseUrl = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc,id.asc${regionQ}${ACTIVE_Q}&limit=${PAGE}`;
         const first = await fetch(`${baseUrl}&offset=0`, { headers: { ...H, Prefer: 'count=exact' } });
         if (!first.ok) throw new Error('HTTP ' + first.status);
         let all = await first.json();
@@ -3054,7 +3054,7 @@
         const PAGE = 1000;
         // payment_tracking DAHİL: bu sayfa o tipteki eski kapalı satırları da
         // listeliyor (yalnızca "Alarm Tipi" hücresini boş bırakıyor).
-        const baseUrl = `${SUPABASE_URL}/rest/v1/alarms?order=closed_at.desc.nullslast` +
+        const baseUrl = `${SUPABASE_URL}/rest/v1/alarms?order=closed_at.desc.nullslast,id.asc` +
           `${regionQ}&status=eq.closed&limit=${PAGE}`;
         try {
           const first = await fetch(`${baseUrl}&offset=0`, { headers: { ...H, Prefer: 'count=exact' } });
@@ -3278,7 +3278,7 @@
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
       let out = [];
       for (let off = 0; off < cap; off += 1000) {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}&limit=1000&offset=${off}`, { headers: H });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/${path},id.asc&limit=1000&offset=${off}`, { headers: H });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         const p = await r.json();
         out = out.concat(Array.isArray(p) ? p : []);
@@ -3880,7 +3880,7 @@
         const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,created_time,result_code,sub_code,agent_note';
         const PAGE = 1000;
         const teamQ = window.rmTeams ? `&team=${TeamMap.inFilter(window.rmTeams)}` : '';
-        const baseUrl = `${SUPABASE_URL}/rest/v1/deals?or=${orParam}${teamQ}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}${DEALS_2026_Q}`;
+        const baseUrl = `${SUPABASE_URL}/rest/v1/deals?or=${orParam}${teamQ}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'count=exact' };
         const first = await fetch(`${baseUrl}&offset=0`, { headers: H });
         if (!first.ok) throw new Error('HTTP ' + first.status);
@@ -4256,7 +4256,7 @@
         const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,created_time,result_code,sub_code,agent_note';
         const PAGE = 1000;
         const teamQ = window.rmTeams ? `&team=${TeamMap.inFilter(window.rmTeams)}` : '';
-        const baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}${teamQ}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}${DEALS_2026_Q}`;
+        const baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}${teamQ}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
         const first = await fetch(`${baseUrl}&offset=0`, { headers: H });
         if (!first.ok) throw new Error('HTTP ' + first.status);
         const firstRows = await first.json();
@@ -9011,7 +9011,7 @@
       // Bir sayfa yine de tükenirse çağıran taraf onu boş bırakıp devam ediyor;
       // tek sayfa yüzünden tüm yükleme iptal edilmiyor.
       async function fetchRange(offset, limit) {
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=${_DEALS_SELECT}${teamQ}${DEALS_2026_Q}&limit=${limit}&offset=${offset}`, { headers: h });
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?select=${_DEALS_SELECT}${teamQ}${DEALS_2026_Q}&order=id.asc&limit=${limit}&offset=${offset}`, { headers: h });
         if (!r.ok) throw new Error('HTTP ' + r.status);
         return r.json();
       }

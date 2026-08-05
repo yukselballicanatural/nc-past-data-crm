@@ -227,7 +227,7 @@ window.AlarmEngine = (function () {
       const url = `${BASE}/rest/v1/deals?stage=${stageParam}` +
         `&select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,raw` +
         CREATED_2026_Q +
-        `&limit=500&offset=${offset}`;
+        `&order=id.asc&limit=500&offset=${offset}`;
       const r = await fetch(url, { headers: H });
       if (!r.ok) {
         let detail = '';
@@ -327,7 +327,7 @@ window.AlarmEngine = (function () {
       let offset = 0;
       while (true) {
         const url = `${BASE}/rest/v1/alarms?status=${ACTIVE}${extraFilter}` +
-          `&select=${select}&limit=1000&offset=${offset}`;
+          `&select=${select}&order=id.asc&limit=1000&offset=${offset}`;
         const r = await fetch(url, { headers: H });
         if (!r.ok) break;
         const batch = await r.json();
@@ -799,7 +799,7 @@ window.AlarmEngine = (function () {
         `${BASE}/rest/v1/alarms?status=${ACTIVE}` +
         `&alarm_type=in.(arrival_approaching,visit_approaching,today_patient)` +
         `&reference_date=not.is.null&select=id,alarm_type,reference_field,reference_date` +
-        `&limit=1000&offset=${offset}`,
+        `&order=id.asc&limit=1000&offset=${offset}`,
         { headers: H }
       );
       if (!r.ok) break;

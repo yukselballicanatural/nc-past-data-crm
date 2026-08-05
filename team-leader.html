@@ -2704,7 +2704,7 @@
 
       const PAGE = 500;
       const buildAlarmsUrl = (off) => {
-        let url = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc&limit=${PAGE}&offset=${off}`;
+        let url = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc,id.asc&limit=${PAGE}&offset=${off}`;
         if (teamParam) {
           url += `&team=${teamParam}`;
         } else if (isRM) {
@@ -3516,7 +3516,7 @@
       // Postgres varsayılanı DESC'te null'ları öne koyar — nullslast ile boş değerleri sona at
       const nullsMod = dealSortDir === 'desc' ? '.nullslast' : '';
       const orderParam = `${dealSortCol}.${dealSortDir}${nullsMod}${dealSortCol !== 'id' ? ',id.asc' : ''}`;
-      let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date,payment_or_flight_ticket,raw&order=${orderParam}&limit=${DEAL_PAGE_SIZE}&offset=${offset}${DEALS_2026_Q}`;
+      let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date,payment_or_flight_ticket,raw&order=${orderParam},id.asc&limit=${DEAL_PAGE_SIZE}&offset=${offset}${DEALS_2026_Q}`;
       // Rol bazlı kapsam: TL kendi takımı (tüm yazım varyantları), RM kendi bölgesindeki tüm takımlar
       if (!isRM && currentUser.team) {
         url += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
@@ -3990,7 +3990,7 @@
       const orParam = encodeURIComponent('(stage.ilike.*cancel*,result_code.ilike.8.*)');
       const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,payment_or_flight_ticket,created_time,result_code,sub_code,agent_note';
       const PAGE = 1000;
-      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?or=${orParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}${DEALS_2026_Q}`;
+      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?or=${orParam}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
       if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
       else if (isRM) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
 
@@ -4425,7 +4425,7 @@
       const stageParam = encodeURIComponent('ilike.*won*');
       const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,created_time,result_code,sub_code,agent_note';
       const PAGE = 1000;
-      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc&limit=${PAGE}${DEALS_2026_Q}`;
+      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
       if (!isRM && currentUser.team) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
       else if (isRM) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
 
@@ -5251,7 +5251,7 @@
         let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,raw` +
           `&stage=${stageParam}&raw->>Payment_Or_Flight_Ticket=eq.Payment&raw->>Last_Activity_Time=is.null` +
           DEALS_2026_Q +
-          `&limit=${PAGE}&offset=${off}`;
+          `&order=id.asc&limit=${PAGE}&offset=${off}`;
         if (!isRM && currentUser.team) url += `&team=${TeamMap.inFilter(TeamMap.aliasesFor(currentUser.team))}`;
         else if (isRM) url += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
         return url;
