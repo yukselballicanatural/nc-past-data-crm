@@ -5257,8 +5257,26 @@
     I18N.translateDOM(tbody);
   }
 
+  // ── Görünüm hafızası ────────────────────────────────────────────────
+  // Yenileme (F5) kullanıcıyı en başa atıyordu. SEKME BAŞINA saklanıyor:
+  // yenileme aynı yerde açar, yeni sekme temiz başlar.
+  const _TL_VIEW_KEY = 'nc_tl_view';
+  const _TL_VIEWS = ['alarms','today','deals','closed-alarms','cancelled','won',
+    'rm-overview','activity','team-members','daily-entry'];
+  function _tlRestoreView() {
+    let v = '';
+    try { v = sessionStorage.getItem(_TL_VIEW_KEY) || ''; } catch (e) {}
+    if (!v || !_TL_VIEWS.includes(v)) return null;
+    // RM'de "Takımımdaki Kişiler" menüsü gizli; kayıt onu geri getirmesin.
+    if (isRM && v === 'team-members') return null;
+    // RM olmayan biri rm-overview'a düşmesin.
+    if (!isRM && v === 'rm-overview') return null;
+    return v;
+  }
+
   function switchView(v) {
     activeView = v;
+    try { sessionStorage.setItem(_TL_VIEW_KEY, v); } catch (e) {}
     const views = ['alarms','today','deals','closed-alarms','cancelled','won','rm-overview','activity','team-members','daily-entry'];
     views.forEach(id => {
       const vw = document.getElementById('view-' + id);
@@ -5285,6 +5303,45 @@
       _depSyncQuickButtons(depDate);
     }
   }
+
+  // ── Dil değişimi: sayfa yenilemeden, bulunulan yerde ────────────────
+  // I18N statik iskeleti kendisi çevirir/geri alır; buradaki iş DİNAMİK
+  // içeriği yeniden çizmek (tablolar render anında I18N.t() çağırıyor).
+  // AĞ ÇAĞRISI YOK — veriler bellekte. (bkz. admin.html'deki aynı kanca)
+  I18N.onLangChange(() => {
+    const lt = document.getElementById('langToggleMount');
+    if (lt) lt.innerHTML = I18N.renderToggleButton();
+    const mini = document.getElementById('miniLangLabel');
+    if (mini) mini.textContent = I18N.getLang().toUpperCase();
+    try { mountExportButtons(); } catch (e) {}
+    // Dile bağlı tarih biçimi
+    try {
+      const tdl = document.getElementById('todayDateLabel');
+      if (tdl) tdl.textContent = new Date().toLocaleDateString(
+        I18N.getLang() === 'en' ? 'en-US' : 'tr-TR',
+        { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    } catch (e) {}
+    try {
+      const rl = document.getElementById('roleLabel');
+      if (rl) rl.textContent = isRM ? 'Regional Manager' : I18N.t('Team Leader');
+    } catch (e) {}
+    // Alarm listesi rozetleri/şeridi her sayfada görünür durumda
+    try { renderConsultantStrip(); } catch (e) {}
+    const R = {
+      'alarms':         () => renderAlarms(),
+      'today':          () => renderToday(),
+      'deals':          () => renderDeals(),
+      'closed-alarms':  () => renderClosedAlarms(),
+      'cancelled':      () => renderCancelledReport(),
+      'won':            () => renderWonAlarms(),
+      'rm-overview':    () => { renderRmKpis(); renderRmTeamCards(); renderRmAlarmTable(); },
+      'activity':       () => renderTlActivity(),
+      'team-members':   () => renderTeamMembers(),
+      'daily-entry':    () => renderDailyEntry(),
+    };
+    const fn = R[activeView];
+    if (fn) { try { fn(); } catch (e) {} }
+  });
 
   // ── Payment / Aktivite Yok listesi ──────────────────────────────
   // Server-side: aktif stage + Payment + Last Activity boş dealler (PDF 7.6)
@@ -5994,6 +6051,10 @@
         } catch(_e) {}
       })();
 
+      // Kayıtlı görünüm, AŞAĞIDAKİ switchView çağrılarından ÖNCE okunmalı —
+      // switchView kaydı güncelliyor, sonra okursak kendi yazdığımızı okuruz.
+      const _savedView = _tlRestoreView();
+
       // RM için özel nav + default view
       if (isRM) {
         const navRM  = document.getElementById('nav-rm-overview');
@@ -6007,6 +6068,12 @@
         if (navTM) navTM.style.display = 'none';
         switchView('rm-overview');
       }
+
+      // Yenilemeden sonra kullanıcıyı bıraktığı sayfada başlat. RM'nin
+      // varsayılanı yukarıda rm-overview'a ayarlandı; kayıt varsa o kazanır
+      // (kayıt _tlRestoreView içinde role göre doğrulanıyor).
+      const _defaultView = isRM ? 'rm-overview' : 'alarms';
+      if (_savedView && _savedView !== _defaultView) switchView(_savedView);
 
       // Alarm motorunu arka planda çalıştır (15 dakikada bir otomatik)
       runEngine(false);

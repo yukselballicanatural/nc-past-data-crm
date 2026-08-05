@@ -1079,6 +1079,16 @@
     return str;
   }
 
+  // ── Geri alma defteri ────────────────────────────────────────────────
+  // Sözlük TEK YÖNLÜ (TR→EN) ve tersi belirsiz: birden çok Türkçe anahtar
+  // aynı İngilizce karşılığa düşebiliyor. Bu yüzden İngilizceden Türkçeye
+  // dönüş sözlükten TÜRETİLEMEZ — çeviri anındaki ÖZGÜN metin saklanıyor.
+  // WeakMap: DOM'dan düşen node'lar kendiliğinden temizlenir.
+  var _origText = new WeakMap();   // text node -> özgün Türkçe
+  var _origAttr = new WeakMap();   // element -> { attr: özgün Türkçe }
+
+  var TR_ATTRS = ['placeholder', 'title', 'label'];
+
   // Statik DOM metnini çevir: text node'lar + placeholder/title attribute'ları.
   function translateDOM(root) {
     if (getLang() !== 'en') return;
@@ -1091,27 +1101,91 @@
       var trimmed = raw.trim();
       if (!trimmed) continue;
       if (Object.prototype.hasOwnProperty.call(DICT, trimmed)) {
-        toChange.push([node, raw.replace(trimmed, DICT[trimmed])]);
+        toChange.push([node, raw, raw.replace(trimmed, DICT[trimmed])]);
       }
     }
-    toChange.forEach(function (pair) { pair[0].nodeValue = pair[1]; });
+    toChange.forEach(function (p) {
+      // Özgünü YALNIZCA ilk kez sakla — translateDOM aynı node üzerinde
+      // birden çok kez çağrılıyor, ikinci kez saklarsak çevrilmiş metni
+      // "özgün" sanıp geri dönüşü bozarız.
+      if (!_origText.has(p[0])) _origText.set(p[0], p[1]);
+      p[0].nodeValue = p[2];
+    });
 
     // 'label' de listede: <optgroup label="..."> metni text node değil
     // attribute'tur, yoksa İngilizce modda sessizce Türkçe kalır.
-    ['placeholder', 'title', 'label'].forEach(function (attr) {
+    TR_ATTRS.forEach(function (attr) {
       var els = root.querySelectorAll('[' + attr + ']');
       els.forEach(function (el) {
         var v = el.getAttribute(attr);
         if (v && Object.prototype.hasOwnProperty.call(DICT, v)) {
+          var bag = _origAttr.get(el);
+          if (!bag) { bag = {}; _origAttr.set(el, bag); }
+          if (!Object.prototype.hasOwnProperty.call(bag, attr)) bag[attr] = v;
           el.setAttribute(attr, DICT[v]);
         }
       });
     });
   }
 
+  // translateDOM'un tersi: saklanan özgün Türkçe metinleri geri koyar.
+  // İngilizce modda ÜRETİLMİŞ dinamik içeriğin defterde kaydı yoktur —
+  // onu geri almak değil YENİDEN ÇİZMEK gerekir (bkz. setLangLive).
+  function revertDOM(root) {
+    root = root || global.document.body;
+    var walker = global.document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null);
+    var node;
+    var toChange = [];
+    while ((node = walker.nextNode())) {
+      if (_origText.has(node)) toChange.push([node, _origText.get(node)]);
+    }
+    toChange.forEach(function (p) { p[0].nodeValue = p[1]; _origText.delete(p[0]); });
+
+    TR_ATTRS.forEach(function (attr) {
+      var els = root.querySelectorAll('[' + attr + ']');
+      els.forEach(function (el) {
+        var bag = _origAttr.get(el);
+        if (bag && Object.prototype.hasOwnProperty.call(bag, attr)) {
+          el.setAttribute(attr, bag[attr]);
+          delete bag[attr];
+        }
+      });
+    });
+  }
+
   function toggle() {
-    setLang(getLang() === 'en' ? 'tr' : 'en');
-    global.location.reload();
+    setLangLive(getLang() === 'en' ? 'tr' : 'en');
+  }
+
+  // ── Sayfa yenilemeden dil değiştirme ─────────────────────────────────
+  // Eskiden dil değiştirmek location.reload() yapıyordu: kullanıcı
+  // bulunduğu sayfadan atılıyor, elde zaten duran on binlerce satır
+  // sıfırdan yeniden indiriliyordu.
+  //
+  // Panel kendi ÇİZİM fonksiyonlarını buraya kaydeder; ağ çağrısı YOK,
+  // veriler bellekte. Kanca kaydetmemiş bir sayfa (ör. giriş ekranı)
+  // yarı çevrilmiş kalmasın diye eski davranışa (reload) düşer.
+  var _langHooks = [];
+  function onLangChange(fn) {
+    if (typeof fn === 'function') _langHooks.push(fn);
+  }
+
+  function setLangLive(lang) {
+    if (lang !== 'tr' && lang !== 'en') return;
+    if (lang === getLang()) return;
+    if (!_langHooks.length) {          // kancasız sayfa — güvenli taraf
+      setLang(lang);
+      global.location.reload();
+      return;
+    }
+    setLang(lang);
+    // Statik iskelet: EN'e geçerken çevir, TR'ye dönerken defterden geri al.
+    if (lang === 'en') translateDOM(global.document.body);
+    else revertDOM(global.document.body);
+    // Dinamik içerik: özgün metni olmadığı için geri alınamaz, yeniden çizilir.
+    _langHooks.forEach(function (fn) {
+      try { fn(lang); } catch (e) { /* bir kanca patlarsa diğerleri çalışsın */ }
+    });
   }
 
   function renderToggleButton() {
@@ -1123,11 +1197,9 @@
       '</div>';
   }
 
-  function setLangAndReload(lang) {
-    if (lang === getLang()) return;
-    setLang(lang);
-    global.location.reload();
-  }
+  // Geriye dönük ad — artık yenileme YAPMIYOR, canlı geçiş yapıyor.
+  // (Panellerdeki dil düğmesi bu adı çağırıyor; imza korundu.)
+  function setLangAndReload(lang) { setLangLive(lang); }
 
   function init() {
     if (getLang() === 'en') translateDOM(global.document.body);
@@ -1144,7 +1216,10 @@
     setLang: setLang,
     t: t,
     translateDOM: translateDOM,
+    revertDOM: revertDOM,
     toggle: toggle,
+    setLangLive: setLangLive,
+    onLangChange: onLangChange,
     setLangAndReload: setLangAndReload,
     renderToggleButton: renderToggleButton
   };
