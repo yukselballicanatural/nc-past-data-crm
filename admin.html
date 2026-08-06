@@ -878,21 +878,35 @@
           <!-- ↻ Yenile: TUM sayfalarda ayni dugme — Tum Deal'ler, Sistem
                Kayitlari ve takim liderindeki Deal Listesi ile BIREBIR ayni
                satir ici tanim (turkuaz dolgu · 8px 14px · 11px · r10).
-               Onceki ikincil (gri) varyant cam katmanda soluk beyaz bir pile
-               donusuyordu ve devre disi gibi duruyordu.
-               "+ Kullanici Ekle" turkuazdan indigoya alindi: yoksa yan yana
-               iki ayni renk dolgu dururdu ve "yenile" rengi ayirt edici
-               olmaktan cikardi. Indigo zaten uygulamanin birincil eylem
-               rengi (Kaydet, Aktivite Yenile). -->
+               Onceki ikincil (gri #1e293b) varyant cam katmanda soluk beyaz
+               bir pile donusuyor ve devre disi gibi duruyordu.
+               NOT: indigoya (#4f46e5) almak da denendi, isik temasinda hicbir
+               sey degistirmiyor — liquid-glass.css'in "birincil buton" kurali
+               turkuazi da indigoyu da AYNI cam butona indiriyor (bkz. bolum
+               21). Sadece koyu temada ayrisirdi, yani temalar arasi tutarsizlik
+               olurdu. Iki buton da birincil ve ayni gorunuyor: bu, cam
+               katmanindaki tek-birincil-stil kuralinin bilincli sonucu.
+               loadUsers(TRUE): yenile butonu 5 dakikalik oturum onbellegini
+               atlayip gercekten yeni veri cekmeli, yoksa "yenile" hicbir sey
+               yapmiyor gibi gorunuyordu. -->
           <button onclick="loadUsers(true)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">↻ Yenile</button>
-          <button onclick="openUserModal(null)" style="padding:8px 14px;background:#4f46e5;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">+ Kullanıcı Ekle</button>
+          <button onclick="openUserModal(null)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">+ Kullanıcı Ekle</button>
         </div>
       </div>
-      <!-- Hizli takim filtreleri KALDIRILDI (kullanici istegi): arama kutusu
-           takim adinda da eslesiyor, ayni isi yapan iki arayuz vardi. -->
-      <!-- Search -->
-      <div class="mb-4">
-        <input type="text" id="userSearch" oninput="_dbRenderUsersTable()" placeholder="Ad, kullanıcı adı, takım veya rol ara…" class="filter-input" style="max-width:320px" />
+      <!-- Filtreler: metin arama + rol + takım -->
+      <div class="flex flex-wrap gap-2 mb-4 items-center">
+        <input type="text" id="userSearch" oninput="_dbRenderUsersTable()" placeholder="Ad, kullanıcı adı ara…" class="filter-input" style="max-width:220px" />
+        <select id="userRoleFilter" onchange="_dbRenderUsersTable()" class="filter-select" style="max-width:180px">
+          <option value="">Tüm Roller</option>
+          <option value="super-admin">Super Admin</option>
+          <option value="admin">Admin</option>
+          <option value="regional-manager">Regional Manager</option>
+          <option value="team-leader">Team Leader</option>
+        </select>
+        <select id="userTeamFilter" onchange="_dbRenderUsersTable()" class="filter-select" style="max-width:200px">
+          <option value="">Tüm Takımlar</option>
+        </select>
+        <button onclick="_usersResetFilters()" style="padding:6px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Sıfırla</button>
       </div>
       <!-- Loading -->
       <div id="usersLoadingState" class="flex flex-col items-center py-16 gap-4">
@@ -8989,30 +9003,52 @@
     function uName(u)  { return u['Deal Owner Name'] || u['full_name'] || ''; }
     function uId(u)    { return String(u['Id'] || u['id'] || ''); }
 
-    // buildTeamFilterBar / filterByTeam KALDIRILDI (kullanici istegi: "hizli
-    // filtreleri kaldiralim"). Islevsel kayip yok — arama kutusu takim
-    // adinda da esliyor (bkz. _usersFilteredRows).
-
-    // Filtre mantığı ayrı: tablo da export da bunu kullanıyor (tek kaynak).
-    // Rol adi Users tablosunda serbest metin; ayni rol icin farkli yazimlar
-    // var. Tek yerde karar verilsin ki liste, takim filtresi ve rol sayimlari
-    // ayrisamasin.
     function _isAgentRole(role) {
       const r = (role || '').toLowerCase().trim();
       return r === 'agent' || r === 'agents' || r === 'danışman' || r === 'danisman';
     }
 
+    // Rol dropdown'ı için normalize: verideki serbest metin → seçenek değeri
+    function _normalizeRole(role) {
+      const r = (role || '').toLowerCase().trim();
+      if (r === 'super-admin' || r === 'super admin') return 'super-admin';
+      if (r === 'admin') return 'admin';
+      if (r.includes('regional') || r.includes('manager')) return 'regional-manager';
+      if (r.includes('leader') || r === 'tl') return 'team-leader';
+      return r;
+    }
+
+    // Takım dropdown'ını mevcut veriyle doldurur (loadUsers sonrası çağrılır).
+    function _buildUserTeamDropdown() {
+      const sel = document.getElementById('userTeamFilter');
+      if (!sel) return;
+      const current = sel.value;
+      const rows = allUsers.filter(u => !_isAgentRole(u['Role']));
+      const teams = [...new Set(rows.map(uTeam).filter(Boolean))].sort();
+      sel.innerHTML = `<option value="">Tüm Takımlar</option>` +
+        teams.map(t => `<option value="${_escAttr(t)}"${t === current ? ' selected' : ''}>${_escHtml(t)}</option>`).join('');
+    }
+
+    function _usersResetFilters() {
+      const s = document.getElementById('userSearch');
+      const r = document.getElementById('userRoleFilter');
+      const t = document.getElementById('userTeamFilter');
+      if (s) s.value = '';
+      if (r) r.value = '';
+      if (t) t.value = '';
+      renderUsersTable();
+    }
+
     function _usersFilteredRows() {
       const search = (document.getElementById('userSearch')?.value || '').toLowerCase();
-      // Danismanlar (agent) panele giris yapmiyor — agent.html yapilmayacak,
-      // dolayisiyla burada yonetilecek bir sey yok. Listede yalnizca giris
-      // yetkisi olan roller kalir: takim lideri, bolge muduru, admin,
-      // super admin. Rol adi veride serbest yazilmis olabildigi icin
-      // (Agent / agent / Danışman) eslesme genis tutuldu.
+      const roleF  = (document.getElementById('userRoleFilter')?.value || '').toLowerCase();
+      const teamF  = document.getElementById('userTeamFilter')?.value || '';
       let list = allUsers.filter(u => !_isAgentRole(u['Role']));
       if (search) list = list.filter(u =>
         [uName(u), u['Username'], u['Role'], uTeam(u)].join(' ').toLowerCase().includes(search)
       );
+      if (roleF) list = list.filter(u => _normalizeRole(u['Role']) === roleF);
+      if (teamF) list = list.filter(u => uTeam(u) === teamF);
       return list;
     }
 
