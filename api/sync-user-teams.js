@@ -381,33 +381,119 @@ export default async function handler(req, res) {
 
       // Users.id bigint JS safe-integer sınırını aşabiliyor — Username ile
       // hedefle (bkz. api/team-members.js'deki aynı not).
-      async function patchUser(username, payload) {
-        return fetch(
-          `${SUPABASE_URL}/rest/v1/Users?Username=eq.${encodeURIComponent(username)}`,
-          { method: 'PATCH', headers: { ...HJ, Prefer: 'return=minimal' }, body: JSON.stringify(payload) }
-        );
+      // Users tablosunda BAZI KOLONLAR YOK: canlı şemada updated_at, is_active,
+      // deactivated_at, deactivation_reason, created_at, zoho_user_id
+      // bulunmuyor (bu kolonları ekleyen zoho_users_sync.sql hiç
+      // çalıştırılmadı). Payload'a olmayan bir kolon konursa PostgREST tüm
+      // PATCH'e 400 döner ve panelde "0 takım atandı, 1 başarısız" görünür —
+      // takım gerçekten yazılabilecekken.
+      //
+      // Bu yüzden api/admin-users.js'teki desenin aynısı: veritabanının
+      // reddettiği kolon payload'dan DÜŞÜRÜLÜP yeniden denenir. Böylece takım
+      // ataması migration gerektirmeden çalışır; düşürülen kolonlar yanıtta
+      // `droppedColumns` olarak bildirilir (sessizce yok sayılmaz).
+      const droppedCols = new Set();
+
+      function pgErr(text) {
+        try {
+          const j = JSON.parse(text);
+          return { code: j.code || '', message: j.message || '', details: j.details || '' };
+        } catch (e) { return { code: '', message: String(text || ''), details: '' }; }
+      }
+      // Eksik kolonun adını hata metninden çıkarır. Postgres/PostgREST bunu
+      // İKİ AYRI biçimde söylüyor ve ikisi de karşılanmak zorunda:
+      //   42703  : column Users.updated_at does not exist      ← tablo ÖNEKLİ
+      //   PGRST204: Could not find the 'updated_at' column of 'Users' ...
+      // Önek soyulmazsa aday ad "Users.updated_at" olur, payload'da böyle bir
+      // anahtar bulunmadığı için kolon "eksik" sayılmaz ve yeniden deneme hiç
+      // tetiklenmez — testte tam olarak bu yakalandı.
+      function missingColumn(err, payload) {
+        const hay = err.message + ' ' + err.details;
+        const cands = [];
+        // Tırnaklı: column "Takim Adi" of relation "Users" ... — kolon adında
+        // BOŞLUK olabilir ('Takim Adi'), bu yüzden tırnak içi ayrı ele alınıyor.
+        let m = /column\s+"([^"]+)"/i.exec(hay);
+        if (m) cands.push(m[1]);
+        // Tırnaksız: column Users.updated_at does not exist
+        m = /column\s+([^\s"']+)\s+(?:of relation|does not exist)/i.exec(hay);
+        if (m) cands.push(m[1]);
+        // PGRST204: Could not find the 'updated_at' column of 'Users' ...
+        m = /could not find the '([^']+)' column/i.exec(hay);
+        if (m) cands.push(m[1]);
+        for (const raw of cands) {
+          if (Object.prototype.hasOwnProperty.call(payload, raw)) return raw;
+          // "Users.updated_at" → "updated_at" (tablo/şema öneki soyulur)
+          const bare = String(raw).split('.').pop();
+          if (bare && Object.prototype.hasOwnProperty.call(payload, bare)) return bare;
+        }
+        return null;
+      }
+
+      // Dönüş: { ok, status, error }. Şemada olmayan kolonları atarak dener;
+      // ZORUNLU alanların (`required`) düşmesi gerekiyorsa başarısız sayar —
+      // örneğin is_active olmadan "girişi kapat" işlemi ANLAMSIZ olurdu ve
+      // sessizce "başarılı" demek yanlış bilgi verirdi.
+      async function patchUser(username, payloadIn, required) {
+        const payload = { ...payloadIn };
+        // Baştan bilinen eksik kolonları hiç gönderme (gereksiz tur atmasın).
+        for (const c of droppedCols) delete payload[c];
+        for (let attempt = 0; attempt < 6; attempt++) {
+          if (!Object.keys(payload).length) {
+            return { ok: false, status: 400, error: 'Yazılacak alan kalmadı (şemada kolon yok).' };
+          }
+          const r = await fetch(
+            `${SUPABASE_URL}/rest/v1/Users?Username=eq.${encodeURIComponent(username)}`,
+            { method: 'PATCH', headers: { ...HJ, Prefer: 'return=minimal' }, body: JSON.stringify(payload) }
+          );
+          if (r.ok) return { ok: true, status: r.status };
+
+          const err = pgErr(await r.text());
+          const col = missingColumn(err, payload);
+          if (col) {
+            droppedCols.add(col);
+            delete payload[col];
+            if (required && required.includes(col)) {
+              return {
+                ok: false, status: 400,
+                error: `Veritabanında "${col}" kolonu yok — bu işlem için gerekli. ` +
+                       'Depodaki team_assignments.sql dosyasını Supabase SQL Editor\'de çalıştırın.',
+              };
+            }
+            continue;
+          }
+          return { ok: false, status: r.status, error: err.message || ('HTTP ' + r.status) };
+        }
+        return { ok: false, status: 502, error: 'Birden fazla deneme başarısız oldu.' };
       }
 
       const applied = [], failed = [];
       for (const c of (only ? changes.filter(x => only.has(x.username)) : changes)) {
         if (!c.username) { failed.push({ ...c, error: 'Username boş' }); continue; }
-        const pR = await patchUser(c.username, { 'Takim Adi': c.to, updated_at: new Date().toISOString() });
+        // 'Takim Adi' ZORUNLU: bu işlemin tek amacı o. updated_at yalnızca
+        // izlenebilirlik için, şemada yoksa düşürülüp devam edilir.
+        const pR = await patchUser(
+          c.username,
+          { 'Takim Adi': c.to, updated_at: new Date().toISOString() },
+          ['Takim Adi']
+        );
         if (pR.ok) applied.push(c);
-        else failed.push({ ...c, error: 'HTTP ' + pR.status });
+        else failed.push({ ...c, error: pR.error || ('HTTP ' + pR.status) });
       }
 
       const deactivated = [];
       if (doDeactivate) {
         for (const l of (only ? leavers.filter(x => only.has(x.username)) : leavers)) {
           if (!l.username) { failed.push({ ...l, error: 'Username boş' }); continue; }
+          // is_active ZORUNLU: o kolon yoksa "girişi kapat" hiçbir şey yapmaz,
+          // başarılı demek yanlış bilgi olurdu.
           const pR = await patchUser(l.username, {
             is_active: false,
             deactivated_at: new Date().toISOString(),
             deactivation_reason: `Zoho status: ${l.zohoStatus}`,
             updated_at: new Date().toISOString(),
-          });
+          }, ['is_active']);
           if (pR.ok) deactivated.push(l);
-          else failed.push({ ...l, error: 'HTTP ' + pR.status });
+          else failed.push({ ...l, error: pR.error || ('HTTP ' + pR.status) });
         }
       }
 
@@ -416,6 +502,9 @@ export default async function handler(req, res) {
         appliedCount: applied.length,
         deactivatedCount: deactivated.length,
         failedCount: failed.length,
+        // Şemada bulunmadığı için yazılamayan kolonlar — panel bunu gösterir ki
+        // "yazdı ama izleme alanı boş kaldı" durumu görünmez kalmasın.
+        droppedColumns: [...droppedCols],
       });
       return;
     }

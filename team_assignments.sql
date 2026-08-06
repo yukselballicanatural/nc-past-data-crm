@@ -1,7 +1,10 @@
 -- ============================================================
--- TAKIM ATAMASI — ADMIN'IN ELLE KURDUĞU, KALICI EŞLEŞTİRME
+-- TAKIM YÖNETİMİ KURULUMU
+--   1) team_assignments tablosu — admin'in elle kurduğu kalıcı eşleştirme
+--   2) Users tablosundaki eksik yaşam döngüsü kolonları
 -- Supabase SQL Editor'e yapıştır ve BİR KEZ çalıştır:
 --   https://supabase.com/dashboard/project/aztxfncqanrodbttywrb/sql
+-- Betik tekrar çalıştırılabilir (idempotent): her şey "if not exists" ile.
 -- ============================================================
 --
 -- NEDEN GEREKLİ
@@ -67,8 +70,43 @@ create index if not exists team_assignments_team_idx
 -- başka bir takıma atayıp o takımın verisini görebilirdi.
 alter table public.team_assignments enable row level security;
 
+-- ============================================================
+-- 2) Users TABLOSUNDAKİ EKSİK YAŞAM DÖNGÜSÜ KOLONLARI
+-- ============================================================
+-- Canlı şemada bu kolonların HİÇBİRİ yok; onları ekleyen zoho_users_sync.sql
+-- hiç çalıştırılmamış. Ölçüldü (PostgREST'e olmayan kolon sorulduğunda
+-- 42703 döner, RLS satırları gizlese bile bu ayrım güvenilir):
+--   VAR : id, "Deal Owner Name", "Username", "Password", "Role",
+--         "Takim Adi", "Phone", "Email"
+--   YOK : created_at, updated_at, is_active, deactivated_at,
+--         deactivation_reason, zoho_user_id
+--
+-- SONUÇLARI:
+--  * "Zoho'ya göre eşitle" PATCH gövdesine updated_at koyuyordu; olmayan bir
+--    kolon PostgREST'te TÜM isteği 400'e düşürüyor → panelde "0 takım atandı,
+--    1 başarısız". Takım aslında yazılabilecek durumdaydı.
+--    (Bu artık kodda da tolere ediliyor: api/sync-user-teams.js reddedilen
+--    kolonu düşürüp yeniden deniyor. Yani takım ataması bu SQL olmadan da
+--    çalışır — aşağıdaki kolonlar yalnızca izlenebilirlik ve "girişi kapat"
+--    için gerekli.)
+--  * "Girişi kapat" is_active'e yazıyor; o kolon olmadan bu özellik hiç
+--    çalışamaz (kodda artık sessizce başarılı demiyor, açık hata veriyor).
+--
+-- Kolonlar TEK TEK ve "if not exists" ile ekleniyor: bir kısmı sonradan elle
+-- eklenmiş olabilir, betiğin yeniden çalıştırılması zarar vermemeli.
+alter table public."Users" add column if not exists created_at          timestamptz default now();
+alter table public."Users" add column if not exists updated_at          timestamptz;
+alter table public."Users" add column if not exists is_active           boolean not null default true;
+alter table public."Users" add column if not exists deactivated_at      timestamptz;
+alter table public."Users" add column if not exists deactivation_reason text;
+alter table public."Users" add column if not exists zoho_user_id        text;
+
+-- is_active üzerinden sık filtreleniyor (kadro listeleri aktif olanları alır).
+create index if not exists users_is_active_idx on public."Users" (is_active);
+
 -- Test:
 -- select * from public.team_assignments order by full_name;
+-- select "Username", "Takim Adi", is_active, updated_at from public."Users" limit 5;
 --
 -- Elle örnek (normalde admin panelinden yapılır):
 --   insert into public.team_assignments (person_key, full_name, team, assigned_by)

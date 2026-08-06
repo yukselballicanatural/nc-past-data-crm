@@ -6470,13 +6470,21 @@
         const n = data.appliedCount || 0;
         const d = data.deactivatedCount || 0;
         const f = data.failedCount || 0;
+        // Başarısızlıkta SEBEBİ göster. Eskiden yalnızca "{f} başarısız"
+        // yazıyordu ve gerçek neden (ör. "Users.updated_at kolonu yok")
+        // sunucudan gelmesine rağmen ekranda hiç görünmüyordu — teşhis
+        // edilemez bir hata mesajıydı.
+        const firstErr = (data.failed && data.failed.length && data.failed[0].error) || '';
         if (d) {
           showSiteNotice(I18N.t('{n} kişinin girişi kapatıldı.').replace('{n}', d), f ? 'warn' : 'success');
         } else showSiteNotice(
           f ? I18N.t('{n} takım güncellendi, {f} başarısız.').replace('{n}', n).replace('{f}', f)
+              + (firstErr ? ' — ' + firstErr : '')
             : I18N.t('{n} takım güncellendi.').replace('{n}', n),
           f ? 'warn' : 'success'
         );
+        // Hiçbiri uygulanamadıysa ve sebep belliyse ayrıca kalıcı bir hata ver.
+        if (!n && !d && f && firstErr) showSiteNotice(firstErr, 'error');
         // Günlük Ekip Girişi üye cache'i ve uyuşmazlık taraması artık bayat.
         _adeMembersCache = null;
         _amTmDriftAt = 0;
