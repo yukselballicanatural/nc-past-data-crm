@@ -931,24 +931,20 @@ html[data-theme="dark"] .dep-quick-btn {
 /* Aktif düğme: hem hex hem normalize rgb() biçimi listelenir — JS
    style.background yazdığında tarayıcı style özniteliğini yeniden
    serialize ediyor. Dört kimliğin tamamı olmalı; Kanban'lar eksikti. */
-html[data-theme="dark"] #alarmsViewBtnTable[style*="rgb(79, 70, 229)" i],
-html[data-theme="dark"] #alarmsViewBtnKanban[style*="rgb(79, 70, 229)" i],
-html[data-theme="dark"] #dealsViewBtnTable[style*="rgb(79, 70, 229)" i],
-html[data-theme="dark"] #dealsViewBtnKanban[style*="rgb(79, 70, 229)" i],
-html[data-theme="dark"] #alarmsViewBtnTable[style*="background:#4f46e5" i],
-html[data-theme="dark"] #alarmsViewBtnKanban[style*="background:#4f46e5" i],
-html[data-theme="dark"] #dealsViewBtnTable[style*="background:#4f46e5" i],
-html[data-theme="dark"] #dealsViewBtnKanban[style*="background:#4f46e5" i],
+html[data-theme="dark"] #alarmsViewBtnTable.on,
+html[data-theme="dark"] #alarmsViewBtnKanban.on,
+html[data-theme="dark"] #dealsViewBtnTable.on,
+html[data-theme="dark"] #dealsViewBtnKanban.on,
 html[data-theme="dark"] .dep-quick-btn.dep-quick-active,
 html[data-theme="dark"] .dep-quick-btn.dep-quick-active:hover {
   background: transparent !important;
   color: #fff !important;
   box-shadow: none !important;
 }
-html[data-theme="dark"] #alarmsViewBtnTable:hover,
-html[data-theme="dark"] #alarmsViewBtnKanban:hover,
-html[data-theme="dark"] #dealsViewBtnTable:hover,
-html[data-theme="dark"] #dealsViewBtnKanban:hover { color: var(--d-ink) !important; }
+html[data-theme="dark"] #alarmsViewBtnTable:not(.on):hover,
+html[data-theme="dark"] #alarmsViewBtnKanban:not(.on):hover,
+html[data-theme="dark"] #dealsViewBtnTable:not(.on):hover,
+html[data-theme="dark"] #dealsViewBtnKanban:not(.on):hover { color: var(--d-ink) !important; }
 
 /* ── Sonuç popup'ı (Hasta Geldi / Muayene / İşlemlerde / Gelemedi) ─── */
 html[data-theme="dark"] .nc-out-modal .nc-out-bg {

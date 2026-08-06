@@ -510,8 +510,8 @@
           <!-- Guncelleme zamani segmentin SOLUNDA (istek) -->
           <span class="text-xs text-slate-500" id="lastRefresh">—</span>
           <div style="display:flex;background:#111827;border:1px solid #374151;border-radius:8px;padding:2px;gap:2px">
-            <button onclick="setDealsView('table')" id="dealsViewBtnTable" class="px-2.5 py-1.5 text-[11px] font-bold rounded-md" style="background:#4f46e5;color:#fff;transition:all .15s">☰ Tablo</button>
-            <button onclick="setDealsView('kanban')" id="dealsViewBtnKanban" class="px-2.5 py-1.5 text-[11px] font-bold rounded-md" style="background:transparent;color:#94a3b8;transition:all .15s">▦ Kanban</button>
+            <button onclick="setDealsView('table')" id="dealsViewBtnTable" class="px-2.5 py-1.5 text-[11px] font-bold rounded-md nc-seg-btn on" style="transition:all .15s;">☰ Tablo</button>
+            <button onclick="setDealsView('kanban')" id="dealsViewBtnKanban" class="px-2.5 py-1.5 text-[11px] font-bold rounded-md nc-seg-btn" style="transition:all .15s;">▦ Kanban</button>
           </div>
           <!-- Takim liderindeki Yenile ile BIREBIR ayni: satir ici turkuaz,
                10px yaricap, 8px 14px dolgu, 11px kalin yazi. Boylece cam
@@ -7789,8 +7789,12 @@
       document.getElementById('dealsTableView').classList.toggle('hidden', mode !== 'table');
       document.getElementById('dealsKanbanView').classList.toggle('hidden', mode !== 'kanban');
       const bT = document.getElementById('dealsViewBtnTable'), bK = document.getElementById('dealsViewBtnKanban');
-      bT.style.background = mode === 'table'  ? '#4f46e5' : 'transparent'; bT.style.color = mode === 'table'  ? '#fff' : '#94a3b8';
-      bK.style.background = mode === 'kanban' ? '#4f46e5' : 'transparent'; bK.style.color = mode === 'kanban' ? '#fff' : '#94a3b8';
+      // Aktiflik SINIFLA tasiniyor. Eskiden satir ici background yaziliyordu ve cam
+      // katmani [style*="background:#4f46e5"] ile eslesiyordu; JS ayni rengi
+      // yazdiginda tarayici bunu "rgb(79, 70, 229)" diye serilestirdigi icin esleme
+      // KOPUYOR ve buton ilk tiklamadan sonra rengini kaybediyordu.
+      bT.classList.toggle('on', mode === 'table');
+      bK.classList.toggle('on', mode === 'kanban');
       if (mode === 'kanban') renderKanban(filteredDeals);
       else renderDeals(filteredDeals);
     }

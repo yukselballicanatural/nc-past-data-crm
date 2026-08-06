@@ -1154,16 +1154,18 @@ html[data-theme="light"] #dealsViewBtnKanban {
   color: var(--ink-2) !important;
   transition: color .24s var(--ease), transform .3s var(--spring) !important;
 }
-/* Aktif olan (JS satır içi indigo yazıyor) — yazı beyaz, zemini kayan
-   gösterge çiziyor */
-html[data-theme="light"] #alarmsViewBtnTable[style*="rgb(79, 70, 229)" i],
-html[data-theme="light"] #alarmsViewBtnKanban[style*="rgb(79, 70, 229)" i],
-html[data-theme="light"] #dealsViewBtnTable[style*="rgb(79, 70, 229)" i],
-html[data-theme="light"] #dealsViewBtnKanban[style*="rgb(79, 70, 229)" i],
-html[data-theme="light"] #alarmsViewBtnTable[style*="background:#4f46e5" i],
-html[data-theme="light"] #alarmsViewBtnKanban[style*="background:#4f46e5" i],
-html[data-theme="light"] #dealsViewBtnTable[style*="background:#4f46e5" i],
-html[data-theme="light"] #dealsViewBtnKanban[style*="background:#4f46e5" i] {
+/* Aktif olan — yazı beyaz, zemini kayan gösterge çiziyor.
+   Ölçüt artık '.on' SINIFI, satır içi renk DEĞİL: JS `style.background`
+   yazdığında tarayıcı değeri `rgb(79, 70, 229)` diye yeniden serileştiriyor
+   ve `[style*="background:#4f46e5"]` eşleşmesi KOPUYORDU — buton ilk
+   tıklamadan sonra rengini yitiriyordu.
+   Seçicide kimlik ŞART: yukarıdaki taban kural `#id { color: ... !important }`
+   olduğu için sınıf-only bir kural (aynı !important'la bile) kimliğe
+   yenilirdi; `#id.on` kimlik+sınıf olarak kazanır. */
+html[data-theme="light"] #alarmsViewBtnTable.on,
+html[data-theme="light"] #alarmsViewBtnKanban.on,
+html[data-theme="light"] #dealsViewBtnTable.on,
+html[data-theme="light"] #dealsViewBtnKanban.on {
   background: transparent !important;
   color: #fff !important;
   box-shadow: none !important;
@@ -3423,3 +3425,24 @@ html[data-theme="dark"]  .ng-flat .ng-label { background: rgba(8,12,20,0.92); }
 .ng-mode-note { font-size: 9.5px; font-weight: 600; margin-top: 8px; display: block; }
 html[data-theme="light"] .ng-mode-note { color: var(--ink-3); }
 html[data-theme="dark"]  .ng-mode-note { color: #7d8ba3; }
+
+/* ═════════════════════════════════════════════════════════════════════
+   TABLO / KANBAN SEGMENT BUTONU (.nc-seg-btn)
+   Aktiflik SINIFLA (.on) taşınıyor — satır içi background ile değil.
+   Sebep: cam katmanı eskiden `[style*="background:#4f46e5"]` ile eşleşiyordu;
+   JS aynı rengi atadığında tarayıcı bunu `rgb(79, 70, 229)` diye
+   serileştirdiği için eşleşme kopuyor ve buton İLK TIKLAMADAN SONRA
+   rengini yitiriyordu ("başta renkli, sonra gri").
+
+   Seçili görünümü KAYAN GÖSTERGE (.lq-seg-ind) veriyor, butonun kendisi
+   saydam kalır — yoksa iki katman üst üste boyanır.
+   ═════════════════════════════════════════════════════════════════════ */
+.nc-seg-btn {
+  /* Segment butonunun kendi zemini SAYDAM: seçili görünümü kayan gösterge
+     (.lq-seg-ind) çiziyor, ikisi üst üste boyanmasın. Renk/aktiflik kuralları
+     kimlik seçicileriyle yukarıda tanımlı (taban kural #id !important olduğu
+     için sınıf-only bir kural ona yenilirdi). */
+  background: transparent;
+  position: relative;   /* göstergenin ÜSTÜNDE kalsın */
+  z-index: 1;
+}

@@ -400,15 +400,25 @@
       new Segment(nav.parentElement, '.nav-btn');
     }
 
-    // Tablo / Kanban geçişleri — aktiflik satır içi background ile
-    // işaretleniyor (JS '#4f46e5' veya 'transparent' yazıyor)
-    var inlineActive = function (el) {
+    // Tablo / Kanban geçişleri — aktiflik artık '.on' SINIFI.
+    //
+    // Eskiden ölçüt satır içi background'dı ve bu iki yerden kırılıyordu:
+    //   * Cam katmanı '[style*="background:#4f46e5"]' ile eşleşiyordu; JS aynı
+    //     rengi yazdığında tarayıcı bunu 'rgb(79, 70, 229)' diye serileştirdiği
+    //     için eşleşme kopuyor, buton ilk tıklamadan sonra rengini yitiriyordu.
+    //   * Satır içi stil okumak, durumu görünümle karıştırıyordu; sınıf tek
+    //     doğruluk kaynağı.
+    // Geriye dönük destek: '.on' hiç yoksa eski satır içi ölçüte düşülür,
+    // böylece bu desende kalan başka bir grup varsa göstergesi kaybolmaz.
+    var classActive = function (el) {
+      if (el.classList.contains('on')) return true;
+      if (el.parentElement && el.parentElement.querySelector('.nc-seg-btn.on')) return false;
       var b = (el.style.background || el.style.backgroundColor || '').toLowerCase();
       return !!b && b !== 'transparent' && b.indexOf('rgba(0, 0, 0, 0)') < 0;
     };
     ['alarmsViewBtnTable', 'dealsViewBtnTable'].forEach(function (id) {
       var b = document.getElementById(id);
-      if (b && b.parentElement) new Segment(b.parentElement, 'button', inlineActive);
+      if (b && b.parentElement) new Segment(b.parentElement, 'button', classActive);
     });
 
     // Admin "Tüm Deal'ler" hızlı filtreleri (#dealTabNav) — aktiflik burada

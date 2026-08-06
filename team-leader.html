@@ -445,8 +445,8 @@
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span id="engineStatus" style="font-size:10px;color:#475569"></span>
         <div style="display:flex;background:#111827;border:1px solid #374151;border-radius:8px;padding:2px;gap:2px">
-          <button onclick="setAlarmsViewMode('table')" id="alarmsViewBtnTable" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:#4f46e5;color:#fff;transition:all .15s">☰ Tablo</button>
-          <button onclick="setAlarmsViewMode('kanban')" id="alarmsViewBtnKanban" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:transparent;color:#94a3b8;transition:all .15s">▦ Kanban</button>
+          <button class="nc-seg-btn on" onclick="setAlarmsViewMode('table')" id="alarmsViewBtnTable" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;transition:all .15s;">☰ Tablo</button>
+          <button class="nc-seg-btn" onclick="setAlarmsViewMode('kanban')" id="alarmsViewBtnKanban" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;transition:all .15s;">▦ Kanban</button>
         </div>
         <button onclick="runEngineManual()" id="btnRunEngine" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s" onmouseover="this.style.background='#0d9488';this.style.borderColor='#0d9488';this.style.color='#fff'" onmouseout="this.style.background='#1e293b';this.style.borderColor='#334155';this.style.color='#94a3b8'">
           <svg style="width:13px;height:13px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
@@ -634,8 +634,8 @@
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           <div style="display:flex;background:#111827;border:1px solid #374151;border-radius:8px;padding:2px;gap:2px">
-            <button onclick="setDealsViewMode('table')" id="dealsViewBtnTable" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:#4f46e5;color:#fff;transition:all .15s">☰ Tablo</button>
-            <button onclick="setDealsViewMode('kanban')" id="dealsViewBtnKanban" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;background:transparent;color:#94a3b8;transition:all .15s">▦ Kanban</button>
+            <button class="nc-seg-btn on" onclick="setDealsViewMode('table')" id="dealsViewBtnTable" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;transition:all .15s;">☰ Tablo</button>
+            <button class="nc-seg-btn" onclick="setDealsViewMode('kanban')" id="dealsViewBtnKanban" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;transition:all .15s;">▦ Kanban</button>
           </div>
           <button onclick="loadDeals(true)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">↻ Yenile</button>
           <span id="dealsExportMount"></span>
@@ -2488,8 +2488,12 @@
     const tabsRow = document.getElementById('alarmTabsRow');
     if (tabsRow) tabsRow.style.display = mode === 'kanban' ? 'none' : 'flex';
     const bT = document.getElementById('alarmsViewBtnTable'), bK = document.getElementById('alarmsViewBtnKanban');
-    bT.style.background = mode === 'table'  ? '#4f46e5' : 'transparent'; bT.style.color = mode === 'table'  ? '#fff' : '#94a3b8';
-    bK.style.background = mode === 'kanban' ? '#4f46e5' : 'transparent'; bK.style.color = mode === 'kanban' ? '#fff' : '#94a3b8';
+    // Aktiflik SINIFLA tasiniyor. Eskiden satir ici background yaziliyordu ve cam
+    // katmani [style*="background:#4f46e5"] ile eslesiyordu; JS ayni rengi
+    // yazdiginda tarayici bunu "rgb(79, 70, 229)" diye serilestirdigi icin esleme
+    // KOPUYOR ve buton ilk tiklamadan sonra rengini kaybediyordu.
+    bT.classList.toggle('on', mode === 'table');
+    bK.classList.toggle('on', mode === 'kanban');
     renderAlarms();
   }
 
@@ -3798,8 +3802,12 @@
     document.getElementById('dealTableFooter').style.display  = mode === 'table' ? '' : 'none';
     document.getElementById('dealsKanbanView').style.display  = mode === 'kanban' ? 'block' : 'none';
     const bT = document.getElementById('dealsViewBtnTable'), bK = document.getElementById('dealsViewBtnKanban');
-    bT.style.background = mode === 'table'  ? '#4f46e5' : 'transparent'; bT.style.color = mode === 'table'  ? '#fff' : '#94a3b8';
-    bK.style.background = mode === 'kanban' ? '#4f46e5' : 'transparent'; bK.style.color = mode === 'kanban' ? '#fff' : '#94a3b8';
+    // Aktiflik SINIFLA tasiniyor. Eskiden satir ici background yaziliyordu ve cam
+    // katmani [style*="background:#4f46e5"] ile eslesiyordu; JS ayni rengi
+    // yazdiginda tarayici bunu "rgb(79, 70, 229)" diye serilestirdigi icin esleme
+    // KOPUYOR ve buton ilk tiklamadan sonra rengini kaybediyordu.
+    bT.classList.toggle('on', mode === 'table');
+    bK.classList.toggle('on', mode === 'kanban');
     if (mode === 'kanban') loadTlKanban();
   }
 
