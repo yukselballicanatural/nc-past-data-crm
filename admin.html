@@ -875,11 +875,17 @@
         <h2 class="text-xl font-bold text-white">Kullanıcılar</h2>
         <div class="flex gap-2 flex-wrap items-center">
           <span id="usersExportMount"></span>
-          <!-- Yenile/Ekle: takim liderindeki basli butonlarla BIREBIR ayni
-               satir ici tanim (8px 14px · 11px · r10) — cam katmanindaki tek
-               birincil/ikincil buton kurali ikisine de uyuyor. -->
-          <button onclick="loadUsers()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">↻ Yenile</button>
-          <button onclick="openUserModal(null)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">+ Kullanıcı Ekle</button>
+          <!-- ↻ Yenile: TUM sayfalarda ayni dugme — Tum Deal'ler, Sistem
+               Kayitlari ve takim liderindeki Deal Listesi ile BIREBIR ayni
+               satir ici tanim (turkuaz dolgu · 8px 14px · 11px · r10).
+               Onceki ikincil (gri) varyant cam katmanda soluk beyaz bir pile
+               donusuyordu ve devre disi gibi duruyordu.
+               "+ Kullanici Ekle" turkuazdan indigoya alindi: yoksa yan yana
+               iki ayni renk dolgu dururdu ve "yenile" rengi ayirt edici
+               olmaktan cikardi. Indigo zaten uygulamanin birincil eylem
+               rengi (Kaydet, Aktivite Yenile). -->
+          <button onclick="loadUsers(true)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">↻ Yenile</button>
+          <button onclick="openUserModal(null)" style="padding:8px 14px;background:#4f46e5;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">+ Kullanıcı Ekle</button>
         </div>
       </div>
       <!-- Hizli takim filtreleri KALDIRILDI (kullanici istegi): arama kutusu
@@ -9082,9 +9088,13 @@
             if (!resp.ok || respBody.error) throw new Error(respBody.error || ('HTTP ' + resp.status));
             addLog('DELETE_USER', `Kullanıcı silindi: ${userName} (${originalUsername})`);
             await loadUsers();
-            showSiteNotice(`"${fmt(userName)}" ${I18N.t('silindi.')}`, 'success');
+            showSiteResult(
+              I18N.t('Kullanıcı Silindi'),
+              `<strong style="color:#4ade80">${fmt(userName)}</strong> ${I18N.t('adlı kullanıcı kalıcı olarak silindi.')}`,
+              'success'
+            );
           } catch(e) {
-            showSiteNotice(I18N.t('Silme başarısız: ') + e.message, 'error');
+            showSiteResult(I18N.t('Silme Başarısız'), fmt(e.message), 'error');
           }
         }
       );
@@ -10081,6 +10091,9 @@
       if (_cfmCard) _cfmCard.setAttribute('data-tone', _cfmDanger ? 'danger' : 'info');
       _cfmBox.style.setProperty('--cfm-accent', okColor || '#dc2626');
       ok.style.background = '';   // rengi artik CSS yonetiyor
+      // Sonuç modundan (showSiteResult) dönülmüş olabilir: İptal'i geri getir.
+      const _cfmCancelBtn = document.getElementById('scCancel');
+      if (_cfmCancelBtn) _cfmCancelBtn.style.display = '';
       _cfmBox.style.display = 'flex';
       _scCb = onConfirm;
       ok.onclick = () => { const cb = _scCb; closeSiteConfirm(); if (cb) cb(); };
@@ -10091,6 +10104,34 @@
     function closeSiteConfirm() {
       document.getElementById('siteConfirm').style.display = 'none';
       _scCb = null;
+    }
+    // Sonuç diyaloğu: aynı Liquid Glass kartını "işlem tamam" durumuyla açar.
+    // Üstteki yeşil toast yerine kullanılır — İptal butonu yok, tek "Kapat".
+    // tone: 'success' (yeşil onay) | 'error' (kırmızı). accent yoksa tona göre.
+    function showSiteResult(title, msg, tone, accent) {
+      const _tone = tone === 'error' ? 'error' : 'success';
+      const _acc = accent || (_tone === 'error' ? '#dc2626' : '#16a34a');
+      document.getElementById('scTitle').textContent = I18N.t(title);
+      document.getElementById('scMsg').innerHTML = I18N.t(msg);
+      document.getElementById('scExtra').innerHTML = '';
+      const _cfmBox = document.getElementById('siteConfirm');
+      const _cfmCard = _cfmBox.querySelector('.nc-cfm');
+      const _cfmIcon = document.getElementById('scIcon');
+      if (_cfmIcon) _cfmIcon.innerHTML = _tone === 'error'
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M15 9l-6 6M9 9l6 6"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>';
+      if (_cfmCard) _cfmCard.setAttribute('data-tone', _tone === 'error' ? 'danger' : 'success');
+      _cfmBox.style.setProperty('--cfm-accent', _acc);
+      // İptal butonunu gizle, onay butonunu "Kapat" yap.
+      const _cancel = document.getElementById('scCancel');
+      if (_cancel) _cancel.style.display = 'none';
+      const ok = document.getElementById('scOk');
+      ok.textContent = I18N.t('Kapat');
+      ok.style.background = '';
+      _scCb = null;
+      ok.onclick = () => closeSiteConfirm();
+      _cfmBox.style.display = 'flex';
+      setTimeout(() => ok.focus(), 0);
     }
     // Esc ve bosluga tiklama ile kapanir. Yikici bir onay kutusunda kacis
     // yolunun olmasi sart; eskiden yalnizca Iptal butonu vardi.
