@@ -170,6 +170,15 @@
     'Mevcut şifre gösterilemez (veritabanında geri çevrilemez şekilde şifrelenmiş). Buraya yazdığın yeni şifre kaydedilir; boş bırakırsan eski şifre değişmez.':
       'The current password cannot be shown (it is irreversibly hashed in the database). A new password typed here will be saved; leave it blank to keep the old one.',
     'Ad soyad, kullanıcı adı ve şifre zorunludur.': 'Full name, username and password are required.',
+    // Sistem Kayitlari: filtre secenekleri artik veriden uretiliyor, bu yuzden
+    // eskiden hic etiketi olmayan islem tipleri de gorunuyor
+    'Kullanıcı Sil': 'Delete User',
+    'Alarm Sıfırlama': 'Alarm Reset',
+    'Günlük Giriş Düzenleme': 'Daily Entry Edit',
+    'Geri Alma': 'Rollback',
+    'Kullanıcı Devre Dışı': 'User Deactivated',
+    'Takım Senkronu': 'Team Sync',
+    'Giriş Ekranı': 'Login Screen',
     // Kullanici duzenleme penceresi: telefon/e-posta/durum + sistem alanlari
     'Bu hesabın mevcut şifresi yukarıda görünüyor. Kullanıcı ilk girişini yaptığında şifre geri çevrilemez şekilde şifrelenir ve bir daha gösterilemez.':
       "This account's current password is shown above. Once the user signs in for the first time it is irreversibly hashed and can no longer be shown.",

@@ -1058,22 +1058,13 @@
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 mb-4 flex flex-wrap gap-3 items-end">
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">İşlem Tipi</label>
-          <select id="logFilter" class="filter-select" style="width:160px" onchange="renderLogs()">
+          <!-- Secenekler VERIDEN uretiliyor (bkz. _logBuildFilterOptions).
+               Elle yazilmis liste kaymisti: LOGOUT / DELETE_USER /
+               ALARM_RESET / DAILY_ENTRY_EDIT / ROLLBACK / USER_DEACTIVATE /
+               USER_TEAM_SYNC yaziliyor ama listede yoktu, dolayisiyla
+               filtrelenemiyordu. -->
+          <select id="logFilter" class="filter-select" style="width:190px" onchange="renderLogs()">
             <option value="">Tümü</option>
-            <option value="LOGIN">Login</option>
-            <option value="VIEW_DEAL">Deal Görüntüleme</option>
-            <option value="SAVE_RESULT">Kayıt / Kilitle</option>
-            <option value="UNLOCK_REQUEST">Unlock Talebi</option>
-            <option value="UNLOCK_APPROVE">Unlock Onay</option>
-            <option value="UNLOCK_REJECT">Unlock Red</option>
-            <option value="EDIT_USER">Kullanıcı Düzenle</option>
-            <option value="ADD_USER">Kullanıcı Ekle</option>
-            <option value="DATA_VIEW">Data Görüntüleme</option>
-            <option value="ALARM_CLOSE">Alarm Kapatma</option>
-            <option value="ALARM_UPDATE">Alarm Güncelleme</option>
-            <option value="ALARM_QUICK_ACTION">Alarm Hızlı Aksiyon</option>
-            <option value="ALARM_REOPEN">Alarm Yeniden Aç</option>
-            <option value="ALARM_ESCALATE">Alarm Eskale</option>
           </select>
         </div>
         <div>
@@ -1082,22 +1073,20 @@
         </div>
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Sayfa</label>
-          <select id="logPage" class="filter-select" style="width:130px" onchange="renderLogs()">
+          <!-- Veriden uretiliyor: "login" (giris kayitlari) listede yoktu,
+               olmayan "agent" sayfasi ise duruyordu. -->
+          <select id="logPage" class="filter-select" style="width:150px" onchange="renderLogs()">
             <option value="">Tümü</option>
-            <option value="agent">Agent</option>
-            <option value="admin">Admin</option>
-            <option value="team-leader">Team Leader</option>
           </select>
         </div>
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Rol</label>
-          <select id="logRole" class="filter-select" style="width:130px" onchange="renderLogs()">
+          <!-- ASIL HATA BURADAYDI: secenek degerleri "Admin" / "Team Leader"
+               diye yazilmisti ama Logs.role normalize edilmis slug tutuyor
+               ("admin", "team-leader"). Tam esitlik arandigi icin filtrenin
+               HER secenegi sifir sonuc veriyordu. Artik veriden uretiliyor. -->
+          <select id="logRole" class="filter-select" style="width:160px" onchange="renderLogs()">
             <option value="">Tümü</option>
-            <option value="Super Admin">Super Admin</option>
-            <option value="Admin">Admin</option>
-            <option value="Team Leader">Team Leader</option>
-            <option value="Regional Manager">Regional Manager</option>
-            <option value="Agent">Agent</option>
           </select>
         </div>
         <div>
@@ -8968,13 +8957,16 @@
           const c = JSON.parse(sessionStorage.getItem(_USERS_CACHE) || 'null');
           if (c && Date.now() - c.ts < _USERS_TTL) {
             allUsers = c.users;
+            _buildUserTeamDropdown();
             renderUsersTable();
             loadEl.classList.add('hidden');
             document.getElementById('usersContent').classList.remove('hidden');
-            // Arka planda güncelle
-            _auFetch('/api/admin-users').then(r => r.json()).then(({ users }) => {
+            // Arka planda güncelle — r.ok kontrolü şart: 401 döner ama JSON
+            // parse edilebilir, allUsers'ı [] ile ezmemek için kontrol gerekli.
+            _auFetch('/api/admin-users').then(r => r.ok ? r.json() : Promise.reject()).then(({ users }) => {
+              if (!Array.isArray(users)) return;
               try { sessionStorage.setItem(_USERS_CACHE, JSON.stringify({ ts: Date.now(), users })); } catch(e) {}
-              allUsers = users || []; renderUsersTable();
+              allUsers = users; _buildUserTeamDropdown(); renderUsersTable();
             }).catch(() => {});
             return;
           }
@@ -8984,18 +8976,17 @@
       document.getElementById('usersContent').classList.add('hidden');
       document.getElementById('usersEmpty').classList.add('hidden');
       try {
-        // Users tablosu artık tarayıcıdan doğrudan erişilemiyor (RLS anon'a
-        // kapalı) — liste api/admin-users.js üzerinden (service_role ile)
-        // sunucu tarafında çekiliyor.
         const resp = await _auFetch('/api/admin-users');
         const respBody = await resp.json();
+        if (!resp.ok) throw new Error(respBody.error || ('HTTP ' + resp.status));
         allUsers = respBody.users || [];
         try { sessionStorage.setItem(_USERS_CACHE, JSON.stringify({ ts: Date.now(), users: allUsers })); } catch(e) {}
+        _buildUserTeamDropdown();
         renderUsersTable();
         loadEl.classList.add('hidden');
         document.getElementById('usersContent').classList.remove('hidden');
       } catch(e) {
-        loadEl.innerHTML = '<p class="text-red-400 text-sm text-center py-10">Error: ' + e.message + '</p>';
+        loadEl.innerHTML = '<p class="text-red-400 text-sm text-center py-10">Hata: ' + _escHtml(e.message) + '</p>';
       }
     }
 
@@ -9379,18 +9370,71 @@
       ALARM_REOPEN:'#f59e0b', ALARM_ESCALATE:'#fb923c'
     };
     const LOG_LABELS = {
-      LOGIN:'Login', VIEW_DEAL:I18N.t('Deal Görüntüle'), SAVE_RESULT:I18N.t('Kayıt/Kilitle'),
+      LOGIN:'Login', LOGOUT:I18N.t('Çıkış'), VIEW_DEAL:I18N.t('Deal Görüntüle'), SAVE_RESULT:I18N.t('Kayıt/Kilitle'),
       UNLOCK_REQUEST:I18N.t('Unlock Talep'), UNLOCK_APPROVE:I18N.t('Unlock Onay'), UNLOCK_REJECT:I18N.t('Unlock Red'),
-      EDIT_USER:I18N.t('Kullanıcı Düzenle'), ADD_USER:I18N.t('Kullanıcı Ekle'), DATA_VIEW:I18N.t('Data Görüntüle'),
+      EDIT_USER:I18N.t('Kullanıcı Düzenle'), ADD_USER:I18N.t('Kullanıcı Ekle'), DELETE_USER:I18N.t('Kullanıcı Sil'),
+      DATA_VIEW:I18N.t('Data Görüntüle'),
       ALARM_CLOSE:I18N.t('Alarm Kapatma'), ALARM_UPDATE:I18N.t('Alarm Güncelleme'), ALARM_QUICK_ACTION:I18N.t('Alarm Hızlı Aksiyon'),
-      ALARM_REOPEN:I18N.t('Alarm Yeniden Aç'), ALARM_ESCALATE:I18N.t('Alarm Eskale')
+      ALARM_REOPEN:I18N.t('Alarm Yeniden Aç'), ALARM_ESCALATE:I18N.t('Alarm Eskale'), ALARM_RESET:I18N.t('Alarm Sıfırlama'),
+      // Asagidakiler de yaziliyor ama eskiden ne etikette ne filtre listesinde
+      // vardi — tabloda ham kod ("USER_TEAM_SYNC") gorunuyordu.
+      DAILY_ENTRY_EDIT:I18N.t('Günlük Giriş Düzenleme'), ROLLBACK:I18N.t('Geri Alma'),
+      USER_DEACTIVATE:I18N.t('Kullanıcı Devre Dışı'), USER_TEAM_SYNC:I18N.t('Takım Senkronu')
     };
+
+    // ── Rol/Sayfa normalizasyonu ────────────────────────────────────────
+    // Logs.role, index.html'de normalize edilmis SLUG olarak yaziliyor
+    // ("admin", "team-leader", "super-admin"). Rol filtresinin secenekleri ise
+    // elle "Admin" / "Team Leader" diye yazilmisti ve karsilastirma TAM
+    // esitlikti — yani filtrenin HER secenegi sifir sonuc veriyordu. Artik iki
+    // taraf da ayni normalize sureclerinden geciyor.
+    function _logNormRole(r) {
+      const s = String(r == null ? '' : r).toLowerCase().trim();
+      if (!s) return '';
+      if (s.includes('super')) return 'super-admin';
+      if (s.includes('admin')) return 'admin';
+      if (s.includes('regional') || s.includes('manager') || s === 'rm') return 'regional-manager';
+      if (s.includes('leader') || s === 'tl') return 'team-leader';
+      return s;
+    }
+    const _LOG_ROLE_LABELS = {
+      'super-admin': 'Super Admin', 'admin': 'Admin',
+      'regional-manager': 'Regional Manager', 'team-leader': 'Team Leader', 'agent': 'Agent'
+    };
+    const _LOG_PAGE_LABELS = {
+      'login': I18N.t('Giriş Ekranı'), 'admin': 'Admin',
+      'team-leader': 'Team Leader', 'agent': 'Agent'
+    };
+
+    // Filtre seceneklerini VERIDEN uret. Elle yazilmis listeler kaciniyordu:
+    // Islem Tipi'nde LOGOUT / DELETE_USER / ALARM_RESET / DAILY_ENTRY_EDIT /
+    // ROLLBACK / USER_DEACTIVATE / USER_TEAM_SYNC hic yoktu, Sayfa'da
+    // "login" yoktu ama var olmayan "agent" duruyordu. Veriden uretilince
+    // bir daha kayamaz; yaninda kac kayit oldugu da yaziyor.
+    function _logBuildFilterOptions() {
+      const fill = (id, values, labelOf) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const keep = el.value;                       // mevcut secim korunur
+        const counts = new Map();
+        values.forEach(v => { if (v) counts.set(v, (counts.get(v) || 0) + 1); });
+        const keys = [...counts.keys()].sort((a, b) =>
+          new Intl.Collator('tr', { numeric: true }).compare(labelOf(a), labelOf(b)));
+        el.innerHTML = `<option value="">${I18N.t('Tümü')}</option>`
+          + keys.map(k => `<option value="${_escAttr(k)}">${fmt(labelOf(k))} (${counts.get(k)})</option>`).join('');
+        // Secim artik veride yoksa "Tumu"ye duser — yoksa bos tablo kalirdi.
+        el.value = keys.includes(keep) ? keep : '';
+      };
+      fill('logFilter', allLogs.map(l => l.action_type), k => LOG_LABELS[k] || k);
+      fill('logPage',   allLogs.map(l => l.page),        k => _LOG_PAGE_LABELS[k] || k);
+      fill('logRole',   allLogs.map(l => _logNormRole(l.role)), k => _LOG_ROLE_LABELS[k] || k);
+    }
 
     // Filtre mantığı ayrı: tablo da export da bunu kullanıyor (tek kaynak).
     function _logsFilteredRows() {
       const actionFilter = document.getElementById('logFilter').value;
       const userFilter   = (document.getElementById('logUser').value || '').toLowerCase();
-      const pageFilter   = document.getElementById('logPage').value;
+      const pageFilter   = (document.getElementById('logPage').value || '').toLowerCase();
       const roleFilter   = document.getElementById('logRole').value;
       const search       = (document.getElementById('logSearch').value || '').toLowerCase();
       const dateFrom     = document.getElementById('logDateFrom').value || '';
@@ -9398,8 +9442,8 @@
       return allLogs.filter(l => {
         if (actionFilter && (l.action_type||'') !== actionFilter) return false;
         if (userFilter   && !(l.username||'').toLowerCase().includes(userFilter)) return false;
-        if (pageFilter   && (l.page||'') !== pageFilter) return false;
-        if (roleFilter   && (l.role||'') !== roleFilter) return false;
+        if (pageFilter   && String(l.page||'').toLowerCase().trim() !== pageFilter) return false;
+        if (roleFilter   && _logNormRole(l.role) !== roleFilter) return false;
         if (search && ![(l.details||''),(l.deal_name||''),(l.username||''),(l.full_name||'')].join(' ').toLowerCase().includes(search)) return false;
         if (dateFrom || dateTo) {
           const logDate = l.created_at ? String(l.created_at).slice(0, 10) : '';
@@ -9411,7 +9455,19 @@
       });
     }
 
+    // Secenekler VERIDEN uretildigi icin allLogs degistiginde yeniden
+    // kurulmali. renderLogs her filtre degisiminde de calisiyor; imza ayni
+    // kaldigi surece bosa is yapmasin diye ucuz bir imza karsilastirmasi var.
+    let _logOptSig = null;
+    function _logSyncFilterOptions() {
+      const sig = allLogs.length + '|' + (allLogs[0] && allLogs[0].id);
+      if (sig === _logOptSig) return;
+      _logOptSig = sig;
+      _logBuildFilterOptions();
+    }
+
     function renderLogs() {
+      _logSyncFilterOptions();
       const logs = _logsFilteredRows();
       document.getElementById('logCount').textContent = logs.length + ' / ' + allLogs.length;
       if (!logs.length) {
@@ -9441,9 +9497,12 @@
         return `<tr class="border-b border-gray-800 hover:bg-gray-800/50 transition-colors">
           <td class="px-3 py-2 text-slate-500 whitespace-nowrap">${fmtTime(l.created_at)}</td>
           <td class="px-3 py-2"><div class="font-semibold text-white">${fmt(l.username)}</div><div class="text-slate-500 text-[10px]">${fmt(l.full_name)}</div></td>
-          <td class="px-3 py-2 text-slate-400">${fmt(l.role)}</td>
+          <!-- Rol/Sayfa hucreleri de acilirlardaki AYNI etiketi gostersin:
+               ham slug ("team-leader", "login") ile filtre secenegi ("Team
+               Leader", "Giris Ekrani") ayri okunuyordu. -->
+          <td class="px-3 py-2 text-slate-400">${fmt(_LOG_ROLE_LABELS[_logNormRole(l.role)] || l.role)}</td>
           <td class="px-3 py-2 text-slate-400">${fmt(l.team)}</td>
-          <td class="px-3 py-2"><span class="text-[10px] bg-gray-800 text-slate-400 px-1.5 py-0.5 rounded">${fmt(l.page)}</span></td>
+          <td class="px-3 py-2"><span class="text-[10px] bg-gray-800 text-slate-400 px-1.5 py-0.5 rounded">${fmt(_LOG_PAGE_LABELS[l.page] || l.page)}</span></td>
           <td class="px-3 py-2"><span style="display:inline-block;padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;background:${color}22;color:${color};border:1px solid ${color}44">${label}</span></td>
           <td class="px-3 py-2 text-slate-400 text-[11px]">${fmt(l.deal_name)}</td>
           <td class="px-3 py-2 text-slate-400 text-[11px]" style="max-width:260px;word-break:break-word">${fmt(l.details)}</td>
