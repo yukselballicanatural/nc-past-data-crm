@@ -893,21 +893,10 @@
           <button onclick="openUserModal(null)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">+ Kullanıcı Ekle</button>
         </div>
       </div>
-      <!-- Filtreler: metin arama + rol + takım -->
-      <div class="flex flex-wrap gap-2 mb-4 items-center">
-        <input type="text" id="userSearch" oninput="_dbRenderUsersTable()" placeholder="Ad, kullanıcı adı ara…" class="filter-input" style="max-width:220px" />
-        <select id="userRoleFilter" onchange="_dbRenderUsersTable()" class="filter-select" style="max-width:180px">
-          <option value="">Tüm Roller</option>
-          <option value="super-admin">Super Admin</option>
-          <option value="admin">Admin</option>
-          <option value="regional-manager">Regional Manager</option>
-          <option value="team-leader">Team Leader</option>
-        </select>
-        <select id="userTeamFilter" onchange="_dbRenderUsersTable()" class="filter-select" style="max-width:200px">
-          <option value="">Tüm Takımlar</option>
-        </select>
-        <button onclick="_usersResetFilters()" style="padding:6px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer">Sıfırla</button>
-      </div>
+      <!-- Filtreler KALDIRILDI (kullanici istegi: "gerek yok"). Liste giris
+           yetkisi olan kisilerden olusuyor, yani kisa; arama/rol/takim
+           suzgeci taramaktan daha uzun suruyordu. Tablo tum listeyi gosterir.
+           Kolonlar hala Ad Soyad'a gore sirali geliyor (uctan order=id.asc). -->
       <!-- Loading -->
       <div id="usersLoadingState" class="flex flex-col items-center py-16 gap-4">
         <div class="spinner-anim"></div>
@@ -7105,7 +7094,8 @@
     }
     const _dbApplyFilters        = _debounce(() => applyFilters(), 300);
     const _dbRenderAdminAlarmTbl = _debounce(() => renderAdminAlarmTable(), 300);
-    const _dbRenderUsersTable    = _debounce(() => renderUsersTable(), 250);
+    // _dbRenderUsersTable KALDIRILDI: Kullanicilar sayfasinda debounce
+    // gerektiren bir suzgec (arama kutusu) kalmadi.
     const _dbRenderLogs          = _debounce(() => renderLogs(), 250);
     const _dbFilterTeamList      = _debounce(() => filterTeamList(), 200);
     const _dbRenderAdminToday    = _debounce(() => renderAdminToday(), 250);
@@ -8957,7 +8947,6 @@
           const c = JSON.parse(sessionStorage.getItem(_USERS_CACHE) || 'null');
           if (c && Date.now() - c.ts < _USERS_TTL) {
             allUsers = c.users;
-            _buildUserTeamDropdown();
             renderUsersTable();
             loadEl.classList.add('hidden');
             document.getElementById('usersContent').classList.remove('hidden');
@@ -8966,7 +8955,7 @@
             _auFetch('/api/admin-users').then(r => r.ok ? r.json() : Promise.reject()).then(({ users }) => {
               if (!Array.isArray(users)) return;
               try { sessionStorage.setItem(_USERS_CACHE, JSON.stringify({ ts: Date.now(), users })); } catch(e) {}
-              allUsers = users; _buildUserTeamDropdown(); renderUsersTable();
+              allUsers = users; renderUsersTable();
             }).catch(() => {});
             return;
           }
@@ -8981,7 +8970,6 @@
         if (!resp.ok) throw new Error(respBody.error || ('HTTP ' + resp.status));
         allUsers = respBody.users || [];
         try { sessionStorage.setItem(_USERS_CACHE, JSON.stringify({ ts: Date.now(), users: allUsers })); } catch(e) {}
-        _buildUserTeamDropdown();
         renderUsersTable();
         loadEl.classList.add('hidden');
         document.getElementById('usersContent').classList.remove('hidden');
@@ -8999,48 +8987,11 @@
       return r === 'agent' || r === 'agents' || r === 'danışman' || r === 'danisman';
     }
 
-    // Rol dropdown'ı için normalize: verideki serbest metin → seçenek değeri
-    function _normalizeRole(role) {
-      const r = (role || '').toLowerCase().trim();
-      if (r === 'super-admin' || r === 'super admin') return 'super-admin';
-      if (r === 'admin') return 'admin';
-      if (r.includes('regional') || r.includes('manager')) return 'regional-manager';
-      if (r.includes('leader') || r === 'tl') return 'team-leader';
-      return r;
-    }
-
-    // Takım dropdown'ını mevcut veriyle doldurur (loadUsers sonrası çağrılır).
-    function _buildUserTeamDropdown() {
-      const sel = document.getElementById('userTeamFilter');
-      if (!sel) return;
-      const current = sel.value;
-      const rows = allUsers.filter(u => !_isAgentRole(u['Role']));
-      const teams = [...new Set(rows.map(uTeam).filter(Boolean))].sort();
-      sel.innerHTML = `<option value="">Tüm Takımlar</option>` +
-        teams.map(t => `<option value="${_escAttr(t)}"${t === current ? ' selected' : ''}>${_escHtml(t)}</option>`).join('');
-    }
-
-    function _usersResetFilters() {
-      const s = document.getElementById('userSearch');
-      const r = document.getElementById('userRoleFilter');
-      const t = document.getElementById('userTeamFilter');
-      if (s) s.value = '';
-      if (r) r.value = '';
-      if (t) t.value = '';
-      renderUsersTable();
-    }
-
+    // Arama/rol/takim suzgecleri KALDIRILDI. Fonksiyon duruyor cunku tabloyu
+    // da export'u da bu besliyor (tek kaynak) — tek isi kalan, panele girisi
+    // olmayan danismanlari listeden dusurmek.
     function _usersFilteredRows() {
-      const search = (document.getElementById('userSearch')?.value || '').toLowerCase();
-      const roleF  = (document.getElementById('userRoleFilter')?.value || '').toLowerCase();
-      const teamF  = document.getElementById('userTeamFilter')?.value || '';
-      let list = allUsers.filter(u => !_isAgentRole(u['Role']));
-      if (search) list = list.filter(u =>
-        [uName(u), u['Username'], u['Role'], uTeam(u)].join(' ').toLowerCase().includes(search)
-      );
-      if (roleF) list = list.filter(u => _normalizeRole(u['Role']) === roleF);
-      if (teamF) list = list.filter(u => uTeam(u) === teamF);
-      return list;
+      return allUsers.filter(u => !_isAgentRole(u['Role']));
     }
 
     function renderUsersTable() {
@@ -9410,18 +9361,19 @@
     // Islem Tipi'nde LOGOUT / DELETE_USER / ALARM_RESET / DAILY_ENTRY_EDIT /
     // ROLLBACK / USER_DEACTIVATE / USER_TEAM_SYNC hic yoktu, Sayfa'da
     // "login" yoktu ama var olmayan "agent" duruyordu. Veriden uretilince
-    // bir daha kayamaz; yaninda kac kayit oldugu da yaziyor.
+    // bir daha kayamaz.
+    // NOT: secenek yaninda kayit adedi de yaziliyordu ("Admin (12)"),
+    // kullanici istegiyle kaldirildi — toplam sayi zaten sagdaki "Toplam"
+    // alaninda duruyor.
     function _logBuildFilterOptions() {
       const fill = (id, values, labelOf) => {
         const el = document.getElementById(id);
         if (!el) return;
         const keep = el.value;                       // mevcut secim korunur
-        const counts = new Map();
-        values.forEach(v => { if (v) counts.set(v, (counts.get(v) || 0) + 1); });
-        const keys = [...counts.keys()].sort((a, b) =>
+        const keys = [...new Set(values.filter(Boolean))].sort((a, b) =>
           new Intl.Collator('tr', { numeric: true }).compare(labelOf(a), labelOf(b)));
         el.innerHTML = `<option value="">${I18N.t('Tümü')}</option>`
-          + keys.map(k => `<option value="${_escAttr(k)}">${fmt(labelOf(k))} (${counts.get(k)})</option>`).join('');
+          + keys.map(k => `<option value="${_escAttr(k)}">${fmt(labelOf(k))}</option>`).join('');
         // Secim artik veride yoksa "Tumu"ye duser — yoksa bos tablo kalirdi.
         el.value = keys.includes(keep) ? keep : '';
       };
