@@ -51,8 +51,23 @@ export default async function handler(req, res) {
       // Satirlari silmiyoruz: gecmis veri (daily_performance, alarm_logs) onlara
       // bagli. Gorunmez + giris yapamaz olmalari yeterli.
       users = users.filter(u => !isBlocked(u['Deal Owner Name'], u['Username']));
-      // Password alanı listeleme ekranında ASLA düz metin/hash olarak dönmez.
-      users.forEach(u => { delete u.Password; });
+      // Şifre: bcrypt HASH'i asla dönmez — geri çevrilemez, panelde de bir işe
+      // yaramaz, sızması zarar verir. Bunun yerine iki türev alan dönüyor:
+      //   passwordSet   → şifre tanımlı mı (boş hesapları görebilmek için)
+      //   passwordPlain → SADECE kayıt henüz hashlenmemişse (eski kayıtlar;
+      //                   api/login.js ilk başarılı girişte hashliyor). Bu
+      //                   değer veritabanında zaten düz metin duruyor ve bu uç
+      //                   admin/super-admin token'ı zorunlu kılıyor; admine
+      //                   göstermek yeni bir sızma yüzeyi açmıyor, mevcut
+      //                   şifresini soran kullanıcıya cevap verebilmesini
+      //                   sağlıyor. Hashlenmiş kayıtlarda hiç dönmez.
+      users.forEach(u => {
+        const stored = String(u.Password == null ? '' : u.Password);
+        const hashed = /^\$2[aby]\$/.test(stored);
+        u.passwordSet   = stored.trim() !== '';
+        u.passwordPlain = (!hashed && stored.trim() !== '') ? stored : null;
+        delete u.Password;
+      });
       res.status(200).json({ users });
       return;
     }

@@ -882,8 +882,8 @@
           <button onclick="openUserModal(null)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">+ Kullanıcı Ekle</button>
         </div>
       </div>
-      <!-- Team filter bar -->
-      <div class="flex flex-wrap gap-2 mb-3" id="teamFilterBar"></div>
+      <!-- Hizli takim filtreleri KALDIRILDI (kullanici istegi): arama kutusu
+           takim adinda da eslesiyor, ayni isi yapan iki arayuz vardi. -->
       <!-- Search -->
       <div class="mb-4">
         <input type="text" id="userSearch" oninput="_dbRenderUsersTable()" placeholder="Ad, kullanıcı adı, takım veya rol ara…" class="filter-input" style="max-width:320px" />
@@ -1154,11 +1154,11 @@
             <input type="text" id="umPassword" class="filter-input" style="flex:1;min-width:0" placeholder="Şifre" autocomplete="off" />
             <button type="button" onclick="_umGenPassword()" class="am-btn" style="white-space:nowrap;flex-shrink:0" title="Güçlü bir şifre üret ve kutuya yaz">Üret</button>
           </div>
-          <!-- Mevcut sifre GOSTERILEMEZ: veritabaninda bcrypt ile
-               hash'lenmis duruyor ve api/admin-users.js listelemede
-               Password alanini siliyor. Hash tek yonlu, geri cevrilemez.
-               Yapilabilecek olan yeni bir sifre ATAMAK — yazilan deger
-               burada acik gorunur, boylece kullaniciya iletilebilir. -->
+          <!-- Mevcut sifre YALNIZCA henuz hashlenmemis eski kayitlarda
+               gosterilebilir (api/admin-users.js -> passwordPlain). Hashlenmis
+               kayitlarda hash tek yonlu, geri cevrilemez; yapilabilecek olan
+               yeni bir sifre ATAMAK — yazilan deger burada acik gorunur,
+               boylece kullaniciya iletilebilir. -->
           <p id="umPassHint" class="text-[10px] text-slate-500 mt-1" style="line-height:1.45"></p>
         </div>
         <div>
@@ -1187,6 +1187,35 @@
             <div id="umTeamList" style="max-height:220px;overflow-y:auto"></div>
           </div>
         </div>
+        <!-- Telefon / E-posta / Durum: Users tablosunda duruyordu ama bu
+             pencerede hic yoktu — "duzenle deyince bilgileri gelmiyor"
+             sikayetinin asil sebebi buydu. Artik hem gorunuyor hem
+             duzenlenebiliyor. -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Telefon</label>
+            <input type="text" id="umPhone" class="filter-input w-full" placeholder="Telefon" />
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">E-posta</label>
+            <input type="text" id="umEmail" class="filter-input w-full" placeholder="E-posta" />
+          </div>
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Durum</label>
+          <select id="umActive" class="filter-select w-full">
+            <option value="true">Aktif — giriş yapabilir</option>
+            <option value="false">Pasif — giriş yapamaz</option>
+          </select>
+        </div>
+        <!-- Salt okunur sistem alanlari: satirda ne varsa dokuluyor (id,
+             zoho_user_id, created_at, ... ). Genel amacli — semaya yeni bir
+             kolon eklenirse burada kendiliginden gorunur, kod degismesi
+             gerekmez. -->
+        <details id="umRawWrap" style="border:1px solid var(--edge-soft,#334155);border-radius:10px;padding:8px 10px">
+          <summary style="cursor:pointer;font-size:11px;font-weight:700;color:#94a3b8;user-select:none">Sistem bilgileri</summary>
+          <div id="umRaw" style="margin-top:8px;display:grid;grid-template-columns:auto 1fr;gap:4px 10px;font-size:11px"></div>
+        </details>
         <div id="umError" style="display:none;color:#f87171;font-size:0.75rem;font-weight:600;padding:8px 12px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px"></div>
         <div class="flex gap-2 pt-1">
           <button onclick="closeUserModal()" class="flex-1 py-2 bg-gray-800 text-slate-300 text-sm rounded-lg font-semibold border border-gray-700">İptal</button>
@@ -8896,9 +8925,11 @@
     }
 
     let allUsers = [];
-    let activeTeamFilter = '';
 
-    const _USERS_CACHE = 'nc_admin_users_v1';
+    // v2: uc artik satirin TUM alanlarini + passwordPlain/passwordSet donuyor.
+    // Anahtar degismezse eski onbellekten gelen kayitlarda bu alanlar olmaz ve
+    // duzenleme penceresi 5 dakika boyunca bos gorunurdu.
+    const _USERS_CACHE = 'nc_admin_users_v2';
     const _USERS_TTL   = 5 * 60 * 1000;
 
     // api/admin-users.js artık admin/super-admin token'ı zorunlu kılıyor —
@@ -8917,13 +8948,13 @@
           const c = JSON.parse(sessionStorage.getItem(_USERS_CACHE) || 'null');
           if (c && Date.now() - c.ts < _USERS_TTL) {
             allUsers = c.users;
-            buildTeamFilterBar(); renderUsersTable();
+            renderUsersTable();
             loadEl.classList.add('hidden');
             document.getElementById('usersContent').classList.remove('hidden');
             // Arka planda güncelle
             _auFetch('/api/admin-users').then(r => r.json()).then(({ users }) => {
               try { sessionStorage.setItem(_USERS_CACHE, JSON.stringify({ ts: Date.now(), users })); } catch(e) {}
-              allUsers = users || []; buildTeamFilterBar(); renderUsersTable();
+              allUsers = users || []; renderUsersTable();
             }).catch(() => {});
             return;
           }
@@ -8940,7 +8971,7 @@
         const respBody = await resp.json();
         allUsers = respBody.users || [];
         try { sessionStorage.setItem(_USERS_CACHE, JSON.stringify({ ts: Date.now(), users: allUsers })); } catch(e) {}
-        buildTeamFilterBar(); renderUsersTable();
+        renderUsersTable();
         loadEl.classList.add('hidden');
         document.getElementById('usersContent').classList.remove('hidden');
       } catch(e) {
@@ -8952,26 +8983,9 @@
     function uName(u)  { return u['Deal Owner Name'] || u['full_name'] || ''; }
     function uId(u)    { return String(u['Id'] || u['id'] || ''); }
 
-    function buildTeamFilterBar() {
-      // Danismanlar listede olmadigi icin sayilar ve takim listesi de onlari
-      // saymamali — yoksa "Takim X: 12" yaziyor ama tabloda 2 satir cikiyor
-      // ve yalnizca danismandan olusan takimlar bos filtre olarak duruyor.
-      const rows = allUsers.filter(u => !_isAgentRole(u['Role']));
-      const teams = [...new Set(rows.map(uTeam).filter(Boolean))].sort();
-      const bar = document.getElementById('teamFilterBar');
-      const btn = (label, val) => {
-        const active = activeTeamFilter === val;
-        return `<button onclick="filterByTeam('${_jsStrAttr(val)}')" class="px-3 py-1.5 text-xs rounded-lg font-semibold transition-all ${active ? 'bg-indigo-600 text-white' : 'bg-gray-800 text-slate-400 hover:text-white border border-gray-700'}">${fmt(label)} <span class="ml-1 text-[10px] opacity-70">${val === '' ? rows.length : rows.filter(u=>uTeam(u)===val).length}</span></button>`;
-      };
-      bar.innerHTML = btn('Tüm Takımlar', '') + teams.map(t => btn(t, t)).join('');
-      I18N.translateDOM(bar);
-    }
-
-    function filterByTeam(team) {
-      activeTeamFilter = team;
-      buildTeamFilterBar();
-      renderUsersTable();
-    }
+    // buildTeamFilterBar / filterByTeam KALDIRILDI (kullanici istegi: "hizli
+    // filtreleri kaldiralim"). Islevsel kayip yok — arama kutusu takim
+    // adinda da esliyor (bkz. _usersFilteredRows).
 
     // Filtre mantığı ayrı: tablo da export da bunu kullanıyor (tek kaynak).
     // Rol adi Users tablosunda serbest metin; ayni rol icin farkli yazimlar
@@ -8990,7 +9004,6 @@
       // super admin. Rol adi veride serbest yazilmis olabildigi icin
       // (Agent / agent / Danışman) eslesme genis tutuldu.
       let list = allUsers.filter(u => !_isAgentRole(u['Role']));
-      if (activeTeamFilter) list = list.filter(u => uTeam(u) === activeTeamFilter);
       if (search) list = list.filter(u =>
         [uName(u), u['Username'], u['Role'], uTeam(u)].join(' ').toLowerCase().includes(search)
       );
@@ -9099,6 +9112,43 @@
       el.select();
     }
 
+    // Yukarida kendi alani olan / gosterilmesi anlamsiz kolonlar. Geri kalan
+    // NE VARSA salt okunur dokuluyor: semaya yeni kolon eklenirse kod
+    // degismeden burada gorunur.
+    const _UM_HANDLED = new Set([
+      'Deal Owner Name', 'full_name', 'Username', 'Password', 'Role',
+      'Takim Adi', 'team', 'Phone', 'Email', 'is_active',
+      'passwordPlain', 'passwordSet'
+    ]);
+    function _umRenderRaw(u) {
+      const wrap = document.getElementById('umRawWrap');
+      const box  = document.getElementById('umRaw');
+      if (!wrap || !box) return;
+      if (!u) { wrap.style.display = 'none'; box.innerHTML = ''; return; }
+      wrap.style.display = '';
+      wrap.open = false;
+      const rows = Object.keys(u)
+        .filter(k => !_UM_HANDLED.has(k))
+        .sort()
+        .map(k => {
+          const v = u[k];
+          const txt = (v === null || v === undefined || v === '')
+            ? '—'
+            : (typeof v === 'object' ? JSON.stringify(v) : String(v));
+          return `<div style="color:#64748b;white-space:nowrap">${fmt(k)}</div>`
+               + `<div style="color:#e2e8f0;font-family:ui-monospace,monospace;word-break:break-all">${fmt(txt)}</div>`;
+        });
+      // Sifre durumu ozel: alanin kendisi degil, DURUMU bilgi olarak degerli.
+      rows.unshift(
+        `<div style="color:#64748b;white-space:nowrap">${I18N.t('Şifre durumu')}</div>`
+        + `<div style="color:#e2e8f0">${u.passwordPlain
+              ? I18N.t('düz metin (henüz şifrelenmemiş)')
+              : (u.passwordSet === false ? I18N.t('tanımlı değil') : I18N.t('şifrelenmiş (bcrypt)'))}</div>`
+      );
+      box.innerHTML = rows.join('');
+      I18N.translateDOM(box);
+    }
+
     function openUserModal(userId) {
       const u = userId ? allUsers.find(x => uId(x) === String(userId)) : null;
       document.getElementById('userModalTitle').textContent =
@@ -9107,18 +9157,33 @@
       document.getElementById('umOriginalUsername').value = u ? (u['Username'] || '') : '';
       document.getElementById('umFullName').value = u ? uName(u) : '';
       document.getElementById('umUsername').value = u ? (u['Username'] || '') : '';
-      // Şifreler artık hashleniyor ve API'den hiç dönmüyor — düzenlerken alan
-      // boş başlar; boş bırakılırsa mevcut şifre değişmeden kalır (bkz. saveUser).
-      document.getElementById('umPassword').value = '';
-      document.getElementById('umPassword').placeholder = u
-        ? I18N.t('Değiştirmek istemiyorsan boş bırak')
-        : I18N.t('Şifre');
+      // Şifre: henüz hashlenmemiş eski kayıtlarda mevcut şifre GÖSTERİLİR
+      // (api/admin-users.js -> passwordPlain). Hashlenmiş kayıtlarda
+      // gösterilemez — hash geri çevrilemez; alan boş başlar ve boş
+      // bırakılırsa mevcut şifre değişmeden kalır (bkz. saveUser).
+      const pwEl = document.getElementById('umPassword');
+      const plain = u ? (u.passwordPlain || '') : '';
+      pwEl.value = plain;
+      pwEl.placeholder = u ? I18N.t('Değiştirmek istemiyorsan boş bırak') : I18N.t('Şifre');
       const hintEl = document.getElementById('umPassHint');
       if (hintEl) {
-        hintEl.textContent = u
-          ? I18N.t('Mevcut şifre gösterilemez (veritabanında geri çevrilemez şekilde şifrelenmiş). Buraya yazdığın yeni şifre kaydedilir; boş bırakırsan eski şifre değişmez.')
-          : I18N.t('Şifre burada açık görünür — kullanıcıya iletmen için.');
+        if (!u) {
+          hintEl.textContent = I18N.t('Şifre burada açık görünür — kullanıcıya iletmen için.');
+        } else if (plain) {
+          hintEl.textContent = I18N.t('Bu hesabın mevcut şifresi yukarıda görünüyor. Kullanıcı ilk girişini yaptığında şifre geri çevrilemez şekilde şifrelenir ve bir daha gösterilemez.');
+        } else if (u.passwordSet === false) {
+          hintEl.textContent = I18N.t('Bu hesapta tanımlı şifre yok — kullanıcı giriş yapamaz. Buraya bir şifre yazıp kaydet.');
+        } else {
+          hintEl.textContent = I18N.t('Mevcut şifre gösterilemez (veritabanında geri çevrilemez şekilde şifrelenmiş). Buraya yazdığın yeni şifre kaydedilir; boş bırakırsan eski şifre değişmez.');
+        }
       }
+      document.getElementById('umPhone').value = u ? (u['Phone'] || '') : '';
+      document.getElementById('umEmail').value = u ? (u['Email'] || '') : '';
+      // is_active kolonu olmayabilir; undefined'i "aktif" say (uctaki
+      // `=== false` kontrolu ile ayni varsayim).
+      document.getElementById('umActive').value =
+        (u && u['is_active'] === false) ? 'false' : 'true';
+      _umRenderRaw(u);
       // Rol varsayilani artik "Agent" degil: danismanlar bu ekranda
       // yonetilmiyor, secenek de kaldirildi. Bos birakilsa select'in
       // selectedIndex'i -1 olup kaydederken bos rol gidiyordu.
@@ -9154,6 +9219,9 @@
       const password = document.getElementById('umPassword').value.trim();
       const role     = document.getElementById('umRole').value;
       const team     = document.getElementById('umTeam').value.trim();
+      const phone    = document.getElementById('umPhone').value.trim();
+      const email    = document.getElementById('umEmail').value.trim();
+      const isActive = document.getElementById('umActive').value !== 'false';
       const errEl    = document.getElementById('umError');
       const isEdit   = !!(id || originalUsername);
       // Yeni kullanıcıda şifre zorunlu; düzenlemede boş bırakılırsa mevcut
@@ -9174,7 +9242,12 @@
           'Deal Owner Name': fullName,
           'Username': username,
           'Role': role,
-          'Takim Adi': team
+          'Takim Adi': team,
+          // Bos birakilan telefon/e-posta null yazilir — bos string PostgREST'te
+          // "girilmis ama bos" gibi durur ve team-members.js ile ayrismaz.
+          'Phone': phone || null,
+          'Email': email || null,
+          'is_active': isActive
         };
         if (password) payload['Password'] = password;
         let resp;
