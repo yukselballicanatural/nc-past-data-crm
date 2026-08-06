@@ -9971,17 +9971,22 @@
       if (el.style.display === 'block' && ev.target !== el && !el.contains(ev.target)) { el.style.display = 'none'; el._src = null; }
     });
   </script>
-  <div id="siteConfirm" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);align-items:center;justify-content:center">
-    <div style="background:#1e293b;border:1px solid #334155;border-radius:16px;padding:24px;max-width:440px;width:95%;box-shadow:0 20px 60px rgba(0,0,0,0.6)">
-      <div id="scTitle" style="font-size:1rem;font-weight:700;color:#f1f5f9;margin-bottom:10px"></div>
-      <div id="scMsg"   style="font-size:0.82rem;color:#94a3b8;margin-bottom:16px;line-height:1.5"></div>
-      <div id="scExtra" style="margin-bottom:14px"></div>
-      <div style="display:flex;gap:10px">
-        <button id="scCancel" onclick="closeSiteConfirm()" style="flex:1;padding:10px;background:#0f172a;color:#94a3b8;border-radius:8px;font-weight:600;font-size:0.82rem;border:1px solid #334155;cursor:pointer">İptal</button>
-        <button id="scOk" style="flex:1;padding:10px;border-radius:8px;font-weight:700;font-size:0.82rem;border:none;cursor:pointer;color:#fff;background:#dc2626">Onayla</button>
+  <div id="siteConfirm" class="nc-cfm-bg" style="display:none;position:fixed;inset:0;z-index:9999;align-items:center;justify-content:center;padding:20px">
+  <div class="nc-cfm" role="dialog" aria-modal="true" aria-labelledby="scTitle" aria-describedby="scMsg">
+    <div class="nc-cfm-head">
+      <div class="nc-cfm-icon" id="scIcon" aria-hidden="true"></div>
+      <div class="nc-cfm-texts">
+        <div id="scTitle" class="nc-cfm-title"></div>
+        <div id="scMsg" class="nc-cfm-desc"></div>
       </div>
     </div>
+    <div id="scExtra" class="nc-cfm-extra"></div>
+    <div class="nc-cfm-foot">
+      <button id="scCancel" type="button" onclick="closeSiteConfirm()" class="nc-cfm-btn nc-cfm-cancel">İptal</button>
+      <button id="scOk" type="button" class="nc-cfm-btn nc-cfm-go">Onayla</button>
+    </div>
   </div>
+</div>
   <script>
     let _scCb = null;
     function showSiteConfirm(title, msg, okLabel, okColor, onConfirm) {
@@ -9989,15 +9994,44 @@
       document.getElementById('scMsg').innerHTML = I18N.t(msg);
       document.getElementById('scExtra').innerHTML = '';
       const ok = document.getElementById('scOk');
-      ok.textContent = I18N.t(okLabel); ok.style.background = okColor;
-      document.getElementById('siteConfirm').style.display = 'flex';
+      ok.textContent = I18N.t(okLabel);
+      // Vurgu rengi CSS degiskenine gider: cam yuzey onu gradyan/halka icin
+      // kullanir. Eskiden dogrudan ok.style.background yaziliyordu ve cam
+      // katmaniyla catisiyordu.
+      const _cfmDanger = /^#(dc2626|ef4444|b91c1c|f87171|991b1b)$/i.test(String(okColor || '').trim());
+      const _cfmBox = document.getElementById('siteConfirm');
+      const _cfmCard = _cfmBox.querySelector('.nc-cfm');
+      const _cfmIcon = document.getElementById('scIcon');
+      if (_cfmIcon) _cfmIcon.innerHTML = _cfmDanger
+        ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6M10 11v6M14 11v6"/></svg>'
+        : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v.01M12 11v5"/></svg>';
+      if (_cfmCard) _cfmCard.setAttribute('data-tone', _cfmDanger ? 'danger' : 'info');
+      _cfmBox.style.setProperty('--cfm-accent', okColor || '#dc2626');
+      ok.style.background = '';   // rengi artik CSS yonetiyor
+      _cfmBox.style.display = 'flex';
       _scCb = onConfirm;
       ok.onclick = () => { const cb = _scCb; closeSiteConfirm(); if (cb) cb(); };
+      // Yikici eylemde odak IPTALDE baslar: Enter kazayla silmesin.
+      const _cfmCancel = document.getElementById('scCancel');
+      if (_cfmCancel) setTimeout(() => _cfmCancel.focus(), 0);
     }
     function closeSiteConfirm() {
       document.getElementById('siteConfirm').style.display = 'none';
       _scCb = null;
     }
+    // Esc ve bosluga tiklama ile kapanir. Yikici bir onay kutusunda kacis
+    // yolunun olmasi sart; eskiden yalnizca Iptal butonu vardi.
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape') return;
+      var b = document.getElementById('siteConfirm');
+      if (b && b.style.display === 'flex') closeSiteConfirm();
+    });
+    document.addEventListener('mousedown', function (e) {
+      var b = document.getElementById('siteConfirm');
+      if (!b || b.style.display !== 'flex') return;
+      // Yalnizca ZEMINE tiklandiysa: kartin icine tiklamak kapatmamali.
+      if (e.target === b) closeSiteConfirm();
+    });
     // Eksik veri sayfası uyarısını net-util.js buradan geçirir — o dosya
     // hangi panelde olduğunu bilmesin diye bildirim fonksiyonu enjekte ediliyor.
     if (window.NCNet) NCNet.setNotifier(m => showSiteNotice(m, 'warn'));

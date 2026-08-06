@@ -13,6 +13,7 @@
 //   - regional-manager: KENDİ bölgesindeki (Istanbul/Morocco) tüm takımların üyeleri.
 //   - admin / super-admin: TÜM takımların TÜM üyeleri.
 import { verifyToken, bearerToken } from './_auth.js';
+import { isBlocked } from './_blocked-users.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
 
@@ -329,7 +330,9 @@ export default async function handler(req, res) {
         // yapılıyordu; role tanınmayan bir yazımdaysa kişi takım liderinin
         // listesinden sessizce düşüyordu (somut vaka: Farah Team'deki
         // Salvatore De Luca — Zoho'da ve zoho_users'ta aktif, panelde yok).
-        const active = zohoRows.filter(z => !isLeaver(z));
+        // Sistemden CIKARILMIS kisiler kadroda da gorunmez (bkz. _blocked-users.js) --
+        // Takimimdaki Kisiler ve Gunluk Ekip Girisi ayni listeden besleniyor.
+        const active = zohoRows.filter(z => !isLeaver(z) && !isBlocked(z.full_name));
 
         // Katı sinyallerle (team / role / Users) yerleşemeyenler için son çare
         // deal taraması — YALNIZCA gerekliyse ve yalnızca o isimler için.
@@ -447,6 +450,7 @@ export default async function handler(req, res) {
           const inZoho = new Set(zohoRows.map(z => nameKey(z.full_name)));
           const extras = userRows.filter(u => {
             if (u['is_active'] === false) return false;
+            if (isBlocked(u['Deal Owner Name'], u['Username'])) return false;
             const k = nameKey(u['Deal Owner Name'] || u['Username']);
             return k && !inZoho.has(k);
           });
@@ -475,7 +479,8 @@ export default async function handler(req, res) {
         }
       } else {
         // zoho_users yok — eski davranış (yalnız Users tablosu)
-        const scoped = scopeRows(userRows.filter(u => u['is_active'] !== false));
+        const scoped = scopeRows(userRows.filter(u =>
+          u['is_active'] !== false && !isBlocked(u['Deal Owner Name'], u['Username'])));
         scopeLabel = scoped.scopeLabel;
         members = scoped.rows.map(u => ({
           username: u['Username'] || '',
@@ -519,6 +524,10 @@ export default async function handler(req, res) {
         // Aynada olmayan ama Users'ta aktif duranlar
         for (const u of userRows) {
           if (u['is_active'] === false) continue;
+          // Engelli kişi DİZİNE de girmemeli: dizin, deal/alarm satırlarının
+          // hangi takıma ait olduğunu belirliyor. Testte yakalandı — kadro
+          // listesini süzmek yetmiyordu, burası ayrı bir yol.
+          if (isBlocked(u['Deal Owner Name'], u['Username'])) continue;
           const t = normalizeTeam(String(u['Takim Adi'] || '').trim());
           if (t) push(u['Deal Owner Name'] || u['Username'], t);
         }
@@ -552,6 +561,13 @@ export default async function handler(req, res) {
       const phone = String(body?.phone || '').trim();
       const email = String(body?.email || '').trim();
       if (!targetUsername) { res.status(400).json({ error: 'Kullanıcı adı gerekli.' }); return; }
+      // Engelli kisi icin Users satiri OLUSTURULMAZ: bu uc telefon/e-posta
+      // duzenlenirken satir yaratiyor, yani engel olmasa kisi Users tablosuna
+      // arka kapidan geri girerdi.
+      if (isBlocked(targetUsername)) {
+        res.status(403).json({ error: 'Bu kisi sistemden cikarildi.' });
+        return;
+      }
 
       // Hedef kullanıcı GERÇEKTEN çağıranın izinli kapsamında mı — server-side doğrula.
       const targetR = await fetch(`${SUPABASE_URL}/rest/v1/Users?Username=eq.${encodeURIComponent(targetUsername)}&select=*`, { headers: H });

@@ -12,6 +12,7 @@
 // olurdu.
 import bcrypt from 'bcryptjs';
 import { verifyToken, bearerToken } from './_auth.js';
+import { isBlocked, BLOCKED_NAMES } from './_blocked-users.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
 
@@ -45,7 +46,11 @@ export default async function handler(req, res) {
     if (req.method === 'GET') {
       const r = await fetch(`${SUPABASE_URL}/rest/v1/Users?select=*&order=id.asc&limit=1000`, { headers: H });
       if (!r.ok) { res.status(502).json({ error: 'Veritabanı hatası.' }); return; }
-      const users = await r.json();
+      let users = await r.json();
+      // Sistemden CIKARILMIS kisiler listede gorunmez (bkz. _blocked-users.js).
+      // Satirlari silmiyoruz: gecmis veri (daily_performance, alarm_logs) onlara
+      // bagli. Gorunmez + giris yapamaz olmalari yeterli.
+      users = users.filter(u => !isBlocked(u['Deal Owner Name'], u['Username']));
       // Password alanı listeleme ekranında ASLA düz metin/hash olarak dönmez.
       users.forEach(u => { delete u.Password; });
       res.status(200).json({ users });
@@ -54,6 +59,12 @@ export default async function handler(req, res) {
 
     if (req.method === 'POST') {
       const payload = { ...(body?.payload || {}) };
+      // Engelli bir adla yeniden olusturmayi reddet -- yoksa 'sildim, geri geldi'
+      // dongusu surer.
+      if (isBlocked(payload['Deal Owner Name'], payload['Username'])) {
+        res.status(403).json({ error: 'Bu kisi sistemden cikarildi, yeniden eklenemez.' });
+        return;
+      }
       if (payload.Password) payload.Password = await bcrypt.hash(payload.Password, 10);
       const r = await fetch(`${SUPABASE_URL}/rest/v1/Users`, {
         method: 'POST',
@@ -73,6 +84,10 @@ export default async function handler(req, res) {
       const payload = { ...(rawPayload || {}) };
       // Şifre alanı boş bırakılmışsa (kullanıcı değiştirmek istemiyor) hiç
       // gönderilmesin — boş string'i hashleyip üzerine yazmayalım.
+      if (isBlocked(payload['Deal Owner Name'], payload['Username'])) {
+        res.status(403).json({ error: 'Bu kisi sistemden cikarildi, bu ada guncellenemez.' });
+        return;
+      }
       if (!payload.Password) delete payload.Password;
       else payload.Password = await bcrypt.hash(payload.Password, 10);
       const filterKey = username ? `Username=eq.${encodeURIComponent(username)}` : `id=eq.${encodeURIComponent(id)}`;

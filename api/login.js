@@ -9,6 +9,7 @@
 // güvenli hale gelir.
 import bcrypt from 'bcryptjs';
 import { signToken, normalizeRole } from './_auth.js';
+import { isBlocked } from './_blocked-users.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
 const TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 saat — bir mesai günü
@@ -85,6 +86,15 @@ export default async function handler(req, res) {
     // "hesap kapalı" cevapları ayrışır ve doğru şifre bilinmeden hesabın
     // durumu öğrenilebilirdi. Ayrıca bu sayede yanlış şifre girene, hesabın
     // varlığını ima eden bir mesaj gitmiyor.
+    // Sistemden CIKARILMIS kisiler (bkz. _blocked-users.js) giris YAPAMAZ.
+    // Users satiri hala dursa ya da dis senkron onu yeniden yazsa bile burada
+    // durur. is_active ile ayni yerde: sifre DOGRULANDIKTAN SONRA, yoksa
+    // "sifre yanlis" ile "hesap kapali" cevaplari ayrisir ve hesabin varligi
+    // sizardi.
+    if (isBlocked(user['Deal Owner Name'], user['Username'])) {
+      res.status(403).json({ error: 'Bu hesap devre disi birakilmis. Yoneticinizle gorusun.' });
+      return;
+    }
     if (user['is_active'] === false) {
       res.status(403).json({ error: 'Bu hesap devre dışı bırakılmış. Yöneticinizle görüşün.' });
       return;

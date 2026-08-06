@@ -3446,3 +3446,133 @@ html[data-theme="dark"]  .ng-mode-note { color: #7d8ba3; }
   position: relative;   /* göstergenin ÜSTÜNDE kalsın */
   z-index: 1;
 }
+
+/* ═════════════════════════════════════════════════════════════════════
+   ONAY DİYALOĞU (#siteConfirm / .nc-cfm) — Liquid Glass
+   Eskiden düz #1e293b bir levha ve rgba(0,0,0,.7) siyah perdeydi; açık
+   temada koyu bir kutu olarak patlıyordu. Artık iki temada da cam.
+
+   Yapı: ikon diski + başlık + açıklama + (varsa ek alan) + alt butonlar.
+   Vurgu rengi çağırandan gelir (--cfm-accent), ton data-tone ile.
+   ═════════════════════════════════════════════════════════════════════ */
+.nc-cfm-bg {
+  --cfm-accent: #dc2626;
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+html[data-theme="light"] .nc-cfm-bg { background: rgba(18, 24, 44, 0.34); }
+html[data-theme="dark"]  .nc-cfm-bg { background: rgba(2, 6, 16, 0.62); }
+
+.nc-cfm {
+  position: relative;
+  width: 100%;
+  max-width: 430px;
+  padding: 22px 22px 18px;
+  border-radius: 22px;
+  animation: ncCfmIn .26s cubic-bezier(.22, 1, .36, 1) both;
+}
+@keyframes ncCfmIn {
+  from { opacity: 0; transform: translateY(12px) scale(.97); }
+  to   { opacity: 1; transform: none; }
+}
+html[data-theme="light"] .nc-cfm {
+  background: linear-gradient(158deg, rgba(255,255,255,.80) 0%, rgba(255,255,255,.62) 100%);
+  border: 1px solid rgba(255,255,255,.55);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  backdrop-filter: blur(30px) saturate(190%);
+  box-shadow: 0 24px 70px -18px rgba(23,43,99,.45),
+              inset 0 1px 0 0 rgba(255,255,255,.9);
+}
+html[data-theme="dark"] .nc-cfm {
+  background: linear-gradient(158deg, rgba(255,255,255,.085) 0%, rgba(255,255,255,.045) 100%);
+  border: 1px solid rgba(255,255,255,.13);
+  -webkit-backdrop-filter: blur(30px) saturate(175%);
+  backdrop-filter: blur(30px) saturate(175%);
+  box-shadow: 0 26px 80px -20px rgba(0,0,0,.75),
+              inset 0 1px 0 0 rgba(255,255,255,.12);
+}
+/* Üst kenarda tonun rengiyle ince bir çizgi — camda sıcak/uyarıcı aksan */
+.nc-cfm::after {
+  content: '';
+  position: absolute; top: 0; left: 26px; right: 26px; height: 2px;
+  border-radius: 2px;
+  background: linear-gradient(90deg,
+    transparent 0%, var(--cfm-accent) 50%, transparent 100%);
+  opacity: .8;
+  pointer-events: none;
+}
+
+.nc-cfm-head { display: flex; gap: 14px; align-items: flex-start; }
+/* İkon diski: tonun rengiyle yumuşak bir daire */
+.nc-cfm-icon {
+  flex: 0 0 auto;
+  width: 42px; height: 42px;
+  border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--cfm-accent);
+  background: color-mix(in srgb, var(--cfm-accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cfm-accent) 32%, transparent);
+}
+.nc-cfm-icon svg { width: 20px; height: 20px; }
+.nc-cfm-texts { min-width: 0; padding-top: 1px; }
+.nc-cfm-title {
+  font-size: 15.5px; font-weight: 800; letter-spacing: -0.01em;
+  margin-bottom: 5px;
+}
+.nc-cfm-desc { font-size: 12.5px; line-height: 1.6; }
+html[data-theme="light"] .nc-cfm-title { color: #12141a; }
+html[data-theme="light"] .nc-cfm-desc  { color: #4b5364; }
+html[data-theme="dark"]  .nc-cfm-title { color: #f2f5fa; }
+html[data-theme="dark"]  .nc-cfm-desc  { color: #a9b4c8; }
+.nc-cfm-extra:not(:empty) { margin-top: 14px; }
+
+.nc-cfm-foot {
+  display: flex; gap: 9px; justify-content: flex-end;
+  margin-top: 20px;
+}
+.nc-cfm-btn {
+  padding: 9px 18px;
+  border-radius: 11px;
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  cursor: pointer;
+  transition: transform .18s cubic-bezier(.34,1.4,.56,1),
+              box-shadow .2s ease, background .2s ease, color .2s ease;
+}
+.nc-cfm-btn:active { transform: scale(.97); }
+/* İptal — cam, çerçeveli */
+html[data-theme="light"] .nc-cfm-cancel {
+  background: rgba(255,255,255,.62); border: 1px solid rgba(255,255,255,.7);
+  color: #4b5364; box-shadow: inset 0 1px 0 rgba(255,255,255,.9);
+}
+html[data-theme="light"] .nc-cfm-cancel:hover { background: rgba(255,255,255,.85); color: #12141a; }
+html[data-theme="dark"] .nc-cfm-cancel {
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14);
+  color: #a9b4c8;
+}
+html[data-theme="dark"] .nc-cfm-cancel:hover { background: rgba(255,255,255,.13); color: #f2f5fa; }
+/* Onay — tonun rengiyle dolu */
+.nc-cfm-go {
+  border: none;
+  color: #fff;
+  background: linear-gradient(150deg,
+    color-mix(in srgb, var(--cfm-accent) 82%, #fff) 0%,
+    var(--cfm-accent) 100%);
+  box-shadow: 0 8px 20px -6px color-mix(in srgb, var(--cfm-accent) 65%, transparent),
+              inset 0 1px 0 rgba(255,255,255,.28);
+}
+.nc-cfm-go:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px -8px color-mix(in srgb, var(--cfm-accent) 80%, transparent),
+              inset 0 1px 0 rgba(255,255,255,.36);
+}
+.nc-cfm-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--cfm-accent) 40%, transparent);
+}
+@media (max-width: 480px) {
+  .nc-cfm-foot { flex-direction: column-reverse; }
+  .nc-cfm-btn { width: 100%; }
+}
+/* İptal butonunun odak halkası NÖTR: yıkıcı tonun kırmızısı burada
+   "tehlikeli buton" izlenimi veriyordu, oysa güvenli seçenek bu. */
+.nc-cfm-cancel:focus-visible { box-shadow: 0 0 0 3px rgba(148, 163, 184, .38) !important; }
