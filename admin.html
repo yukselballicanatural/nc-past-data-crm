@@ -3676,7 +3676,7 @@
             // Takım liderinin alarm sonuç kodundan gönderdiği WhatsApp mesajları
             // `alarm_logs` tablosunda action_type='whatsapp_sent' olarak tutuluyor
             // (bkz. sendAdminResultCodeWhatsApp) — action_by alanı gönderenin adı.
-            _tlFetchLogs(`alarm_logs?select=action_by,created_at&action_type=eq.whatsapp_sent&created_at=gte.${encodeURIComponent(sinceIso)}&order=created_at.desc`, 20000),
+            _tlFetchLogs(`alarm_logs?select=action_by,created_at,note,deal_id&action_type=eq.whatsapp_sent&created_at=gte.${encodeURIComponent(sinceIso)}&order=created_at.desc`, 20000),
           ]);
           _tlLogs = win;
           _tlWaLogs = waSent;
@@ -3762,19 +3762,29 @@
 
       // WhatsApp gönderimleri `alarm_logs.action_by` alanındaki AD ile eşleşir
       // (o tablo username tutmuyor) — kişinin görünen adına göre eşleştiriliyor.
+      // `Logs` tablosundaki satırlarla AYNI şekle (action_type/created_at/
+      // deal_name) çevrilip normal log akışına katılıyor ki hem "Son
+      // hareketler" listesinde hem üstteki günlük aktivite grafiğinde diğer
+      // aksiyonlarla birlikte görünsün — ayrı bir özel gösterim gerekmez.
       const waBy = new Map();
       (_tlWaLogs || []).forEach(l => {
         const k = _tlKey(l.action_by);
         if (!k) return;
         if (!waBy.has(k)) waBy.set(k, []);
-        waBy.get(k).push(l);
+        waBy.get(k).push({
+          created_at: l.created_at,
+          action_type: 'whatsapp_sent',
+          deal_name: l.note || null,
+          deal_id: l.deal_id || null,
+        });
       });
 
       _tlRows = [...people.values()].map(p => {
         const canon = (window.TeamMap && TeamMap.normalize(p.team)) || p.team || '';
         const region = (window.TeamMap && p.team) ? TeamMap.regionForTeam(p.team) : '';
-        const logs = logsBy.get(p.key) || [];
-        const waLogs = waBy.get(_tlKey(p.name)) || [];
+        const logs = (logsBy.get(p.key) || [])
+          .concat(waBy.get(_tlKey(p.name)) || [])
+          .sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''));
         return {
           ...p,
           canonTeam: canon,
@@ -3782,7 +3792,6 @@
           region,
           workload: workload[canon] || 0,
           logs,
-          waLogs,
           lastLoginAll: _tlLastLogin[p.key] || null,
         };
       });
@@ -3813,7 +3822,6 @@
         r.byType = {};
         acts.forEach(l => { r.byType[l.action_type] = (r.byType[l.action_type] || 0) + 1; });
         r.winLogs = inWin;
-        r.waCount = (r.waLogs || []).filter(l => new Date(l.created_at).getTime() >= cutoff).length;
 
         // ── Skor ──────────────────────────────────────────────────────
         const ad = _tlDaysAgo(r.lastAction);
@@ -3965,6 +3973,7 @@
       SAVE_RESULT: 'Sonuç kaydı', ALARM_RESET: 'Alarm sıfırlama',
       VIEW_DEAL: 'Deal görüntüleme', LEAD_TRANSFER: 'Lead transferi',
       LOGIN: 'Giriş', LOGOUT: 'Çıkış', DATA_VIEW: 'Sayfa görüntüleme',
+      whatsapp_sent: 'WhatsApp mesajı',
     };
     let _tlDetailKey = null;      // açık olan liderin anahtarı
     let _tlDetailTimer = null;    // canlı tazeleme zamanlayıcısı
@@ -4077,19 +4086,15 @@
         <div class="tl-bar"><i data-w="${val === null ? 0 : Math.round(val / max * 100)}" style="background:${col}"></i></div></div>`;
 
       // ── Aksiyon dağılımı ──────────────────────────────────────────
-      // WhatsApp gönderimi `logs`/byType'ta değil ayrı bir kaynakta
-      // (alarm_logs) tutuluyor — çubuk ölçeği diğer aksiyonlarla tutarlı
-      // olsun diye maxType hesabına dahil ediliyor.
-      const maxType = Math.max(1, r.waCount || 0, ...Object.values(r.byType));
+      // whatsapp_sent (bkz. _tlBuild) diğer aksiyonlarla aynı `logs` akışına
+      // katıldığı için burada özel bir işlem gerekmiyor — byType'ta normal
+      // bir tip olarak otomatik görünür.
+      const maxType = Math.max(1, ...Object.values(r.byType));
       const typeRows = Object.entries(r.byType).sort((a, b) => b[1] - a[1])
         .map(([k, v]) => `<div class="mb-1.5">
           <div class="flex justify-between text-[10px]"><span class="text-slate-300">${_escHtml(I18N.t(_TL_TYPE_LABELS[k] || k))}</span>
             <span class="text-white font-bold">${v}</span></div>
-          <div class="tl-hbar"><i data-w="${Math.round(v / maxType * 100)}"></i></div></div>`).join('')
-        + (r.waCount ? `<div class="mb-1.5">
-          <div class="flex justify-between text-[10px]"><span class="text-slate-300">${_escHtml(I18N.t('WhatsApp mesajı'))}</span>
-            <span class="text-white font-bold">${r.waCount}</span></div>
-          <div class="tl-hbar"><i data-w="${Math.round(r.waCount / maxType * 100)}" style="background:#25D366"></i></div></div>` : '')
+          <div class="tl-hbar"><i data-w="${Math.round(v / maxType * 100)}" style="${k === 'whatsapp_sent' ? 'background:#25D366' : ''}"></i></div></div>`).join('')
         || `<div class="text-[11px] text-red-400 py-1">${I18N.t('Bu dönemde hiç aksiyon yok.')}</div>`;
 
       const stat = (label, val, sub) => `<div class="bg-gray-800/40 rounded-xl p-2.5">
