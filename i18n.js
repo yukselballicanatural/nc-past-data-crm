@@ -1078,6 +1078,7 @@
     'Bu dönemde hiç aksiyon yok.': 'No actions in this period.',
     'Giriş sayısı': 'Login count',
     'WhatsApp mesajı': 'WhatsApp messages',
+    'son 50 kayıt': 'last 50 records',
 
     // ── Takım eşleştirme dökümü + elle takım ataması ──────────────────
     // (admin.html "Takımımdaki Kişiler" → Kimler? / Takıma Ata popup'ları)

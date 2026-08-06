@@ -262,7 +262,8 @@
     #tmSyncModal.open, #tmAssignModal.open { display:flex; }
     #tmSyncModal .modal-panel, #tmAssignModal .modal-panel { overscroll-behavior: contain; }
     /* Premium giriş: cam panel hafifçe büyüyerek ve netleşerek gelir. */
-    #tmSyncModal.open .modal-panel, #tmAssignModal.open .modal-panel {
+    #tmSyncModal.open .modal-panel, #tmAssignModal.open .modal-panel,
+    #tlDetailModal.open .modal-panel {
       animation: tmPanelIn .34s cubic-bezier(.22,1,.36,1) both;
     }
     @keyframes tmPanelIn {
@@ -270,7 +271,8 @@
       to   { opacity:1; transform:none; }
     }
     @media (prefers-reduced-motion: reduce) {
-      #tmSyncModal.open .modal-panel, #tmAssignModal.open .modal-panel { animation:none; }
+      #tmSyncModal.open .modal-panel, #tmAssignModal.open .modal-panel,
+      #tlDetailModal.open .modal-panel { animation:none; }
     }
 
     /* ══ Takım eşleştirme bileşenleri — TEMA-DUYARLI TOKENLAR ══════════
@@ -291,6 +293,28 @@
       --tm-ink:       #f2f5fa;
       --tm-ink-2:     #a9b4c8;
       --tm-ink-3:     #78849c;
+      /* Grafik ipucu gibi ÜSTTE yüzen küçük yüzeyler: saydamlık burada
+         okunabilirliği bozuyor, bu yüzden daha opak bir zemin. */
+      --tm-tip-bg:    rgba(13,21,38,.94);
+      /* Lider Takibi skor/çubuk renkleri. Anlam taşıdıkları için tema başına
+         AYRI tanımlı: koyu temada canlı tonlar, açık temada koyu tonlar.
+         Ölçüldü — açık temada canlı tonlar (yeşil #34d399 1.65:1, amber
+         #fbbf24 1.43:1) skor sayısını neredeyse görünmez kılıyordu. */
+      /* #ef4444 koyu cam kartta 4.27:1 ile metin eşiğinin altındaydı;
+         skor sayısı 20px kalın olduğu için bir ton açıldı (#f87171). */
+      --tl-score-ok:   #34d399;  --tl-score-warn: #fbbf24;  --tl-score-bad: #f87171;
+      --tl-fresh:      #34d399;  --tl-cons:       #60a5fa;   --tl-cov:       #c084fc;
+      /* Halka ışıması AYRI token: renk artık var() olduğu için hex'e alfa
+         eklenemiyor ("var(--x)55" geçersiz CSS). */
+      --tl-glow-ok:    rgba(52,211,153,.42);
+      --tl-glow-warn:  rgba(251,191,36,.42);
+      --tl-glow-bad:   rgba(239,68,68,.42);
+      /* Günlük aktivite grafiği çubukları (dikey gradyan: üst → alt) */
+      --tl-bar-hi:     linear-gradient(180deg,#4ade80,#16a34a);   /* yoğun gün */
+      --tl-bar-mid:    linear-gradient(180deg,#34d399,#0f9d6e);   /* aksiyon var */
+      --tl-bar-login:  linear-gradient(180deg,#fdba74,#f97316);   /* sadece giriş */
+      --tl-swatch-hi:    #4ade80;
+      --tl-swatch-login: #fb923c;
       --tm-danger:      #fca5a5;  --tm-danger-bg: rgba(239,68,68,.11);  --tm-danger-edge: rgba(248,113,113,.28);
       --tm-warn:        #fcd34d;  --tm-warn-bg:   rgba(245,158,11,.11); --tm-warn-edge:   rgba(251,191,36,.26);
       --tm-info:        #c7d2fe;  --tm-info-bg:   rgba(99,102,241,.13); --tm-info-edge:   rgba(165,180,252,.28);
@@ -306,6 +330,7 @@
       --tm-ink:       var(--d-ink, #f2f5fa);
       --tm-ink-2:     var(--d-ink-2, #a9b4c8);
       --tm-ink-3:     var(--d-ink-3, #78849c);
+      --tm-tip-bg:    var(--d-strong, rgba(20,26,42,.92));
     }
     html[data-theme="light"] {
       --tm-surface:   rgba(255,255,255,.50);
@@ -316,6 +341,23 @@
       --tm-ink:       #12141a;
       --tm-ink-2:     #4b5364;
       --tm-ink-3:     #6b7385;
+      --tm-tip-bg:    rgba(255,255,255,.92);
+      /* Açık temada koyu tonlar — hepsi cam kart zemininde ≥4.5:1
+         (scratchpad/pickscore.js ile ölçüldü). */
+      --tl-score-ok:   #047857;  --tl-score-warn: #92400e;  --tl-score-bad: #b91c1c;
+      --tl-fresh:      #047857;  --tl-cons:       #1d4ed8;   --tl-cov:       #7e22ce;
+      --tl-glow-ok:    rgba(4,120,87,.30);
+      --tl-glow-warn:  rgba(146,64,14,.30);
+      --tl-glow-bad:   rgba(185,28,28,.30);
+      /* Açık temada canlı yeşil/turuncu çubuklar cam zeminde 1.35–2.78:1
+         veriyordu (grafikler için eşik 3.0). Koyu tonlara indirildi —
+         ölçüm: scratchpad/barcheck.js */
+      --tl-bar-hi:     linear-gradient(180deg,#059669,#065f46);
+      --tl-bar-mid:    linear-gradient(180deg,#0d9488,#0f766e);
+      /* #ea580c 2.86:1 ile eşiğin hemen altındaydı — bir ton koyulaştırıldı. */
+      --tl-bar-login:  linear-gradient(180deg,#c2410c,#9a3412);
+      --tl-swatch-hi:    #059669;
+      --tl-swatch-login: #c2410c;
       /* Metinler KOYU tonlara iner — açık cam üstünde okunabilirlik için. */
       --tm-danger:      #9f1239;  --tm-danger-bg: rgba(190,18,60,.085);  --tm-danger-edge: rgba(190,18,60,.24);
       --tm-warn:        #92400e;  --tm-warn-bg:   rgba(245,158,11,.15);  --tm-warn-edge:   rgba(180,83,9,.26);
@@ -449,39 +491,110 @@
     .tm-cfm-item b { color:var(--tm-ink); font-weight:750; }
     .tm-cfm-arrow { color:var(--tm-accent); font-weight:800; }
     .tm-cfm-more { padding:6px 9px; font-size:11px; color:var(--tm-ink-3); }
-    .tl-pill { display:inline-block; padding:2px 8px; border-radius:9999px; font-size:10px; font-weight:800; white-space:nowrap; }
+    /* Lider durum rozeti — renk data-tone ile, tema-duyarlı tokenlardan.
+       Önceden _tlStatusMeta'nın sabit renkleri satır içi yazılıyordu
+       (ör. açık yeşil #34d399 metin, %15 yeşil zemin): koyu temada okunuyor,
+       açık temada cam yüzeyin üstünde kayboluyordu. */
+    .tl-pill { display:inline-block; padding:3px 9px; border-radius:9999px; font-size:10px; font-weight:800;
+      white-space:nowrap; background:var(--tm-surface); border:1px solid var(--tm-edge); color:var(--tm-ink-2); }
+    .tl-pill[data-tone="ok"]     { background:var(--tm-ok-bg);     border-color:var(--tm-ok-edge);     color:var(--tm-ok); }
+    .tl-pill[data-tone="accent"] { background:var(--tm-accent-bg); border-color:var(--tm-accent-edge); color:var(--tm-accent); }
+    .tl-pill[data-tone="warn"]   { background:var(--tm-warn-bg);   border-color:var(--tm-warn-edge);   color:var(--tm-warn); }
+    .tl-pill[data-tone="danger"] { background:var(--tm-danger-bg); border-color:var(--tm-danger-edge); color:var(--tm-danger); }
 
-    /* ── Lider Takibi detay popup'ı ─────────────────────────────────── */
-    .tl-avatar { width:44px; height:44px; border-radius:14px; display:flex; align-items:center; justify-content:center;
-      font-weight:800; font-size:15px; color:#0b1220; flex:none; letter-spacing:.02em; }
+    /* ── Lider Takibi detay popup'ı ─────────────────────────────────────
+       Renkler --tm-* tokenlarından (bkz. üstteki token bloğu): bu popup da
+       önce sabit koyu hex'lerle yazılıydı (#1e293b çubuk yuvası, #0b1220
+       ipucu, Tailwind'in bg-gray-800/30 kartları) ve açık temada hem
+       kontrast hem cam uyumu bozuluyordu. */
+    .tl-avatar { width:46px; height:46px; border-radius:15px; display:flex; align-items:center; justify-content:center;
+      font-weight:800; font-size:15px; color:#0b1220; flex:none; letter-spacing:.02em;
+      box-shadow:0 6px 18px -4px rgba(0,0,0,.45), inset 0 1px 0 0 rgba(255,255,255,.35); }
     .tl-live { display:inline-flex; align-items:center; gap:5px; font-size:9px; font-weight:800;
-      color:#34d399; text-transform:uppercase; letter-spacing:.06em; }
-    .tl-live i { width:6px; height:6px; border-radius:50%; background:#34d399; animation:tlPulse 1.8s ease-in-out infinite; }
+      color:var(--tm-ok); text-transform:uppercase; letter-spacing:.06em;
+      padding:3px 9px; border-radius:9999px; background:var(--tm-ok-bg); border:1px solid var(--tm-ok-edge); }
+    .tl-live i { width:6px; height:6px; border-radius:50%; background:currentColor; animation:tlPulse 1.8s ease-in-out infinite; }
     @keyframes tlPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(1.6)} }
-    /* Skor halkası */
-    .tl-ring { transform:rotate(-90deg); }
+
+    /* Kart yüzeyi — popup içindeki her bölüm. .tm-sec ile aynı cam dili. */
+    .tl-card {
+      border-radius:15px; padding:13px 15px;
+      background:var(--tm-surface); border:1px solid var(--tm-edge);
+      box-shadow:var(--tm-sheen);
+      backdrop-filter:blur(8px) saturate(150%); -webkit-backdrop-filter:blur(8px) saturate(150%);
+    }
+    .tl-card-head { display:flex; align-items:center; justify-content:space-between; gap:8px; margin-bottom:11px; }
+    .tl-card-title { font-size:10px; font-weight:800; text-transform:uppercase; letter-spacing:.06em; color:var(--tm-ink-2); }
+    .tl-card-note  { font-size:9.5px; color:var(--tm-ink-3); }
+
+    /* Üstteki küçük istatistik kutuları */
+    .tl-stat { border-radius:14px; padding:11px 13px; background:var(--tm-surface-2);
+      border:1px solid var(--tm-edge); transition:background .15s, transform .15s var(--ease,ease); }
+    .tl-stat:hover { background:var(--tm-hover); transform:translateY(-2px); }
+    .tl-stat-label { font-size:9px; text-transform:uppercase; font-weight:800; letter-spacing:.06em; color:var(--tm-ink-3); }
+    .tl-stat-value { font-size:15px; font-weight:800; color:var(--tm-ink); margin-top:4px; line-height:1.15; }
+    .tl-stat-sub   { font-size:9px; color:var(--tm-ink-3); margin-top:2px; }
+
+    /* Skor halkası — merkezde yumuşak bir ışıma */
+    .tl-ring { transform:rotate(-90deg); filter:drop-shadow(0 0 6px var(--tl-ring-glow, transparent)); }
     .tl-ring .tl-ring-val { transition:stroke-dashoffset 1.1s cubic-bezier(.22,1,.36,1); }
+    .tl-score-num { font-size:20px; font-weight:800; line-height:1; }
+    .tl-score-den { font-size:7.5px; color:var(--tm-ink-3); font-weight:800; letter-spacing:.06em; }
+
     /* Skor bileşen çubukları */
-    .tl-bar { height:6px; background:#1e293b; border-radius:999px; overflow:hidden; }
+    .tl-bar { height:6px; background:var(--tm-surface-2); border-radius:999px; overflow:hidden;
+      border:1px solid var(--tm-edge); }
     .tl-bar > i { display:block; height:100%; width:0; border-radius:999px; transition:width 1s cubic-bezier(.22,1,.36,1); }
+    .tl-part-label { font-size:9.5px; color:var(--tm-ink-2); }
+    .tl-part-val   { font-size:9.5px; color:var(--tm-ink); font-weight:800; }
+
     /* Günlük aktivite grafiği */
-    .tl-chart { display:flex; gap:2px; align-items:stretch; height:96px; position:relative; }
+    .tl-chart { display:flex; gap:2px; align-items:stretch; height:104px; position:relative;
+      padding:6px 4px 0; border-radius:12px; background:var(--tm-surface-2); border:1px solid var(--tm-edge); }
     .tl-col { flex:1 1 0; min-width:3px; display:flex; flex-direction:column; justify-content:flex-end;
-      border-radius:3px; position:relative; transition:background .12s; }
-    .tl-col:hover { background:rgba(148,163,184,.10); }
-    .tl-col.tl-wknd { background:rgba(255,255,255,.025); }
-    .tl-col.tl-wknd:hover { background:rgba(148,163,184,.10); }
-    .tl-col > b { display:block; width:100%; border-radius:3px 3px 0 0; transform:scaleY(0); transform-origin:bottom;
+      border-radius:4px; position:relative; transition:background .12s; }
+    .tl-col:hover { background:var(--tm-hover); }
+    .tl-col.tl-wknd { background:var(--tm-surface); }
+    .tl-col.tl-wknd:hover { background:var(--tm-hover); }
+    .tl-col > b { display:block; width:100%; border-radius:4px 4px 1px 1px; transform:scaleY(0); transform-origin:bottom;
       transition:transform .75s cubic-bezier(.22,1,.36,1); }
     .tl-chart.on .tl-col > b { transform:scaleY(1); }
+    .tl-axis { display:flex; gap:2px; margin-top:5px; font-size:8px; color:var(--tm-ink-3); }
+    .tl-legend { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:9px; font-size:9px; color:var(--tm-ink-3); }
+    .tl-legend span { display:inline-flex; align-items:center; gap:5px; }
+    .tl-legend i { width:8px; height:8px; border-radius:3px; }
+
+    /* İpucu — cam yüzey, iki temada da okunur */
     .tl-tip { position:absolute; pointer-events:none; opacity:0; transform:translate(-50%,-100%);
-      background:#0b1220; border:1px solid #334155; border-radius:9px; padding:6px 10px; font-size:10px;
-      color:#e2e8f0; white-space:nowrap; z-index:6; box-shadow:0 10px 30px rgba(0,0,0,.6); transition:opacity .12s; }
+      background:var(--tm-tip-bg); border:1px solid var(--tm-edge); border-radius:10px; padding:6px 10px; font-size:10px;
+      color:var(--tm-ink); white-space:nowrap; z-index:6; box-shadow:0 12px 32px -8px rgba(0,0,0,.55);
+      backdrop-filter:blur(10px) saturate(180%); -webkit-backdrop-filter:blur(10px) saturate(180%);
+      transition:opacity .12s; }
     .tl-tip.on { opacity:1; }
+
     /* Aksiyon dağılımı yatay çubukları */
-    .tl-hbar { height:5px; background:#1e293b; border-radius:999px; overflow:hidden; margin-top:3px; }
-    .tl-hbar > i { display:block; height:100%; width:0; border-radius:999px; background:#2dd4bf;
+    .tl-hbar { height:5px; background:var(--tm-surface-2); border-radius:999px; overflow:hidden; margin-top:4px;
+      border:1px solid var(--tm-edge); }
+    .tl-hbar > i { display:block; height:100%; width:0; border-radius:999px; background:var(--tm-accent);
       transition:width .9s cubic-bezier(.22,1,.36,1); }
+    .tl-type-row { margin-bottom:9px; }
+    .tl-type-row:last-child { margin-bottom:0; }
+    .tl-type-name { font-size:10.5px; color:var(--tm-ink-2); }
+    .tl-type-cnt  { font-size:10.5px; color:var(--tm-ink); font-weight:800; }
+
+    /* Son hareketler listesi */
+    .tl-log { max-height:252px; overflow-y:auto; overscroll-behavior:contain; margin:-4px -6px -4px 0; padding-right:6px; }
+    .tl-log-row { display:flex; align-items:center; gap:9px; padding:6px 8px; border-radius:9px;
+      transition:background .12s; }
+    .tl-log-row:hover { background:var(--tm-hover); }
+    .tl-log-row + .tl-log-row { margin-top:1px; }
+    .tl-log-time { font-size:9.5px; color:var(--tm-ink-3); white-space:nowrap; flex:none;
+      font-variant-numeric:tabular-nums; }
+    .tl-log-type { font-size:10px; font-weight:750; white-space:nowrap; flex:none; }
+    .tl-log-deal { font-size:10px; color:var(--tm-ink-2); overflow:hidden; text-overflow:ellipsis;
+      white-space:nowrap; margin-left:auto; max-width:190px; text-align:right; }
+    .tl-foot-row { margin-top:11px; padding-top:10px; border-top:1px solid var(--tm-edge);
+      display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:10.5px; }
     .am-icon-btn { width:34px; height:34px; border-radius:11px; display:inline-flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,.08); background:rgba(255,255,255,.04); color:#94a3b8; transition:all .15s; cursor:pointer; font-size:15px; }
     .am-icon-btn:hover { background:rgba(255,255,255,.09); color:#fff; border-color:rgba(255,255,255,.16); }
     .kpi-loading { opacity:.35; animation: nc-kpi-pulse 1.1s ease-in-out infinite; pointer-events:none; }
@@ -2130,19 +2243,19 @@
        (kapsayıcının padding alanına tıklama backdrop'a denk gelmeyebilir). -->
   <div id="tlDetailModal" onclick="if(event.target===this)closeTlDetail()">
     <div class="modal-backdrop" onclick="closeTlDetail()"></div>
-    <div class="modal-panel" style="max-width:880px">
+    <div class="modal-panel" style="max-width:900px">
       <div class="flex items-start gap-3 mb-4">
         <div class="tl-avatar" id="tlDetailAvatar">—</div>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2 flex-wrap">
-            <h3 class="text-lg font-bold text-white leading-tight" id="tlDetailName">—</h3>
+            <div class="tm-modal-title" id="tlDetailName">—</div>
             <span id="tlDetailPill"></span>
           </div>
-          <p class="text-xs text-slate-400 mt-0.5" id="tlDetailSub">—</p>
+          <div class="tm-modal-sub" id="tlDetailSub">—</div>
         </div>
-        <div class="flex flex-col items-end gap-1.5 flex-none">
+        <div class="flex items-center gap-2 flex-none">
           <span class="tl-live" id="tlDetailLive" title="Bu ekran açıkken veriler kendiliğinden tazelenir"><i></i>canlı</span>
-          <button onclick="closeTlDetail()" class="text-slate-500 hover:text-white text-2xl leading-none px-1">&times;</button>
+          <button onclick="closeTlDetail()" class="tm-close" aria-label="Kapat">&times;</button>
         </div>
       </div>
       <div id="tlDetailBody"></div>
@@ -4116,17 +4229,21 @@
       });
     }
 
+    // `tone`: rozetin rengini belirler ve .tl-pill[data-tone] üzerinden
+    // tema-duyarlı tokenlara bağlanır (bkz. .tl-pill CSS'i). `color`/`bg`
+    // alanları KORUNDU — bu fonksiyonun çıktısı CSV ve başka rozetlerde de
+    // kullanılıyor, imzayı bozmamak için.
     function _tlStatusMeta(s) {
       const m = {
-        active:     { label: 'Aktif',            color: '#34d399', bg: 'rgba(16,185,129,.15)' },
-        ok:         { label: 'Kullanıyor',       color: '#a3e635', bg: 'rgba(132,204,22,.15)' },
-        low:        { label: 'Zayıf',            color: '#fbbf24', bg: 'rgba(245,158,11,.15)' },
-        login_only: { label: 'Sadece Giriş',     color: '#fb923c', bg: 'rgba(249,115,22,.18)' },
-        dormant:    { label: 'Girmiyor',         color: '#ef4444', bg: 'rgba(239,68,68,.18)' },
-        never:      { label: 'Hiç Girmedi',      color: '#ef4444', bg: 'rgba(239,68,68,.25)' },
-        no_work:    { label: 'Yük Yok',          color: '#64748b', bg: 'rgba(100,116,139,.15)' },
+        active:     { label: 'Aktif',            tone: 'ok',     color: '#34d399', bg: 'rgba(16,185,129,.15)' },
+        ok:         { label: 'Kullanıyor',       tone: 'accent', color: '#a3e635', bg: 'rgba(132,204,22,.15)' },
+        low:        { label: 'Zayıf',            tone: 'warn',   color: '#fbbf24', bg: 'rgba(245,158,11,.15)' },
+        login_only: { label: 'Sadece Giriş',     tone: 'warn',   color: '#fb923c', bg: 'rgba(249,115,22,.18)' },
+        dormant:    { label: 'Girmiyor',         tone: 'danger', color: '#ef4444', bg: 'rgba(239,68,68,.18)' },
+        never:      { label: 'Hiç Girmedi',      tone: 'danger', color: '#ef4444', bg: 'rgba(239,68,68,.25)' },
+        no_work:    { label: 'Yük Yok',          tone: '',       color: '#64748b', bg: 'rgba(100,116,139,.15)' },
       };
-      const hit = m[s] || { label: s, color: '#94a3b8', bg: 'rgba(148,163,184,.15)' };
+      const hit = m[s] || { label: s, tone: '', color: '#94a3b8', bg: 'rgba(148,163,184,.15)' };
       // Rozetler tablo dışında da (uyarı şeridi, CSV) kullanılıyor; oralarda
       // translateDOM çalışmadığı için çeviri burada uygulanıyor.
       return { ...hit, label: I18N.t(hit.label) };
@@ -4190,7 +4307,7 @@
         bannerHtml += `<div class="text-[11px] font-bold text-red-300 mb-1">⚠ ${_escHtml(I18N.t('{n} takım lideri sistemi kullanmıyor').replace('{n}', worst.length))}</div>
           <div class="text-[11px] text-slate-300" style="line-height:1.7">${worst.map(r => {
             const m = _tlStatusMeta(r.status);
-            return `<span class="tl-pill" style="background:${m.bg};color:${m.color};margin-right:6px">${_escHtml(r.name)} — ${_escHtml(m.label)}</span>`;
+            return `<span class="tl-pill" data-tone="${m.tone || ''}" style="margin-right:6px">${_escHtml(r.name)} — ${_escHtml(m.label)}</span>`;
           }).join('')}</div>`;
       }
       if (bannerHtml) {
@@ -4214,7 +4331,7 @@
              <span style="color:#475569;font-size:9px"> (${r.touched}/${r.workload})</span>`;
         return `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
           <td class="py-1.5"><span style="color:${scoreCol};font-weight:800;font-size:13px">${r.score}</span></td>
-          <td class="py-1.5"><span class="tl-pill" style="background:${m.bg};color:${m.color}">${m.label}</span></td>
+          <td class="py-1.5"><span class="tl-pill" data-tone="${m.tone || ''}">${m.label}</span></td>
           <td class="py-1.5 text-white text-[11px] whitespace-nowrap">${_escHtml(r.name)}${r.inRoster ? '' : ' <span title="Users tablosunda kaydı yok" style="color:#fb923c">*</span>'}</td>
           <td class="py-1.5 text-slate-300 text-[11px] whitespace-nowrap">${_escHtml(r.teamLabel)}</td>
           <td class="py-1.5 text-slate-400 text-[10px] whitespace-nowrap">${_escHtml(r.region || '—')}</td>
@@ -4302,7 +4419,7 @@
       av.textContent = _tlInitials(r.name);
       av.style.background = _tlAvatarColor(r.name);
       document.getElementById('tlDetailPill').innerHTML =
-        `<span class="tl-pill" style="background:${m.bg};color:${m.color}">${_escHtml(m.label)}</span>`;
+        `<span class="tl-pill" data-tone="${m.tone || ''}">${_escHtml(m.label)}</span>`;
       document.getElementById('tlDetailSub').innerHTML =
         `${_escHtml(r.teamLabel)} · ${_escHtml(r.region || '—')}${r.username ? ' · <span style="color:#475569;font-family:monospace">' + _escHtml(r.username) + '</span>' : ''}`;
 
@@ -4325,8 +4442,12 @@
         const d = _tlDayStr(dt);
         const n = perDay[d] || 0;
         const wknd = dt.getDay() === 0 || dt.getDay() === 6;
-        const h = n ? Math.max(8, Math.round(n / maxDay * 100)) : (loginDay[d] ? 4 : 2);
-        const col = n ? (n >= maxDay * 0.66 ? '#34d399' : '#22a06b') : (loginDay[d] ? '#fb923c' : '#1e293b');
+        const h = n ? Math.max(8, Math.round(n / maxDay * 100)) : (loginDay[d] ? 5 : 3);
+        // Çubuklar düz renk yerine dikey gradyan: yoğun günler üstte daha
+        // parlak, tabanda koyu — bar grafiğe derinlik verir.
+        const col = n
+          ? (n >= maxDay * 0.66 ? 'var(--tl-bar-hi)' : 'var(--tl-bar-mid)')
+          : (loginDay[d] ? 'var(--tl-bar-login)' : 'var(--tm-edge)');
         cols += `<div class="tl-col${wknd ? ' tl-wknd' : ''}" data-d="${d}" data-n="${n}" data-w="${WD[dt.getDay()]}" data-l="${loginDay[d] ? 1 : 0}">
           <b style="height:${h}%;background:${col}"></b></div>`;
         const idx = days - 1 - i;
@@ -4335,17 +4456,30 @@
 
       // ── Skor halkası ──────────────────────────────────────────────
       const sp = r.scoreParts;
-      const C = 2 * Math.PI * 26;
-      const sCol = r.score >= 70 ? '#34d399' : r.score >= 40 ? '#fbbf24' : '#ef4444';
-      const ring = `<svg class="tl-ring" width="68" height="68" viewBox="0 0 68 68">
-        <circle cx="34" cy="34" r="26" fill="none" stroke="#1e293b" stroke-width="7"/>
-        <circle class="tl-ring-val" cx="34" cy="34" r="26" fill="none" stroke="${sCol}" stroke-width="7"
+      const R = 30, C = 2 * Math.PI * R;
+      // Renk tema-duyarlı token'dan geliyor (bkz. --tl-score-*): açık temada
+      // canlı yeşil/amber, skor sayısını cam kartın üstünde görünmez kılıyordu.
+      const sTone = r.score >= 70 ? 'ok' : r.score >= 40 ? 'warn' : 'bad';
+      const sCol = `var(--tl-score-${sTone})`;
+      const sGlow = `var(--tl-glow-${sTone})`;
+      // Halka artık daha büyük ve gradyanlı; merkezdeki sayının çevresinde
+      // skor rengiyle yumuşak bir ışıma var (--tl-ring-glow).
+      const ringId = 'tlRingGrad';
+      const ring = `<svg class="tl-ring" width="78" height="78" viewBox="0 0 78 78" style="--tl-ring-glow:${sGlow}">
+        <defs><linearGradient id="${ringId}" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stop-color="${sCol}"/>
+          <stop offset="100%" stop-color="${sCol}" stop-opacity=".6"/>
+        </linearGradient></defs>
+        <circle cx="39" cy="39" r="${R}" fill="none" stroke="var(--tm-surface-2)" stroke-width="7"/>
+        <circle cx="39" cy="39" r="${R}" fill="none" stroke="var(--tm-edge)" stroke-width="7" opacity=".6"/>
+        <circle class="tl-ring-val" cx="39" cy="39" r="${R}" fill="none" stroke="url(#${ringId})" stroke-width="7"
           stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}"
           stroke-dashoffset="${firstPaint ? C.toFixed(1) : (C * (1 - r.score / 100)).toFixed(1)}"/></svg>`;
 
-      const part = (label, val, max, col) => `<div class="mb-1.5">
-        <div class="flex justify-between text-[9px] mb-0.5"><span class="text-slate-400">${label}</span>
-          <span class="text-slate-300 font-bold">${val === null ? '—' : val + '/' + max}</span></div>
+      const part = (label, val, max, col) => `<div style="margin-bottom:8px">
+        <div class="flex justify-between" style="margin-bottom:3px">
+          <span class="tl-part-label">${label}</span>
+          <span class="tl-part-val">${val === null ? '—' : val + '<span style="color:var(--tm-ink-3);font-weight:700">/' + max + '</span>'}</span></div>
         <div class="tl-bar"><i data-w="${val === null ? 0 : Math.round(val / max * 100)}" style="background:${col}"></i></div></div>`;
 
       // ── Aksiyon dağılımı ──────────────────────────────────────────
@@ -4354,40 +4488,46 @@
       // bir tip olarak otomatik görünür.
       const maxType = Math.max(1, ...Object.values(r.byType));
       const typeRows = Object.entries(r.byType).sort((a, b) => b[1] - a[1])
-        .map(([k, v]) => `<div class="mb-1.5">
-          <div class="flex justify-between text-[10px]"><span class="text-slate-300">${_escHtml(I18N.t(_TL_TYPE_LABELS[k] || k))}</span>
-            <span class="text-white font-bold">${v}</span></div>
-          <div class="tl-hbar"><i data-w="${Math.round(v / maxType * 100)}" style="${k === 'whatsapp_sent' ? 'background:#25D366' : ''}"></i></div></div>`).join('')
-        || `<div class="text-[11px] text-red-400 py-1">${I18N.t('Bu dönemde hiç aksiyon yok.')}</div>`;
+        .map(([k, v]) => `<div class="tl-type-row">
+          <div class="flex justify-between"><span class="tl-type-name">${_escHtml(I18N.t(_TL_TYPE_LABELS[k] || k))}</span>
+            <span class="tl-type-cnt">${v}</span></div>
+          <div class="tl-hbar"><i data-w="${Math.round(v / maxType * 100)}" style="${
+            // WhatsApp kendi marka yeşiliyle ayrışıyor (diğerleri vurgu rengi).
+            k === 'whatsapp_sent' ? 'background:linear-gradient(90deg,#25D366aa,#1da851)' : ''}"></i></div></div>`).join('')
+        || `<div style="font-size:11px;color:var(--tm-danger);padding:4px 0">${I18N.t('Bu dönemde hiç aksiyon yok.')}</div>`;
 
-      const stat = (label, val, sub) => `<div class="bg-gray-800/40 rounded-xl p-2.5">
-        <div class="text-[9px] text-slate-500 uppercase font-bold tracking-wide">${label}</div>
-        <div class="text-sm font-bold text-white mt-1">${val}</div>
-        ${sub ? `<div class="text-[9px] text-slate-500 mt-0.5">${sub}</div>` : ''}</div>`;
+      const stat = (label, val, sub) => `<div class="tl-stat">
+        <div class="tl-stat-label">${label}</div>
+        <div class="tl-stat-value">${val}</div>
+        ${sub ? `<div class="tl-stat-sub">${sub}</div>` : ''}</div>`;
 
+      // Tablo yerine satır listesi: hücre hizası dar popup'ta bozuluyordu ve
+      // hover geri bildirimi verilemiyordu.
       const recent = r.winLogs.slice(0, 50).map(l => {
         const isAct = !_TL_NON_ACTION.has(l.action_type);
-        return `<tr class="border-b border-gray-800/40">
-          <td class="py-1 pr-2 text-slate-500 text-[10px] whitespace-nowrap">${_amFmtDateTime(l.created_at)}</td>
-          <td class="py-1 pr-2 text-[10px] whitespace-nowrap"><span style="color:${isAct ? '#2dd4bf' : '#64748b'};font-weight:700">${isAct ? '●' : '○'} ${_escHtml(I18N.t(_TL_TYPE_LABELS[l.action_type] || l.action_type))}</span></td>
-          <td class="py-1 text-slate-400 text-[10px]" style="max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${l.deal_name ? _escHtml(l.deal_name) : '—'}</td>
-        </tr>`;
+        const wa = l.action_type === 'whatsapp_sent';
+        const tone = wa ? '#25D366' : (isAct ? 'var(--tm-accent)' : 'var(--tm-ink-3)');
+        return `<div class="tl-log-row">
+          <span class="tl-log-time">${_amFmtDateTime(l.created_at)}</span>
+          <span class="tl-log-type" style="color:${tone}">${isAct ? '●' : '○'} ${_escHtml(I18N.t(_TL_TYPE_LABELS[l.action_type] || l.action_type))}</span>
+          <span class="tl-log-deal">${l.deal_name ? _escHtml(l.deal_name) : '—'}</span>
+        </div>`;
       }).join('');
 
       document.getElementById('tlDetailBody').innerHTML = `
         <div class="grid md:grid-cols-5 gap-3 mb-3">
-          <div class="bg-gray-800/30 rounded-xl p-3 flex items-center gap-3 md:col-span-2">
+          <div class="tl-card md:col-span-2" style="display:flex;align-items:center;gap:15px">
             <div style="position:relative;flex:none">
               ${ring}
               <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column">
-                <span style="font-size:17px;font-weight:800;color:${sCol};line-height:1">${r.score}</span>
-                <span style="font-size:7px;color:#64748b;font-weight:700;letter-spacing:.05em">/100</span>
+                <span class="tl-score-num" style="color:${sCol}">${r.score}</span>
+                <span class="tl-score-den">/100</span>
               </div>
             </div>
             <div class="flex-1 min-w-0">
-              ${part(I18N.t('Tazelik'), sp.fresh, 40, '#34d399')}
-              ${part(I18N.t('Süreklilik'), sp.cons, 30, '#60a5fa')}
-              ${part(I18N.t('Kapsam'), sp.cov, 30, '#c084fc')}
+              ${part(I18N.t('Tazelik'), sp.fresh, 40, 'var(--tl-fresh)')}
+              ${part(I18N.t('Süreklilik'), sp.cons, 30, 'var(--tl-cons)')}
+              ${part(I18N.t('Kapsam'), sp.cov, 30, 'var(--tl-cov)')}
             </div>
           </div>
           ${stat(I18N.t('Son Giriş'), _tlAgoLabel(r.lastLoginAll), r.lastLoginAll ? _amFmtDateTime(r.lastLoginAll) : '')}
@@ -4395,33 +4535,39 @@
           ${stat(I18N.t('Alarm Yükü'), r.workload, r.coverage === null ? I18N.t('aktif alarmı yok') : _escHtml(I18N.t('dokunulan {n}').replace('{n}', r.touched)))}
         </div>
 
-        <div class="bg-gray-800/30 rounded-xl p-3 mb-3">
-          <div class="flex items-center justify-between mb-2">
-            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wide">${_escHtml(I18N.t('Günlük aktivite — son {d} gün').replace('{d}', days))}</div>
-            <div class="text-[9px] text-slate-500">${_escHtml(I18N.t('en yoğun gün: {n} aksiyon').replace('{n}', maxDay))}</div>
+        <div class="tl-card mb-3">
+          <div class="tl-card-head">
+            <div class="tl-card-title">${_escHtml(I18N.t('Günlük aktivite — son {d} gün').replace('{d}', days))}</div>
+            <div class="tl-card-note">${_escHtml(I18N.t('en yoğun gün: {n} aksiyon').replace('{n}', maxDay))}</div>
           </div>
           <div class="tl-chart" id="tlChart">${cols}<div class="tl-tip" id="tlTip"></div></div>
-          <div class="flex text-[8px] text-slate-600 mt-1" style="gap:2px">${labels}</div>
-          <div class="text-[9px] text-slate-500 mt-1.5">
-            <span style="color:#34d399">■</span> ${I18N.t('aksiyon alınan gün')} ·
-            <span style="color:#fb923c">■</span> ${I18N.t('sadece giriş yapılan gün')} ·
-            <span style="color:#334155">■</span> ${I18N.t('hiç yok')}
+          <div class="tl-axis">${labels}</div>
+          <div class="tl-legend">
+            <span><i style="background:var(--tl-bar-hi)"></i>${I18N.t('aksiyon alınan gün')}</span>
+            <span><i style="background:var(--tl-bar-login)"></i>${I18N.t('sadece giriş yapılan gün')}</span>
+            <span><i style="background:var(--tm-edge)"></i>${I18N.t('hiç yok')}</span>
           </div>
         </div>
 
         <div class="grid md:grid-cols-2 gap-3">
-          <div class="bg-gray-800/30 rounded-xl p-3">
-            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wide mb-2">${_escHtml(I18N.t('Aksiyon dağılımı ({d} gün)').replace('{d}', days))}</div>
+          <div class="tl-card">
+            <div class="tl-card-head">
+              <div class="tl-card-title">${_escHtml(I18N.t('Aksiyon dağılımı ({d} gün)').replace('{d}', days))}</div>
+            </div>
             ${typeRows}
-            <div class="mt-2 pt-2 border-t border-gray-700/50 flex justify-between text-[10px]">
-              <span class="text-slate-500">${I18N.t('Giriş sayısı')}</span>
-              <span class="text-slate-300 font-bold">${r.logins} · ${_escHtml(I18N.t('{n} farklı gün').replace('{n}', r.loginDays))}</span>
+            <div class="tl-foot-row">
+              <span style="color:var(--tm-ink-3)">${I18N.t('Giriş sayısı')}</span>
+              <span style="color:var(--tm-ink);font-weight:800">${r.logins}
+                <span style="color:var(--tm-ink-3);font-weight:700">· ${_escHtml(I18N.t('{n} farklı gün').replace('{n}', r.loginDays))}</span></span>
             </div>
           </div>
-          <div class="bg-gray-800/30 rounded-xl p-3">
-            <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wide mb-2">${I18N.t('Son hareketler')}</div>
-            <div style="max-height:250px;overflow-y:auto;overscroll-behavior:contain">
-              ${recent ? `<table class="w-full">${recent}</table>` : `<div class="text-[11px] text-slate-500">${I18N.t('Kayıt yok.')}</div>`}
+          <div class="tl-card">
+            <div class="tl-card-head">
+              <div class="tl-card-title">${I18N.t('Son hareketler')}</div>
+              ${r.winLogs.length > 50 ? `<div class="tl-card-note">${_escHtml(I18N.t('son 50 kayıt'))}</div>` : ''}
+            </div>
+            <div class="tl-log">
+              ${recent || `<div style="font-size:11px;color:var(--tm-ink-3);padding:4px 0">${I18N.t('Kayıt yok.')}</div>`}
             </div>
           </div>
         </div>`;
