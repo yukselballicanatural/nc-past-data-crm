@@ -251,6 +251,29 @@
        "zincirlenmesini" (scroll chaining) durdurur — ikisi birlikte gerekli. */
     body.nc-scroll-lock { overflow: hidden; }
     #tlDetailModal .modal-panel { overscroll-behavior: contain; }
+
+    /* Takım senkron dökümü ("Kimler?") ve takım atama popup'ları.
+       .modal-backdrop/.modal-panel BİLEREK yeniden kullanılıyor: bu iki sınıf
+       liquid-glass.css ve liquid-glass-dark.css'te hem açık hem koyu tema için
+       zaten cam görünümü alıyor. Elle renk vermek yerine sistemin kendi cam
+       tanımını miras almak, popup'ın panelin geri kalanıyla aynı görünmesini
+       garanti ediyor (önceden bu döküm sayfa içinde aşağı kayan bir şeritti). */
+    #tmSyncModal, #tmAssignModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
+    #tmSyncModal.open, #tmAssignModal.open { display:flex; }
+    #tmSyncModal .modal-panel, #tmAssignModal .modal-panel { overscroll-behavior: contain; }
+    /* Döküm bölümleri — kart yüzeyi cam panelin üstünde hafifçe yüzsün. */
+    .tm-sec { border-radius:12px; padding:12px 14px; margin-bottom:12px; border:1px solid; }
+    .tm-sec-head { display:flex; align-items:center; gap:8px; font-size:11px; font-weight:800;
+                   text-transform:uppercase; letter-spacing:.04em; margin-bottom:9px; }
+    .tm-sec-count { padding:2px 8px; border-radius:9999px; font-size:10px; font-weight:800; }
+    .tm-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+              padding:8px 10px; border-radius:9px; background:rgba(148,163,184,.06); margin-bottom:6px; }
+    .tm-row:last-child { margin-bottom:0; }
+    .tm-row-name { font-size:12px; font-weight:700; color:#e2e8f0; }
+    .tm-row-meta { font-size:10.5px; color:#94a3b8; }
+    .tm-mini-btn { padding:4px 10px; border-radius:8px; font-size:10.5px; font-weight:800;
+                   cursor:pointer; white-space:nowrap; border:1px solid; transition:filter .12s; }
+    .tm-mini-btn:hover { filter:brightness(1.18); }
     .tl-pill { display:inline-block; padding:2px 8px; border-radius:9999px; font-size:10px; font-weight:800; white-space:nowrap; }
 
     /* ── Lider Takibi detay popup'ı ─────────────────────────────────── */
@@ -947,14 +970,11 @@
         <svg style="width:16px;height:16px;color:#fbbf24;flex-shrink:0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
         <span id="tmSyncMsg" style="color:#fbbf24;font-size:12px;font-weight:700"></span>
         <span id="tmSyncSrc" style="color:#b45309;font-size:11px">Kaynak: her danışmanın en son deal'indeki takım.</span>
-        <button id="tmSyncDetailBtn" onclick="amTmToggleSyncDetail()" style="padding:4px 10px;background:#78350f4d;border:1px solid #b45309;border-radius:8px;color:#fbbf24;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Kimler? ▾</button>
+        <button id="tmSyncDetailBtn" onclick="amTmOpenSyncDetail()" style="padding:4px 10px;background:#78350f4d;border:1px solid #b45309;border-radius:8px;color:#fbbf24;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">Kimler?</button>
         <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
           <button id="tmSyncLeaverBtn" onclick="amTmDeactivateLeavers()" style="display:none;padding:7px 14px;background:#450a0a;border:1px solid #7f1d1d;border-radius:9px;color:#f87171;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap"></button>
           <button id="tmSyncTeamBtn" onclick="amTmApplyAllDrift()" style="padding:7px 14px;background:#0d9488;border:none;border-radius:9px;color:#fff;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap">Tümünü Zoho'ya Göre Eşitle</button>
         </span>
-        <!-- Uyarının dökümü: sayı tek başına işe yaramıyordu ("bunlar kim?").
-             Kişi kişi ad, takım, rol ve GEREKÇE burada listeleniyor. -->
-        <div id="tmSyncDetail" style="display:none;width:100%;margin-top:2px;border-top:1px solid #b4530966;padding-top:11px"></div>
       </div>
       <div id="tmLoading" class="flex flex-col items-center py-16 gap-4">
         <div class="spinner-anim"></div>
@@ -1946,6 +1966,72 @@
         </div>
       </div>
       <div id="tlDetailBody"></div>
+    </div>
+  </div>
+
+  <!-- ===== TAKIM SENKRON DÖKÜMÜ ("Kimler?") =====
+       Sayı tek başına işe yaramıyordu ("bunlar kim, neden?"). Kişi kişi ad,
+       takım, rol ve GEREKÇE burada listeleniyor; her satırdan doğrudan aksiyon
+       alınabiliyor (girişi kapat / takıma ata).
+       Önceden bu döküm sayfa akışı içinde açılan ve sayfayı aşağı kaydıran bir
+       şeritti — panelin geri kalanının modal diliyle uyuşmuyordu. -->
+  <div id="tmSyncModal" onclick="if(event.target===this)amTmCloseSyncDetail()">
+    <div class="modal-backdrop" onclick="amTmCloseSyncDetail()"></div>
+    <div class="modal-panel" style="max-width:820px">
+      <div class="flex items-start gap-3 mb-4">
+        <div style="width:38px;height:38px;border-radius:11px;background:rgba(245,158,11,.14);border:1px solid rgba(245,158,11,.3);display:flex;align-items:center;justify-content:center;flex:none">
+          <svg style="width:19px;height:19px;color:#fbbf24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <h3 class="text-lg font-bold text-white leading-tight">Takım Eşleştirme Dökümü</h3>
+          <p class="text-xs text-slate-400 mt-0.5" id="tmSyncModalSub">—</p>
+        </div>
+        <button onclick="amTmCloseSyncDetail()" class="text-slate-500 hover:text-white text-2xl leading-none px-1 flex-none">&times;</button>
+      </div>
+      <div id="tmSyncDetail"></div>
+    </div>
+  </div>
+
+  <!-- ===== TAKIMA ATA =====
+       Otomatik çözümleme (Zoho rolü) yanlış olduğunda yöneticinin son sözü
+       söylediği yer. Kayıt team_assignments tablosuna yazılır ve KALICIDIR:
+       "Zoho'ya göre eşitle" bu kişiyi bir daha önermez. Bkz. team_assignments.sql -->
+  <div id="tmAssignModal" onclick="if(event.target===this)amTmCloseAssign()">
+    <div class="modal-backdrop" onclick="amTmCloseAssign()"></div>
+    <div class="modal-panel" style="max-width:520px">
+      <div class="flex items-start gap-3 mb-4">
+        <div style="width:38px;height:38px;border-radius:11px;background:rgba(13,148,136,.14);border:1px solid rgba(13,148,136,.35);display:flex;align-items:center;justify-content:center;flex:none">
+          <svg style="width:19px;height:19px;color:#2dd4bf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+        </div>
+        <div class="min-w-0 flex-1">
+          <h3 class="text-lg font-bold text-white leading-tight">Takıma Ata</h3>
+          <p class="text-xs text-slate-400 mt-0.5" id="tmAssignWho">—</p>
+        </div>
+        <button onclick="amTmCloseAssign()" class="text-slate-500 hover:text-white text-2xl leading-none px-1 flex-none">&times;</button>
+      </div>
+
+      <div id="tmAssignAuto" class="text-[11px] text-slate-400 mb-3" style="padding:9px 11px;border-radius:9px;background:rgba(148,163,184,.07)"></div>
+
+      <label class="block text-[10px] font-bold uppercase tracking-wide text-slate-500 mb-1.5">Takım</label>
+      <select id="tmAssignTeam" class="filter-select" style="width:100%;margin-bottom:12px"></select>
+
+      <label class="flex items-center gap-2.5 mb-3 cursor-pointer" style="padding:9px 11px;border-radius:9px;background:rgba(148,163,184,.07)">
+        <input type="checkbox" id="tmAssignLeader" style="width:15px;height:15px;accent-color:#0d9488;cursor:pointer">
+        <span class="text-[11px] text-slate-300 font-semibold">Bu kişi seçilen takımın <b>lideri</b> olsun</span>
+      </label>
+      <p class="text-[10px] text-slate-500 mb-4 leading-relaxed">
+        Lider işaretlenirse bu kişi kendi panelinde o takımın kadrosunu ve Günlük
+        Ekip Girişi'ni görür. Zoho'daki lideri pasifleşmiş takımlar için gerekli.
+      </p>
+
+      <div class="flex items-center gap-2 flex-wrap">
+        <button onclick="amTmSaveAssign()" id="tmAssignSaveBtn"
+          style="padding:8px 16px;background:#0d9488;border:none;border-radius:9px;color:#fff;font-size:12px;font-weight:800;cursor:pointer">Kaydet</button>
+        <button onclick="amTmClearAssign()" id="tmAssignClearBtn"
+          style="display:none;padding:8px 14px;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:9px;color:#f87171;font-size:12px;font-weight:800;cursor:pointer">Atamayı Kaldır</button>
+        <button onclick="amTmCloseAssign()"
+          style="margin-left:auto;padding:8px 14px;background:rgba(148,163,184,.1);border:1px solid rgba(148,163,184,.25);border-radius:9px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">Vazgeç</button>
+      </div>
     </div>
   </div>
 
@@ -4199,9 +4285,13 @@
       });
     }
 
-    // Esc ile kapat — modal açıkken.
+    // Esc ile kapat — modal açıkken. Sıra ÖNEMLİ: atama popup'ı döküm
+    // popup'ının üstünde açılabiliyor, Esc en üstteki katmanı kapatmalı.
     document.addEventListener('keydown', e => {
-      if (e.key === 'Escape' && document.getElementById('tlDetailModal')?.classList.contains('open')) closeTlDetail();
+      if (e.key !== 'Escape') return;
+      if (document.getElementById('tmAssignModal')?.classList.contains('open')) { amTmCloseAssign(); return; }
+      if (document.getElementById('tmSyncModal')?.classList.contains('open')) { amTmCloseSyncDetail(); return; }
+      if (document.getElementById('tlDetailModal')?.classList.contains('open')) closeTlDetail();
     });
 
     // Panelin geri kalanıyla aynı export menüsünü (CSV/XLSX/PDF/HTML) kullanıyor;
@@ -5703,6 +5793,7 @@
         if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
         _amTeamMembers = data.members || [];
         _amTmUnplaced = data.unplaced || [];
+        if (typeof data.assignmentsInstalled === 'boolean') _amTmAssignInstalled = data.assignmentsInstalled;
         // Kadronun hangi ana ait olduğu + takımı tahminle yerleştirilenler.
         // Bu ikisi TL panelindeki notun aynısı — iki panel aynı şeyi göstermeli.
         _amTmMeta = {
@@ -5748,6 +5839,9 @@
     // Zoho'da aktif ama hiçbir sinyalle takıma bağlanamayanlar — kaynağı
     // /api/team-members yanıtındaki `unplaced` (yalnızca admin'e gelir).
     let _amTmUnplaced = [];
+    // null = bilinmiyor (henüz yanıt gelmedi), false = team_assignments.sql
+    // çalıştırılmamış → elle atama yapılamaz, panel bunu açıkça bildirir.
+    let _amTmAssignInstalled = null;
 
     // Sayfa her açılışta /api/sync-user-teams'i çağırmasın: uç Users'ı ve
     // (ayna yoksa) deal tablosunu tarıyor. Sekmeler arası gidiş-gelişte
@@ -5809,9 +5903,17 @@
     // isLeaver notu). Birleşik tek metin bunu ayırt edilemez hâle getiriyordu.
     let _amTmDetailOpen = false;
 
-    function amTmToggleSyncDetail() {
-      _amTmDetailOpen = !_amTmDetailOpen;
+    function amTmOpenSyncDetail() {
+      _amTmDetailOpen = true;
       _amTmRenderSyncDetail();
+      document.getElementById('tmSyncModal').classList.add('open');
+      _tlLockScroll(true);
+    }
+
+    function amTmCloseSyncDetail() {
+      _amTmDetailOpen = false;
+      document.getElementById('tmSyncModal').classList.remove('open');
+      _tlLockScroll(false);
     }
 
     // Tarihi gg.aa.yyyy göster — ISO biçimi panelin geri kalanıyla uyumsuz.
@@ -5837,67 +5939,87 @@
 
     function _amTmRenderSyncDetail() {
       const box = document.getElementById('tmSyncDetail');
-      const btn = document.getElementById('tmSyncDetailBtn');
-      if (!box || !btn) return;
-      if (!_amTmDetailOpen) {
-        box.style.display = 'none';
-        btn.textContent = I18N.t('Kimler?') + ' ▾';
-        return;
-      }
-      btn.textContent = I18N.t('Kimler?') + ' ▴';
-      box.style.display = 'block';
-      const H = (t, c) => `<div style="font-size:11px;font-weight:800;color:${c};letter-spacing:.4px;text-transform:uppercase;margin-bottom:6px">${_escHtml(t)}</div>`;
+      if (!box || !_amTmDetailOpen) return;
+
+      // Bölüm başlığı — sayıyı rozette gösterir (başlık metnine gömmek yerine).
+      const SEC = (title, color, bg, count, rowsHtml, footer) => `
+        <div class="tm-sec" style="border-color:${color}55;background:${bg}">
+          <div class="tm-sec-head" style="color:${color}">
+            ${_escHtml(title)}
+            <span class="tm-sec-count" style="background:${color}22;color:${color}">${count}</span>
+          </div>
+          ${rowsHtml}
+          ${footer ? `<div style="color:#64748b;font-size:10.5px;margin-top:8px;line-height:1.5">${footer}</div>` : ''}
+        </div>`;
+
       const out = [];
+      const sub = [];
 
       if (_amTmLeavers.length) {
-        out.push(`<div style="margin-bottom:12px">`
-          + H(I18N.t('Zoho\'da aktif değil') + ` (${_amTmLeavers.length})`, '#f87171')
-          + `<div style="display:flex;flex-direction:column;gap:5px">`
-          + _amTmLeavers.map(l => `<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#450a0a4d;border:1px solid #7f1d1d80;border-radius:8px;padding:6px 10px">
-               <b style="color:#fecaca;font-size:12px">${_escHtml(l.fullName || l.username || '—')}</b>
-               <span style="color:#94a3b8;font-size:11px">${_escHtml(l.team || I18N.t('takım yok'))} · ${_escHtml(l.role || '—')}</span>
-               <span style="color:#fca5a5;font-size:11px">${_escHtml(_amTmLeaverReason(l))}</span>
-               ${l.username ? `<span style="color:#475569;font-size:10.5px">${_escHtml(l.username)}</span>` : ''}
-               ${l.username ? `<button onclick="amTmDeactivateOne('${_jsStrAttr(l.username)}')" style="margin-left:auto;padding:3px 9px;background:#7f1d1d;border:none;border-radius:7px;color:#fecaca;font-size:10.5px;font-weight:700;cursor:pointer;white-space:nowrap">${_escHtml(I18N.t('Girişi kapat'))}</button>` : ''}
-             </div>`).join('')
-          + `</div></div>`);
+        sub.push(I18N.t('{n} ayrılan').replace('{n}', _amTmLeavers.length));
+        out.push(SEC(I18N.t("Zoho'da aktif değil"), '#f87171', 'rgba(127,29,29,.14)', _amTmLeavers.length,
+          _amTmLeavers.map(l => `<div class="tm-row">
+             <span class="tm-row-name" style="color:#fecaca">${_escHtml(l.fullName || l.username || '—')}</span>
+             <span class="tm-row-meta">${_escHtml(l.team || I18N.t('takım yok'))} · ${_escHtml(l.role || '—')}</span>
+             <span class="tm-row-meta" style="color:#fca5a5">${_escHtml(_amTmLeaverReason(l))}</span>
+             ${l.username ? `<span class="tm-row-meta" style="color:#475569;font-family:monospace">${_escHtml(l.username)}</span>` : ''}
+             ${l.username ? `<button onclick="amTmDeactivateOne('${_jsStrAttr(l.username)}')" class="tm-mini-btn" style="margin-left:auto;background:rgba(127,29,29,.5);border-color:#7f1d1d;color:#fecaca">${_escHtml(I18N.t('Girişi kapat'))}</button>` : ''}
+           </div>`).join('')));
       }
 
       if (_amTmDrift.size) {
         const all = [..._amTmDrift.values()];
-        out.push(`<div>`
-          + H(I18N.t('Takımı uyuşmuyor') + ` (${all.length})`, '#fbbf24')
-          + `<div style="display:flex;flex-direction:column;gap:5px">`
-          + all.map(d => `<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#78350f33;border:1px solid #b4530980;border-radius:8px;padding:6px 10px">
-               <b style="color:#fde68a;font-size:12px">${_escHtml(d.fullName || d.username || '—')}</b>
-               <span style="color:#94a3b8;font-size:11px">${_escHtml(d.role || '—')}</span>
-               <span style="font-size:11px;color:#cbd5e1">${_escHtml(d.from || I18N.t('takım yok'))} → <b style="color:#5eead4">${_escHtml(d.to)}</b></span>
-               <span style="color:#64748b;font-size:10.5px">${_escHtml(_amTmSourceLabel(d))}</span>
-             </div>`).join('')
-          + `</div></div>`);
+        sub.push(I18N.t('{n} uyuşmazlık').replace('{n}', all.length));
+        out.push(SEC(I18N.t('Takımı uyuşmuyor'), '#fbbf24', 'rgba(120,53,15,.16)', all.length,
+          all.map(d => `<div class="tm-row">
+             <span class="tm-row-name" style="color:#fde68a">${_escHtml(d.fullName || d.username || '—')}</span>
+             <span class="tm-row-meta">${_escHtml(d.role || '—')}</span>
+             <span class="tm-row-meta" style="color:#cbd5e1">${_escHtml(d.from || I18N.t('takım yok'))} → <b style="color:#5eead4">${_escHtml(d.to)}</b></span>
+             <span class="tm-row-meta" style="color:#64748b">${_escHtml(_amTmSourceLabel(d))}</span>
+             <span style="margin-left:auto;display:flex;gap:6px">
+               ${d.username ? `<button onclick="amTmApplyDriftByUser('${_jsStrAttr(d.username)}')" class="tm-mini-btn" style="background:rgba(13,148,136,.22);border-color:#0d9488;color:#5eead4">${_escHtml(I18N.t('Zoho\'ya göre güncelle'))}</button>` : ''}
+               <button onclick="amTmOpenAssign('${_jsStrAttr(d.fullName || '')}')" class="tm-mini-btn" style="background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.3);color:#cbd5e1">${_escHtml(I18N.t('Elle ata'))}</button>
+             </span>
+           </div>`).join(''),
+          _escHtml(I18N.t('"Zoho\'ya göre güncelle" Users kaydını Zoho\'daki takıma çeker. Zoho da yanlışsa "Elle ata" ile kalıcı olarak sabitleyin — senkron o kişiye bir daha dokunmaz.'))));
       }
 
       // ── Takıma bağlanamayanlar ────────────────────────────────────────
-      // Bu kişiler Zoho'da AKTİF ama ne zoho_users.team, ne role, ne Users
-      // kaydı, ne de son deal'i tanınan bir satış takımı veriyor. Admin
-      // panelinde ham metinleriyle görünürler; takım liderinin listesinde
-      // çıkmadıkları için eskiden hiç iz bırakmadan kayboluyorlardı.
+      // Bu kişiler Zoho'da AKTİF ama ne role, ne Users kaydı, ne de son deal'i
+      // tanınan bir satış takımı veriyor. Satış dışı birimler (Finance, IT,
+      // Executive Board...) artık bu listeye HİÇ girmiyor (bkz. api/_teams.js) —
+      // eskiden 48 kişilik gürültünün neredeyse tamamı onlardı ve gerçek
+      // sorunlar içinde kayboluyordu. Kalanlar gerçekten yerleştirilmesi
+      // gereken kişiler; her satırdan doğrudan elle atama yapılabilir.
       if (_amTmUnplaced.length) {
-        out.push(`<div style="margin-top:12px">`
-          + H(I18N.t('Takıma bağlanamadı') + ` (${_amTmUnplaced.length})`, '#a5b4fc')
-          + `<div style="display:flex;flex-direction:column;gap:5px">`
-          + _amTmUnplaced.map(p => `<div style="display:flex;align-items:center;gap:9px;flex-wrap:wrap;background:#1e1b4b4d;border:1px solid #4338ca80;border-radius:8px;padding:6px 10px">
-               <b style="color:#c7d2fe;font-size:12px">${_escHtml(p.fullName || '—')}</b>
-               <span style="color:#94a3b8;font-size:11px">${I18N.t('Zoho rolü')}: ${_escHtml(p.zohoRole || '—')}</span>
-               <span style="color:#94a3b8;font-size:11px">${I18N.t('Zoho takımı')}: ${_escHtml(p.zohoTeam || '—')}</span>
-               ${p.email ? `<span style="color:#475569;font-size:10.5px">${_escHtml(p.email)}</span>` : ''}
-             </div>`).join('')
-          + `</div>`
-          + `<div style="color:#64748b;font-size:10.5px;margin-top:6px">${_escHtml(I18N.t('Zoho\'daki takım/rol adı tanınan takımlardan biriyle eşleşmiyor — Zoho tarafında düzeltilmeli.'))}</div>`
-          + `</div>`);
+        sub.push(I18N.t('{n} yerleşemeyen').replace('{n}', _amTmUnplaced.length));
+        out.push(SEC(I18N.t('Takıma bağlanamadı'), '#a5b4fc', 'rgba(30,27,75,.28)', _amTmUnplaced.length,
+          _amTmUnplaced.map(p => `<div class="tm-row">
+             <span class="tm-row-name" style="color:#c7d2fe">${_escHtml(p.fullName || '—')}</span>
+             <span class="tm-row-meta">${I18N.t('Zoho rolü')}: ${_escHtml(p.zohoRole || '—')}</span>
+             ${p.email ? `<span class="tm-row-meta" style="color:#475569">${_escHtml(p.email)}</span>` : ''}
+             <button onclick="amTmOpenAssign('${_jsStrAttr(p.fullName || '')}')" class="tm-mini-btn" style="margin-left:auto;background:rgba(13,148,136,.22);border-color:#0d9488;color:#5eead4">${_escHtml(I18N.t('Takıma ata'))}</button>
+           </div>`).join(''),
+          _escHtml(I18N.t('Zoho\'daki rol adı tanınan satış takımlarından biriyle eşleşmiyor. Zoho tarafında düzeltilebilir ya da buradan kalıcı olarak elle atanabilir.'))));
+      }
+
+      if (!out.length) {
+        out.push(`<div style="text-align:center;padding:28px 0;color:#4ade80;font-size:13px;font-weight:700">
+          ${_escHtml(I18N.t('Uyuşmazlık yok — kadro Zoho ile tutarlı.'))}</div>`);
+      }
+
+      // Atama tablosu kurulmadıysa "Elle ata" butonları çalışmaz; bunu sessiz
+      // bir hataya bırakmak yerine en üstte açıkça söylüyoruz.
+      if (_amTmAssignInstalled === false) {
+        out.unshift(`<div class="tm-sec" style="border-color:#f8717155;background:rgba(127,29,29,.14)">
+          <div class="tm-sec-head" style="color:#f87171">${_escHtml(I18N.t('Elle atama devre dışı'))}</div>
+          <div style="font-size:11px;color:#fca5a5;line-height:1.6">${_escHtml(I18N.t('team_assignments tablosu veritabanında yok. Depodaki team_assignments.sql dosyasını Supabase SQL Editor\'de bir kez çalıştırın — o zamana kadar takım eşleştirmesi yalnızca otomatik (Zoho) kurala göre çalışır.'))}</div>
+        </div>`);
       }
 
       box.innerHTML = out.join('');
+      const subEl = document.getElementById('tmSyncModalSub');
+      if (subEl) subEl.textContent = sub.length ? sub.join(' · ') : I18N.t('Sorun bulunmadı');
     }
 
     // Tek kişinin girişini kapat — uç zaten usernames ile kapsamı daraltıyor.
@@ -5940,6 +6062,158 @@
         + `<br><br><b>${_escHtml(m.fullName)}</b><br>${_escHtml(d.from || '—')} → <b>${_escHtml(d.to)}</b>`
         + `<br><span style="font-size:11px;color:#64748b">${_escHtml(_amTmSourceLabel(d))}</span>`;
       showSiteConfirm('Takımı Güncelle', body, 'Güncelle', '#0d9488', () => _amTmRunSync([d.username]));
+    }
+
+    // Döküm popup'ındaki satırdan çağrılır (orada tablo indeksi yok, username var).
+    function amTmApplyDriftByUser(username) {
+      const d = [..._amTmDrift.values()].find(x => x.username === username);
+      if (!d) return;
+      const body = I18N.t('Bu danışmanın takımı Users tablosunda güncellenecek. Takım bilgisi hangi verileri görebileceğini de belirler — takım lideri panelleri ve günlük ekip girişi buna göre kapsanır.')
+        + `<br><br><b>${_escHtml(d.fullName || username)}</b><br>${_escHtml(d.from || '—')} → <b>${_escHtml(d.to)}</b>`
+        + `<br><span style="font-size:11px;color:#64748b">${_escHtml(_amTmSourceLabel(d))}</span>`;
+      showSiteConfirm('Takımı Güncelle', body, 'Güncelle', '#0d9488', () => _amTmRunSync([d.username]));
+    }
+
+    // ── Elle takım ataması ──────────────────────────────────────────────
+    // Otomatik çözümleme (Zoho rolü → Users → son deal) yanlış olduğunda
+    // yöneticinin son sözü söylediği yer. Kayıt team_assignments tablosuna
+    // gider ve KALICIDIR — "Zoho'ya göre eşitle" bu kişiyi bir daha önermez.
+    // Bkz. team_assignments.sql / api/team-assignments.js
+    let _amTmAssignTarget = null;   // { fullName, zohoUserId, currentTeam, autoTeam }
+
+    // Atama popup'ındaki takım listesi: TeamMap'teki kanonik takımlar. Ham
+    // metin serbest bırakılmıyor — yazım hatası kişiyi hiçbir yere bağlanamaz
+    // hâle getirirdi (bu sayfadaki sorunun kaynağı tam olarak buydu).
+    function _amTmTeamOptions(selected) {
+      const opts = [`<option value="">${_escHtml(I18N.t('— Satış dışı (kadroda görünmesin) —'))}</option>`];
+      const keys = (window.TeamMap && TeamMap.TEAMS) ? Object.keys(TeamMap.TEAMS) : [];
+      keys.sort((a, b) => {
+        const la = (TeamMap.TEAMS[a].label || a), lb = (TeamMap.TEAMS[b].label || b);
+        return String(la).localeCompare(String(lb), 'tr');
+      }).forEach(k => {
+        const t = TeamMap.TEAMS[k];
+        const label = (t.label || k) + (t.region ? ' · ' + t.region : '');
+        opts.push(`<option value="${_escHtml(k)}"${k === selected ? ' selected' : ''}>${_escHtml(label)}</option>`);
+      });
+      return opts.join('');
+    }
+
+    function amTmOpenAssign(fullName) {
+      const name = String(fullName || '').trim();
+      if (!name) return;
+      if (_amTmAssignInstalled === false) {
+        showSiteNotice(I18N.t('team_assignments tablosu veritabanında yok. Depodaki team_assignments.sql dosyasını Supabase SQL Editor\'de bir kez çalıştırın.'), 'error');
+        return;
+      }
+      // Kişinin şu anki durumunu kadro listesinden oku (varsa).
+      const m = (_amTeamMembers || []).find(x => String(x.fullName || '').trim().toLowerCase() === name.toLowerCase());
+      const up = (_amTmUnplaced || []).find(x => String(x.fullName || '').trim().toLowerCase() === name.toLowerCase());
+      _amTmAssignTarget = {
+        fullName: name,
+        zohoUserId: (m && m.zohoUserId) || '',
+        currentTeam: (m && m.team) || '',
+        isManual: !!(m && m.manualTeam),
+        zohoRole: (m && m.zohoRole) || (up && up.zohoRole) || '',
+      };
+
+      document.getElementById('tmAssignWho').textContent = name
+        + (_amTmAssignTarget.zohoRole ? ' · ' + I18N.t('Zoho rolü') + ': ' + _amTmAssignTarget.zohoRole : '');
+
+      // Otomatik çözümlemenin ne dediğini göster — yönetici neyi ezdiğini bilsin.
+      const auto = _amTmAssignTarget.isManual
+        ? I18N.t('Bu kişinin takımı şu anda ELLE atanmış: {t}').replace('{t}', _amTmAssignTarget.currentTeam || I18N.t('satış dışı'))
+        : (_amTmAssignTarget.currentTeam
+            ? I18N.t('Otomatik çözümleme şu anda: {t}').replace('{t}', _amTmAssignTarget.currentTeam)
+            : I18N.t('Otomatik çözümleme bu kişiyi hiçbir takıma bağlayamıyor.'));
+      document.getElementById('tmAssignAuto').textContent = auto;
+
+      document.getElementById('tmAssignTeam').innerHTML =
+        _amTmTeamOptions(_amTmAssignTarget.currentTeam);
+      document.getElementById('tmAssignLeader').checked = false;
+      // "Atamayı Kaldır" yalnızca gerçekten bir atama varsa anlamlı.
+      document.getElementById('tmAssignClearBtn').style.display =
+        _amTmAssignTarget.isManual ? '' : 'none';
+
+      document.getElementById('tmAssignModal').classList.add('open');
+      _tlLockScroll(true);
+    }
+
+    function amTmCloseAssign() {
+      document.getElementById('tmAssignModal').classList.remove('open');
+      _amTmAssignTarget = null;
+      // Döküm popup'ı arkada açık kalmış olabilir — kaydırma kilidini ancak
+      // ikisi de kapalıysa bırak, yoksa arka sayfa kaymaya başlar.
+      if (!document.getElementById('tmSyncModal').classList.contains('open')) _tlLockScroll(false);
+    }
+
+    async function _amTmAssignRequest(method, body) {
+      const token = (currentUser && currentUser.token) || '';
+      const r = await fetch('/api/team-assignments', {
+        method,
+        headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+        body: JSON.stringify(body),
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+      return data;
+    }
+
+    async function amTmSaveAssign() {
+      if (!_amTmAssignTarget) return;
+      const btn = document.getElementById('tmAssignSaveBtn');
+      const team = document.getElementById('tmAssignTeam').value;
+      const isLeader = document.getElementById('tmAssignLeader').checked;
+      // Lider ataması bir takım seçilmeden anlamsız — sessizce yanlış kayıt
+      // yazmak yerine erken uyar.
+      if (isLeader && !team) {
+        showSiteNotice(I18N.t('Lider ataması için bir takım seçmelisiniz.'), 'warn');
+        return;
+      }
+      btn.disabled = true;
+      const old = btn.textContent;
+      btn.textContent = I18N.t('Kaydediliyor...');
+      try {
+        await _amTmAssignRequest('PUT', {
+          fullName: _amTmAssignTarget.fullName,
+          zohoUserId: _amTmAssignTarget.zohoUserId || null,
+          team: team || null,
+          isLeader,
+        });
+        addLog('USER_TEAM_ASSIGN',
+          `Takım elle atandı: ${_amTmAssignTarget.fullName} → ${team || 'satış dışı'}${isLeader ? ' (lider)' : ''}`);
+        showSiteNotice(I18N.t('Atama kaydedildi.'), 'success');
+        amTmCloseAssign();
+        // Kadro ve Günlük Ekip Girişi aynı listeden besleniyor — ikisinin de
+        // cache'i bayat, birlikte tazelenmeli.
+        _adeMembersCache = null;
+        _amTmDriftAt = 0;
+        loadAdminTeamMembers(true);
+      } catch (e) {
+        showSiteNotice(I18N.t('Atama kaydedilemedi: ') + e.message, 'error');
+      } finally { btn.disabled = false; btn.textContent = old; }
+    }
+
+    function amTmClearAssign() {
+      if (!_amTmAssignTarget) return;
+      const name = _amTmAssignTarget.fullName;
+      showSiteConfirm(
+        I18N.t('Atamayı Kaldır'),
+        I18N.t('Bu kişinin elle ataması kaldırılacak ve takımı yeniden otomatik (Zoho) kurala göre belirlenecek.')
+          + `<br><br><b>${_escHtml(name)}</b>`,
+        I18N.t('Kaldır'), '#ef4444',
+        async () => {
+          try {
+            await _amTmAssignRequest('DELETE', { fullName: name });
+            addLog('USER_TEAM_ASSIGN', `Elle takım ataması kaldırıldı: ${name}`);
+            showSiteNotice(I18N.t('Atama kaldırıldı.'), 'success');
+            amTmCloseAssign();
+            _adeMembersCache = null;
+            _amTmDriftAt = 0;
+            loadAdminTeamMembers(true);
+          } catch (e) {
+            showSiteNotice(I18N.t('Atama kaldırılamadı: ') + e.message, 'error');
+          }
+        });
     }
 
     // Tümü
@@ -6049,12 +6323,18 @@
             ? ` <span title="Takımı Zoho'da yazılı değil; en son deal'inden tahmin edildi" style="color:#f59e0b;font-size:11px">★</span>`
             : ''}</td>
         <td style="padding:8px 12px;color:#94a3b8;font-size:11.5px;white-space:nowrap">${m.realName ? _escHtml(m.realName) : dash}</td>
-        <td style="padding:8px 12px;color:#64748b;font-size:11px;white-space:nowrap">${_escHtml(m.team)}${_amTmDriftBadge(m, i)}</td>
+        <td style="padding:8px 12px;color:#64748b;font-size:11px;white-space:nowrap">${_escHtml(m.team)}${
+          // Elle atanmış takım: senkron bunu değiştirmez. Kilit ikonu, "neden
+          // Zoho'dan farklı?" sorusunu tablodan ayrılmadan cevaplıyor.
+          m.manualTeam
+            ? ` <span title="${_escHtml(I18N.t('Bu takım elle atandı — Zoho senkronu değiştirmez'))}" style="color:#2dd4bf;font-size:10px">🔒</span>`
+            : ''}${_amTmDriftBadge(m, i)}</td>
         <td style="padding:8px 12px;white-space:nowrap">${seniority}</td>
         <td id="tmPhoneCell-${i}" style="padding:8px 12px;color:#cbd5e1;white-space:nowrap;min-width:170px">${phoneDisplay}</td>
         <td id="tmEmailCell-${i}" style="padding:8px 12px;color:#cbd5e1;min-width:200px">${emailDisplay}</td>
         <td style="padding:8px 12px;white-space:nowrap;text-align:right">
           <button onclick="editAdminMember(${i})" id="tmEditBtn-${i}" style="padding:5px 12px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">Düzelt</button>
+          <button onclick="amTmOpenAssign('${_jsStrAttr(m.fullName || '')}')" title="${_escHtml(I18N.t('Takıma ata (kalıcı)'))}" style="padding:5px 10px;background:#0f766e;border:none;border-radius:7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;margin-right:4px">Takım</button>
           <button onclick="openAdminMemberWhatsApp(${i})" style="padding:5px 10px;background:#166534;border:none;border-radius:7px;color:#fff;font-size:11px;font-weight:700;cursor:pointer">WA</button>
         </td>
       </tr>`;

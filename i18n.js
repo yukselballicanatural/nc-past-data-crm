@@ -1078,6 +1078,47 @@
     'Bu dönemde hiç aksiyon yok.': 'No actions in this period.',
     'Giriş sayısı': 'Login count',
     'WhatsApp mesajı': 'WhatsApp messages',
+
+    // ── Takım eşleştirme dökümü + elle takım ataması ──────────────────
+    // (admin.html "Takımımdaki Kişiler" → Kimler? / Takıma Ata popup'ları)
+    'Takım Eşleştirme Dökümü': 'Team Matching Breakdown',
+    '{n} ayrılan': '{n} leavers',
+    '{n} uyuşmazlık': '{n} mismatches',
+    '{n} yerleşemeyen': '{n} unassigned',
+    'Sorun bulunmadı': 'No issues found',
+    'Uyuşmazlık yok — kadro Zoho ile tutarlı.': 'No mismatches — roster is consistent with Zoho.',
+    "Zoho'ya göre güncelle": 'Update from Zoho',
+    'Elle ata': 'Assign manually',
+    'Takıma ata': 'Assign to team',
+    'Takıma ata (kalıcı)': 'Assign to team (permanent)',
+    'Takıma Ata': 'Assign to Team',
+    'Vazgeç': 'Cancel',
+    'Kaldır': 'Remove',
+    'Atamayı Kaldır': 'Remove Assignment',
+    'Atama kaydedildi.': 'Assignment saved.',
+    'Atama kaydedilemedi: ': 'Could not save assignment: ',
+    'Atama kaldırıldı.': 'Assignment removed.',
+    'Atama kaldırılamadı: ': 'Could not remove assignment: ',
+    'Elle atama devre dışı': 'Manual assignment disabled',
+    'satış dışı': 'non-sales',
+    '— Satış dışı (kadroda görünmesin) —': '— Non-sales (hide from roster) —',
+    'Bu kişinin takımı şu anda ELLE atanmış: {t}': "This person's team is currently MANUALLY assigned: {t}",
+    'Otomatik çözümleme şu anda: {t}': 'Automatic resolution currently says: {t}',
+    'Otomatik çözümleme bu kişiyi hiçbir takıma bağlayamıyor.':
+      'Automatic resolution cannot match this person to any team.',
+    'Lider ataması için bir takım seçmelisiniz.': 'You must pick a team to assign a leader.',
+    'Bu kişinin elle ataması kaldırılacak ve takımı yeniden otomatik (Zoho) kurala göre belirlenecek.':
+      "This person's manual assignment will be removed and their team will be determined by the automatic (Zoho) rule again.",
+    'Bu takım elle atandı — Zoho senkronu değiştirmez':
+      'This team was assigned manually — Zoho sync will not change it',
+    '"Zoho\'ya göre güncelle" Users kaydını Zoho\'daki takıma çeker. Zoho da yanlışsa "Elle ata" ile kalıcı olarak sabitleyin — senkron o kişiye bir daha dokunmaz.':
+      '"Update from Zoho" pulls the Users record to the team Zoho reports. If Zoho is also wrong, pin it permanently with "Assign manually" — sync will never touch that person again.',
+    'Zoho\'daki rol adı tanınan satış takımlarından biriyle eşleşmiyor. Zoho tarafında düzeltilebilir ya da buradan kalıcı olarak elle atanabilir.':
+      'The Zoho role name does not match any recognised sales team. It can be fixed in Zoho, or assigned manually here for good.',
+    'team_assignments tablosu veritabanında yok. Depodaki team_assignments.sql dosyasını Supabase SQL Editor\'de bir kez çalıştırın — o zamana kadar takım eşleştirmesi yalnızca otomatik (Zoho) kurala göre çalışır.':
+      'The team_assignments table does not exist in the database. Run team_assignments.sql from the repository once in the Supabase SQL Editor — until then team matching works from the automatic (Zoho) rule only.',
+    'team_assignments tablosu veritabanında yok. Depodaki team_assignments.sql dosyasını Supabase SQL Editor\'de bir kez çalıştırın.':
+      'The team_assignments table does not exist in the database. Run team_assignments.sql from the repository once in the Supabase SQL Editor.',
     'Son hareketler': 'Recent activity',
     'Aksiyon dağılımı': 'Action breakdown',
     'aktif alarmı yok': 'has no active alarms',
