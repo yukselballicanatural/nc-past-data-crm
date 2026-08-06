@@ -1558,14 +1558,14 @@
       <table style="width:100%;border-collapse:collapse">
         <thead>
           <tr style="background:#0f172a">
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Hasta</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Deal ID</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Danışman</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Takım</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Bölge</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Alarm Tipi</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Kapatılma Tarihi</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Kapatan</th>
+            <th onclick="_amClosedSortBy('deal_name')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Hasta</span><span data-csort="deal_name" style="margin-left:4px;color:#6366f1"></span></th>
+            <th onclick="_amClosedSortBy('deal_id')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Deal ID</span><span data-csort="deal_id" style="margin-left:4px;color:#6366f1"></span></th>
+            <th onclick="_amClosedSortBy('deal_owner')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Danışman</span><span data-csort="deal_owner" style="margin-left:4px;color:#6366f1"></span></th>
+            <th onclick="_amClosedSortBy('team')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Takım</span><span data-csort="team" style="margin-left:4px;color:#6366f1"></span></th>
+            <th onclick="_amClosedSortBy('region')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Bölge</span><span data-csort="region" style="margin-left:4px;color:#6366f1"></span></th>
+            <th onclick="_amClosedSortBy('alarm_type')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Alarm Tipi</span><span data-csort="alarm_type" style="margin-left:4px;color:#6366f1"></span></th>
+            <th onclick="_amClosedSortBy('closed_at')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Kapatılma Tarihi</span><span data-csort="closed_at" style="margin-left:4px;color:#6366f1"></span></th>
+            <th onclick="_amClosedSortBy('closed_by')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Kapatan</span><span data-csort="closed_by" style="margin-left:4px;color:#6366f1"></span></th>
             <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Not</th>
             <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Aksiyon</th>
           </tr>
@@ -3263,6 +3263,69 @@
     // Filtre/boyut değişince ilk sayfaya dön — 40. sayfada filtre daraltıldığında
     // boş ekran kalıyordu.
     function _amClosedResetPage() { _amClosedPage = 1; renderAdminClosedAlarms(); }
+
+    // ── Sıralama ───────────────────────────────────────────────────────
+    // Varsayılan: en son kapatılan üstte (sayfanın eski davranışı).
+    let _amClosedSort = { key: 'closed_at', dir: 'desc' };
+
+    // Başlığa tıklama: aynı kolona tekrar basmak yönü çevirir, yeni kolonda
+    // anlamlı yönle başlar — tarihte "en yeni önce", metinde A→Z.
+    function _amClosedSortBy(key) {
+      if (_amClosedSort.key === key) {
+        _amClosedSort.dir = _amClosedSort.dir === 'asc' ? 'desc' : 'asc';
+      } else {
+        _amClosedSort = { key, dir: (key === 'closed_at' ? 'desc' : 'asc') };
+      }
+      // Sıralama değişince ilk sayfaya dön: 40. sayfada sıralamayı çevirince
+      // kullanıcı listenin ortasında bambaşka satırlarla karşılaşıyordu.
+      _amClosedPage = 1;
+      renderAdminClosedAlarms();
+    }
+
+    // Sıralama anahtarı → karşılaştırılacak değer. Tabloda GÖRÜNEN değerle
+    // aynı olmalı: Deal ID hücresi Zoho referansını, Alarm Tipi hücresi
+    // etiketi gösteriyor; ham alana göre sıralamak "yanlış sıralı" görünürdü.
+    function _amClosedSortValue(a, key) {
+      if (key === 'deal_id') {
+        const ref = (_amDealInfoFor(a.deal_id) || {}).ref;
+        return String(ref || a.deal_id || '');
+      }
+      if (key === 'alarm_type') {
+        if (a.alarm_type === 'payment_tracking') return '';
+        const tm = _amTypeMeta(AlarmStatus.effectiveType(a), false);
+        return (tm && tm.label) || '';
+      }
+      return a[key] == null ? '' : String(a[key]);
+    }
+
+    function _amClosedApplySort(data) {
+      const { key, dir } = _amClosedSort;
+      const mul = dir === 'asc' ? 1 : -1;
+      // Türkçe harf sırası (İ, Ş, Ğ...) için localeCompare('tr'); sayıya
+      // benzeyen değerler (Deal ID referansları) numeric ile doğru sıralanır.
+      const coll = new Intl.Collator('tr', { numeric: true, sensitivity: 'base' });
+      return data.slice().sort((x, y) => {
+        const vx = _amClosedSortValue(x, key);
+        const vy = _amClosedSortValue(y, key);
+        // Boş değerler her iki yönde de EN SONA: "—" dolu satırların arasına
+        // karışırsa tablo rastgele görünür.
+        if (!vx && !vy) return 0;
+        if (!vx) return 1;
+        if (!vy) return -1;
+        const c = key === 'closed_at' ? (vx < vy ? -1 : vx > vy ? 1 : 0) : coll.compare(vx, vy);
+        // Eşitlikte id ile kırılır — aynı anda kapatılmış satırlar her
+        // çizimde yer değiştirmesin (kararlı sıra).
+        return c !== 0 ? c * mul : String(x.id).localeCompare(String(y.id));
+      });
+    }
+
+    // Aktif kolonun okunu göster, diğerlerini temizle.
+    function _amClosedRenderSortArrows() {
+      document.querySelectorAll('#view-closed-alarms th [data-csort]').forEach(el => {
+        const on = el.getAttribute('data-csort') === _amClosedSort.key;
+        el.textContent = on ? (_amClosedSort.dir === 'asc' ? '▲' : '▼') : '';
+      });
+    }
     function _amClosedGoPage(p) {
       const n = Math.max(1, Math.min(_amClosedLastPage, Number(p) || 1));
       if (n === _amClosedPage) return;
@@ -3278,12 +3341,16 @@
       // Deal/kayıt gizlenmez — bu deal'in kapandığını görmek önemli. Sadece
       // "Payment Takip" ALARM TİPİ etiketi hiçbir yerde gösterilmiyor (aşağıda
       // tm boşa çekiliyor); satırın kendisi diğer kapatılmış alarmlar gibi listelenir.
-      let data = adminAllAlarms.filter(a => a.status === 'closed').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+      let data = adminAllAlarms.filter(a => a.status === 'closed');
       _closedAlarmsPopulateOwnerFilter();
       const ownerSel = document.getElementById('closedAlarmsOwnerFilter');
       if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
       const search = (document.getElementById('closedAlarmsSearch')?.value || '').toLowerCase().trim();
       if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
+      // Sıralama SÜZMEDEN SONRA, sayfalamadan ÖNCE: yalnızca görünen sayfayı
+      // sıralamak "sayfa 2'de A'dan başlıyor" gibi anlamsız bir tablo verirdi.
+      data = _amClosedApplySort(data);
+      _amClosedRenderSortArrows();
       const tbody = document.getElementById('closedAlarmsTbody');
       const empty = document.getElementById('closedAlarmsEmpty');
       const pager = document.getElementById('closedAlarmsPager');
@@ -6539,11 +6606,14 @@
     }
 
     function exportAdminClosedAlarms(format) {
-      let data = adminAllAlarms.filter(a => a.status === 'closed').sort((a,b) => (b.closed_at||'').localeCompare(a.closed_at||''));
+      let data = adminAllAlarms.filter(a => a.status === 'closed');
       const ownerSel = document.getElementById('closedAlarmsOwnerFilter');
       if (ownerSel && ownerSel.value) data = data.filter(a => a.deal_owner === ownerSel.value);
       const search = (document.getElementById('closedAlarmsSearch')?.value || '').toLowerCase().trim();
       if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
+      // Dosya, ekranda görünen SIRAYLA insin — kullanıcı tabloyu bir kolona
+      // göre sıralayıp indirdiğinde farklı sıra gelmesi şaşırtıcı olurdu.
+      data = _amClosedApplySort(data);
       const headers = ['Hasta','Deal ID','Danışman','Takım','Bölge','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Sonuç Kodu','Not'];
       const rows = data.map(a => {
         const info = _amDealInfoFor(a.deal_id) || {};

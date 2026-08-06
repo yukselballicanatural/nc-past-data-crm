@@ -390,6 +390,7 @@
     'Toplam Kalan:': 'Total Remaining:',
     '‹ Önceki': '‹ Previous',
     'Sonraki ›': 'Next ›',
+    'Sırala': 'Sort',
     // Kapatılan Alarmlar sayfalama çubuğu
     '« İlk': '« First',
     'Son »': 'Last »',
