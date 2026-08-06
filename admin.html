@@ -8980,11 +8980,31 @@
 
     function uTeam(u) { return u['Takim Adi'] || u['team'] || ''; }
     function uName(u)  { return u['Deal Owner Name'] || u['full_name'] || ''; }
-    function uId(u)    { return String(u['Id'] || u['id'] || ''); }
+    // Users.id, Zoho'dan gelen 18 haneli bir bigint — JS'in guvenli tamsayi
+    // sinirini (2^53) ASIYOR. JSON.parse bunu cift duyarlikli sayiya
+    // yuvarladigi icin FARKLI iki kisinin id'si AYNI degere donusebiliyor
+    // (207727000006683627 ve ...629 -> ikisi de ...620). Bu yuzden satirlari
+    // id ile hedeflemek yanlis kisiyi buluyordu: "Malak Fadili" satirinda
+    // Sil'e basmak baska birini siliyordu. Uctan gelen id_text kesin degeri
+    // metin olarak tasir; SADECE GOSTERIM icin kullanilir, hedefleme icin
+    // asla kullanilmaz (bkz. _usersRows).
+    function uId(u)    { return String(u['id_text'] || u['Id'] || u['id'] || ''); }
 
     function _isAgentRole(role) {
       const r = (role || '').toLowerCase().trim();
       return r === 'agent' || r === 'agents' || r === 'danışman' || r === 'danisman';
+    }
+
+    // Ekranda GORUNEN satirlar, render sirasiyla. openUserModal/deleteUser
+    // hedefi buradan cozer — id ile find() yapmak yanlis kisiyi buluyordu
+    // (bkz. uId notu). Satir sayisi degistiyse (arka plan tazelemesi araya
+    // girdiyse) indeks kaymis olabilir, o yuzden _usersRowAt hem indeksi hem
+    // beklenen kullanici adini dogrular.
+    let _usersRows = [];
+    function _usersRowAt(i) {
+      const n = Number(i);
+      if (!Number.isInteger(n) || n < 0 || n >= _usersRows.length) return null;
+      return _usersRows[n];
     }
 
     // Arama/rol/takim suzgecleri KALDIRILDI. Fonksiyon duruyor cunku tabloyu
@@ -9006,15 +9026,20 @@
       };
       const tbody = document.getElementById('usersBody');
       const empty = document.getElementById('usersEmpty');
+      // Satirlar HTML'e SIRA NUMARASIYLA baglanir, id ile DEGIL. Sebep: Users.id
+      // 2^53'u asan bir bigint ve JSON.parse onu yuvarladigi icin iki farkli
+      // kisi ayni id'ye sahip gorunebiliyor — "Sil"e basinca baska biri
+      // siliniyordu. Indeks bu render'a ait ve tekil; asagidaki _usersRows tam
+      // olarak ekranda gorunen satirlari tutar.
+      _usersRows = list;
       if (!list.length) { tbody.innerHTML = ''; empty.classList.remove('hidden'); return; }
       empty.classList.add('hidden');
       tbody.innerHTML = list.map((u, i) => {
-        const id = uId(u);
         // Şifreler artık hashlenmiş tutuluyor ve API'den hiç dönmüyor — burada
         // gösterilecek gerçek bir değer yok, düz metin şifre göstermek zaten
         // güvenli değildi.
         return `
-          <tr class="border-b border-gray-800/40 hover:bg-gray-800/30 cursor-pointer" onclick="openUserModal('${id}')">
+          <tr class="border-b border-gray-800/40 hover:bg-gray-800/30 cursor-pointer" onclick="openUserModal(${i})">
             <td class="py-2 text-slate-500 text-center text-xs">${i+1}</td>
             <td class="py-2 text-white font-semibold">${fmt(uName(u))}</td>
             <td class="py-2 text-indigo-400 font-mono text-sm">${fmt(u['Username'])}</td>
@@ -9023,14 +9048,14 @@
             <td class="py-2 text-slate-300 text-sm">${fmt(uTeam(u))}</td>
             <td class="py-2 text-center">
               <div class="flex gap-1.5 justify-center">
-                <button onclick="event.stopPropagation();openUserModal('${id}')" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-slate-300 hover:text-white text-[11px] rounded-lg font-semibold border border-gray-700 transition-all">${I18N.t('Düzenle')}</button>
+                <button onclick="event.stopPropagation();openUserModal(${i})" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-slate-300 hover:text-white text-[11px] rounded-lg font-semibold border border-gray-700 transition-all">${I18N.t('Düzenle')}</button>
                 ${(() => {
                   const uRole = (u['Role']||'').toLowerCase();
                   const isPrivileged = uRole === 'admin' || uRole === 'super-admin' || uRole === 'super admin';
                   if (isPrivileged && !window.isSuperAdmin) {
                     return `<span class="px-2.5 py-1 text-[11px] text-slate-600 font-semibold" title="${I18N.t('Yalnızca Super Admin silebilir')}">🔒</span>`;
                   }
-                  return `<button onclick="event.stopPropagation();deleteUser('${id}');" class="px-2.5 py-1 bg-rose-900/40 hover:bg-rose-800/60 text-rose-400 hover:text-rose-300 text-[11px] rounded-lg font-semibold border border-rose-800/50 transition-all">${I18N.t('Sil')}</button>`;
+                  return `<button onclick="event.stopPropagation();deleteUser(${i});" class="px-2.5 py-1 bg-rose-900/40 hover:bg-rose-800/60 text-rose-400 hover:text-rose-300 text-[11px] rounded-lg font-semibold border border-rose-800/50 transition-all">${I18N.t('Sil')}</button>`;
                 })()}
               </div>
             </td>
@@ -9039,10 +9064,19 @@
       I18N.translateDOM(tbody);
     }
 
-    function deleteUser(userId) {
-      const u = allUsers.find(x => uId(x) === String(userId));
+    function deleteUser(rowIndex) {
+      const u = _usersRowAt(rowIndex);
+      if (!u) { showSiteNotice(I18N.t('Satır bulunamadı, listeyi yenileyip tekrar deneyin.'), 'error'); return; }
       const userName = uName(u) || '';
-      const uRole = (u && u['Role'] || '').toLowerCase();
+      // Hedefleme KULLANICI ADIYLA yapilir; id yuvarlanmis oldugu icin baska
+      // birini isaret edebiliyor. Kullanici adi yoksa silmeyi hic denemiyoruz:
+      // uc o durumda id'ye duserdi ve yanlis satiri silebilirdi.
+      const originalUsername = String(u['Username'] || '').trim();
+      if (!originalUsername) {
+        showSiteNotice(I18N.t('Bu kaydın kullanıcı adı yok, güvenle silinemiyor. Önce bir kullanıcı adı atayın.'), 'error');
+        return;
+      }
+      const uRole = (u['Role'] || '').toLowerCase();
       const isPrivileged = uRole === 'admin' || uRole === 'super-admin' || uRole === 'super admin';
       if (isPrivileged && !window.isSuperAdmin) {
         showSiteNotice(I18N.t('Admin kullanıcıları yalnızca Super Admin silebilir.'), 'error');
@@ -9050,17 +9084,19 @@
       }
       showSiteConfirm(
         I18N.t('Kullanıcıyı Sil'),
-        `<strong style="color:#fca5a5">${fmt(userName)}</strong> ${I18N.t('adlı kullanıcı kalıcı olarak silinecek. Bu işlem geri alınamaz.')}`,
+        // Kullanici adi da yaziliyor: "hangi Malak" belirsizligi kalmasin, yanlis
+        // kisiyi silmenin bedeli agir.
+        `<strong style="color:#fca5a5">${fmt(userName)}</strong> <span style="opacity:.75">(${fmt(originalUsername)})</span> ${I18N.t('adlı kullanıcı kalıcı olarak silinecek. Bu işlem geri alınamaz.')}`,
         I18N.t('Sil'), '#dc2626',
         async () => {
           try {
-            const originalUsername = u ? (u['Username'] || '') : '';
             // Users tablosu artık tarayıcıdan doğrudan silinemiyor (RLS anon'a
             // kapalı) — api/admin-users.js üzerinden (service_role ile) siliniyor.
+            // id GONDERILMIYOR: yuvarlanmis deger yanlis satiri silebilir.
             const resp = await _auFetch('/api/admin-users', {
               method: 'DELETE',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ id: userId, username: originalUsername })
+              body: JSON.stringify({ username: originalUsername })
             });
             const respBody = await resp.json().catch(() => ({}));
             if (!resp.ok || respBody.error) throw new Error(respBody.error || ('HTTP ' + resp.status));
@@ -9103,10 +9139,12 @@
     // Yukarida kendi alani olan / gosterilmesi anlamsiz kolonlar. Geri kalan
     // NE VARSA salt okunur dokuluyor: semaya yeni kolon eklenirse kod
     // degismeden burada gorunur.
+    // 'id' de gizli: yuvarlanmis (yanlis) degeri gostermek yaniltici olurdu.
+    // Kesin deger id_text olarak geliyor ve "Id" adiyla gosteriliyor.
     const _UM_HANDLED = new Set([
       'Deal Owner Name', 'full_name', 'Username', 'Password', 'Role',
       'Takim Adi', 'team', 'Phone', 'Email', 'is_active',
-      'passwordPlain', 'passwordSet'
+      'passwordPlain', 'passwordSet', 'id', 'Id', 'id_text'
     ]);
     function _umRenderRaw(u) {
       const wrap = document.getElementById('umRawWrap');
@@ -9126,6 +9164,11 @@
           return `<div style="color:#64748b;white-space:nowrap">${fmt(k)}</div>`
                + `<div style="color:#e2e8f0;font-family:ui-monospace,monospace;word-break:break-all">${fmt(txt)}</div>`;
         });
+      // Id: kesin degeri (id_text) gosteriyoruz — yuvarlanmis 'id' degil.
+      rows.unshift(
+        `<div style="color:#64748b;white-space:nowrap">Id</div>`
+        + `<div style="color:#e2e8f0;font-family:ui-monospace,monospace">${fmt(uId(u))}</div>`
+      );
       // Sifre durumu ozel: alanin kendisi degil, DURUMU bilgi olarak degerli.
       rows.unshift(
         `<div style="color:#64748b;white-space:nowrap">${I18N.t('Şifre durumu')}</div>`
@@ -9137,8 +9180,14 @@
       I18N.translateDOM(box);
     }
 
-    function openUserModal(userId) {
-      const u = userId ? allUsers.find(x => uId(x) === String(userId)) : null;
+    // rowIndex: tablodaki satirin sira numarasi (id DEGIL — bkz. uId notu).
+    // null/undefined -> yeni kullanici.
+    function openUserModal(rowIndex) {
+      const u = (rowIndex === null || rowIndex === undefined) ? null : _usersRowAt(rowIndex);
+      if (rowIndex !== null && rowIndex !== undefined && !u) {
+        showSiteNotice(I18N.t('Satır bulunamadı, listeyi yenileyip tekrar deneyin.'), 'error');
+        return;
+      }
       document.getElementById('userModalTitle').textContent =
         u ? I18N.t('Kullanıcıyı Düzenle') : I18N.t('Yeni Kullanıcı Ekle');
       document.getElementById('umUserId').value          = u ? uId(u) : '';
@@ -9221,7 +9270,7 @@
       }
       errEl.style.display = 'none';
       const btn = document.getElementById('umSaveBtn');
-      btn.textContent = 'Saving…'; btn.disabled = true;
+      btn.textContent = I18N.t('Kaydediliyor...'); btn.disabled = true;
       try {
         // Users tablosu artık tarayıcıdan doğrudan yazılamıyor (RLS anon'a
         // kapalı) — ekleme/düzenleme api/admin-users.js üzerinden (service_role
@@ -9240,10 +9289,13 @@
         if (password) payload['Password'] = password;
         let resp;
         if (isEdit) {
+          // id GONDERILMIYOR: yuvarlanmis deger baska bir satiri guncelleyebilir.
+          // Duzenleme her zaman ESKI kullanici adiyla hedeflenir.
+          if (!originalUsername) throw new Error(I18N.t('Bu kaydın kullanıcı adı yok, güvenle güncellenemiyor.'));
           resp = await _auFetch('/api/admin-users', {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id, username: originalUsername, payload })
+            body: JSON.stringify({ username: originalUsername, payload })
           });
         } else {
           resp = await _auFetch('/api/admin-users', {
@@ -9255,14 +9307,14 @@
         const respBody = await resp.json().catch(() => ({}));
         if (!resp.ok || respBody.error) throw new Error(respBody.error || ('HTTP ' + resp.status));
         closeUserModal();
-        await loadUsers();
-        showSiteNotice(id ? 'User updated successfully.' : 'User added successfully.', 'success');
-        addLog(id ? 'EDIT_USER' : 'ADD_USER', `${id?'Kullanıcı güncellendi':'Kullanıcı eklendi'}: ${fullName} (${username}) — Takım: ${team}`);
+        await loadUsers(true);        // onbellegi atla, yeni kayit hemen gorunsun
+        showSiteNotice(isEdit ? I18N.t('Kullanıcı güncellendi.') : I18N.t('Kullanıcı eklendi.'), 'success');
+        addLog(isEdit ? 'EDIT_USER' : 'ADD_USER', `${isEdit?'Kullanıcı güncellendi':'Kullanıcı eklendi'}: ${fullName} (${username}) — Takım: ${team}`);
       } catch(err) {
-        errEl.textContent = 'Save failed: ' + err.message;
+        errEl.textContent = I18N.t('Kaydedilemedi: ') + err.message;
         errEl.style.display = 'block';
       } finally {
-        btn.textContent = 'Save'; btn.disabled = false;
+        btn.textContent = I18N.t('Kaydet'); btn.disabled = false;
       }
     }
 

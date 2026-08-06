@@ -173,6 +173,15 @@
     // Sistem Kayitlari: filtre secenekleri artik veriden uretiliyor, bu yuzden
     // eskiden hic etiketi olmayan islem tipleri de gorunuyor
     'Kullanıcı Sil': 'Delete User',
+    // Kullanicilar: satir hedefleme id yerine sira numarasiyla yapiliyor
+    'Satır bulunamadı, listeyi yenileyip tekrar deneyin.':
+      'Row not found — refresh the list and try again.',
+    'Bu kaydın kullanıcı adı yok, güvenle silinemiyor. Önce bir kullanıcı adı atayın.':
+      'This record has no username, so it cannot be deleted safely. Assign a username first.',
+    'Bu kaydın kullanıcı adı yok, güvenle güncellenemiyor.':
+      'This record has no username, so it cannot be updated safely.',
+    'Kullanıcı güncellendi.': 'User updated.',
+    'Kullanıcı eklendi.': 'User added.',
     'Alarm Sıfırlama': 'Alarm Reset',
     'Günlük Giriş Düzenleme': 'Daily Entry Edit',
     'Geri Alma': 'Rollback',
