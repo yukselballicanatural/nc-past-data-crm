@@ -1629,7 +1629,8 @@
   // ── Sistem geneli kesim: yalnızca created_time 2026+ olan kayıtlar ──
   // Deal sorgularına eklenen filtre + alarmları deal created_time'a göre eleme.
   const CREATED_2026_MIN = '2026-01-01';
-  const DEALS_2026_Q = '&created_time=gte.2026-01-01T00:00:00';
+  // Profclinic satış dışı bir birim — deal listesi/analytics'ten dışlanıyor.
+  const DEALS_2026_Q = '&created_time=gte.2026-01-01T00:00:00&team=neq.Profclinic';
   function _is2026Created(created) {
     // created: 'YYYY-MM-DD' | ISO | null. Bilinmiyorsa (null) elenmez.
     if (!created) return true;

@@ -66,7 +66,14 @@ as $$
     select
       coalesce(amount, 0)::numeric             as amount,
       coalesce(total_paid_amount, 0)::numeric  as paid,
-      coalesce(remaining_amount, 0)::numeric   as unpaid,
+      -- remaining_amount Zoho'dan bazı dealler icin (ozellikle henuz odeme
+      -- islenmemis "Reservation Pending" asamasindakiler) hic gelmiyor, NULL
+      -- kaliyor. coalesce(...,0) bu durumda odenmemis tutari SIFIR sayip
+      -- "Odenmeyen" toplamini gercekte olmasi gerekenden az gosteriyordu.
+      -- remaining_amount NULL ise tutar-odenen farkina (negatif olmayacak
+      -- sekilde) duser — admin.html'deki istemci hesabiyla (mapDeals) aynı
+      -- kural.
+      coalesce(remaining_amount, greatest(coalesce(amount,0) - coalesce(total_paid_amount,0), 0))::numeric as unpaid,
       coalesce(stage, '')                      as stage,
       coalesce(team, '')                       as team,
       coalesce(deal_owner, '')                 as owner,
@@ -90,6 +97,9 @@ as $$
       and (p_date_to   is null or arrival_date <= p_date_to)
       and (p_created_from is null or created_time::date >= p_created_from)
       and (p_created_to   is null or created_time::date <= p_created_to)
+      -- Profclinic satış dışı bir birim (Finance/VIP Team/Executive Board
+      -- gibi) — özet/analitikten kalıcı olarak dışlanıyor.
+      and coalesce(team,'') <> 'Profclinic'
   ),
   scalars as (
     select
@@ -200,6 +210,12 @@ begin
   from (
     select coalesce(nullif(raw->>'Language',''), 'Unknown') as lang, count(*) as cnt
     from public.deals
+    -- Sistem geneli kesim: KPI/rozet/Analytics'in tamamı gibi sadece 2026+
+    -- created_time'lı dealler sayılır (önceden burada filtre YOKTU, 55K
+    -- satırın tamamı — tüm yılların verisi — sayılıyordu). Profclinic de
+    -- (satış dışı birim) diğer analitikle tutarlı şekilde dışlanıyor.
+    where created_time::date >= date '2026-01-01'
+      and coalesce(team,'') <> 'Profclinic'
     group by 1
   ) a;
 

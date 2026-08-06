@@ -1077,6 +1077,7 @@
     'Lead transferi': 'Lead transfer',
     'Bu dönemde hiç aksiyon yok.': 'No actions in this period.',
     'Giriş sayısı': 'Login count',
+    'WhatsApp mesajı': 'WhatsApp messages',
     'Son hareketler': 'Recent activity',
     'Aksiyon dağılımı': 'Action breakdown',
     'aktif alarmı yok': 'has no active alarms',

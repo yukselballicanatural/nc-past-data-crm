@@ -2341,8 +2341,10 @@
     let currentUser = null;
 
     // ── Sistem geneli kesim: yalnızca created_time 2026+ olan kayıtlar ──
+    // Profclinic satış dışı bir birim (Finance/VIP Team/Executive Board gibi) —
+    // deal listesi/analytics'ten kalıcı olarak dışlanıyor.
     const CREATED_2026_MIN = '2026-01-01';
-    const DEALS_2026_Q = '&created_time=gte.2026-01-01T00:00:00';
+    const DEALS_2026_Q = '&created_time=gte.2026-01-01T00:00:00&team=neq.Profclinic';
     function _is2026Created(created) {
       if (!created) return true;               // bilinmiyorsa elenmez
       return String(created).slice(0, 10) >= CREATED_2026_MIN;
@@ -3581,6 +3583,7 @@
     let _tlRows = null;          // hesaplanmış lider karneleri
     let _tlLogs = null;          // dönem penceresindeki Logs satırları
     let _tlLastLogin = null;     // username -> tüm zamanların son LOGIN'i
+    let _tlWaLogs = null;        // dönem penceresindeki whatsapp_sent kayıtları (alarm_logs)
     let _tlSortKey = 'score';
     let _tlSortDir = 'asc';      // skor: en kötü en üstte
     let _tlRosterOk = false;     // Users kadrosu çekilebildi mi (bkz. loadTlUsage)
@@ -3662,23 +3665,28 @@
           } catch (e) {}
         }
         if (cached) {
-          _tlLogs = cached.logs; _tlLastLogin = cached.lastLogin;
+          _tlLogs = cached.logs; _tlLastLogin = cached.lastLogin; _tlWaLogs = cached.waLogs || [];
         } else {
           const sel = 'select=created_at,username,full_name,role,team,page,action_type,details,deal_id,deal_name';
-          const [win, logins] = await Promise.all([
+          const [win, logins, waSent] = await Promise.all([
             _tlFetchLogs(`Logs?${sel}&created_at=gte.${encodeURIComponent(sinceIso)}&order=created_at.desc`, 20000),
             // Tüm zamanların son girişi: "90 günden eski" ile "hiç girmemiş"
             // ayrımı ancak pencerenin dışına bakarak yapılabilir.
             _tlFetchLogs('Logs?select=username,full_name,created_at&action_type=eq.LOGIN&order=created_at.desc', 20000),
+            // Takım liderinin alarm sonuç kodundan gönderdiği WhatsApp mesajları
+            // `alarm_logs` tablosunda action_type='whatsapp_sent' olarak tutuluyor
+            // (bkz. sendAdminResultCodeWhatsApp) — action_by alanı gönderenin adı.
+            _tlFetchLogs(`alarm_logs?select=action_by,created_at&action_type=eq.whatsapp_sent&created_at=gte.${encodeURIComponent(sinceIso)}&order=created_at.desc`, 20000),
           ]);
           _tlLogs = win;
+          _tlWaLogs = waSent;
           _tlLastLogin = {};
           logins.forEach(l => {                       // desc sıralı → ilk görülen en yenisi
             const k = _tlKey(l.username) || _tlKey(l.full_name);
             if (k && !_tlLastLogin[k]) _tlLastLogin[k] = l.created_at;
           });
           try {
-            sessionStorage.setItem(_TL_LOGS_CACHE, JSON.stringify({ ts: Date.now(), logs: _tlLogs, lastLogin: _tlLastLogin }));
+            sessionStorage.setItem(_TL_LOGS_CACHE, JSON.stringify({ ts: Date.now(), logs: _tlLogs, lastLogin: _tlLastLogin, waLogs: _tlWaLogs }));
           } catch (e) { /* kota — cache olmadan da çalışır */ }
         }
 
@@ -3752,10 +3760,21 @@
         logsBy.get(k).push(l);
       });
 
+      // WhatsApp gönderimleri `alarm_logs.action_by` alanındaki AD ile eşleşir
+      // (o tablo username tutmuyor) — kişinin görünen adına göre eşleştiriliyor.
+      const waBy = new Map();
+      (_tlWaLogs || []).forEach(l => {
+        const k = _tlKey(l.action_by);
+        if (!k) return;
+        if (!waBy.has(k)) waBy.set(k, []);
+        waBy.get(k).push(l);
+      });
+
       _tlRows = [...people.values()].map(p => {
         const canon = (window.TeamMap && TeamMap.normalize(p.team)) || p.team || '';
         const region = (window.TeamMap && p.team) ? TeamMap.regionForTeam(p.team) : '';
         const logs = logsBy.get(p.key) || [];
+        const waLogs = waBy.get(_tlKey(p.name)) || [];
         return {
           ...p,
           canonTeam: canon,
@@ -3763,6 +3782,7 @@
           region,
           workload: workload[canon] || 0,
           logs,
+          waLogs,
           lastLoginAll: _tlLastLogin[p.key] || null,
         };
       });
@@ -3793,6 +3813,7 @@
         r.byType = {};
         acts.forEach(l => { r.byType[l.action_type] = (r.byType[l.action_type] || 0) + 1; });
         r.winLogs = inWin;
+        r.waCount = (r.waLogs || []).filter(l => new Date(l.created_at).getTime() >= cutoff).length;
 
         // ── Skor ──────────────────────────────────────────────────────
         const ad = _tlDaysAgo(r.lastAction);
@@ -4120,6 +4141,10 @@
             <div class="mt-2 pt-2 border-t border-gray-700/50 flex justify-between text-[10px]">
               <span class="text-slate-500">${I18N.t('Giriş sayısı')}</span>
               <span class="text-slate-300 font-bold">${r.logins} · ${_escHtml(I18N.t('{n} farklı gün').replace('{n}', r.loginDays))}</span>
+            </div>
+            <div class="mt-1 pt-1 flex justify-between text-[10px]">
+              <span class="text-slate-500">${I18N.t('WhatsApp mesajı')}</span>
+              <span class="text-slate-300 font-bold" style="color:#25D366">${r.waCount || 0}</span>
             </div>
           </div>
           <div class="bg-gray-800/30 rounded-xl p-3">
