@@ -23,6 +23,7 @@
 // yazılabilir — Profclinic, Finance, VIP Team, Executive Board, Aftercare gibi
 // birimler ya da hiç tanınmayan bir ad asla Users'a yazılmaz.
 import { verifyToken, bearerToken } from './_auth.js';
+import { fetchTeamAssignments } from './_teams.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
 
@@ -76,12 +77,13 @@ function looseTeam(t) {
   return hit;
 }
 
-// zoho_users satırının söylediği takım. Şemadaki `team` kolonu okunmuyordu;
-// role bir görev unvanı olduğunda kişi hiçbir takıma bağlanamıyordu.
+// zoho_users satırının söylediği takım. Canlı tabloda `team` kolonu YOK
+// (bkz. handler içindeki select notu) — takım bilgisi `role` alanında:
+// üyelerde kanonik ad ("Farah Team - Morocco"), liderlerde alias
+// ("Team Leader - Farah"); ikisi de normalizeTeam ile aynı kanonik ada iner.
 function zohoTeamOf(z) {
   if (!z) return null;
-  return normalizeTeam(z.team) || normalizeTeam(z.role)
-      || looseTeam(z.team) || looseTeam(z.role) || null;
+  return normalizeTeam(z.role) || looseTeam(z.role) || null;
 }
 
 function nameKey(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
@@ -184,13 +186,29 @@ export default async function handler(req, res) {
     // vekil kuralda gereken "yönetici rolünü atla" istisnası burada GEREKMİYOR.
     const zoho = new Map();      // nameKey → zoho_users satırı
     {
+      // DİKKAT — buraya `team` kolonu EKLEMEYİN. Canlı zoho_users tablosu dış
+      // Zoho senkronu tarafından oluşturuluyor ve `team`/`is_confirmed`
+      // kolonları YOK (zoho_users_sync.sql'deki DDL hiç çalıştırılmadı).
+      // Var olmayan bir kolon istendiğinde PostgREST tüm sorguya 400 dönüyor;
+      // eskiden bu hata sessizce yutulup ayna BOŞ kalıyordu, sistem de 50 bin
+      // satırlık "en son deal" vekil taramasına düşüyordu. Sonuç: takımlar
+      // Zoho'ya değil bayat deal geçmişine göre atanıyor (yanlış takım) ve
+      // POST tarafında tarama + seri PATCH'ler fonksiyon zaman aşımına
+      // (504) yol açıyordu. Takım bilgisi `role` alanında — bkz. üstteki not.
       const zr = await fetchAllPaged(
-        'zoho_users?select=id,full_name,original_agent_name,email,role,team,region,status,exit_date,phone,mobile&order=id.asc');
-      if (zr.ok) {
-        for (const z of zr.rows) {
-          const k = nameKey(z.full_name);
-          if (k) zoho.set(k, z);
-        }
+        'zoho_users?select=id,full_name,original_agent_name,email,role,region,status,exit_date,phone,mobile&order=id.asc');
+      if (!zr.ok) {
+        // Sessizce vekil kurala DÜŞMÜYORUZ: ayna okunamıyorsa öneriler yanlış
+        // olur. Hatayı açıkça bildir ki bir daha sessizce bozulmasın.
+        res.status(502).json({
+          error: 'Zoho kullanıcı aynası (zoho_users) okunamadı — takım eşleştirmesi ' +
+                 'yanlış sonuç vermemesi için işlem durduruldu. Şema değişmiş olabilir.',
+        });
+        return;
+      }
+      for (const z of zr.rows) {
+        const k = nameKey(z.full_name);
+        if (k) zoho.set(k, z);
       }
     }
     // DİKKAT: "ayna kullanılabilir" ölçütü tablonun VARLIĞI değil, DOLU olması.
@@ -242,9 +260,22 @@ export default async function handler(req, res) {
     if (!uRes.ok) { res.status(502).json({ error: 'Veritabanı hatası (Users).' }); return; }
     const users = uRes.rows;
 
+    // ── Yönetici atamaları — senkron bunları ASLA ezmez ────────────────
+    // Kullanıcının açık talebi: "admin panelinden atadığım takım öyle kalsın,
+    // değişmesin." Bu kişiler öneri listesine hiç girmez; aksi hâlde her
+    // "Zoho'ya göre eşleştir" tıklaması yöneticinin kararını geri alırdı.
+    const manualKeys = new Set();
+    {
+      const ar = await fetchTeamAssignments(SUPABASE_URL, H);
+      for (const a of ar.rows) {
+        const k = nameKey(a.full_name) || String(a.person_key || '');
+        if (k) manualKeys.add(k);
+      }
+    }
+
     const changes = [];     // takım değişiklikleri
     const leavers = [];     // Zoho'da artık aktif olmayanlar
-    let skippedBoss = 0;
+    let skippedBoss = 0, skippedManual = 0;
     for (const u of users) {
       const ownerName = u['Deal Owner Name'] || u['Username'] || '';
       const z = zoho.get(nameKey(ownerName));
@@ -275,6 +306,11 @@ export default async function handler(req, res) {
       }
 
       // ── Takım ──
+      // Elle atanmışsa dokunulmaz (bkz. manualKeys notu). Ayrılan kontrolü
+      // BİLEREK bunun ÜSTÜNDE: elle takım atanmış biri Zoho'dan ayrıldıysa
+      // girişinin kapatılması gerekir — atama, ayrılmayı gizlememeli.
+      if (manualKeys.has(nameKey(ownerName))) { skippedManual++; continue; }
+
       // Kaynak tercihi: zoho_users.role (doğrudan bilgi) > en son deal (vekil).
       let target = null, source = null, dealCount = null, lastDealDate = null;
       const zTeam = zohoTeamOf(z);
@@ -324,6 +360,10 @@ export default async function handler(req, res) {
         // kişiler için sinyal alınamamış olabilir (yanlış öneri DEĞİL, eksik öneri).
         scanTruncated,
         skippedBoss,
+        // Elle atandığı için önerilmeyen kişi sayısı — panelde "N kişi elle
+        // atanmış, dokunulmadı" olarak gösterilir ki sessiz bir atlama gibi
+        // durmasın.
+        skippedManual,
         changes,
         leavers,
       });

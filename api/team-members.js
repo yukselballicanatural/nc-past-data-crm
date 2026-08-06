@@ -14,6 +14,7 @@
 //   - admin / super-admin: TÜM takımların TÜM üyeleri.
 import { verifyToken, bearerToken } from './_auth.js';
 import { isBlocked } from './_blocked-users.js';
+import { isNonSalesRole, fetchTeamAssignments } from './_teams.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
 
@@ -111,8 +112,18 @@ function looseTeam(t) {
 // geliyordu; sonuç: Zoho'da "Sales Agent - Sara Team - Morocco" yazan biri,
 // Users'ta bayat "Farah Team" durduğu için Farah'ın listesinde çıkıyordu.
 // Artık Zoho'nun hem katı hem serbest metni, bizim aynalarımızı YENER.
-function resolveZohoTeam(z, usersRow, dealTeamByName) {
+// assignByKey: nameKey → team_assignments satırı (yönetici kararı). Bkz.
+// team_assignments.sql — bu, tahmin zincirinin TAMAMINI yener ve bir sonraki
+// senkronda geri alınmaz.
+function resolveZohoTeam(z, usersRow, dealTeamByName, assignByKey) {
+  // 0) YÖNETİCİ ATAMASI — her şeyin üstünde. `team === null` kaydı da geçerli
+  //    bir karardır ("satış dışı"): kişi kadroda görünmez ve uyarıya girmez.
+  const ov = assignByKey && assignByKey.get(nameKey(z.full_name));
+  if (ov) return { team: ov.team || null, source: 'manual', manual: true };
   // 1-2) Zoho'nun kendi alanları, birebir eşleşme
+  //    NOT: zoho_users tablosunda `team` kolonu YOK (canlı şema dış Zoho
+  //    senkronundan geliyor); bu satır bilerek duruyor — kolon sonradan
+  //    eklenirse otomatik devreye girer, yokken zararsızca null döner.
   if (normalizeTeam(z.team)) return { team: normalizeTeam(z.team), source: 'zoho.team' };
   if (normalizeTeam(z.role)) return { team: normalizeTeam(z.role), source: 'zoho.role' };
   // 3-4) Zoho'nun serbest metni ("Sales Agent - Farah Team - Morocco (Junior)")
@@ -222,7 +233,34 @@ export default async function handler(req, res) {
     const meRows = await meR.json();
     const me = meRows[0];
     if (!me) { res.status(401).json({ error: 'Kullanıcı bulunamadı.' }); return; }
-    const myTeam = String(me['Takim Adi'] || '').trim();
+    const myTeamRaw = String(me['Takim Adi'] || '').trim();
+
+    // ── Yönetici atamaları (team_assignments) ─────────────────────────────
+    // Kapsam hesabından ÖNCE okunuyor: çağıranın kendi takımı da elle
+    // atanmış olabilir. Tablo kurulmamışsa boş Map ile devam edilir (eski
+    // otomatik davranış) — bkz. api/_teams.js / team_assignments.sql.
+    const assignByKey = new Map();     // nameKey → satır
+    const leaderOfTeam = new Map();    // nameKey → lideri olduğu takım
+    let assignmentsInstalled = true;   // team_assignments.sql çalıştırıldı mı
+    {
+      const ar = await fetchTeamAssignments(SUPABASE_URL, H);
+      assignmentsInstalled = ar.installed !== false;
+      for (const a of ar.rows) {
+        const k = nameKey(a.full_name) || String(a.person_key || '');
+        if (!k) continue;
+        assignByKey.set(k, a);
+        if (a.is_leader && a.team) leaderOfTeam.set(k, a.team);
+      }
+    }
+
+    // Çağıranın ETKİN takımı. Sıra: yönetici ataması (lider ataması dahil) →
+    // Users."Takim Adi". Eskiden yalnızca Users okunuyordu; o alan bayat
+    // kaldığında takım lideri BAŞKA bir takımın kadrosunu görüyordu — bu
+    // sayfadaki "yanlış kişiler çıkıyor" şikâyetinin doğrudan sebebi.
+    const myKey = nameKey(me['Deal Owner Name'] || me['Username'] || '');
+    const myTeam = leaderOfTeam.get(myKey)
+      || (assignByKey.get(myKey) && assignByKey.get(myKey).team)
+      || myTeamRaw;
 
     function scopeRows(rows) {
       if (claims.r === 'team-leader') {
@@ -250,8 +288,16 @@ export default async function handler(req, res) {
     // kullanıcı adıyla Users'ta tekrar sorgulanan güncel role/takıma göre.
     function scopeZoho(items) {
       if (claims.r === 'team-leader') {
-        const mine = normalizeTeam(myTeam) || myTeam;
-        return { rows: items.filter(p => p.team === mine), scopeLabel: myTeam };
+        // scopeRows ile AYNI kural olmak zorunda: iki tarafı da kanonikleştir,
+        // kanonik yoksa nameKey'e düş. Eskiden burada ham `myTeam` ile katı
+        // eşitlik vardı — "Arij Team" ↔ "Arij  Team" gibi tek bir yazım farkı
+        // liderin kadrosunu TAMAMEN boşaltıyordu (aynı sayfada scopeRows
+        // fallback'i vardı, burada yoktu: iki farklı sonuç).
+        const mine = normalizeTeam(myTeam) || nameKey(myTeam);
+        return {
+          rows: items.filter(p => p.team && (normalizeTeam(p.team) || nameKey(p.team)) === mine),
+          scopeLabel: myTeam,
+        };
       }
       if (claims.r === 'regional-manager') {
         const region = regionForRm(me);
@@ -341,6 +387,10 @@ export default async function handler(req, res) {
         // çalışmaz. Users tarafında normalizeTeam kullanılıyor: tanınmayan bir
         // yazım "takım var" sayılıp kişiyi yerleştirmesiz bırakmasın.
         const needDeals = active.filter(z => {
+          // Yönetici ataması olan ya da satış dışı birimde olan kişi için deal
+          // taramasına gerek yok — takımı zaten belli (ya da hiç olmamalı).
+          if (assignByKey.has(nameKey(z.full_name))) return false;
+          if (isNonSalesRole(z.role)) return false;
           if (normalizeTeam(z.team) || normalizeTeam(z.role)) return false;
           if (looseTeam(z.team) || looseTeam(z.role)) return false;
           const u = usersByName.get(nameKey(z.full_name));
@@ -376,13 +426,24 @@ export default async function handler(req, res) {
 
         const resolved = active.map(z => {
           const u = usersByName.get(nameKey(z.full_name)) || null;
-          const rt = resolveZohoTeam(z, u, dealTeamByName);
-          return { z, u, team: rt.team, teamSource: rt.source };
+          const rt = resolveZohoTeam(z, u, dealTeamByName, assignByKey);
+          return {
+            z, u, team: rt.team, teamSource: rt.source, manual: rt.manual === true,
+            // Satış dışı birim: Finance, Executive Board, IT, Quality... Bu
+            // kişilerin bir danışman takımına bağlanması ZATEN beklenmiyor.
+            nonSales: rt.manual ? !rt.team : isNonSalesRole(z.role),
+          };
         });
 
         // Hiçbir sinyalle takıma bağlanamayanlar SESSİZCE yutulmuyor —
         // admin panelinde "kimler?" dökümünde ham alanlarıyla listelenir.
-        unplaced = resolved.filter(p => !p.team).map(p => ({
+        //
+        // Satış dışı birimler bu dökümden ÇIKARILDI: uyarı 48 kişiyi
+        // sayıyordu ve neredeyse tamamı Finance/Executive Board/IT gibi zaten
+        // takımı olmaması gereken kişilerdi — gerçek sorunlar bu gürültünün
+        // içinde görünmez hâle geliyordu. Artık uyarı yalnızca GERÇEKTEN
+        // yerleştirilmesi gereken ama yerleştirilemeyen kişileri gösterir.
+        unplaced = resolved.filter(p => !p.team && !p.nonSales).map(p => ({
           fullName: p.z.full_name || '',
           zohoRole: p.z.role || '',
           zohoTeam: p.z.team || '',
@@ -397,6 +458,8 @@ export default async function handler(req, res) {
         // gerektiği için liste admin panelinde gösterilir — sessizce yutulmuyor.
         conflicts = resolved
           .map(p => {
+            // Yönetici ataması bir "çelişki" değil, KARAR — uyarıya girmez.
+            if (p.manual) return null;
             const uTeam = p.u && normalizeTeam(p.u['Takim Adi']);
             if (!p.team || !uTeam || uTeam === p.team) return null;
             return {
@@ -410,7 +473,13 @@ export default async function handler(req, res) {
           .filter(Boolean);
 
         resolvedAll = resolved;
-        const scoped = scopeZoho(resolved);
+        // Satış dışı birimler kadro listesinden çıkarılıyor. Admin kapsamı
+        // filtresizdi ve bu kişileri de listeliyordu; "Takımımdaki Kişiler"
+        // bir SATIŞ kadrosu ekranı olduğu için Finance/IT/Executive Board
+        // satırları hem listeyi hem de takım filtresini kirletiyordu.
+        // İstisna: yönetici elle bir takım atadıysa (manual) kişi listede
+        // kalır — yönetici kararı bu filtreden de güçlü.
+        const scoped = scopeZoho(resolved.filter(p => !p.nonSales || p.manual));
         scopeLabel = scoped.scopeLabel;
         members = scoped.rows
           .map(p => {
@@ -439,6 +508,9 @@ export default async function handler(req, res) {
               hasLogin:   !!(u && u['Username']),
               zohoUserId: z.id || '',
               teamSource: p.teamSource || '',
+              // Panelde "elle atandı" kilidini göstermek için — bu kişinin
+              // takımı yönetici kararıyla sabitlenmiş, senkron değiştirmez.
+              manualTeam: p.manual === true,
             };
           });
 
@@ -550,6 +622,10 @@ export default async function handler(req, res) {
         // (ayrıca başka takımların kişilerini içerir).
         unplaced:  isAdmin ? unplaced  : [],
         conflicts: isAdmin ? conflicts : [],
+        // false → team_assignments.sql henüz çalıştırılmamış; elle takım
+        // ataması yapılamaz. Panel bunu admin'e açıkça söylüyor (sessizce
+        // çalışmayan bir buton bırakmak yerine).
+        assignmentsInstalled: isAdmin ? assignmentsInstalled : undefined,
       });
       return;
     }
@@ -588,7 +664,12 @@ export default async function handler(req, res) {
       let targetTeam;
       let pendingCreate = null;   // Users satırı yoksa, izin verildikten SONRA oluşturulacak kayıt
       if (target) {
-        targetTeam = String(target['Takim Adi'] || '').trim();
+        // Yönetici ataması varsa yetki kontrolü de ONA göre olmalı: aksi hâlde
+        // elle kendi takımına atanmış bir kişiyi takım lideri listesinde
+        // GÖRÜYOR ama düzenleyemiyordu (403) — GET ile PATCH farklı takım
+        // hesaplıyordu.
+        const ovT = assignByKey.get(nameKey(target['Deal Owner Name'] || target['Username'] || ''));
+        targetTeam = (ovT && ovT.team) || String(target['Takim Adi'] || '').trim();
       } else {
         // Users'ta yok — Zoho kadrosunda gerçekten var mı ve hangi takımda?
         const zAllR = await fetch(`${SUPABASE_URL}/rest/v1/zoho_users?select=id,full_name,role,email&limit=2000`, { headers: H });
@@ -598,7 +679,10 @@ export default async function handler(req, res) {
         // Zoho adından türetilen değer kullanılıyor.
         const z = zAll.find(x => derivedUsername(x.full_name) === targetUsername);
         if (!z) { res.status(404).json({ error: 'Kullanıcı bulunamadı.' }); return; }
-        targetTeam = normalizeTeam(z.role) || String(z.role || '').trim();
+        // GET'teki resolveZohoTeam ile aynı öncelik: önce yönetici ataması.
+        const ovZ = assignByKey.get(nameKey(z.full_name));
+        targetTeam = (ovZ && ovZ.team)
+          || normalizeTeam(z.role) || String(z.role || '').trim();
         // Kapsam kontrolü aşağıda targetTeam ile yapılıyor; oluşturma ancak
         // izin verildikten sonra (allowed) gerçekleşiyor.
         pendingCreate = { username: targetUsername, fullName: z.full_name || '', team: targetTeam, email: z.email || '' };
