@@ -1540,8 +1540,16 @@
       </div>
       <div class="flex gap-2 flex-wrap">
         <input id="closedAlarmsSearch" placeholder="Hasta, danışman..." oninput="_dbRenderAdminClosedAlarms()" class="filter-select" style="width:170px">
-        <select id="closedAlarmsOwnerFilter" onchange="renderAdminClosedAlarms()" class="filter-select" style="width:170px">
+        <select id="closedAlarmsOwnerFilter" onchange="_amClosedResetPage()" class="filter-select" style="width:170px">
           <option value="">Tüm Deal Owner'lar</option>
+        </select>
+        <!-- Sayfa boyutu: 12 binden fazla kapalı alarm var, tamamını tek
+             seferde çizmek sayfayı kilitliyordu. Varsayılan 100. -->
+        <select id="closedAlarmsPageSize" onchange="_amClosedResetPage()" class="filter-select" style="width:110px" title="Sayfa başına satır">
+          <option value="50">50 satır</option>
+          <option value="100" selected>100 satır</option>
+          <option value="500">500 satır</option>
+          <option value="1000">1000 satır</option>
         </select>
         <span id="closedAlarmsExportMount"></span>
       </div>
@@ -1565,6 +1573,17 @@
         <tbody id="closedAlarmsTbody"></tbody>
       </table>
       <div id="closedAlarmsEmpty" style="display:none;text-align:center;padding:40px 16px;color:#475569;font-size:13px">Kapatılan alarm bulunamadı.</div>
+      <!-- Sayfa gezinme çubuğu — kaç satırın kaçıncısına bakıldığı her zaman yazılı -->
+      <div id="closedAlarmsPager" style="display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid #1e293b;background:#0b1220">
+        <span id="closedAlarmsRange" style="font-size:11px;color:#64748b"></span>
+        <div style="display:flex;align-items:center;gap:6px">
+          <button onclick="_amClosedGoPage(1)" id="closedAlarmsFirst" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:10px;font-weight:700;cursor:pointer">« İlk</button>
+          <button onclick="_amClosedGoPage(_amClosedPage - 1)" id="closedAlarmsPrev" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:10px;font-weight:700;cursor:pointer">‹ Önceki</button>
+          <span id="closedAlarmsPageInfo" style="font-size:11px;color:#cbd5e1;font-weight:700;padding:0 4px"></span>
+          <button onclick="_amClosedGoPage(_amClosedPage + 1)" id="closedAlarmsNext" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:10px;font-weight:700;cursor:pointer">Sonraki ›</button>
+          <button onclick="_amClosedGoPage(_amClosedLastPage)" id="closedAlarmsLast" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:10px;font-weight:700;cursor:pointer">Son »</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3231,6 +3250,30 @@
       return _amClosedLoading;
     }
 
+    // ── Sayfalama ──────────────────────────────────────────────────────
+    // 12 binden fazla kapalı alarm var. Eskiden hepsi TEK innerHTML ile
+    // çiziliyordu: on binlerce DOM düğümü + inline stil, sayfa kilitleniyordu
+    // ("sisteme girince çöküyor"). Artık yalnızca görüntülenen sayfa çizilir.
+    let _amClosedPage = 1;
+    let _amClosedLastPage = 1;
+    function _amClosedPageSize() {
+      const v = Number(document.getElementById('closedAlarmsPageSize')?.value || 100);
+      return [50, 100, 500, 1000].includes(v) ? v : 100;
+    }
+    // Filtre/boyut değişince ilk sayfaya dön — 40. sayfada filtre daraltıldığında
+    // boş ekran kalıyordu.
+    function _amClosedResetPage() { _amClosedPage = 1; renderAdminClosedAlarms(); }
+    function _amClosedGoPage(p) {
+      const n = Math.max(1, Math.min(_amClosedLastPage, Number(p) || 1));
+      if (n === _amClosedPage) return;
+      _amClosedPage = n;
+      renderAdminClosedAlarms();
+      // Sayfa değişince tablonun başına dön, yoksa kullanıcı listenin
+      // ortasında yeni sayfaya bakıyor.
+      const v = document.getElementById('view-closed-alarms');
+      if (v) v.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    }
+
     function renderAdminClosedAlarms() {
       // Deal/kayıt gizlenmez — bu deal'in kapandığını görmek önemli. Sadece
       // "Payment Takip" ALARM TİPİ etiketi hiçbir yerde gösterilmiyor (aşağıda
@@ -3243,8 +3286,10 @@
       if (search) data = data.filter(a => [a.deal_name, a.deal_owner].join(' ').toLowerCase().includes(search));
       const tbody = document.getElementById('closedAlarmsTbody');
       const empty = document.getElementById('closedAlarmsEmpty');
+      const pager = document.getElementById('closedAlarmsPager');
       if (!data.length) {
         tbody.innerHTML = '';
+        if (pager) pager.style.display = 'none';
         // Satırlar henüz inmediyse "bulunamadı" YANLIŞ bir ifade — sayfa
         // boşmuş gibi görünüyordu, oysa indirme sürüyordu.
         empty.textContent = _amClosedLoaded
@@ -3254,7 +3299,17 @@
         return;
       }
       empty.style.display = 'none';
-      tbody.innerHTML = data.map(a => {
+
+      // ── Yalnızca geçerli sayfayı çiz ─────────────────────────────────
+      const size = _amClosedPageSize();
+      const total = data.length;
+      _amClosedLastPage = Math.max(1, Math.ceil(total / size));
+      if (_amClosedPage > _amClosedLastPage) _amClosedPage = _amClosedLastPage;
+      const start = (_amClosedPage - 1) * size;
+      const pageRows = data.slice(start, start + size);
+      _amClosedRenderPager(start, pageRows.length, total);
+
+      tbody.innerHTML = pageRows.map(a => {
         // "Payment Takip" artık geçerli bir alarm tipi sayılmıyor — bu tipteki
         // eski kayıtlarda Alarm Tipi hücresi boş bırakılır, satırın kendisi silinmez.
         const isPaymentTracking = a.alarm_type === 'payment_tracking';
@@ -3278,6 +3333,33 @@
       }).join('');
     }
 
+    // Gezinme çubuğu: kaç satırın kaçıncı dilimine bakıldığı YAZILI olmalı —
+    // "ilk 100'ü görüyorum" ile "hepsi bu" arasındaki fark önemli.
+    function _amClosedRenderPager(start, shown, total) {
+      const pager = document.getElementById('closedAlarmsPager');
+      if (!pager) return;
+      const size = _amClosedPageSize();
+      // Tek sayfaya sığıyorsa çubuk yine gösterilir: toplam sayı bilgisi değerli.
+      pager.style.display = 'flex';
+      const nf = (n) => n.toLocaleString('tr-TR');
+      document.getElementById('closedAlarmsRange').textContent =
+        `${nf(start + 1)}–${nf(start + shown)} / ${nf(total)}` +
+        (total > size ? `  ·  ${I18N.t('sayfa başına')} ${nf(size)}` : '');
+      document.getElementById('closedAlarmsPageInfo').textContent =
+        `${nf(_amClosedPage)} / ${nf(_amClosedLastPage)}`;
+      const dis = (id, off) => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.disabled = off;
+        b.style.opacity = off ? '.4' : '';
+        b.style.cursor = off ? 'default' : 'pointer';
+      };
+      dis('closedAlarmsFirst', _amClosedPage === 1);
+      dis('closedAlarmsPrev',  _amClosedPage === 1);
+      dis('closedAlarmsNext',  _amClosedPage === _amClosedLastPage);
+      dis('closedAlarmsLast',  _amClosedPage === _amClosedLastPage);
+    }
+
     // ── Aktivite / İşlem Geçmişi (G8) ─────────────────────────────────
     // alarm_logs tablosundaki tüm aksiyonları (durum değişimi/kapatma/not)
     // gösterir — takım liderleri "Hasta Geldi/Muayene/İşlemlerde/Gelmedi"
@@ -3298,6 +3380,16 @@
         // deal_id -> {name, region, team, owner} eşlemesi (adminAllAlarms'tan)
         const dealMap = new Map();
         (adminAllAlarms || []).forEach(a => { if (a.deal_id) dealMap.set(String(a.deal_id), { name: a.deal_name, region: a.region, team: a.team, owner: a.deal_owner }); });
+        // ── Sistem geneli yıl kesimi ─────────────────────────────────────
+        // alarm_logs'ta tarih yılı DEĞİL, deal'in created_time'ı ölçüt (panelin
+        // her yerinde olduğu gibi). Eskiden burada kesim yoktu: seçili yıl 2026
+        // olsa bile 2026 öncesi deal'lerin aksiyon geçmişi listede duruyordu.
+        // Yıl kümesi alarm listesinden BAĞIMSIZ (_amEnsureYearIds) — kapalı
+        // alarmlar henüz inmemişse bile doğru süzer.
+        const yearIds = await _amEnsureYearIds(amSelectedYear);
+        if (yearIds && yearIds.size) {
+          rows = rows.filter(l => l.deal_id && yearIds.has(String(l.deal_id)));
+        }
         // RM: sadece kendi bölgesinin dealleri (adminAllAlarms zaten bölgeye kısıtlı)
         if (window.isRM) rows = rows.filter(l => l.deal_id && dealMap.has(String(l.deal_id)));
         _adminActivityRows = rows.map(l => {
@@ -4070,7 +4162,9 @@
               .filter(id => !knownIds.has(id));
             if (missingIds.length) {
               const idsFilter = encodeURIComponent('in.(' + missingIds.join(',') + ')');
-              const mR = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=${idsFilter}&select=${selectCols}`, { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
+              // DEALS_2026_Q ŞART: asıl liste 2026+ ile kısıtlıyken bu ek sorgu
+              // kısıtsızdı, yani iptal listesine 2026 öncesi deal'ler sızıyordu.
+              const mR = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=${idsFilter}&select=${selectCols}${DEALS_2026_Q}`, { headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY } });
               if (mR.ok) { const missingDeals = await mR.json(); all = all.concat(missingDeals); }
             }
           }
@@ -6907,7 +7001,8 @@
     const _dbRenderLogs          = _debounce(() => renderLogs(), 250);
     const _dbFilterTeamList      = _debounce(() => filterTeamList(), 200);
     const _dbRenderAdminToday    = _debounce(() => renderAdminToday(), 250);
-    const _dbRenderAdminClosedAlarms = _debounce(() => renderAdminClosedAlarms(), 250);
+    // Aramada ilk sayfaya dön: 40. sayfada arama yazınca boş ekran kalıyordu.
+    const _dbRenderAdminClosedAlarms = _debounce(() => _amClosedResetPage(), 250);
     const _dbCaApplyFilters      = _debounce(() => _caApplyFilters(), 250);
     const _dbWaApplyFilters      = _debounce(() => _waApplyFilters(), 250);
     const _dbRenderAdminActivity = _debounce(() => renderAdminActivity(), 250);
