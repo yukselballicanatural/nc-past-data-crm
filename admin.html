@@ -5928,8 +5928,13 @@
         document.getElementById('aamExistingNoteWrap').style.display = 'none';
       }
       document.getElementById('aamNewStatus').value = '';
-      document.getElementById('aamNoteInput').value = '';
-      const aamNC = document.getElementById('aamNoteCount'); if (aamNC) aamNC.textContent = '0 / 300';
+      // ÖNCEDEN her açılışta boşaltılıyordu (bkz. team-leader.html'deki aynı
+      // düzeltme): a.note veritabanında zaten kayıtlıydı, yalnızca bu alan
+      // onu göstermiyordu ve tekrar açılışta sıfırdan başlanıyormuş gibi
+      // görünüyordu.
+      document.getElementById('aamNoteInput').value = a.note || '';
+      const aamNC = document.getElementById('aamNoteCount');
+      if (aamNC) aamNC.textContent = (a.note || '').length + ' / 300';
       document.getElementById('aamCloseReasonWrap').style.display = 'none';
       // "Alarmı Sıfırla" yalnızca üzerinde gerçekten bir aksiyon varsa anlamlı —
       // hiç dokunulmamış (open + not/sonuç kodu/damga yok) bir alarmda gizle.
@@ -6055,24 +6060,42 @@
           _amOpenWaPhoneModal(member);
           return;
         }
-        _amOpenWhatsAppLink(alarm, resultCode, note, digits);
+        await _amOpenWhatsAppLink(alarm, resultCode, note, digits);
       } catch(e) { /* WhatsApp yönlendirmesi ana kayıt akışını bozmasın */ }
     }
 
-    function _amOpenWhatsAppLink(alarm, resultCode, note, digits) {
+    // Not'a eklenmiş görselleri çeker — bkz. team-leader.html'deki
+    // _fetchAttachmentLinks ile AYNI mantık/kısıt (wa.me dosya eklemeyi
+    // desteklemiyor, yalnızca link gönderilebilir).
+    async function _amFetchAttachmentLinks(attachId) {
+      if (!attachId) return [];
+      try {
+        const token = (currentUser && currentUser.token) || '';
+        const r = await fetch(`/api/alarm-files?alarm_id=${encodeURIComponent(attachId)}`,
+          { headers: { Authorization: 'Bearer ' + token } });
+        const data = await r.json().catch(() => ({}));
+        return Array.isArray(data.files) ? data.files.map(f => f.url).filter(Boolean) : [];
+      } catch(e) { return []; }
+    }
+
+    async function _amOpenWhatsAppLink(alarm, resultCode, note, digits) {
       const dealLink = alarm.deal_id ? `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${alarm.deal_id}` : '';
       const isEN = I18N.getLang() === 'en';
       const translatedCode = isEN ? I18N.t(resultCode) : resultCode;
+      // Ekler alarm.id (normal alarm modalı) veya alarm.deal_id (Won modal —
+      // NCAttach.load orada deal.id ile çağrılıyor) ile saklanıyor.
+      const attachLinks = await _amFetchAttachmentLinks(alarm.id || alarm.deal_id);
       const lines = [
         isEN ? 'Alarm Result Code Update' : 'Alarm Güncelleme Bildirimi',
         `Deal: ${alarm.deal_name || '-'}`,
         dealLink ? `Link: ${dealLink}` : '',
         `${isEN ? 'Result Code' : 'Sonuç Kodu'}: ${translatedCode}`,
         note ? `${isEN ? 'Note' : 'Not'}: ${note}` : '',
+        ...attachLinks.map((u, i) => `${isEN ? 'Attachment' : 'Görsel'} ${i + 1}: ${u}`),
       ].filter(Boolean);
       window.open(`https://web.whatsapp.com/send?phone=${digits}&text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
       if (alarm.id) {
-        const logNote = `Sonuç Kodu: ${resultCode}${note ? ' | Not: ' + note : ''}`;
+        const logNote = `Sonuç Kodu: ${resultCode}${note ? ' | Not: ' + note : ''}${attachLinks.length ? ' | ' + attachLinks.length + ' görsel' : ''}`;
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
         fetch(`${SUPABASE_URL}/rest/v1/alarm_logs`, {
           method: 'POST', headers: H,
@@ -6133,7 +6156,7 @@
         const cached = (_amTeamMembers || []).find(m => m.username === member.username);
         if (cached) cached.phone = check.val;
         document.getElementById('amWaPhoneModal').classList.remove('open');
-        _amOpenWhatsAppLink(alarm, resultCode, note, _amWaDigits(check.val));
+        await _amOpenWhatsAppLink(alarm, resultCode, note, _amWaDigits(check.val));
         _amWaPendingCtx = null;
       } catch(e) {
         errEl.textContent = I18N.t('Kaydedilemedi: ') + e.message;
