@@ -1220,6 +1220,15 @@
       <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
         <h2 class="text-xl font-bold text-white">Kullanıcılar</h2>
         <div class="flex gap-2 flex-wrap items-center">
+          <!-- Danışmanlar varsayılan olarak gizli: liste panele girişi olan
+               kişilerden oluşuyor ve kısa kalıyor. Ama "Agent" rolüyle kişi
+               eklenebildiği için erişilebilir olmaları şart — yoksa eklenen
+               kayıt anında kayboluyor. -->
+          <label class="tm-check" style="padding:6px 11px;border-radius:10px">
+            <input type="checkbox" id="umShowAgents" onchange="_umToggleAgents(this.checked)">
+            <span class="tm-sw" aria-hidden="true"></span>
+            <span><b style="white-space:nowrap">Danışmanları da göster</b></span>
+          </label>
           <span id="usersExportMount"></span>
           <!-- ↻ Yenile: TUM sayfalarda ayni dugme — Tum Deal'ler, Sistem
                Kayitlari ve takim liderindeki Deal Listesi ile BIREBIR ayni
@@ -1510,15 +1519,24 @@
         </div>
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Rol</label>
-          <!-- "Agent" secenegi KALDIRILDI: danismanlarin panele girisi yok
-               (agent.html yapilmayacak), yeni danisman olusturmak da bu
-               ekranin isi degil. -->
-          <select id="umRole" class="filter-select w-full">
+          <!-- "Agent" GERI EKLENDI. Danismanlarin panele girisi yok
+               (agent.html yapilmayacak) ama Users satirlari baska islere
+               yariyor: telefon/e-posta, takim atamasi ve gecmis verinin
+               (daily_performance, alarm_logs) baglandigi kayit. Zoho'da
+               olmayan bir danismani elle eklemenin baska yolu yoktu.
+               Secildiginde umRoleNote uyarisi cikar ve sifre zorunlulugu
+               kalkar (bkz. saveUser). -->
+          <select id="umRole" class="filter-select w-full" onchange="_umSyncRoleNote()">
+            <option value="Agent">Agent (Danışman) — panele giriş yok</option>
             <option value="Team Leader">Team Leader</option>
             <option value="Regional Manager">Regional Manager</option>
             <option value="Admin">Admin</option>
             <option value="Super Admin" id="umRoleSuperAdminOpt" style="display:none;color:#e879f9">Super Admin</option>
           </select>
+          <!-- Agent seçildiğinde: bu kaydın ne işe yaradığını ve neyi
+               yaramadığını açıkça söyler. Aksi halde admin bir danışman
+               oluşturup "neden giriş yapamıyor?" diye kalır. -->
+          <p id="umRoleNote" class="tm-note" style="display:none;margin-top:7px"></p>
         </div>
         <div style="position:relative">
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Takım</label>
@@ -9821,9 +9839,21 @@
 
     // Arama/rol/takim suzgecleri KALDIRILDI. Fonksiyon duruyor cunku tabloyu
     // da export'u da bu besliyor (tek kaynak) — tek isi kalan, panele girisi
-    // olmayan danismanlari listeden dusurmek.
+    // olmayan danismanlari VARSAYILAN OLARAK listeden dusurmek.
+    //
+    // Anahtar neden gerekli: rol secenegine "Agent" geri eklendi. Suzgec
+    // kosulsuz olsaydi yeni eklenen danisman kaydedildigi anda listeden
+    // kaybolur, admin "eklenmedi mi?" diye ayni kaydi tekrar tekrar
+    // olusturmaya calisirdi.
+    let _umShowAgents = false;
     function _usersFilteredRows() {
+      if (_umShowAgents) return allUsers;
       return allUsers.filter(u => !_isAgentRole(u['Role']));
+    }
+
+    function _umToggleAgents(on) {
+      _umShowAgents = !!on;
+      renderUsersTable();
     }
 
     function renderUsersTable() {
@@ -10113,10 +10143,18 @@
       document.getElementById('umActive').value =
         (u && u['is_active'] === false) ? 'false' : 'true';
       _umRenderRaw(u);
-      // Rol varsayilani artik "Agent" degil: danismanlar bu ekranda
-      // yonetilmiyor, secenek de kaldirildi. Bos birakilsa select'in
-      // selectedIndex'i -1 olup kaydederken bos rol gidiyordu.
-      document.getElementById('umRole').value     = u ? (u['Role'] || 'Team Leader') : 'Team Leader';
+      // Varsayilan YENI kayitta "Team Leader" kalir: Agent secenegi geri
+      // geldi ama bu ekranin asil isi panel hesabi acmak. Mevcut kayitta
+      // rol Users'tan gelir; secenekte yoksa (ornegin eski bir deger)
+      // select bos kalmasin diye onceden ekleniyor.
+      const roleSel = document.getElementById('umRole');
+      const wantRole = u ? (u['Role'] || 'Team Leader') : 'Team Leader';
+      if (wantRole && ![...roleSel.options].some(o => o.value === wantRole)) {
+        roleSel.insertAdjacentHTML('beforeend',
+          `<option value="${_escHtml(wantRole)}">${_escHtml(wantRole)}</option>`);
+      }
+      roleSel.value = wantRole;
+      _umSyncRoleNote();
       document.getElementById('umError').style.display = 'none';
       // Super Admin seçeneğini sadece super-admin görebilir
       const saOpt = document.getElementById('umRoleSuperAdminOpt');
@@ -10140,6 +10178,30 @@
       document.body.style.overflow = '';
     }
 
+    // Panele girişi OLAN roller. _amTmHasLogin ile aynı ayrımı yapar ama bu
+    // ekran ham Users.Role değerleriyle çalışıyor.
+    function _umRoleHasLogin(role) {
+      const r = String(role || '').toLowerCase().trim();
+      return !(r === 'agent' || r === 'agents' || r === 'danışman' || r === 'danisman' || r === '');
+    }
+
+    // Agent seçildiğinde: kaydın ne işe yaradığını söyle ve şifreyi isteğe
+    // bağlı hâle getir. Şifre zorunlu kalsaydı, panele hiç giremeyecek bir
+    // kişi için anlamsız bir şifre üretmek zorunda kalınırdı.
+    function _umSyncRoleNote() {
+      const role = document.getElementById('umRole').value;
+      const note = document.getElementById('umRoleNote');
+      const hasLogin = _umRoleHasLogin(role);
+      const pwWrap = document.getElementById('umPassword').closest('div');
+      if (note) {
+        note.style.display = hasLogin ? 'none' : '';
+        if (!hasLogin) note.textContent = I18N.t('Danışmanlar bu panele giriş yapmaz. Bu kayıt telefon/e-posta, takım ataması ve geçmiş performans verisinin bağlandığı satırdır — şifre isteğe bağlıdır.');
+      }
+      // Şifre alanı gizlenmiyor, yalnızca sönükleşiyor: sonradan rol
+      // değiştirilirse yazılmış şifre kaybolmasın.
+      if (pwWrap) pwWrap.style.opacity = hasLogin ? '' : '.55';
+    }
+
     async function saveUser() {
       const id               = document.getElementById('umUserId').value;
       const originalUsername = document.getElementById('umOriginalUsername').value;
@@ -10156,8 +10218,13 @@
       // Yeni kullanıcıda şifre zorunlu; düzenlemede boş bırakılırsa mevcut
       // şifre değişmeden kalır (bkz. api/admin-users.js PATCH — boş Password
       // alanı hiç gönderilmiyor).
-      if (!fullName || !username || (!isEdit && !password)) {
-        errEl.textContent = I18N.t('Ad soyad, kullanıcı adı ve şifre zorunludur.');
+      // Danışmanda şifre İSTEĞE BAĞLI: bu rol panele hiç giremiyor, zorunlu
+      // tutmak anlamsız bir şifre üretmeye zorlardı.
+      const needsPassword = _umRoleHasLogin(role);
+      if (!fullName || !username || (!isEdit && needsPassword && !password)) {
+        errEl.textContent = needsPassword
+          ? I18N.t('Ad soyad, kullanıcı adı ve şifre zorunludur.')
+          : I18N.t('Ad soyad ve kullanıcı adı zorunludur.');
         errEl.style.display = 'block'; return;
       }
       errEl.style.display = 'none';
@@ -10199,6 +10266,14 @@
         const respBody = await resp.json().catch(() => ({}));
         if (!resp.ok || respBody.error) throw new Error(respBody.error || ('HTTP ' + resp.status));
         closeUserModal();
+        // Danisman kaydedildiyse listeyi ona GORE ac: varsayilan suzgec
+        // danismanlari gizliyor, aksi halde kayit basariyla eklenip ekranda
+        // hic gorunmezdi ("eklenmedi mi?" -> ayni kisiyi tekrar ekleme).
+        if (!needsPassword && !_umShowAgents) {
+          _umShowAgents = true;
+          const cb = document.getElementById('umShowAgents');
+          if (cb) cb.checked = true;
+        }
         await loadUsers(true);        // onbellegi atla, yeni kayit hemen gorunsun
         showSiteNotice(isEdit ? I18N.t('Kullanıcı güncellendi.') : I18N.t('Kullanıcı eklendi.'), 'success');
         addLog(isEdit ? 'EDIT_USER' : 'ADD_USER', `${isEdit?'Kullanıcı güncellendi':'Kullanıcı eklendi'}: ${fullName} (${username}) — Takım: ${team}`);

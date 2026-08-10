@@ -203,6 +203,12 @@
     'adlı kullanıcı yeniden panele giriş yapabilecek.': ' will be able to sign in again.',
     'adlı kullanıcı artık giriş yapamaz.': ' can no longer sign in.',
     'adlı kullanıcı yeniden giriş yapabilir.': ' can sign in again.',
+    // Kullanıcı ekleme: Agent rolü
+    'Agent (Danışman) — panele giriş yok': 'Agent — no panel access',
+    'Danışmanları da göster': 'Show agents too',
+    'Ad soyad ve kullanıcı adı zorunludur.': 'Full name and username are required.',
+    'Danışmanlar bu panele giriş yapmaz. Bu kayıt telefon/e-posta, takım ataması ve geçmiş performans verisinin bağlandığı satırdır — şifre isteğe bağlıdır.':
+      'Agents do not sign in to this panel. This record holds their phone/email, team assignment and the link for historical performance data — a password is optional.',
     // Takıma Ata penceresi
     'Zoho rolü tanımsız': 'No Zoho role',
     'Takım Senkronu': 'Team Sync',
