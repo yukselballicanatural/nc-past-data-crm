@@ -52,10 +52,27 @@ create table if not exists public.team_assignments (
   zoho_user_id text,                      -- izlenebilirlik; kimlik DEĞİL
   team         text,                       -- kanonik takım adı; NULL = satış dışı
   is_leader    boolean not null default false,
+  is_active    boolean not null default true,
   assigned_by  text,                       -- atamayı yapan admin'in kullanıcı adı
   assigned_at  timestamptz not null default now(),
   note         text
 );
+
+-- Tablo daha önce (is_active olmadan) oluşturulmuş olabilir.
+alter table public.team_assignments add column if not exists is_active boolean not null default true;
+
+-- ── `is_active` NE DEMEK ────────────────────────────────────────────────
+-- false = "bu kişi artık kadroda değil": takım liderinin "Takımımdaki
+-- Kişiler" ve "Günlük Ekip Girişi" listelerinden düşer.
+--
+-- Users.is_active'den AYRI bir alan olmasının sebebi: danışmanların çoğunun
+-- Users tablosunda satırı YOK (panele girmiyorlar, hesapları açılmıyor).
+-- "Pasife al" işlemi yalnızca Users'a yazılarak yapılsaydı bu kişiler için
+-- hiç çalışmazdı. Burası kişiye ADIYLA bağlı olduğu için herkeste çalışır.
+--
+-- Panele GİRİŞİ olan roller (takım lideri / bölge müdürü / admin) için
+-- api/team-assignments.js ayrıca Users.is_active'i de false yapar; o alan
+-- girişi engelleyen alandır (bkz. api/login.js).
 
 -- Bir takımın liderini bulmak sık yapılan sorgu (kadro kapsamı hesaplanırken).
 create index if not exists team_assignments_team_idx

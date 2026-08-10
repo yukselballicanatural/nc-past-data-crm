@@ -74,7 +74,7 @@ export function isNonSalesRole(role) {
 export async function fetchTeamAssignments(supabaseUrl, headers) {
   try {
     const r = await fetch(
-      `${supabaseUrl}/rest/v1/team_assignments?select=person_key,full_name,team,is_leader,assigned_by,assigned_at,note&limit=1000`,
+      `${supabaseUrl}/rest/v1/team_assignments?select=*&limit=1000`,
       { headers }
     );
     if (r.status === 404) return { ok: true, installed: false, rows: [] };
@@ -84,4 +84,56 @@ export async function fetchTeamAssignments(supabaseUrl, headers) {
   } catch (e) {
     return { ok: false, installed: true, rows: [] };
   }
+}
+
+// ── Atama dizini ve ETKİN takım ────────────────────────────────────────
+// Aynı üç soruyu api/login.js, api/team-members.js ve api/sync-user-teams.js
+// soruyor; üçünün AYNI cevabı vermesi şart, yoksa kişi bir ekranda görünüp
+// diğerinde kaybolur. Bu yüzden tek yerde.
+export function buildAssignmentIndex(rows) {
+  const byKey = new Map();      // person nameKey → atama satırı
+  const leaderOf = new Map();   // person nameKey → lideri olduğu takım
+  for (const a of (rows || [])) {
+    const k = teamNameKey(a.full_name) || String(a.person_key || '');
+    if (!k) continue;
+    byKey.set(k, a);
+    if (a.is_leader && a.team) leaderOf.set(k, a.team);
+  }
+  return { byKey, leaderOf };
+}
+
+// Kişiyi hem tam adıyla hem kullanıcı adıyla arar: atamalar ADA göre
+// tutuluyor (person_key) ama çağıranların bir kısmının elinde yalnızca
+// Username var.
+function lookup(idx, fullName, username) {
+  const a = idx.byKey.get(teamNameKey(fullName));
+  if (a) return { row: a, key: teamNameKey(fullName) };
+  const b = idx.byKey.get(teamNameKey(username));
+  if (b) return { row: b, key: teamNameKey(username) };
+  return { row: null, key: null };
+}
+
+// Kişinin ETKİN takımı — sıra: lider ataması > kişisel atama > mevcut değer.
+//
+// Lider ataması NEDEN en üstte: bir takımın Zoho'daki lideri ayrıldığında
+// (somut vaka: Touma Team, lideri Abdulkader Touma pasif) o takımın alarmları
+// ve kadrosu sahipsiz kalıyor. Admin başka birini o takımın lideri yaptığında
+// bu kişinin ETKİN takımı o takım olmalı ki panelindeki TÜM sorgular
+// (alarmlar, deal'ler, kadro, günlük ekip girişi) oraya kapsanabilsin.
+export function effectiveTeam(idx, fullName, username, fallbackTeam) {
+  const { row, key } = lookup(idx, fullName, username);
+  if (key && idx.leaderOf.has(key)) return idx.leaderOf.get(key);
+  if (row && row.team) return row.team;
+  // row.team === null bilinçli bir karar ("satış dışı"): mevcut değere
+  // DÖNÜLMEZ, aksi halde yönetici kararı sessizce geri alınırdı.
+  if (row && Object.prototype.hasOwnProperty.call(row, 'team') && row.team === null) return '';
+  return fallbackTeam || '';
+}
+
+// Yönetici bu kişiyi pasife aldı mı? (team_assignments.is_active === false)
+// Users.is_active'den AYRI: bir danışmanın Users satırı hiç olmayabilir,
+// dolayısıyla "pasife alma" yalnızca Users'a yazılarak yapılamıyordu.
+export function isDeactivated(idx, fullName, username) {
+  const { row } = lookup(idx, fullName, username);
+  return !!(row && row.is_active === false);
 }

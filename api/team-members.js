@@ -14,7 +14,10 @@
 //   - admin / super-admin: TÜM takımların TÜM üyeleri.
 import { verifyToken, bearerToken } from './_auth.js';
 import { isBlocked } from './_blocked-users.js';
-import { isNonSalesRole, fetchTeamAssignments } from './_teams.js';
+import {
+  isNonSalesRole, fetchTeamAssignments,
+  buildAssignmentIndex, effectiveTeam, isDeactivated,
+} from './_teams.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
 
@@ -239,28 +242,20 @@ export default async function handler(req, res) {
     // Kapsam hesabından ÖNCE okunuyor: çağıranın kendi takımı da elle
     // atanmış olabilir. Tablo kurulmamışsa boş Map ile devam edilir (eski
     // otomatik davranış) — bkz. api/_teams.js / team_assignments.sql.
-    const assignByKey = new Map();     // nameKey → satır
-    const leaderOfTeam = new Map();    // nameKey → lideri olduğu takım
     let assignmentsInstalled = true;   // team_assignments.sql çalıştırıldı mı
+    let assignIdx = { byKey: new Map(), leaderOf: new Map() };
     {
       const ar = await fetchTeamAssignments(SUPABASE_URL, H);
       assignmentsInstalled = ar.installed !== false;
-      for (const a of ar.rows) {
-        const k = nameKey(a.full_name) || String(a.person_key || '');
-        if (!k) continue;
-        assignByKey.set(k, a);
-        if (a.is_leader && a.team) leaderOfTeam.set(k, a.team);
-      }
+      assignIdx = buildAssignmentIndex(ar.rows);
     }
+    const assignByKey = assignIdx.byKey;   // aşağıdaki çözümlemede kullanılıyor
 
-    // Çağıranın ETKİN takımı. Sıra: yönetici ataması (lider ataması dahil) →
-    // Users."Takim Adi". Eskiden yalnızca Users okunuyordu; o alan bayat
-    // kaldığında takım lideri BAŞKA bir takımın kadrosunu görüyordu — bu
-    // sayfadaki "yanlış kişiler çıkıyor" şikâyetinin doğrudan sebebi.
-    const myKey = nameKey(me['Deal Owner Name'] || me['Username'] || '');
-    const myTeam = leaderOfTeam.get(myKey)
-      || (assignByKey.get(myKey) && assignByKey.get(myKey).team)
-      || myTeamRaw;
+    // Çağıranın ETKİN takımı — api/login.js ile AYNI kural (bkz. _teams.js
+    // effectiveTeam). Eskiden yalnızca Users."Takim Adi" okunuyordu; o alan
+    // bayat kaldığında takım lideri BAŞKA bir takımın kadrosunu görüyordu.
+    const myTeam = effectiveTeam(
+      assignIdx, me['Deal Owner Name'] || me['Username'] || '', me['Username'], myTeamRaw);
 
     function scopeRows(rows) {
       if (claims.r === 'team-leader') {
@@ -378,7 +373,13 @@ export default async function handler(req, res) {
         // Salvatore De Luca — Zoho'da ve zoho_users'ta aktif, panelde yok).
         // Sistemden CIKARILMIS kisiler kadroda da gorunmez (bkz. _blocked-users.js) --
         // Takimimdaki Kisiler ve Gunluk Ekip Girisi ayni listeden besleniyor.
-        const active = zohoRows.filter(z => !isLeaver(z) && !isBlocked(z.full_name));
+        //
+        // isDeactivated: yöneticinin panelden "pasife aldığı" kişiler. Zoho
+        // hâlâ aktif dese bile kadrodan düşer — danışmanların çoğunun Users
+        // satırı olmadığı için bu karar team_assignments'ta tutuluyor
+        // (Users.is_active yalnızca panele GİRİŞİ olan rolleri kapsıyor).
+        const active = zohoRows.filter(z =>
+          !isLeaver(z) && !isBlocked(z.full_name) && !isDeactivated(assignIdx, z.full_name, null));
 
         // Katı sinyallerle (team / role / Users) yerleşemeyenler için son çare
         // deal taraması — YALNIZCA gerekliyse ve yalnızca o isimler için.

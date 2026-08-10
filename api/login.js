@@ -10,6 +10,7 @@
 import bcrypt from 'bcryptjs';
 import { signToken, normalizeRole } from './_auth.js';
 import { isBlocked } from './_blocked-users.js';
+import { fetchTeamAssignments, buildAssignmentIndex, effectiveTeam, isDeactivated } from './_teams.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
 const TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 saat — bir mesai günü
@@ -98,6 +99,38 @@ export default async function handler(req, res) {
     if (user['is_active'] === false) {
       res.status(403).json({ error: 'Bu hesap devre dışı bırakılmış. Yöneticinizle görüşün.' });
       return;
+    }
+
+    // ── Yönetici atamaları (team_assignments) ────────────────────────────
+    // BURADA olması kritik: paneldeki TÜM kapsam (alarmlar, deal'ler, günlük
+    // ekip girişi, kadro) istemcideki `currentUser.team` üzerinden kuruluyor
+    // ve o alan bu yanıttaki 'Takim Adi'ndan geliyor. Etkin takımı burada
+    // çözersek admin'in yaptığı atama tek noktadan tüm sorgulara yansır —
+    // aksi halde yalnızca "Takımımdaki Kişiler" düzelir, alarmlar eski
+    // takımda kalırdı.
+    //
+    // Somut vaka: bir takım liderinin (Abdulkader Touma) Zoho kaydı pasife
+    // düştüğünde takımı sahipsiz kalıyor. Admin başka birini o takımın lideri
+    // yaptığında, o kişi giriş yaptığında takımın alarmlarını ve kadrosunu
+    // görmeye başlar.
+    //
+    // Şifre DOĞRULANDIKTAN SONRA çalışıyor: aksi halde giriş denemesi
+    // yapan herkes için ek bir sorgu maliyeti doğardı.
+    try {
+      const ar = await fetchTeamAssignments(SUPABASE_URL, H);
+      if (ar.rows.length) {
+        const idx = buildAssignmentIndex(ar.rows);
+        const who = user['Deal Owner Name'] || user['Username'] || '';
+        if (isDeactivated(idx, who, user['Username'])) {
+          res.status(403).json({ error: 'Bu hesap devre dışı bırakılmış. Yöneticinizle görüşün.' });
+          return;
+        }
+        const eff = effectiveTeam(idx, who, user['Username'], user['Takim Adi']);
+        if (eff !== undefined && eff !== null) user['Takim Adi'] = eff;
+      }
+    } catch (e) {
+      // Atama tablosu okunamazsa girişi ENGELLEMİYORUZ: kişi kendi
+      // Users."Takim Adi" kapsamıyla çalışmaya devam eder (eski davranış).
     }
 
     delete user.Password; // Client'a asla şifre/hash dönmez

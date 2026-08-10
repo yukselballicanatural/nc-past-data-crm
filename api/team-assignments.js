@@ -79,6 +79,11 @@ export default async function handler(req, res) {
       const team = (rawTeam === null || rawTeam === undefined || String(rawTeam).trim() === '')
         ? null : String(rawTeam).trim();
 
+      // isActive gönderilmediyse DEĞİŞTİRME (varsayılan true): "takıma ata"
+      // işlemi, daha önce pasife alınmış birini sessizce geri aktifleştirmesin.
+      const isActive = (body?.isActive === undefined || body?.isActive === null)
+        ? undefined : body.isActive !== false;
+
       const row = {
         person_key: personKey,
         full_name: fullName,
@@ -89,6 +94,7 @@ export default async function handler(req, res) {
         assigned_at: new Date().toISOString(),
         note: body?.note ? String(body.note).slice(0, 500) : null,
       };
+      if (isActive !== undefined) row.is_active = isActive;
 
       const r = await fetch(
         `${SUPABASE_URL}/rest/v1/team_assignments?on_conflict=person_key`,
@@ -105,7 +111,42 @@ export default async function handler(req, res) {
         return;
       }
       const saved = await r.json().catch(() => null);
-      res.status(200).json({ ok: true, assignment: Array.isArray(saved) ? saved[0] : saved });
+
+      // ── Panele GİRİŞİ olan roller için Users.is_active de güncellenir ──
+      // Ayrım önemli: danışmanlar bu panele zaten giremiyor (hesapları yok),
+      // onlar için "pasife alma" yalnızca kadrodan düşmek demek ve yukarıdaki
+      // team_assignments kaydı bunu tek başına sağlıyor. Takım lideri / bölge
+      // müdürü / admin ise giriş yapabiliyor; onların GİRİŞİNİN de kapanması
+      // gerekiyor — o alan Users.is_active (bkz. api/login.js).
+      //
+      // "En iyi çaba": Users satırı yoksa ya da is_active kolonu şemada
+      // yoksa işlem yine BAŞARILI sayılır, çünkü asıl karar (kadrodan
+      // düşürme) zaten yazıldı. Durum yanıtta `loginBlocked` ile bildirilir.
+      let loginBlocked = null;
+      if (isActive !== undefined) {
+        try {
+          const uR = await fetch(
+            `${SUPABASE_URL}/rest/v1/Users?select=Username,Role&or=(` +
+            `"Deal Owner Name".eq.${encodeURIComponent(fullName)},` +
+            `Username.eq.${encodeURIComponent(fullName)})&limit=1`,
+            { headers: H });
+          const uRows = uR.ok ? await uR.json().catch(() => []) : [];
+          const uname = uRows && uRows[0] && uRows[0]['Username'];
+          if (uname) {
+            const pR = await fetch(
+              `${SUPABASE_URL}/rest/v1/Users?Username=eq.${encodeURIComponent(uname)}`,
+              { method: 'PATCH', headers: { ...HJ, Prefer: 'return=minimal' },
+                body: JSON.stringify({ is_active: isActive }) });
+            loginBlocked = pR.ok ? !isActive : null;
+          }
+        } catch (e) { /* kadro kararı yazıldı; giriş engeli en iyi çaba */ }
+      }
+
+      res.status(200).json({
+        ok: true,
+        assignment: Array.isArray(saved) ? saved[0] : saved,
+        loginBlocked,
+      });
       return;
     }
 

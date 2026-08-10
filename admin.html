@@ -2309,13 +2309,19 @@
       <select id="tmAssignTeam" class="filter-select" style="width:100%;margin-bottom:13px"></select>
 
       <label class="tm-check" style="margin-bottom:9px">
-        <input type="checkbox" id="tmAssignLeader">
+        <input type="checkbox" id="tmAssignLeader" onchange="_amTmSyncLeaderHint()">
         <span>Bu kişi seçilen takımın <b>lideri</b> olsun</span>
       </label>
-      <p class="tm-sec-foot" style="margin:0 2px 16px">
-        Lider işaretlenirse bu kişi kendi panelinde o takımın kadrosunu ve Günlük
-        Ekip Girişi'ni görür. Zoho'daki lideri pasifleşmiş takımlar için gerekli.
+      <p class="tm-sec-foot" style="margin:0 2px 12px">
+        Lider işaretlenirse bu kişi kendi panelinde o takımın <b>alarmlarını</b>,
+        deal'lerini, kadrosunu ve Günlük Ekip Girişi'ni görür. Zoho'daki lideri
+        ayrılmış takımların verisini devretmek için budur.
       </p>
+      <!-- Lider atanan kişinin panel rolü 'team-leader' değilse giriş yapamaz;
+           bu uyarı o durumu atama ANINDA gösterir (sonradan "neden göremiyor?"
+           sorusuna düşmemek için). -->
+      <div id="tmAssignLeaderWarn" class="tm-sec" data-tone="warn"
+           style="display:none;margin-bottom:14px;padding:10px 12px"></div>
 
       <div class="flex items-center gap-2 flex-wrap">
         <button onclick="amTmSaveAssign()" id="tmAssignSaveBtn" class="tm-btn tm-btn-go">Kaydet</button>
@@ -6214,7 +6220,7 @@
       document.getElementById('tmSyncTeamBtn').style.display = n ? '' : 'none';
       document.getElementById('tmSyncLeaverBtn').style.display = L ? '' : 'none';
       document.getElementById('tmSyncLeaverBtn').textContent =
-        I18N.t('{n} ayrılan kişinin girişini kapat').replace('{n}', L);
+        I18N.t('{n} ayrılan kişiyi pasife al').replace('{n}', L);
       _amTmRenderSyncDetail();
     }
 
@@ -6289,7 +6295,7 @@
              <span class="tm-row-meta">${_escHtml(l.team || I18N.t('takım yok'))} · ${_escHtml(l.role || '—')}</span>
              <span class="tm-row-meta" style="color:var(--tm-danger)">${_escHtml(_amTmLeaverReason(l))}</span>
              ${l.username ? `<span class="tm-row-mono">${_escHtml(l.username)}</span>` : ''}
-             ${l.username ? `<button onclick="amTmDeactivateOne('${_jsStrAttr(l.username)}')" class="tm-mini-btn" data-tone="danger" style="margin-left:auto">${_escHtml(I18N.t('Girişi kapat'))}</button>` : ''}
+             ${l.username ? `<button onclick="amTmDeactivateOne('${_jsStrAttr(l.username)}')" class="tm-mini-btn" data-tone="danger" style="margin-left:auto">${_escHtml(_amTmDeactLabel(_amTmHasLogin(l.role)))}</button>` : ''}
            </div>`).join('')));
       }
 
@@ -6350,14 +6356,35 @@
       if (subEl) subEl.textContent = sub.length ? sub.join(' · ') : I18N.t('Sorun bulunmadı');
     }
 
-    // Tek kişinin girişini kapat — uç zaten usernames ile kapsamı daraltıyor.
+    // ── Pasife alma ─────────────────────────────────────────────────────
+    // Danışmanlar bu panele ZATEN giremiyor (hesapları açılmıyor; sistem
+    // takım liderinin/RM'nin/admin'in ekranı). Onlar için "girişi kapat"
+    // yanlış bir ifadeydi — yapılan şey kadrodan düşürmek: takım liderinin
+    // "Takımımdaki Kişiler" ve "Günlük Ekip Girişi" listelerinden çıkarmak.
+    // Panele girişi OLAN roller için (takım lideri / bölge müdürü / admin)
+    // ayrıca gerçekten giriş de kapanıyor (bkz. api/team-assignments.js).
+    const _AM_LOGIN_ROLES = ['team-leader', 'regional-manager', 'admin', 'super-admin'];
+    function _amTmHasLogin(roleRaw) {
+      const r = String(roleRaw || '').toLowerCase().trim();
+      if (!r) return false;
+      if (r.includes('super')) return true;
+      if (r.includes('admin')) return true;
+      if (r.includes('regional') || r.includes('manager')) return true;
+      if (r.includes('leader') || r === 'tl') return true;
+      return false;
+    }
+    // Etikete karar verir: girişi olan → "Girişi Kapat", danışman → "Pasife Al"
+    function _amTmDeactLabel(hasLogin) {
+      return hasLogin ? I18N.t('Girişi Kapat') : I18N.t('Pasife Al');
+    }
+
     function amTmDeactivateOne(username) {
       const l = _amTmLeavers.find(x => x.username === username);
       if (!l) return;
-      // Renkler tema-duyarlı .tm-cfm-* sınıflarından; onay diyaloğu iki temada
-      // da cam yüzey olduğu için sabit gri/kırmızı hex'ler açık temada
-      // okunmuyordu.
-      const body = I18N.t('Bu kişinin girişi kapatılacak. Kayıt SİLİNMEZ — günlük performans ve alarm geçmişi korunur.')
+      const hasLogin = _amTmHasLogin(l.role);
+      const body = (hasLogin
+          ? I18N.t('Bu kişinin PANEL GİRİŞİ kapatılacak ve kadro listelerinden düşecek. Kayıt SİLİNMEZ — günlük performans ve alarm geçmişi korunur.')
+          : I18N.t('Bu kişi kadro listelerinden düşecek: takım liderinin "Takımımdaki Kişiler" ve "Günlük Ekip Girişi" ekranlarında görünmeyecek. Kayıt SİLİNMEZ — günlük performans ve alarm geçmişi korunur.'))
         + `<div class="tm-cfm-list" style="max-height:none">
              <div class="tm-cfm-item">
                <b>${_escHtml(l.fullName || username)}</b>
@@ -6365,30 +6392,63 @@
                <span class="tm-cfm-meta" style="color:var(--tm-danger)">${_escHtml(_amTmLeaverReason(l))}</span>
              </div>
            </div>`;
-      showSiteConfirm('Girişi Kapat', body, I18N.t('Girişi kapat'), '#dc2626',
-        () => _amTmRunSync([username], true));
+      showSiteConfirm(_amTmDeactLabel(hasLogin), body, _amTmDeactLabel(hasLogin), '#dc2626',
+        () => _amTmSetActive([{ fullName: l.fullName || username, role: l.role }], false));
     }
 
-    // İşten ayrılanların girişini kapat — kayıt SİLİNMEZ, yalnızca is_active=false
-    // (daily_performance / alarm_logs geçmişi bu satıra bağlı).
     function amTmDeactivateLeavers() {
       const all = _amTmLeavers;
       if (!all.length) return;
+      const anyLogin = all.some(l => _amTmHasLogin(l.role));
       const list = all.slice(0, 12).map(l =>
         `<div class="tm-cfm-item">
            <b>${_escHtml(l.fullName)}</b>
            <span class="tm-cfm-meta">${_escHtml(l.team || '—')} · ${_escHtml(l.role || '')}</span>
            <span class="tm-cfm-meta" style="color:var(--tm-danger)">${_escHtml(_amTmLeaverReason(l))}</span>
+           ${_amTmHasLogin(l.role) ? `<span class="tm-cfm-meta" style="color:var(--tm-warn);margin-left:auto">${_escHtml(I18N.t('panel girişi var'))}</span>` : ''}
          </div>`
       ).join('');
       const more = all.length > 12
         ? `<div class="tm-cfm-more">${_escHtml(I18N.t('+{n} kişi daha').replace('{n}', all.length - 12))}</div>`
         : '';
-      const body = I18N.t('Aşağıdaki kişiler Zoho\'da artık aktif değil. Girişleri kapatılacak ve listelerde görünmeyecekler. Kayıtları SİLİNMEZ — günlük performans ve alarm geçmişleri korunur.')
+      const body = I18N.t('Aşağıdaki kişiler Zoho\'da artık aktif değil. Kadro listelerinden düşecekler (Takımımdaki Kişiler + Günlük Ekip Girişi). Kayıtları SİLİNMEZ — günlük performans ve alarm geçmişleri korunur.')
+        + (anyLogin ? '<br><br>' + I18N.t('Panel girişi olanların girişi de kapatılacak.') : '')
         + `<div class="tm-cfm-list">${list}${more}</div>`;
-      showSiteConfirm('Girişleri Kapat', body,
-        I18N.t('{n} kişiyi kapat').replace('{n}', all.length), '#dc2626',
-        () => _amTmRunSync(null, true));
+      showSiteConfirm(I18N.t('Pasife Al'), body,
+        I18N.t('{n} kişiyi pasife al').replace('{n}', all.length), '#dc2626',
+        () => _amTmSetActive(all.map(l => ({ fullName: l.fullName, role: l.role })), false));
+    }
+
+    // Pasife alma / geri açma — team_assignments üzerinden. Users tablosuna
+    // YAZMAYA BAĞLI DEĞİL: danışmanların çoğunun Users satırı yok, eski akış
+    // (sync-user-teams + Users.is_active) tam da bu yüzden "0 başarılı,
+    // 1 başarısız" veriyordu.
+    async function _amTmSetActive(people, active) {
+      if (!people.length) return;
+      if (_amTmAssignInstalled === false) {
+        showSiteNotice(I18N.t('team_assignments tablosu veritabanında yok. Depodaki team_assignments.sql dosyasını Supabase SQL Editor\'de bir kez çalıştırın.'), 'error');
+        return;
+      }
+      let done = 0, failed = 0, blocked = 0, lastErr = '';
+      for (const p of people) {
+        try {
+          const data = await _amTmAssignRequest('PUT', { fullName: p.fullName, isActive: active });
+          done++;
+          if (data && data.loginBlocked) blocked++;
+          addLog(active ? 'USER_ACTIVATE' : 'USER_DEACTIVATE',
+            `${active ? 'Kadroya geri alındı' : 'Pasife alındı'}: ${p.fullName}${p.role ? ' · ' + p.role : ''}`);
+        } catch (e) { failed++; lastErr = e.message; }
+      }
+      showSiteNotice(
+        (active
+          ? I18N.t('{n} kişi kadroya geri alındı.').replace('{n}', done)
+          : I18N.t('{n} kişi pasife alındı.').replace('{n}', done))
+        + (blocked ? ' ' + I18N.t('({n} panel girişi kapatıldı)').replace('{n}', blocked) : '')
+        + (failed ? ' — ' + I18N.t('{f} başarısız').replace('{f}', failed) + (lastErr ? ': ' + lastErr : '') : ''),
+        failed ? 'warn' : 'success');
+      _adeMembersCache = null;
+      _amTmDriftAt = 0;
+      loadAdminTeamMembers(true);
     }
 
     // Tek danışman
@@ -6462,6 +6522,11 @@
         currentTeam: (m && m.team) || '',
         isManual: !!(m && m.manualTeam),
         zohoRole: (m && m.zohoRole) || (up && up.zohoRole) || '',
+        // Users.Role — lider ataması ancak bu rol 'team-leader' ise panele
+        // yansır (token bu role göre veriliyor). Kullanıcı bunu bilmeden
+        // lider atayıp "neden göremiyor?" sorusuyla kalmasın.
+        panelRole: (m && m.role) || '',
+        hasLogin: !!(m && m.hasLogin),
       };
 
       document.getElementById('tmAssignWho').textContent = name
@@ -6478,12 +6543,33 @@
       document.getElementById('tmAssignTeam').innerHTML =
         _amTmTeamOptions(_amTmAssignTarget.currentTeam);
       document.getElementById('tmAssignLeader').checked = false;
+      _amTmSyncLeaderHint();
       // "Atamayı Kaldır" yalnızca gerçekten bir atama varsa anlamlı.
       document.getElementById('tmAssignClearBtn').style.display =
         _amTmAssignTarget.isManual ? '' : 'none';
 
       document.getElementById('tmAssignModal').classList.add('open');
       _tlLockScroll(true);
+    }
+
+    // Lider kutusu işaretlendiğinde: kişinin panel rolü uygun mu?
+    // Lider ataması yalnızca kadroyu/alarmları KAPSAR; panele girebilmesi için
+    // Users.Role'ünün 'team-leader' olması ayrıca gerekir (token o role göre
+    // veriliyor, bkz. api/login.js).
+    function _amTmSyncLeaderHint() {
+      const box = document.getElementById('tmAssignLeaderWarn');
+      const on = document.getElementById('tmAssignLeader');
+      if (!box || !on || !_amTmAssignTarget) return;
+      const t = _amTmAssignTarget;
+      if (!on.checked) { box.style.display = 'none'; return; }
+      const roleOk = _amTmHasLogin(t.panelRole);
+      if (roleOk && t.hasLogin) { box.style.display = 'none'; return; }
+      box.style.display = '';
+      box.innerHTML = `<div style="font-size:11px;color:var(--tm-ink-2);line-height:1.6">${
+        !t.hasLogin
+          ? _escHtml(I18N.t('Bu kişinin panel hesabı yok. Lider ataması kadroyu ve alarmları kapsar ama giriş yapabilmesi için Kullanıcılar sayfasından hesap açıp rolünü "Takım Lideri" yapmalısınız.'))
+          : _escHtml(I18N.t('Bu kişinin panel rolü "{r}". Lider ekranını görebilmesi için Kullanıcılar sayfasından rolünü "Takım Lideri" yapmalısınız.').replace('{r}', t.panelRole || '—'))
+      }</div>`;
     }
 
     function amTmCloseAssign() {

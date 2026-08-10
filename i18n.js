@@ -1093,6 +1093,27 @@
     'Takıma ata': 'Assign to team',
     'Takıma ata (kalıcı)': 'Assign to team (permanent)',
     'Takıma Ata': 'Assign to Team',
+    // ── Pasife alma (danışman) / girişi kapatma (panel kullanıcısı) ──
+    'Pasife Al': 'Deactivate',
+    // 'Girişi Kapat' zaten sözlükte var (satır 630), tekrar eklenmedi.
+    'panel girişi var': 'has panel login',
+    '{n} ayrılan kişiyi pasife al': 'Deactivate {n} departed people',
+    '{n} kişiyi pasife al': 'Deactivate {n} people',
+    '{n} kişi pasife alındı.': '{n} people deactivated.',
+    '{n} kişi kadroya geri alındı.': '{n} people restored to the roster.',
+    '({n} panel girişi kapatıldı)': '({n} panel logins disabled)',
+    '{f} başarısız': '{f} failed',
+    'Panel girişi olanların girişi de kapatılacak.': 'Those with panel access will also have their login disabled.',
+    'Bu kişinin PANEL GİRİŞİ kapatılacak ve kadro listelerinden düşecek. Kayıt SİLİNMEZ — günlük performans ve alarm geçmişi korunur.':
+      "This person's PANEL LOGIN will be disabled and they will drop off the roster lists. The record is NOT deleted — daily performance and alarm history are preserved.",
+    'Bu kişi kadro listelerinden düşecek: takım liderinin "Takımımdaki Kişiler" ve "Günlük Ekip Girişi" ekranlarında görünmeyecek. Kayıt SİLİNMEZ — günlük performans ve alarm geçmişi korunur.':
+      'This person will drop off the roster lists: they will no longer appear in the team leader\'s "My Team Members" and "Daily Team Entry" screens. The record is NOT deleted — daily performance and alarm history are preserved.',
+    'Aşağıdaki kişiler Zoho\'da artık aktif değil. Kadro listelerinden düşecekler (Takımımdaki Kişiler + Günlük Ekip Girişi). Kayıtları SİLİNMEZ — günlük performans ve alarm geçmişleri korunur.':
+      'The people below are no longer active in Zoho. They will drop off the roster lists (My Team Members + Daily Team Entry). Their records are NOT deleted — daily performance and alarm history are preserved.',
+    'Bu kişinin panel hesabı yok. Lider ataması kadroyu ve alarmları kapsar ama giriş yapabilmesi için Kullanıcılar sayfasından hesap açıp rolünü "Takım Lideri" yapmalısınız.':
+      'This person has no panel account. The leader assignment covers the roster and alarms, but to let them log in you must create an account on the Users page and set their role to "Team Leader".',
+    'Bu kişinin panel rolü "{r}". Lider ekranını görebilmesi için Kullanıcılar sayfasından rolünü "Takım Lideri" yapmalısınız.':
+      'This person\'s panel role is "{r}". To let them see the leader screen, set their role to "Team Leader" on the Users page.',
     'Vazgeç': 'Cancel',
     'Kaldır': 'Remove',
     'Atamayı Kaldır': 'Remove Assignment',
