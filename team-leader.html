@@ -4294,6 +4294,53 @@
     _tlcaCurrentDeal = null;
   }
 
+  // "Kapalı" sayılan alarm durumları — filterAlarms'taki (bkz. aktif alarm
+  // kontrolü) listeyle AYNI olmak zorunda. Ayrışırsa burada kapattığımız bir
+  // alarm listelerde hâlâ aktif görünür.
+  const _TL_CLOSED_STATUSES = ['closed','cancelled','no_show','arrived','examined','processing'];
+
+  // Deal'in açık alarmlarını 'cancelled' yapar. Kapatılan alarm sayısını döner.
+  // Tek bir PATCH ile: deal_id eşleşen ve durumu kapalı OLMAYAN tüm satırlar.
+  async function _tlcaCloseOpenAlarms(d, code, note) {
+    const open = (allAlarms || []).filter(a =>
+      String(a.deal_id) === String(d.id) && !_TL_CLOSED_STATUSES.includes(a.status));
+    // allAlarms bayat olabilir; yine de PATCH'i koşulsuz gönderiyoruz —
+    // filtreyi veritabanı uyguluyor, bellekteki liste yalnızca ekranı
+    // güncellemek ve log yazmak için kullanılıyor.
+    const now = new Date().toISOString();
+    const updates = {
+      status: 'cancelled',
+      closed_at: now,
+      closed_by: (currentUser && (currentUser.fullName || currentUser.username)) || '',
+      close_reason: code,
+      actioned_at: now,
+    };
+    const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY,
+                'Content-Type': 'application/json', Prefer: 'return=representation' };
+    const notClosed = encodeURIComponent('not.in.(' + _TL_CLOSED_STATUSES.join(',') + ')');
+    const url = `${SUPABASE_URL}/rest/v1/alarms?deal_id=eq.${encodeURIComponent(String(d.id))}&status=${notClosed}`;
+    let r = await fetch(url, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
+    if (!r.ok) {
+      // Sonuç kodu ZATEN deals'e yazıldı; alarm kapanmadıysa bunu SESSİZCE
+      // geçmeyelim — kullanıcı işin yarım kaldığını bilmeli.
+      showNotice(I18N.t('Sonuç kodu kaydedildi ama açık alarm kapatılamadı: ') + ('HTTP ' + r.status), 'error');
+      return 0;
+    }
+    const rows = await r.json().catch(() => []);
+    const n = Array.isArray(rows) ? rows.length : open.length;
+    // Bellekteki listeyi ve aksiyon geçmişini güncelle
+    open.forEach(a => {
+      logAlarmAction(a, 'closed', a.status, 'cancelled', note);
+      const i = allAlarms.findIndex(x => x.id === a.id);
+      if (i >= 0) allAlarms[i] = { ...allAlarms[i], ...updates };
+    });
+    // Alarm ÖNBELLEĞİ de tazelensin. Aksi halde 5 dakika boyunca sayfaya her
+    // dönüşte alarmlar yeniden AÇIK görünürdü — kapatma işe yaramamış gibi.
+    if (open.length) _tlSetCache(_tlAlarmsCacheKey(), allAlarms);
+    if (n) addLog('ALARM_CLOSE', `İptal sonuç kodu ile ${n} alarm kapatıldı (${code})`, String(d.id), d.deal_name);
+    return n;
+  }
+
   async function _tlcaSaveResult() {
     const d = _tlcaCurrentDeal;
     if (!d) return;
@@ -4316,6 +4363,13 @@
       if (!r.ok) throw new Error('HTTP ' + r.status);
       addLog('SAVE_RESULT', `İptal sonuç kodu: ${fullCode} / ${code}`, String(d.id), d.deal_name);
       Object.assign(d, { result_code: fullCode, sub_code: code, agent_note: note });
+      // Deal'in AÇIK alarmlarını da kapat. Buraya kadar yalnızca `deals`
+      // güncelleniyordu; alarm açık kaldığı için iş "bir sonuca kavuşmuyor"
+      // ve deal alarm listelerinde/sayaçlarda aktif görünmeye devam ediyordu.
+      // Alarm motoru stage=Cancelled olan alarmları zaten kapatıyor ama
+      // en fazla 15 dakikada bir ve YALNIZCA biri paneli açıksa çalışıyor;
+      // üstelik Zoho stage'i henüz güncellenmemişse hiç kapatmıyor.
+      const closedCount = await _tlcaCloseOpenAlarms(d, code, note);
       // Kaydedince modal kapanmaz — kullanıcı aksiyonun kartın içinde
       // gerçekten işlendiğini (İptal Nedeni kartındaki yeşil onay satırı) görsün.
       _tlcaRefreshReasonCard(d);
@@ -4323,8 +4377,18 @@
       const who = (currentUser && (currentUser.fullName || currentUser.username)) || '';
       confirmEl.textContent = `✓ ${I18N.t('Sonuç kodu kaydedildi')}${who ? ' — ' + who : ''} · ${formatDateTime(new Date().toISOString())}`;
       confirmEl.style.display = 'block';
-      showNotice('İptal sonuç kodu kaydedildi.', 'success');
+      showNotice(closedCount
+        ? I18N.t('İptal sonuç kodu kaydedildi, {n} açık alarm kapatıldı.').replace('{n}', closedCount)
+        : I18N.t('İptal sonuç kodu kaydedildi.'), 'success');
+      // Alarm kapandıysa sekme sayaçları ve alarm listeleri de tazelenmeli,
+      // yoksa deal başka ekranlarda hâlâ aktif alarm gibi görünür.
+      if (closedCount) { updateTabCounts(); renderAlarms(); if (activeView === 'today') renderToday(); }
+      _tlcaRefreshReasonCard(d);
       renderCancelledReport();
+      // İptal listesinin ÖNBELLEĞİ de tazelensin: 5 dakikalık kopya eski
+      // hâli tutuyordu ve sayfaya dönüldüğünde deal yeniden "Bekliyor"
+      // görünüyordu — kaydın kaybolduğu izlenimi buradan geliyordu.
+      _tlSetCache(_tlCancelledCacheKey(), cancelledDealsList);
     } catch(e) {
       errEl.textContent = I18N.t('Kaydedilemedi: ') + e.message; errEl.style.display = 'block';
     } finally {

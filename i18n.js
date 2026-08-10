@@ -209,6 +209,11 @@
     'Ad soyad ve kullanıcı adı zorunludur.': 'Full name and username are required.',
     'Danışmanlar bu panele giriş yapmaz. Bu kayıt telefon/e-posta, takım ataması ve geçmiş performans verisinin bağlandığı satırdır — şifre isteğe bağlıdır.':
       'Agents do not sign in to this panel. This record holds their phone/email, team assignment and the link for historical performance data — a password is optional.',
+    // İptal Edilenler — sonuç kodu kaydı artık açık alarmı da kapatıyor
+    'İptal sonuç kodu kaydedildi, {n} açık alarm kapatıldı.':
+      'Cancellation result code saved; {n} open alarm(s) closed.',
+    'Sonuç kodu kaydedildi ama açık alarm kapatılamadı: ':
+      'Result code saved, but the open alarm could not be closed: ',
     // Takıma Ata penceresi
     'Zoho rolü tanımsız': 'No Zoho role',
     'Takım Senkronu': 'Team Sync',
