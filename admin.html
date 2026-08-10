@@ -471,6 +471,10 @@
        böylece bir kutu ve bir metin bloğu birden eksiliyor. */
     .tm-check {
       display:flex; align-items:flex-start; gap:11px; cursor:pointer;
+      /* position:relative ŞART: içindeki gizli input position:absolute.
+         Konumlanmış bir ata olmazsa en yakın konumlanmış kapsayıcıya
+         (panel) göre yerleşir ve başka ögelerin üstüne binebilir. */
+      position:relative;
       padding:11px 13px; border-radius:13px;
       background:var(--tm-surface-2); border:1px solid var(--tm-edge);
       transition:background .14s, border-color .14s;
@@ -2363,8 +2367,14 @@
 
       <div id="tmAssignAuto" class="tm-note" style="margin-bottom:16px"></div>
 
-      <label class="tm-field-label" for="tmAssignTeam">Takım</label>
-      <select id="tmAssignTeam" class="filter-select" style="width:100%;margin-bottom:14px"></select>
+      <!-- Boşluk select'in KENDİSİNDE değil, sarmalayıcı div'de. Açık temada
+           liquid-ui.js native select'i kendi kabına alıyor; select'in üzerine
+           yazılan margin dış akışa yansımıyor ve alttaki anahtar seçime
+           yapışıyordu. Sarmalayıcıya vermek o katmandan bağımsız çalışır. -->
+      <div style="margin-bottom:16px">
+        <label class="tm-field-label" for="tmAssignTeam">Takım</label>
+        <select id="tmAssignTeam" class="filter-select" style="width:100%"></select>
+      </div>
 
       <label class="tm-check" style="margin-bottom:10px">
         <input type="checkbox" id="tmAssignLeader" onchange="_amTmSyncLeaderHint()">

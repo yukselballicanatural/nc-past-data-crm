@@ -54,6 +54,14 @@
     // flex satırlarında ölçü kayar
     if (sel.style.width) wrap.style.width = sel.style.width;
     if (sel.style.minWidth) wrap.style.minWidth = sel.style.minWidth;
+    // BOŞLUK da taşınmalı. Orijinal select artık gizli bir çocuk; üzerindeki
+    // margin dış akışa hiç yansımıyor ve altındaki öge select'e YAPIŞIYOR.
+    // Somut vaka: "Takıma Ata" penceresinde takım seçimi ile lider anahtarı
+    // açık temada bitişik duruyordu (koyu temada bu katman hiç çalışmadığı
+    // için sorun yalnızca açık temada görünüyordu).
+    ['margin', 'marginTop', 'marginBottom', 'marginLeft', 'marginRight'].forEach(function (p) {
+      if (sel.style[p]) { wrap.style[p] = sel.style[p]; sel.style[p] = ''; }
+    });
     sel.parentNode.insertBefore(wrap, sel);
     wrap.appendChild(sel);
     sel.classList.add('lq-native');
