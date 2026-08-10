@@ -186,6 +186,25 @@
     'Günlük Giriş Düzenleme': 'Daily Entry Edit',
     'Geri Alma': 'Rollback',
     'Kullanıcı Devre Dışı': 'User Deactivated',
+    // ── Kullanıcılar sayfası: pasife alma / aktife alma ───────────────
+    'Kullanıcı Aktife Alındı': 'User Reactivated',
+    'Pasif': 'Inactive',
+    'Aktife Al': 'Reactivate',
+    'Girişi Aç': 'Enable Login',
+    'Giriş Kapatıldı': 'Login Disabled',
+    'Giriş Açıldı': 'Login Enabled',
+    'İşlem Başarısız': 'Action Failed',
+    'Kendi hesabınızı pasife alamazsınız.': 'You cannot deactivate your own account.',
+    'Admin kullanıcılarını yalnızca Super Admin pasife alabilir.': 'Only a Super Admin can deactivate admin users.',
+    'Bu kaydın kullanıcı adı yok, güvenle güncellenemiyor. Önce bir kullanıcı adı atayın.':
+      'This record has no username and cannot be updated safely. Assign a username first.',
+    'adlı kullanıcı panele giriş yapamayacak. Kayıtları ve geçmiş verileri silinmez; istediğiniz zaman geri açabilirsiniz.':
+      ' will no longer be able to sign in. Their records and history are kept; you can re-enable access at any time.',
+    'adlı kullanıcı yeniden panele giriş yapabilecek.': ' will be able to sign in again.',
+    'adlı kullanıcı artık giriş yapamaz.': ' can no longer sign in.',
+    'adlı kullanıcı yeniden giriş yapabilir.': ' can sign in again.',
+    // Takıma Ata penceresi
+    'Zoho rolü tanımsız': 'No Zoho role',
     'Takım Senkronu': 'Team Sync',
     'Giriş Ekranı': 'Login Screen',
     // Kullanici duzenleme penceresi: telefon/e-posta/durum + sistem alanlari

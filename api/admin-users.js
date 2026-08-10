@@ -218,6 +218,12 @@ export default async function handler(req, res) {
       // POST ile ayni mantik: olmayan istege bagli kolon (Phone/Email/
       // is_active) TUM guncellemeyi bosa dusurmesin, o alani dusurup devam et.
       const patchPayload = { ...payload };
+      const dropped = [];
+      // İSTEĞE BAĞLI olmayan alanlar: çağıran bunları göndermişse ve kolon
+      // yoksa "başarılı" demek YALAN olur. Somut vaka: "Pasife Al" is_active
+      // yazıyor; o kolon şemada yoksa istek düşürülüp ok:true dönüyordu ve
+      // panelde kişi pasif görünüp gerçekte hâlâ giriş yapabiliyordu.
+      const required = Array.isArray(body?.required) ? body.required : [];
       let pr = null;
       for (let attempt = 0; attempt < 4; attempt++) {
         pr = await fetch(`${SUPABASE_URL}/rest/v1/Users?${filterKey}`, {
@@ -228,12 +234,21 @@ export default async function handler(req, res) {
         if (pr.ok) break;
         const err = pgErr(await pr.text());
         const col = missingColumn(err, patchPayload);
-        if (col) { delete patchPayload[col]; continue; }
+        if (col) {
+          if (required.includes(col)) {
+            res.status(422).json({
+              error: `Users tablosunda "${col}" kolonu yok, bu işlem yapılamıyor. `
+                   + 'Depodaki team_assignments.sql dosyasını Supabase SQL Editor\'de bir kez çalıştırın.'
+            });
+            return;
+          }
+          delete patchPayload[col]; dropped.push(col); continue;
+        }
         res.status(err.code === '23505' ? 409 : 502).json({ error: err.message || 'Veritabanı hatası.' });
         return;
       }
       if (!pr || !pr.ok) { res.status(502).json({ error: 'Güncelleme başarısız.' }); return; }
-      res.status(200).json({ ok: true });
+      res.status(200).json({ ok: true, droppedColumns: dropped });
       return;
     }
 

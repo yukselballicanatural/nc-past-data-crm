@@ -447,18 +447,53 @@
     /* Atama popup'ı alanları. */
     .tm-field-label { display:block; font-size:10px; font-weight:800; text-transform:uppercase;
                       letter-spacing:.06em; color:var(--tm-ink-3); margin-bottom:6px; }
+    /* Mevcut durum: ESKİDEN kutu içinde kutuydu (.tm-note bir kart, içinde
+       select bir kart, altında onay kutusu bir kart daha) — üst üste binen
+       çerçeveler pencereyi kalabalık gösteriyordu. Artık tek satırlık,
+       çerçevesiz bir bilgi şeridi: sol kenarda ince renkli çizgi. */
     .tm-note {
-      font-size:11px; color:var(--tm-ink-2); line-height:1.6; padding:10px 12px; border-radius:11px;
-      background:var(--tm-surface-2); border:1px solid var(--tm-edge);
+      font-size:11px; color:var(--tm-ink-2); line-height:1.55;
+      padding:2px 0 2px 11px; border-left:2px solid var(--tm-accent-edge);
     }
+
+    /* Kişi başlığı: baş harfli madalyon + ad. Genel .tm-badge ikonu yerine
+       kimin düzenlendiğini tek bakışta belli eder. */
+    .tm-avatar {
+      width:42px; height:42px; flex:none; border-radius:13px;
+      display:flex; align-items:center; justify-content:center;
+      font-size:14px; font-weight:800; letter-spacing:.02em;
+      background:var(--tm-accent-bg); border:1px solid var(--tm-accent-edge);
+      color:var(--tm-accent); box-shadow:var(--tm-sheen);
+    }
+
+    /* Lider anahtarı: onay kutusu yerine gerçek bir switch. Açıklama artık
+       ayrı bir paragrafta değil, anahtarın altında ikincil satır olarak —
+       böylece bir kutu ve bir metin bloğu birden eksiliyor. */
     .tm-check {
-      display:flex; align-items:center; gap:10px; cursor:pointer; padding:10px 12px;
-      border-radius:11px; background:var(--tm-surface-2); border:1px solid var(--tm-edge);
+      display:flex; align-items:flex-start; gap:11px; cursor:pointer;
+      padding:11px 13px; border-radius:13px;
+      background:var(--tm-surface-2); border:1px solid var(--tm-edge);
       transition:background .14s, border-color .14s;
     }
     .tm-check:hover { background:var(--tm-hover); }
-    .tm-check input { width:15px; height:15px; accent-color:#0d9488; cursor:pointer; flex:none; }
-    .tm-check span { font-size:11.5px; color:var(--tm-ink); font-weight:650; }
+    .tm-check:has(input:checked) { background:var(--tm-accent-bg); border-color:var(--tm-accent-edge); }
+    .tm-check input { position:absolute; opacity:0; width:0; height:0; }
+    .tm-sw {
+      width:34px; height:20px; flex:none; border-radius:999px; margin-top:1px;
+      background:var(--tm-surface); border:1px solid var(--tm-edge);
+      position:relative; transition:background .16s, border-color .16s;
+    }
+    .tm-sw::after {
+      content:''; position:absolute; top:2px; left:2px; width:14px; height:14px;
+      border-radius:50%; background:var(--tm-ink-2);
+      transition:transform .16s var(--ease,ease), background .16s;
+    }
+    .tm-check input:checked + .tm-sw { background:#0d9488; border-color:#14b8a6; }
+    .tm-check input:checked + .tm-sw::after { transform:translateX(14px); background:#fff; }
+    .tm-check input:focus-visible + .tm-sw { outline:2px solid var(--tm-accent); outline-offset:2px; }
+    .tm-check b { display:block; font-size:11.5px; color:var(--tm-ink); font-weight:750; }
+    .tm-check i { display:block; font-style:normal; font-size:10.5px; color:var(--tm-ink-2);
+                  line-height:1.5; margin-top:3px; }
     .tm-btn {
       padding:9px 17px; border-radius:11px; font-size:12px; font-weight:800; cursor:pointer;
       border:1px solid transparent; transition:filter .14s, transform .12s, background .14s;
@@ -1224,7 +1259,8 @@
               <th>Şifre</th>
               <th>Rol</th>
               <th>Takım</th>
-              <th style="width:110px">İşlemler</th>
+              <th style="width:74px">Durum</th>
+              <th style="width:190px">İşlemler</th>
             </tr>
           </thead>
           <tbody id="usersBody"></tbody>
@@ -2291,39 +2327,43 @@
        "Zoho'ya göre eşitle" bu kişiyi bir daha önermez. Bkz. team_assignments.sql -->
   <div id="tmAssignModal" onclick="if(event.target===this)amTmCloseAssign()">
     <div class="modal-backdrop" onclick="amTmCloseAssign()"></div>
-    <div class="modal-panel" style="max-width:520px">
-      <div class="flex items-start gap-3 mb-4">
-        <span class="tm-badge" data-tone="accent">
-          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
-        </span>
-        <div class="min-w-0 flex-1">
-          <div class="tm-modal-title">Takıma Ata</div>
-          <div class="tm-modal-sub" id="tmAssignWho">—</div>
+    <!-- Düzen KASITLI olarak düz: başlık · durum şeridi · alan · anahtar ·
+         eylemler. Önceki sürümde her parça kendi çerçeveli kutusundaydı
+         (not kutusu + select + onay kutusu + açıklama paragrafı + uyarı
+         kutusu), iç içe geçmiş kenarlıklar pencereyi karmaşık gösteriyordu.
+         Artık tek çerçeveli öge kalan: lider anahtarı — çünkü tıklanabilir
+         olduğunu belli etmesi gerekiyor. -->
+    <div class="modal-panel" style="max-width:440px">
+      <div class="flex items-start gap-3 mb-3">
+        <span class="tm-avatar" id="tmAssignInitials">—</span>
+        <div class="min-w-0 flex-1" style="padding-top:2px">
+          <div class="tm-modal-title" id="tmAssignWho">—</div>
+          <div class="tm-modal-sub" id="tmAssignRole">—</div>
         </div>
         <button onclick="amTmCloseAssign()" class="tm-close" aria-label="Kapat">&times;</button>
       </div>
 
-      <div id="tmAssignAuto" class="tm-note" style="margin-bottom:14px"></div>
+      <div id="tmAssignAuto" class="tm-note" style="margin-bottom:16px"></div>
 
       <label class="tm-field-label" for="tmAssignTeam">Takım</label>
-      <select id="tmAssignTeam" class="filter-select" style="width:100%;margin-bottom:13px"></select>
+      <select id="tmAssignTeam" class="filter-select" style="width:100%;margin-bottom:14px"></select>
 
-      <label class="tm-check" style="margin-bottom:9px">
+      <label class="tm-check" style="margin-bottom:10px">
         <input type="checkbox" id="tmAssignLeader" onchange="_amTmSyncLeaderHint()">
-        <span>Bu kişi seçilen takımın <b>lideri</b> olsun</span>
+        <span class="tm-sw" aria-hidden="true"></span>
+        <span class="min-w-0">
+          <b>Bu takımın lideri olsun</b>
+          <i>Takımın alarmlarını, deal'lerini, kadrosunu ve Günlük Ekip Girişi'ni
+             bu kişi görür. Lideri ayrılmış takımı devretmek için kullanın.</i>
+        </span>
       </label>
-      <p class="tm-sec-foot" style="margin:0 2px 12px">
-        Lider işaretlenirse bu kişi kendi panelinde o takımın <b>alarmlarını</b>,
-        deal'lerini, kadrosunu ve Günlük Ekip Girişi'ni görür. Zoho'daki lideri
-        ayrılmış takımların verisini devretmek için budur.
-      </p>
       <!-- Lider atanan kişinin panel rolü 'team-leader' değilse giriş yapamaz;
            bu uyarı o durumu atama ANINDA gösterir (sonradan "neden göremiyor?"
            sorusuna düşmemek için). -->
       <div id="tmAssignLeaderWarn" class="tm-sec" data-tone="warn"
            style="display:none;margin-bottom:14px;padding:10px 12px"></div>
 
-      <div class="flex items-center gap-2 flex-wrap">
+      <div class="flex items-center gap-2 flex-wrap" style="margin-top:16px">
         <button onclick="amTmSaveAssign()" id="tmAssignSaveBtn" class="tm-btn tm-btn-go">Kaydet</button>
         <button onclick="amTmClearAssign()" id="tmAssignClearBtn" class="tm-btn tm-btn-danger" style="display:none">Atamayı Kaldır</button>
         <button onclick="amTmCloseAssign()" class="tm-btn tm-btn-ghost" style="margin-left:auto">Vazgeç</button>
@@ -6506,6 +6546,15 @@
       return opts.join('');
     }
 
+    // Madalyondaki baş harfler. Türkçe'ye duyarlı: 'i' → 'İ' (toUpperCase()
+    // varsayılan yerel ayarda 'I' üretir ve "İbrahim" → "IB" olurdu).
+    function _amTmInitials(name) {
+      const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+      if (!parts.length) return '—';
+      const take = parts.length === 1 ? [parts[0]] : [parts[0], parts[parts.length - 1]];
+      return take.map(p => p.charAt(0).toLocaleUpperCase('tr')).join('');
+    }
+
     function amTmOpenAssign(fullName) {
       const name = String(fullName || '').trim();
       if (!name) return;
@@ -6529,8 +6578,13 @@
         hasLogin: !!(m && m.hasLogin),
       };
 
-      document.getElementById('tmAssignWho').textContent = name
-        + (_amTmAssignTarget.zohoRole ? ' · ' + I18N.t('Zoho rolü') + ': ' + _amTmAssignTarget.zohoRole : '');
+      document.getElementById('tmAssignWho').textContent = name;
+      // Zoho rolü ARTIK ayrı satırda: ada eklendiğinde başlık iki satıra
+      // taşıp uzun adlarda kırpılıyordu.
+      document.getElementById('tmAssignRole').textContent = _amTmAssignTarget.zohoRole
+        ? I18N.t('Zoho rolü') + ': ' + _amTmAssignTarget.zohoRole
+        : I18N.t('Zoho rolü tanımsız');
+      document.getElementById('tmAssignInitials').textContent = _amTmInitials(name);
 
       // Otomatik çözümlemenin ne dediğini göster — yönetici neyi ezdiğini bilsin.
       const auto = _amTmAssignTarget.isManual
@@ -9805,21 +9859,101 @@
             <td class="py-2 text-xs" style="${roleStyle(u['Role'])}">${fmt(u['Role'])}</td>
             <td class="py-2 text-slate-300 text-sm">${fmt(uTeam(u))}</td>
             <td class="py-2 text-center">
+              <span class="tl-pill" data-tone="${_umIsActive(u) ? 'ok' : 'danger'}">${
+                I18N.t(_umIsActive(u) ? 'Aktif' : 'Pasif')}</span>
+            </td>
+            <td class="py-2 text-center">
               <div class="flex gap-1.5 justify-center">
                 <button onclick="event.stopPropagation();openUserModal(${i})" class="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-slate-300 hover:text-white text-[11px] rounded-lg font-semibold border border-gray-700 transition-all">${I18N.t('Düzenle')}</button>
                 ${(() => {
                   const uRole = (u['Role']||'').toLowerCase();
                   const isPrivileged = uRole === 'admin' || uRole === 'super-admin' || uRole === 'super admin';
+                  // Ayrıcalıklı hesaplarda hem silme hem pasife alma Super
+                  // Admin'e ayrılmış: bir admin, diğer adminin girişini
+                  // kapatarak paneli kilitleyebilirdi.
                   if (isPrivileged && !window.isSuperAdmin) {
                     return `<span class="px-2.5 py-1 text-[11px] text-slate-600 font-semibold" title="${I18N.t('Yalnızca Super Admin silebilir')}">🔒</span>`;
                   }
-                  return `<button onclick="event.stopPropagation();deleteUser(${i});" class="px-2.5 py-1 bg-rose-900/40 hover:bg-rose-800/60 text-rose-400 hover:text-rose-300 text-[11px] rounded-lg font-semibold border border-rose-800/50 transition-all">${I18N.t('Sil')}</button>`;
+                  const act = _umIsActive(u);
+                  return `<button onclick="event.stopPropagation();toggleUserActive(${i});" class="tm-mini-btn" data-tone="${act ? 'danger' : 'accent'}">${
+                            I18N.t(act ? 'Pasife Al' : 'Aktife Al')}</button>
+                          <button onclick="event.stopPropagation();deleteUser(${i});" class="px-2.5 py-1 bg-rose-900/40 hover:bg-rose-800/60 text-rose-400 hover:text-rose-300 text-[11px] rounded-lg font-semibold border border-rose-800/50 transition-all">${I18N.t('Sil')}</button>`;
                 })()}
               </div>
             </td>
           </tr>`;
       }).join('');
       I18N.translateDOM(tbody);
+    }
+
+    // is_active kolonu şemada olmayabilir (bkz. team_assignments.sql) —
+    // o durumda değer undefined gelir ve kişi AKTİF sayılır. Yanlış tarafa
+    // düşmek gerekiyorsa "aktif" tarafı doğrusu: giriş de öyle davranıyor.
+    function _umIsActive(u) { return u && u.is_active === false ? false : true; }
+
+    // Pasife alma: SİLMENİN yerine geçen, geri alınabilir işlem. Silmek
+    // geçmiş veriyi (daily_performance, alarm_logs) sahipsiz bırakıyor;
+    // ayrılan bir kullanıcı için doğru hareket girişini kapatmaktır.
+    function toggleUserActive(rowIndex) {
+      const u = _usersRowAt(rowIndex);
+      if (!u) { showSiteNotice(I18N.t('Satır bulunamadı, listeyi yenileyip tekrar deneyin.'), 'error'); return; }
+      const username = String(u['Username'] || '').trim();
+      // Silmedeki ile AYNI gerekçe: id yuvarlanmış olabilir, hedefleme
+      // yalnızca kullanıcı adıyla yapılır (bkz. uId notu).
+      if (!username) {
+        showSiteNotice(I18N.t('Bu kaydın kullanıcı adı yok, güvenle güncellenemiyor. Önce bir kullanıcı adı atayın.'), 'error');
+        return;
+      }
+      const uRole = (u['Role'] || '').toLowerCase();
+      const isPrivileged = uRole === 'admin' || uRole === 'super-admin' || uRole === 'super admin';
+      if (isPrivileged && !window.isSuperAdmin) {
+        showSiteNotice(I18N.t('Admin kullanıcılarını yalnızca Super Admin pasife alabilir.'), 'error');
+        return;
+      }
+      // Kendi girişini kapatmak paneli kilitler ve geri açacak kimse kalmaz.
+      if (currentUser && String(currentUser.username || '').toLowerCase() === username.toLowerCase()) {
+        showSiteNotice(I18N.t('Kendi hesabınızı pasife alamazsınız.'), 'error');
+        return;
+      }
+      const name = uName(u) || username;
+      const act = _umIsActive(u);
+      showSiteConfirm(
+        I18N.t(act ? 'Girişi Kapat' : 'Girişi Aç'),
+        `<strong style="color:${act ? '#fca5a5' : '#4ade80'}">${fmt(name)}</strong> <span style="opacity:.75">(${fmt(username)})</span> ${
+          I18N.t(act
+            ? 'adlı kullanıcı panele giriş yapamayacak. Kayıtları ve geçmiş verileri silinmez; istediğiniz zaman geri açabilirsiniz.'
+            : 'adlı kullanıcı yeniden panele giriş yapabilecek.')}`,
+        I18N.t(act ? 'Pasife Al' : 'Aktife Al'), act ? '#dc2626' : '#0d9488',
+        async () => {
+          try {
+            const resp = await _auFetch('/api/admin-users', {
+              method: 'PATCH',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                username,
+                payload: { is_active: !act },
+                // is_active DÜŞÜRÜLEMEZ: kolon yoksa uç 422 döner. Aksi
+                // halde panel "pasife alındı" der, kişi giriş yapmaya
+                // devam ederdi.
+                required: ['is_active'],
+              })
+            });
+            const respBody = await resp.json().catch(() => ({}));
+            if (!resp.ok || respBody.error) throw new Error(respBody.error || ('HTTP ' + resp.status));
+            addLog(act ? 'USER_DEACTIVATE' : 'USER_ACTIVATE',
+                   `${act ? 'Kullanıcı pasife alındı' : 'Kullanıcı aktife alındı'}: ${name} (${username})`);
+            await loadUsers(true);
+            showSiteResult(
+              I18N.t(act ? 'Giriş Kapatıldı' : 'Giriş Açıldı'),
+              `<strong style="color:#4ade80">${fmt(name)}</strong> ${
+                I18N.t(act ? 'adlı kullanıcı artık giriş yapamaz.' : 'adlı kullanıcı yeniden giriş yapabilir.')}`,
+              'success'
+            );
+          } catch (e) {
+            showSiteResult(I18N.t('İşlem Başarısız'), fmt(e.message), 'error');
+          }
+        }
+      );
     }
 
     function deleteUser(rowIndex) {
@@ -10140,7 +10274,8 @@
       // Asagidakiler de yaziliyor ama eskiden ne etikette ne filtre listesinde
       // vardi — tabloda ham kod ("USER_TEAM_SYNC") gorunuyordu.
       DAILY_ENTRY_EDIT:I18N.t('Günlük Giriş Düzenleme'), ROLLBACK:I18N.t('Geri Alma'),
-      USER_DEACTIVATE:I18N.t('Kullanıcı Devre Dışı'), USER_TEAM_SYNC:I18N.t('Takım Senkronu')
+      USER_DEACTIVATE:I18N.t('Kullanıcı Devre Dışı'), USER_ACTIVATE:I18N.t('Kullanıcı Aktife Alındı'),
+      USER_TEAM_SYNC:I18N.t('Takım Senkronu')
     };
 
     // ── Rol/Sayfa normalizasyonu ────────────────────────────────────────
