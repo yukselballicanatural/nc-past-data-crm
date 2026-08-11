@@ -214,6 +214,11 @@
       'Cancellation result code saved; {n} open alarm(s) closed.',
     'Sonuç kodu kaydedildi ama açık alarm kapatılamadı: ':
       'Result code saved, but the open alarm could not be closed: ',
+    // Takımsız hesap — panel artık tüm şirketi çekmiyor, kendi kayıtlarına iniyor
+    'Hesabınıza takım atanmamış. Şimdilik yalnızca kendi kayıtlarınız gösteriliyor. Yöneticinizin Kullanıcılar sayfasından takımınızı ayarlaması gerekiyor.':
+      'No team is assigned to your account. For now only your own records are shown. Your administrator needs to set your team on the Users page.',
+    'Hesabınıza takım atanmamış ve ad bilgisi de eksik — veri gösterilemiyor. Yöneticinizle iletişime geçin.':
+      'Your account has no team and no name on file — no data can be shown. Please contact your administrator.',
     // Kullanıcı silme: rol/takım gösterimi + panele girişi olan için uyarı
     '(rol yok)': '(no role)',
     '(takım yok)': '(no team)',
@@ -524,8 +529,6 @@
     'Alarm güncellendi.': 'Alarm updated.',
     'Alarmlar yüklenemedi: ': 'Failed to load alarms: ',
     'Hata: ': 'Error: ',
-    'Uyarı: Kullanıcı kayıtında Takim Adi alanı boş. Tüm alarmlar gösterilecek.':
-      'Warning: The Team Name field is empty on this user record. All alarms will be shown.',
     'Alarm motoru hatası: ': 'Alarm engine error: ',
     'Durum seçin veya not girin.': 'Select a status or enter a note.',
     'Kayıt hatası: ': 'Save error: ',
