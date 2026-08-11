@@ -3170,24 +3170,17 @@ html[data-theme="light"] .aam-hist-row {
 .td-stat-money .td-stat strong { font-size: 14px; }
 
 /* Satır+sütun boşluğu ayrı: satır sarınca (dar ekran/pencere) dikeyde de
-   nefes payı olsun — eskiden 4px'te hem yatay hem dikey, grup ile "Detay"
-   neredeyse birbirine yapışık, sarınca da satırlar bitişik duruyordu. */
-.td-btn-row { display: flex; align-items: center; gap: 10px; row-gap: 8px; flex-wrap: wrap; }
+   nefes payı olsun. */
+.td-btn-row { display: flex; align-items: center; gap: 8px; row-gap: 8px; flex-wrap: wrap; }
 
-/* ── Sonuç butonları tek bir nesne olarak ──────────────────────────────
-   Dört sonuç butonu ayrı ayrı durduğunda satırda 5 rozet oluyor ve sonuç
-   girilmiş satırlarda 2'ye düştüğü için kolon tırtıklı görünüyordu.
-   Bitişik gruplanınca tek bir kontrol gibi okunuyor; renkler korunuyor
-   çünkü sonucun ne olduğu renkten anlaşılıyor. */
-.td-seg { display: inline-flex; border-radius: 9px; overflow: hidden; }
-.td-seg .td-btn {
-  border-radius: 0; border-width: 1px 0 1px 0;
-  padding: 5px 10px;
-}
-.td-seg .td-btn:first-child { border-left-width: 1px; border-radius: 9px 0 0 9px; }
-.td-seg .td-btn:last-child  { border-right-width: 1px; border-radius: 0 9px 9px 0; }
-/* Grup içinde yükselme YOK — tek parça hissi bozulmasın */
-.td-seg .td-btn:hover { transform: none; }
+/* ── Sonuç butonları ────────────────────────────────────────────────────
+   Önceden bitişik (border-radius:0, tek yüzey) bir "segment" olarak
+   gruplanıyordu — kullanıcı geri bildirimi: butonlar birbirine çok yakın,
+   aralarında boşluk olmalı. Artık her buton kendi köşeleriyle, aralarında
+   gerçek bir boşlukla duruyor; hangi sonucun seçileceği hâlâ renkten
+   (yeşil/mavi/turkuaz/kırmızı) anlaşılıyor. */
+.td-seg { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+.td-seg .td-btn { padding: 5px 10px; }
 .td-btn {
   padding: 5px 10px; border-radius: 8px; font-size: 9.5px; font-weight: 800;
   cursor: pointer; white-space: nowrap; letter-spacing: .01em;
@@ -3197,8 +3190,7 @@ html[data-theme="light"] .aam-hist-row {
 .td-btn:hover { transform: translateY(-1px); }
 .td-btn:active { transform: translateY(0); }
 /* "Detay" grup dışı, ayrı bir aksiyon — ince bir ayıraçla görsel olarak
-   sonuç butonlarından koptuğu belli olsun (aksi halde grup ile Detay aynı
-   satırda birbirine yapışık, tek bir buton yığını gibi görünüyordu). */
+   sonuç butonlarından koptuğu belli olsun. */
 .td-btn-detail { margin-left: 2px; padding-left: 12px; border-left: 1px solid rgba(148, 163, 184, .25); }
 
 .td-tag {
@@ -3231,10 +3223,6 @@ html[data-theme="light"] .td-wrap {
 }
 /* Şeritteki para ayırıcısı */
 html[data-theme="light"] .td-stat-money { border-left: 1px solid var(--edge-soft); }
-/* Grup içi ayırıcı: komşu butonların kenarları çakışmasın */
-html[data-theme="light"] .td-seg .td-btn + .td-btn {
-  box-shadow: inset 1px 0 0 rgba(23, 43, 99, 0.09);
-}
 html[data-theme="light"] .td-stat {
   background: var(--g-2);
   -webkit-backdrop-filter: blur(18px) saturate(175%);

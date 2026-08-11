@@ -5504,7 +5504,14 @@
           const rows = await r.json();
           rows.forEach(d => _amShortRefMap.set(String(d.id), { ref: d.deal_id || '', stage: d.stage || '' }));
         }
+        // Bu sorgu bitene kadar dealIdCell, Zoho'nun UZUN iç kayıt numarasını
+        // (yönlendirme linkindeki id) kısa referans yerine gösteriyordu —
+        // sadece Alarm Listesi'ni yenilemek "Bugün Gelecekler" açıkken bu
+        // sütunu düzeltmeden bırakıyordu (kapalı/won/iptal bir deal'in alarmı
+        // orada da görünebiliyor).
         if (_currentView === 'alarms-monitor') renderAdminAlarmTable();
+        const todayView = document.getElementById('view-today');
+        if (todayView && !todayView.classList.contains('hidden') && typeof renderAdminToday === 'function') renderAdminToday();
       } catch(e) { /* sessiz — Deal ID sütunu uzun id ile kalır */ }
     }
     // Geriye dönük uyum: eski çağrılar {amount, paid} bekliyor
