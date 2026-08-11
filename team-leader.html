@@ -5479,6 +5479,13 @@
     let v = '';
     try { v = sessionStorage.getItem(_TL_VIEW_KEY) || ''; } catch (e) {}
     if (!v || !_TL_VIEWS.includes(v)) return null;
+    // NOT: `isRM` burada global DEĞİL — her fonksiyon kendi yerel kopyasını
+    // hesaplıyor (bkz. dosyadaki diğer tüm `const isRM = ...` kullanımları).
+    // Bu satır eksikti: sessionStorage'da kayıtlı bir görünüm VARKEN (yani
+    // en az bir kez sayfa değiştirilip yenilendiğinde) ReferenceError fırlatıp
+    // init()'i yarıda kesiyordu — görünüm gizleme/gösterme mantığı hiç
+    // tamamlanmadığı için birden fazla sayfa üst üste görünür kalıyordu.
+    const isRM = currentUser.role === 'regional-manager';
     // RM'de "Takımımdaki Kişiler" menüsü gizli; kayıt onu geri getirmesin.
     if (isRM && v === 'team-members') return null;
     // RM olmayan biri rm-overview'a düşmesin.
