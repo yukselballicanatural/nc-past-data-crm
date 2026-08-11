@@ -196,8 +196,15 @@ function isHandoverCandidate(z) {
   const ex = parseDateSafe(z.exit_date), st = parseDateSafe(z.start_date);
   return !!(ex && st && st > ex);
 }
+// zoho_users.exit_date/start_date tam ISO zaman damgası olarak gelebilir
+// ("2026-05-06T00:00:00+00:00"), account_handover_approvals'taki `date`
+// tipi kolonlar ise geri okunduğunda sade "2026-05-06" döner. İkisi FARKLI
+// dize olduğu için anahtar hiç eşleşmiyordu — admin onayladığı hâlde kişi
+// hep "onaysız" görünüyordu. İlk 10 karaktere (YYYY-MM-DD) indirgeyerek
+// karşılaştırma format farkından bağımsız hâle getirildi.
+function dateOnly(v) { return String(v || '').slice(0, 10); }
 function handoverKey(zohoUserId, exitDate, startDate) {
-  return String(zohoUserId || '') + '|' + String(exitDate || '') + '|' + String(startDate || '');
+  return String(zohoUserId || '') + '|' + dateOnly(exitDate) + '|' + dateOnly(startDate);
 }
 
 // Danışmanlar panele GİRMİYOR — onlara login açılmıyor. Ama Günlük Ekip Girişi
