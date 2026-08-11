@@ -2589,7 +2589,13 @@
           <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">İptal Sonuç Kodu</label>
           <button id="cdmDeleteResultBtn" type="button" onclick="_cdmDeleteResult()" style="display:none;padding:2px 8px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:9px;font-weight:700;cursor:pointer;flex-shrink:0">Sonuç Kodunu Sil</button>
         </div>
-        <select id="cdmResultCode" style="background:#111827;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:9px 12px;font-size:12px;width:100%">
+        <!-- Ham koyu-renkli inline stil KALDIRILDI: native <select>'in acilir
+             listesi (secenekler) select'in KENDI arkaplan/yazi rengini
+             kullanir, temaya gore degismiyordu -- acik temada bile siyah
+             cikiyordu. .filter-select ile ayni sinifa gecirilince
+             liquid-ui.js bunu diger tum filtre listeleri gibi (Alarm
+             Listesi'ndeki dahil) kendi cam acilir listesine saracak. -->
+        <select id="cdmResultCode" class="filter-select" style="width:100%">
           <option value="">— Seç —</option>
           <option value="Fiyat/Bütçe">Fiyat/Bütçe</option>
           <option value="Medikal Uygunsuzluk">Medikal Uygunsuzluk</option>
@@ -2677,7 +2683,9 @@
           <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Sonuç Kodu <span style="color:#f87171">*</span></label>
           <button id="wrmDeleteResultBtn" type="button" onclick="_wrmDeleteResult()" style="display:none;padding:2px 8px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:9px;font-weight:700;cursor:pointer;flex-shrink:0">Sonuç Kodunu Sil</button>
         </div>
-        <select id="wrmResultCode" style="background:#111827;border:1px solid #374151;color:#e2e8f0;border-radius:8px;padding:9px 12px;font-size:12px;width:100%">
+        <!-- bkz. cdmResultCode notu: ayni sebeple .filter-select'e gecirildi
+             (native secenek listesi acik temada siyah cikiyordu). -->
+        <select id="wrmResultCode" class="filter-select" style="width:100%">
           <option value="">— Seç —</option>
           <option value="Eksik Ödeme Kontrolü İletildi">Eksik Ödeme Kontrolü İletildi</option>
           <option value="Paid Amount Güncelleme Talebi İletildi">Paid Amount Güncelleme Talebi İletildi</option>
@@ -5280,8 +5288,16 @@
           <td style="text-align:right;font-size:11px;color:#4ade80;white-space:nowrap">${fmtMoney(d._paid)}</td>
           <td style="text-align:right;font-size:11px;font-weight:700;color:${diffColor};white-space:nowrap">${diffSign}${fmtMoney(d._diff)}</td>
           <td style="text-align:center;white-space:nowrap">
-            ${d.sub_code ? `<span style="font-size:9px;color:#a5b4fc;margin-right:6px">${fmt(d.sub_code)}</span>` : ''}
-            <button onclick="event.stopPropagation();openWonResultModal('${d.id}')" style="padding:4px 10px;background:#0d9488;border:none;border-radius:7px;color:#fff;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap">Sonuç Kodu</button>
+            <!-- Girilmiş bir sonuç kodu VE ayrı bir "Sonuç Kodu" butonu aynı
+                 anda gösteriliyordu (yığılmış, kötü duruyordu). Artık TEK bir
+                 kontrol: kod girilmemişse teal "Sonuç Kodu" butonu, girilmişse
+                 kodun kendisini gösteren yeşil bir buton — ikisi de aynı
+                 düzenleme popup'ını açıyor. -->
+            <button onclick="event.stopPropagation();openWonResultModal('${d.id}')"
+              style="${d.sub_code
+                ? 'padding:4px 10px;background:#052e16;border:1px solid #166534;border-radius:7px;color:#4ade80;font-size:9px;font-weight:700;cursor:pointer;white-space:nowrap;max-width:190px;overflow:hidden;text-overflow:ellipsis;vertical-align:middle'
+                : 'padding:4px 10px;background:#0d9488;border:none;border-radius:7px;color:#fff;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap'}"
+              title="${d.sub_code ? I18N.t('Düzenlemek için tıkla') + ': ' + fmt(d.sub_code) : ''}">${d.sub_code ? '✓ ' + fmt(d.sub_code) : I18N.t('Sonuç Kodu')}</button>
           </td>
         </tr>`;
       }).join('');

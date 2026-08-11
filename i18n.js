@@ -52,6 +52,7 @@
     // ── WhatsApp mesaj etiketleri ─────────────────────────────────────
     'Alarm Güncelleme Bildirimi': 'Alarm Result Code Update',
     'Sonuç Kodu': 'Result Code',
+    'Düzenlemek için tıkla': 'Click to edit',
     'Not': 'Note',
     'Oluşturulma tarih filtresini temizle': 'Clear the created-date filter',
     'Ödeme durumu, aksiyon planı...': 'Payment status, action plan...',
