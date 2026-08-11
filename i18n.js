@@ -675,6 +675,21 @@
     'Takım güncellenemedi: ': 'Team update failed: ',
     'Hasta, Deal ID veya danışman ara...': 'Search patient, Deal ID or consultant...',
     'Takımımdaki Kişiler': 'My Team Members',
+    'Ayrılan Kişiler': 'Departed Employees',
+    'Zoho hesabı "ayrılmış" görünen kişilerin arşivlenmiş bilgileri — hesap sonradan başka biri tarafından devralınmış olsa bile kalıcı olarak burada tutulur.':
+      'Archived info for people whose Zoho account appears "departed" — kept here permanently even if the account is later taken over by someone else.',
+    'Çıkış Tarihi': 'Exit Date',
+    'Kayıtlı ayrılan kişi yok.': 'No departed employees recorded.',
+    'Hesap Devri Onayı Bekliyor': 'Pending Account Handover Approval',
+    '{n} hesap devri onayı bekliyor.': '{n} account handover(s) awaiting approval.',
+    '{n} hesap devri onayı bekliyor': '{n} account handover(s) pending',
+    'Bu hesabın çıkış tarihinden SONRA bir giriş tarihi var — muhtemelen aynı Zoho hesabını yeni biri devraldı. Onaylarsanız kişi kadroda ve Takımımdaki Kişiler\'de görünür.':
+      'This account has a start date AFTER its exit date — someone else likely took over the same Zoho account. If you approve, the person will appear on staff and in My Team Members.',
+    'Hesap Devrini Onayla': 'Approve Account Handover',
+    'Bu hesabın çıkış tarihi {exit}, ama giriş tarihi {start} — yani hesabı muhtemelen yeni biri devraldı. Onaylarsanız kişi kadroda ve Takımımdaki Kişiler\'de görünür.':
+      'This account\'s exit date is {exit}, but its start date is {start} — meaning someone else likely took it over. If you approve, the person will appear on staff and in My Team Members.',
+    'Onaylandı.': 'Approved.',
+    'Onaylanamadı: ': 'Could not approve: ',
     "Takımındaki danışmanların WhatsApp numaraları — bir numara girip kaydettikten sonra \"WhatsApp'tan Yaz\" ile o kişiyle sohbet doğrudan açılır.":
       "WhatsApp numbers of your team's consultants — after entering and saving a number, \"Message on WhatsApp\" opens a chat with that person directly.",
     'Takımında kayıtlı kişi bulunamadı.': 'No registered members found in your team.',

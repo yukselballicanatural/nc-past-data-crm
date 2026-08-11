@@ -175,6 +175,31 @@ function isLeaver(z) {
   return false;
 }
 
+// ── Zoho hesap devri (bkz. zoho_account_handover.sql) ──────────────────
+// Ajanslar Zoho'da GERÇEK adlarıyla değil, hesabın takma adıyla (persona)
+// çalışıyor: biri ayrılınca (exit_date geçmişe düşer) aynı hesabı bir süre
+// sonra yeni işe giren biri devralabiliyor. Bu durumda hesabın start_date'i
+// eski sahibinin exit_date'inden SONRAdır — yani "ayrılmış" görünen hesap
+// aslında hâlâ (başka biri tarafından) kullanılıyordur. Somut vaka: hesap
+// "Nicholas Parker", exit_date 06.05, start_date 15.06 — 15 Haziran'dan beri
+// hesabı kullanan kişi hâlâ aktif ama isLeaver() onu ayrılmış sayıyordu.
+//
+// Otomatik "aktif say" YAPILMIYOR — Zoho verisi hatalı/eksik olabilir, admin
+// onayı şart (bkz. account_handover_approvals). Onaylanana kadar kişi
+// "Hesap Devri Onayı Bekliyor" listesinde bekler, kadroda görünmez.
+function parseDateSafe(v) {
+  if (!v) return null;
+  const d = new Date(v);
+  return isNaN(d) ? null : d;
+}
+function isHandoverCandidate(z) {
+  const ex = parseDateSafe(z.exit_date), st = parseDateSafe(z.start_date);
+  return !!(ex && st && st > ex);
+}
+function handoverKey(zohoUserId, exitDate, startDate) {
+  return String(zohoUserId || '') + '|' + String(exitDate || '') + '|' + String(startDate || '');
+}
+
 // Danışmanlar panele GİRMİYOR — onlara login açılmıyor. Ama Günlük Ekip Girişi
 // kayıtları daily_performance'ta (entry_date, username) benzersiz kısıtıyla
 // tutuluyor, yani her kişi için kararlı bir anahtar şart.
@@ -224,6 +249,7 @@ export default async function handler(req, res) {
     res.status(401).json({ error: 'Yetkisiz erişim.' });
     return;
   }
+  const isAdmin = ['admin', 'super-admin'].includes(claims.r);
 
   const H  = { apikey: SERVICE_KEY, Authorization: 'Bearer ' + SERVICE_KEY };
   const HJ = { ...H, 'Content-Type': 'application/json; charset=utf-8' };
@@ -343,6 +369,22 @@ export default async function handler(req, res) {
       const userRows = uRes.rows;
       const zohoRows = zRes.ok ? zRes.rows : [];
 
+      // Onaylanmış hesap devirleri — tablo kurulmamışsa (zoho_account_handover.sql
+      // henüz çalıştırılmadı) sessizce boş Set ile devam edilir, hiçbir devir
+      // otomatik onaylanmış sayılmaz.
+      const approvedHandovers = new Set();
+      {
+        const hoR = await fetch(
+          `${SUPABASE_URL}/rest/v1/account_handover_approvals?select=zoho_user_id,exit_date,start_date`,
+          { headers: H });
+        if (hoR.ok) {
+          const hoRows = await hoR.json().catch(() => []);
+          for (const h of (Array.isArray(hoRows) ? hoRows : [])) {
+            approvedHandovers.add(handoverKey(h.zoho_user_id, h.exit_date, h.start_date));
+          }
+        }
+      }
+
       // Users tarafını isimle indeksle — Users."Deal Owner Name" ile
       // zoho_users.full_name aynı değer uzayında (Zoho görünen adı).
       const usersByName = new Map();
@@ -360,6 +402,8 @@ export default async function handler(req, res) {
       let scopeLabel;
       let unplaced = [];
       let conflicts = [];
+      let handoverCandidates = [];
+      let departedEmployees = [];
       // Dizin, kapsamlanmış listeyle AYNI çözümlemeyi kullansın diye dışarıda
       // tutuluyor — ikinci kez resolveZohoTeam çağırmak (deal yedeği olmadan)
       // iki yerde farklı takım üretebilirdi.
@@ -378,8 +422,15 @@ export default async function handler(req, res) {
         // hâlâ aktif dese bile kadrodan düşer — danışmanların çoğunun Users
         // satırı olmadığı için bu karar team_assignments'ta tutuluyor
         // (Users.is_active yalnızca panele GİRİŞİ olan rolleri kapsıyor).
-        const active = zohoRows.filter(z =>
-          !isLeaver(z) && !isBlocked(z.full_name) && !isDeactivated(assignIdx, z.full_name, null));
+        const active = zohoRows.filter(z => {
+          if (isBlocked(z.full_name) || isDeactivated(assignIdx, z.full_name, null)) return false;
+          if (!isLeaver(z)) return true;
+          // "Ayrılmış" görünüyor ama hesap sonradan devralınmış olabilir —
+          // yalnızca admin onayladıysa kadroya dahil edilir (bkz. yukarıdaki
+          // isHandoverCandidate notu).
+          return isHandoverCandidate(z) &&
+            approvedHandovers.has(handoverKey(z.id, z.exit_date, z.start_date));
+        });
 
         // Katı sinyallerle (team / role / Users) yerleşemeyenler için son çare
         // deal taraması — YALNIZCA gerekliyse ve yalnızca o isimler için.
@@ -472,6 +523,68 @@ export default async function handler(req, res) {
             };
           })
           .filter(Boolean);
+
+        // ── Hesap devri onayı bekleyenler + ayrılan kişiler arşivi ─────────
+        // (bkz. yukarıdaki isHandoverCandidate notu ve zoho_account_handover.sql)
+        // Yalnızca admin'e: bu bir veri bakımı/HR kararı, takım liderinin
+        // ekranında karşılığı yok.
+        if (isAdmin) {
+          const leavers = zohoRows.filter(z => isLeaver(z) && z.exit_date);
+          handoverCandidates = leavers
+            .filter(z => isHandoverCandidate(z) &&
+              !approvedHandovers.has(handoverKey(z.id, z.exit_date, z.start_date)))
+            .map(z => ({
+              zohoUserId: z.id || '',
+              fullName:   z.full_name || '',
+              email:      z.email || '',
+              team:       z.team || z.role || '',
+              exitDate:   z.exit_date || '',
+              startDate:  z.start_date || '',
+            }));
+
+          // Zoho aynası hesap yeniden kullanıldığında ESKİ kişinin bilgisini
+          // YENİ kişininkiyle EZER — bu yüzden "ayrılmış" gördüğümüz her anda
+          // anlık görüntüyü kalıcı arşive yazıyoruz (aynı zoho_user_id+exit_date
+          // için ikinci kez yazılmaz, bkz. ignore-duplicates). Admin isteğini
+          // yavaşlatmasın diye sonucu beklemeden (fire-and-forget) gönderilir;
+          // tablo henüz kurulmadıysa (zoho_account_handover.sql) sessizce yutulur.
+          if (leavers.length) {
+            const payload = leavers
+              .map(z => ({
+                zoho_user_id: String(z.id || ''),
+                full_name:    z.full_name || null,
+                email:        z.email || null,
+                phone:        z.phone || z.mobile || null,
+                team:         z.team || z.role || null,
+                region:       z.region || null,
+                exit_date:    z.exit_date,
+              }))
+              .filter(r => r.zoho_user_id);
+            if (payload.length) {
+              fetch(`${SUPABASE_URL}/rest/v1/departed_employees?on_conflict=zoho_user_id,exit_date`, {
+                method: 'POST',
+                headers: { ...H, 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal' },
+                body: JSON.stringify(payload),
+              }).catch(() => {});
+            }
+          }
+
+          const deR = await fetch(
+            `${SUPABASE_URL}/rest/v1/departed_employees?select=*&order=exit_date.desc&limit=500`,
+            { headers: H });
+          if (deR.ok) {
+            const deRows = await deR.json().catch(() => []);
+            departedEmployees = (Array.isArray(deRows) ? deRows : []).map(d => ({
+              zohoUserId: d.zoho_user_id || '',
+              fullName:   d.full_name || '',
+              email:      d.email || '',
+              phone:      d.phone || '',
+              team:       d.team || '',
+              region:     d.region || '',
+              exitDate:   d.exit_date || '',
+            }));
+          }
+        }
 
         resolvedAll = resolved;
         // Satış dışı birimler kadro listesinden çıkarılıyor. Admin kapsamı
@@ -608,7 +721,6 @@ export default async function handler(req, res) {
 
       members.sort((a, b) =>
         (a.team || '').localeCompare(b.team || '') || a.fullName.localeCompare(b.fullName));
-      const isAdmin = ['admin', 'super-admin'].includes(claims.r);
       res.status(200).json({
         team: scopeLabel,
         members,
@@ -623,11 +735,51 @@ export default async function handler(req, res) {
         // (ayrıca başka takımların kişilerini içerir).
         unplaced:  isAdmin ? unplaced  : [],
         conflicts: isAdmin ? conflicts : [],
+        // Hesap devri onayı bekleyenler + ayrılan kişiler arşivi — yalnızca
+        // admin'e (bkz. zoho_account_handover.sql).
+        handoverCandidates: isAdmin ? handoverCandidates : [],
+        departedEmployees:  isAdmin ? departedEmployees  : [],
         // false → team_assignments.sql henüz çalıştırılmamış; elle takım
         // ataması yapılamaz. Panel bunu admin'e açıkça söylüyor (sessizce
         // çalışmayan bir buton bırakmak yerine).
         assignmentsInstalled: isAdmin ? assignmentsInstalled : undefined,
       });
+      return;
+    }
+
+    // Hesap devri onayı — yalnızca admin/super-admin. Şüpheli hesabı (exit_date
+    // geçmişte ama start_date daha sonra) kalıcı olarak "aktif say" listesine
+    // ekler; bkz. yukarıdaki active filtresi ve zoho_account_handover.sql.
+    if (req.method === 'POST') {
+      if (!isAdmin) { res.status(403).json({ error: 'Yalnızca yönetici onaylayabilir.' }); return; }
+      let body = req.body;
+      if (typeof body === 'string') { try { body = JSON.parse(body); } catch (e) { body = {}; } }
+      if (body?.action !== 'approveHandover') {
+        res.status(400).json({ error: 'Bilinmeyen işlem.' });
+        return;
+      }
+      const zohoUserId = String(body?.zohoUserId || '').trim();
+      const exitDate   = String(body?.exitDate || '').trim();
+      const startDate  = String(body?.startDate || '').trim();
+      if (!zohoUserId || !exitDate || !startDate) {
+        res.status(400).json({ error: 'Eksik alan: zohoUserId, exitDate, startDate gerekli.' });
+        return;
+      }
+      const r = await fetch(
+        `${SUPABASE_URL}/rest/v1/account_handover_approvals?on_conflict=zoho_user_id,exit_date,start_date`,
+        {
+          method: 'POST',
+          headers: { ...HJ, Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify({
+            zoho_user_id: zohoUserId, exit_date: exitDate, start_date: startDate,
+            approved_by: claims.u,
+          }),
+        });
+      if (!r.ok) {
+        res.status(502).json({ error: 'Onay kaydedilemedi — account_handover_approvals tablosu kurulmamış olabilir (bkz. zoho_account_handover.sql).' });
+        return;
+      }
+      res.status(200).json({ ok: true });
       return;
     }
 
