@@ -607,6 +607,33 @@
     .tl-type-row:last-child { margin-bottom:0; }
     .tl-type-name { font-size:10.5px; color:var(--tm-ink-2); }
     .tl-type-cnt  { font-size:10.5px; color:var(--tm-ink); font-weight:800; }
+    /* Sayısı 0 olan aksiyon tipleri de artık listede kalıyor ("hiç yok"
+       demek de bir bilgi) ama görsel ağırlıkları düşürülüyor — yoksa hepsi
+       aynı ağırlıkta görünüp gerçek dağılımı okumak zorlaşırdı. */
+    .tl-type-row.tl-type-zero .tl-type-name,
+    .tl-type-row.tl-type-zero .tl-type-cnt { color:var(--tm-ink-3); font-weight:700; }
+    .tl-type-row.tl-type-zero .tl-hbar { opacity:.45; }
+
+    /* Detay popup'undaki özel tarih aralığı filtresi — .tl-card ile aynı
+       cam yüzey, ama tek satırlık kompakt bir araç çubuğu. */
+    .tl-daterange {
+      display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+      padding:9px 12px; margin-bottom:12px; border-radius:13px;
+      background:var(--tm-surface-2); border:1px solid var(--tm-edge);
+    }
+    .tl-daterange-label { font-size:9px; font-weight:800; text-transform:uppercase;
+      letter-spacing:.06em; color:var(--tm-ink-3); white-space:nowrap; }
+    .tl-daterange input[type="date"] { font-size:11px; padding:5px 8px; }
+    .tl-daterange-sep { color:var(--tm-ink-3); font-size:11px; }
+    .tl-daterange-reset {
+      font-size:9.5px; font-weight:800; color:var(--tm-ink-2); cursor:pointer;
+      background:var(--tm-surface); border:1px solid var(--tm-edge); border-radius:8px;
+      padding:5px 10px; transition:background .14s, color .14s;
+    }
+    .tl-daterange-reset:hover { background:var(--tm-hover); color:var(--tm-ink); }
+    .tl-daterange-reset:disabled { opacity:.4; cursor:default; }
+    .tl-daterange-note { font-size:9.5px; color:var(--tm-ink-3); margin-left:auto; }
+    .tl-daterange.tl-daterange-active { border-color:var(--tm-accent-edge); background:var(--tm-accent-bg); }
 
     /* Son hareketler listesi */
     .tl-log { max-height:252px; overflow-y:auto; overscroll-behavior:contain; margin:-4px -6px -4px 0; padding-right:6px; }
@@ -2288,7 +2315,7 @@
               <th style="cursor:pointer" onclick="_tlSort('actionDays')" title="Dönem içinde aksiyon aldığı farklı gün sayısı">Aktif Gün</th>
               <th style="cursor:pointer" onclick="_tlSort('actions')" title="Dönem içindeki alarm aksiyonu sayısı (giriş/çıkış hariç)">Aksiyon</th>
               <th style="cursor:pointer" onclick="_tlSort('workload')" title="Takımının şu anki aktif alarm sayısı">Alarm Yükü</th>
-              <th title="Dönem içinde dokunduğu farklı hasta / aktif alarm yükü">Kapsam</th>
+              <th title="Dönem içinde dokunduğu farklı alarm / takımın toplam alarm sayısı — en fazla %100">Kapsam</th>
               <th></th>
             </tr>
           </thead>
@@ -2303,7 +2330,7 @@
       <strong class="text-slate-400">Skor nasıl hesaplanıyor?</strong>
       <span id="tlFormulaText">Tazelik (40 puan): son aksiyondan bu yana geçen gün — aynı gün 40, 1 gün 36, 3 güne kadar 28, 7 güne kadar 18, 14 güne kadar 8, sonrası 0.
       Süreklilik (30 puan): aksiyon alınan farklı gün sayısı / dönem hedefi (30 günde 10 gün = tam puan).
-      Kapsam (30 puan): dokunulan farklı hasta / aktif alarm yükü — %30'a ulaşınca tam puan.
+      Kapsam (30 puan): dönem içinde dokunulan farklı alarm sayısı / takımın TOPLAM alarm sayısı (yalnızca şu an aktif olanlar değil, tüm durumlar) — %30'a ulaşınca tam puan, oran hiçbir zaman %100'ü geçmez.
       Tüm bileşenler tabloda ayrı ayrı görünür; skor hiçbir veriyi gizlemez.</span>
       <div class="mt-1.5 text-slate-600">Kaynak: <code>Logs</code> tablosu (giriş ve tüm alarm aksiyonları) + takımın anlık aktif alarm sayısı.</div>
     </div>
@@ -2332,6 +2359,17 @@
           <span class="tl-live" id="tlDetailLive" title="Bu ekran açıkken veriler kendiliğinden tazelenir"><i></i>canlı</span>
           <button onclick="closeTlDetail()" class="tm-close" aria-label="Kapat">&times;</button>
         </div>
+      </div>
+      <!-- Üstteki genel "Dönem" seçicisinden BAĞIMSIZ: sadece bu kişinin
+           detayını belirli günler için incelemek için. Boş bırakılırsa
+           (Sıfırla) üstteki genel dönem geçerli olmaya devam eder. -->
+      <div class="tl-daterange" id="tlDateRangeBar">
+        <span class="tl-daterange-label">Tarih Aralığı</span>
+        <input type="date" id="tlDetailFrom" onchange="_tlDetailRangeChange()">
+        <span class="tl-daterange-sep">—</span>
+        <input type="date" id="tlDetailTo" onchange="_tlDetailRangeChange()">
+        <button type="button" id="tlDetailRangeReset" onclick="_tlDetailRangeReset()" class="tl-daterange-reset">Sıfırla</button>
+        <span class="tl-daterange-note" id="tlDetailRangeNote"></span>
       </div>
       <div id="tlDetailBody"></div>
     </div>
@@ -4152,6 +4190,64 @@
       return m;
     }
 
+    // Kapsam oranının PAYDASI: takımın TÜM zamanlardaki/durumlardaki alarm
+    // sayısı (yalnızca şu anki aktif kadro değil). Önceden Kapsam,
+    // "dönem içinde dokunulan alarm" / "şu anki canlı workload" olarak
+    // hesaplanıyordu — dönem içinde kapatılan alarmlar workload'dan düşünce
+    // touched > workload olabiliyordu ve yüzde %100'ü aşıyordu. Bu paydayla
+    // (touched ⊆ bu havuz olduğu için) oran hiçbir zaman %100'ü geçemez.
+    function _tlTotalByTeam() {
+      const m = {};
+      (adminAllAlarms || []).forEach(a => {
+        if (a.alarm_type === 'payment_tracking') return;
+        const canon = (window.TeamMap && TeamMap.normalize(a.team)) || a.team || '(bos)';
+        m[canon] = (m[canon] || 0) + 1;
+      });
+      return m;
+    }
+
+    // Bir log kümesini herhangi bir [fromMs,toMs] penceresi için özet
+    // metriklere çevirir — hem ana tablonun sabit 7/30/90 günlük dönemi hem
+    // de detay popup'undaki özel tarih aralığı filtresi AYNI hesabı kullanır.
+    function _tlMetricsFromLogs(allLogs, fromMs, toMs, totalAlarms) {
+      const inWin = (allLogs || []).filter(l => {
+        const t = new Date(l.created_at).getTime();
+        return t >= fromMs && t <= toMs;
+      });
+      const acts = inWin.filter(l => !_TL_NON_ACTION.has(l.action_type));
+      const logins = inWin.filter(l => l.action_type === 'LOGIN');
+      const actionDays = new Set(acts.map(l => _tlDayStr(l.created_at))).size;
+      const loginDays = new Set(logins.map(l => _tlDayStr(l.created_at))).size;
+      const lastAction = acts.length ? acts.reduce((mx, l) => l.created_at > mx ? l.created_at : mx, acts[0].created_at) : null;
+      const touched = new Set(acts.map(l => l.deal_id).filter(Boolean)).size;
+      // Math.min(1, ...) EK bir güvenlik: payda mantığı doğru kurulsa bile
+      // (silinen/takım değiştirilen deal gibi) uç durumlarda %100'ü aşmasın.
+      const coverage = totalAlarms > 0 ? Math.min(1, touched / totalAlarms) : null;
+      const byType = {};
+      acts.forEach(l => { byType[l.action_type] = (byType[l.action_type] || 0) + 1; });
+      return { winLogs: inWin, actions: acts.length, logins: logins.length, actionDays, loginDays, lastAction, touched, coverage, byType };
+    }
+
+    // Skor formülü — hem genel dönem hem özel tarih aralığı için AYNI.
+    function _tlScoreFor(lastAction, actionDays, targetDays, coverage) {
+      const ad = _tlDaysAgo(lastAction);
+      const fresh = ad === null ? 0 : ad === 0 ? 40 : ad === 1 ? 36 : ad <= 3 ? 28 : ad <= 7 ? 18 : ad <= 14 ? 8 : 0;
+      const cons = Math.min(1, actionDays / targetDays) * 30;
+      const cov = coverage === null ? null : Math.min(1, coverage / 0.30) * 30;
+      const scoreParts = { fresh: Math.round(fresh), cons: Math.round(cons), cov: cov === null ? null : Math.round(cov) };
+      const score = cov === null ? Math.round((fresh + cons) / 70 * 100) : Math.round(fresh + cons + cov);
+      return { scoreParts, score };
+    }
+
+    // Verilen gün sayısına göre "süreklilik" hedefi — 30 günde 10 farklı
+    // aktif gün tam puan (7/90 için ayarlanmış özel eşiklerle AYNI oranı
+    // herhangi bir özel tarih aralığı uzunluğuna genelleştirir).
+    function _tlTargetDaysFor(days) {
+      if (days <= 7)  return Math.max(1, Math.round(days * 3 / 7));
+      if (days <= 30) return Math.max(1, Math.round(days * 10 / 30));
+      return Math.max(1, Math.round(days * 24 / 90));
+    }
+
     function _tlBuild(roster) {
       const workload = _tlWorkloadByTeam();
 
@@ -4233,41 +4329,22 @@
     function _tlComputeMetrics() {
       const days = Number(document.getElementById('tlPeriod')?.value || 30);
       const cutoff = Date.now() - days * 86400000;
-      // Süreklilik hedefi: 30 günde 10 farklı aktif gün tam puan.
-      const targetDays = days === 7 ? 3 : days === 90 ? 24 : 10;
+      const targetDays = _tlTargetDaysFor(days);
+      const totalByTeam = _tlTotalByTeam();
 
       (_tlRows || []).forEach(r => {
-        const inWin = r.logs.filter(l => new Date(l.created_at).getTime() >= cutoff);
-        const acts = inWin.filter(l => !_TL_NON_ACTION.has(l.action_type));
-        const logins = inWin.filter(l => l.action_type === 'LOGIN');
-
         r.periodDays = days;
-        r.actions = acts.length;
-        r.logins = logins.length;
-        r.actionDays = new Set(acts.map(l => _tlDayStr(l.created_at))).size;
-        r.loginDays = new Set(logins.map(l => _tlDayStr(l.created_at))).size;
-        r.lastAction = acts.length ? acts.reduce((m, l) => l.created_at > m ? l.created_at : m, acts[0].created_at) : null;
+        r.totalAlarms = totalByTeam[r.canonTeam] || 0;
+        const dm = _tlMetricsFromLogs(r.logs, cutoff, Date.now(), r.totalAlarms);
+        Object.assign(r, dm);
         r.lastLogin = r.lastLoginAll;
-        r.touched = new Set(acts.map(l => l.deal_id).filter(Boolean)).size;
-        r.coverage = r.workload > 0 ? r.touched / r.workload : null;
-        r.byType = {};
-        acts.forEach(l => { r.byType[l.action_type] = (r.byType[l.action_type] || 0) + 1; });
-        r.winLogs = inWin;
 
-        // ── Skor ──────────────────────────────────────────────────────
-        const ad = _tlDaysAgo(r.lastAction);
-        const fresh = ad === null ? 0 : ad === 0 ? 40 : ad === 1 ? 36 : ad <= 3 ? 28 : ad <= 7 ? 18 : ad <= 14 ? 8 : 0;
-        const cons = Math.min(1, r.actionDays / targetDays) * 30;
-        // Kapsam: yükün %30'una dokunmak tam puan. Yük yoksa bu bileşen
-        // ölçülemez — skoru 70 üzerinden yeniden ölçekle, yoksa alarmı
-        // olmayan lider haksız yere düşük skor alır.
-        const cov = r.coverage === null ? null : Math.min(1, r.coverage / 0.30) * 30;
-        r.scoreParts = { fresh: Math.round(fresh), cons: Math.round(cons), cov: cov === null ? null : Math.round(cov) };
-        r.score = cov === null
-          ? Math.round((fresh + cons) / 70 * 100)
-          : Math.round(fresh + cons + cov);
+        const sc = _tlScoreFor(r.lastAction, r.actionDays, targetDays, r.coverage);
+        r.scoreParts = sc.scoreParts;
+        r.score = sc.score;
 
         // ── Durum ─────────────────────────────────────────────────────
+        const ad = _tlDaysAgo(r.lastAction);
         const ld = _tlDaysAgo(r.lastLoginAll);
         if (ld === null)                              r.status = 'never';
         else if (ld > 14)                             r.status = 'dormant';
@@ -4383,7 +4460,7 @@
         const covTxt = r.coverage === null
           ? '<span style="color:#475569">—</span>'
           : `<span style="color:${r.coverage >= 0.3 ? '#34d399' : r.coverage >= 0.1 ? '#fbbf24' : '#ef4444'}">${Math.round(r.coverage * 100)}%</span>
-             <span style="color:#475569;font-size:9px"> (${r.touched}/${r.workload})</span>`;
+             <span style="color:#475569;font-size:9px"> (${r.touched}/${r.totalAlarms})</span>`;
         return `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
           <td class="py-1.5"><span style="color:${scoreCol};font-weight:800;font-size:13px">${r.score}</span></td>
           <td class="py-1.5"><span class="tl-pill" data-tone="${m.tone || ''}">${m.label}</span></td>
@@ -4412,6 +4489,64 @@
     };
     let _tlDetailKey = null;      // açık olan liderin anahtarı
     let _tlDetailTimer = null;    // canlı tazeleme zamanlayıcısı
+    // Popup'a özel tarih aralığı — üstteki genel "Dönem" seçicisinden
+    // BAĞIMSIZ. İkisi de null'sa üstteki genel dönem geçerli olur.
+    let _tlDetailFrom = null;     // 'YYYY-MM-DD'
+    let _tlDetailTo = null;       // 'YYYY-MM-DD'
+
+    function _tlDateInputStr(d) { return new Date(d).toISOString().slice(0, 10); }
+    // Veri kaynağı en fazla 90 gün geriye çekiliyor (bkz. loadTlUsage) —
+    // seçici bu pencerenin dışına çıkarsa sessizce boş/yanlış sonuç
+    // görünürdü, min/max ile baştan engelleniyor.
+    function _tlDetailBounds() {
+      return { min: _tlDateInputStr(Date.now() - 90 * 86400000), max: _tlDateInputStr(Date.now()) };
+    }
+    function _tlDefaultRangeFor(days) {
+      return { from: _tlDateInputStr(Date.now() - (days - 1) * 86400000), to: _tlDateInputStr(Date.now()) };
+    }
+    // Giriş alanlarını + Sıfırla/not durumunu senkronlar. `r` verilirse
+    // varsayılan aralık o kişinin güncel dönemine göre kurulur (popup
+    // açılışı); verilmezse yalnızca aktif/pasif görünümü günceller.
+    function _tlSyncRangeBar(r) {
+      const fromEl = document.getElementById('tlDetailFrom');
+      const toEl = document.getElementById('tlDetailTo');
+      const bar = document.getElementById('tlDateRangeBar');
+      const resetBtn = document.getElementById('tlDetailRangeReset');
+      const note = document.getElementById('tlDetailRangeNote');
+      if (!fromEl || !toEl) return;
+      const { min, max } = _tlDetailBounds();
+      fromEl.min = min; fromEl.max = max; toEl.min = min; toEl.max = max;
+      const isCustom = !!(_tlDetailFrom && _tlDetailTo);
+      if (r && !isCustom) {
+        const def = _tlDefaultRangeFor(r.periodDays);
+        fromEl.value = def.from; toEl.value = def.to;
+      } else if (isCustom) {
+        fromEl.value = _tlDetailFrom; toEl.value = _tlDetailTo;
+      }
+      if (bar) bar.classList.toggle('tl-daterange-active', isCustom);
+      if (resetBtn) resetBtn.disabled = !isCustom;
+      if (note) note.textContent = isCustom
+        ? I18N.t('Özel aralık aktif — üstteki genel dönemi geçersiz kılıyor')
+        : I18N.t('Veri son 90 günü kapsar');
+    }
+    function _tlDetailRangeChange() {
+      const fromV = document.getElementById('tlDetailFrom')?.value || '';
+      const toV = document.getElementById('tlDetailTo')?.value || '';
+      const note = document.getElementById('tlDetailRangeNote');
+      if (!fromV || !toV) return;
+      if (fromV > toV) {
+        if (note) note.textContent = I18N.t('Başlangıç tarihi bitişten sonra olamaz.');
+        return;
+      }
+      _tlDetailFrom = fromV;
+      _tlDetailTo = toV;
+      _tlRenderDetail(false);
+    }
+    function _tlDetailRangeReset() {
+      _tlDetailFrom = null;
+      _tlDetailTo = null;
+      _tlRenderDetail(false);
+    }
 
     // Ada göre sabit renk — aynı kişi her açılışta aynı rengi alsın.
     function _tlAvatarColor(name) {
@@ -4426,6 +4561,10 @@
 
     function openTlDetail(key) {
       _tlDetailKey = key;
+      // Her açılışta temiz sayfa: bir önceki liderde bırakılmış özel tarih
+      // aralığı bu kişiye sızmasın, varsayılan (üstteki genel dönem) ile başlar.
+      _tlDetailFrom = null;
+      _tlDetailTo = null;
       if (!_tlRenderDetail(true)) return;
       document.getElementById('tlDetailModal').classList.add('open');
       _tlLockScroll(true);
@@ -4460,12 +4599,28 @@
       }
     }
 
+    function _tlFmtDayShort(dateStr) {
+      const MO = ['Oca','Şub','Mar','Nis','May','Haz','Tem','Ağu','Eyl','Eki','Kas','Ara'];
+      const d = new Date(dateStr + 'T00:00:00');
+      return d.getDate() + ' ' + MO[d.getMonth()];
+    }
+    // ld: son giriş kaç gün önce (hesap geneli — tarih filtresinden ETKİLENMEZ).
+    function _tlStatusFor(ld, ad, actionsCount, workload, score) {
+      if (ld === null)                            return 'never';
+      if (ld > 14)                                return 'dormant';
+      if (workload === 0 && !actionsCount)        return 'no_work';
+      if (!actionsCount)                          return 'login_only';
+      if (ad === null || ad > 7)                  return 'low';
+      if (score < 40)                             return 'low';
+      if (score < 70)                             return 'ok';
+      return 'active';
+    }
+
     // firstPaint=false → canlı tazeleme: kaydırma konumu korunur, çubuklar
     // baştan büyüme animasyonu oynatmaz (her dakika zıplaması rahatsız eder).
     function _tlRenderDetail(firstPaint) {
       const r = (_tlRows || []).find(x => x.key === _tlDetailKey);
       if (!r) return false;
-      const m = _tlStatusMeta(r.status);
       const panel = document.querySelector('#tlDetailModal .modal-panel');
       const keepScroll = firstPaint ? 0 : (panel ? panel.scrollTop : 0);
 
@@ -4473,27 +4628,54 @@
       const av = document.getElementById('tlDetailAvatar');
       av.textContent = _tlInitials(r.name);
       av.style.background = _tlAvatarColor(r.name);
-      document.getElementById('tlDetailPill').innerHTML =
-        `<span class="tl-pill" data-tone="${m.tone || ''}">${_escHtml(m.label)}</span>`;
       document.getElementById('tlDetailSub').innerHTML =
         `${_escHtml(r.teamLabel)} · ${_escHtml(r.region || '—')}${r.username ? ' · <span style="color:#475569;font-family:monospace">' + _escHtml(r.username) + '</span>' : ''}`;
 
-      const days = r.periodDays;
+      // ── Tarih aralığı: özel seçim varsa onu, yoksa üstteki genel dönemi
+      // kullan. Popup bu aralığa göre TAM bir rapor kartı — skor/durum
+      // dahil — üretir; bu yüzden "8 Oca haftası nasıl geçmiş?" gibi bir
+      // soruya tek ekrandan cevap verilebilir. -->
+      _tlSyncRangeBar(r);
+      const isCustom = !!(_tlDetailFrom && _tlDetailTo);
+      let fromMs, toMs, days;
+      if (isCustom) {
+        fromMs = new Date(_tlDetailFrom + 'T00:00:00').getTime();
+        toMs = new Date(_tlDetailTo + 'T23:59:59.999').getTime();
+        days = Math.max(1, Math.round((toMs - fromMs) / 86400000) + 1);
+      } else {
+        days = r.periodDays;
+        toMs = Date.now();
+        fromMs = toMs - days * 86400000;
+      }
+      const rangeLabel = isCustom
+        ? `${_tlFmtDayShort(_tlDetailFrom)} – ${_tlFmtDayShort(_tlDetailTo)}`
+        : I18N.t('son {d} gün').replace('{d}', days);
+
+      const dm = _tlMetricsFromLogs(r.logs, fromMs, toMs, r.totalAlarms);
+      const targetDays = _tlTargetDaysFor(days);
+      const sc = _tlScoreFor(dm.lastAction, dm.actionDays, targetDays, dm.coverage);
+      const dStatus = _tlStatusFor(_tlDaysAgo(r.lastLoginAll), _tlDaysAgo(dm.lastAction), dm.actions, r.workload, sc.score);
+      const m = _tlStatusMeta(dStatus);
+      document.getElementById('tlDetailPill').innerHTML =
+        `<span class="tl-pill" data-tone="${m.tone || ''}">${_escHtml(m.label)}</span>` +
+        (isCustom ? `<span style="margin-left:6px;font-size:9px;color:var(--tm-ink-3);font-weight:700">${_escHtml(I18N.t('(seçili aralık)'))}</span>` : '');
+
       // Gün bazında aksiyon / giriş
       const perDay = {}, loginDay = {};
-      r.winLogs.forEach(l => {
+      dm.winLogs.forEach(l => {
         const d = _tlDayStr(l.created_at);
         if (l.action_type === 'LOGIN') loginDay[d] = true;
         if (!_TL_NON_ACTION.has(l.action_type)) perDay[d] = (perDay[d] || 0) + 1;
       });
       const maxDay = Math.max(1, ...Object.values(perDay));
 
-      // ── Grafik ────────────────────────────────────────────────────
+      // ── Grafik: fromMs..toMs arasındaki HER gün (uzun aralıklarda etiket
+      // sıklığı azalır) ──────────────────────────────────────────────
       const WD = ['Pz', 'Pt', 'Sa', 'Ça', 'Pe', 'Cu', 'Ct'];
       let cols = '', labels = '';
       const step = days <= 7 ? 1 : days <= 30 ? 5 : 15;
-      for (let i = days - 1; i >= 0; i--) {
-        const dt = new Date(Date.now() - i * 86400000);
+      for (let i = 0; i < days; i++) {
+        const dt = new Date(fromMs + i * 86400000);
         const d = _tlDayStr(dt);
         const n = perDay[d] || 0;
         const wknd = dt.getDay() === 0 || dt.getDay() === 6;
@@ -4505,16 +4687,15 @@
           : (loginDay[d] ? 'var(--tl-bar-login)' : 'var(--tm-edge)');
         cols += `<div class="tl-col${wknd ? ' tl-wknd' : ''}" data-d="${d}" data-n="${n}" data-w="${WD[dt.getDay()]}" data-l="${loginDay[d] ? 1 : 0}">
           <b style="height:${h}%;background:${col}"></b></div>`;
-        const idx = days - 1 - i;
-        labels += `<div style="flex:1 1 0;min-width:3px;text-align:center">${(idx % step === 0 || i === 0) ? (dt.getDate() + '') : ''}</div>`;
+        labels += `<div style="flex:1 1 0;min-width:3px;text-align:center">${(i % step === 0 || i === days - 1) ? (dt.getDate() + '') : ''}</div>`;
       }
 
       // ── Skor halkası ──────────────────────────────────────────────
-      const sp = r.scoreParts;
+      const sp = sc.scoreParts;
       const R = 30, C = 2 * Math.PI * R;
       // Renk tema-duyarlı token'dan geliyor (bkz. --tl-score-*): açık temada
       // canlı yeşil/amber, skor sayısını cam kartın üstünde görünmez kılıyordu.
-      const sTone = r.score >= 70 ? 'ok' : r.score >= 40 ? 'warn' : 'bad';
+      const sTone = sc.score >= 70 ? 'ok' : sc.score >= 40 ? 'warn' : 'bad';
       const sCol = `var(--tl-score-${sTone})`;
       const sGlow = `var(--tl-glow-${sTone})`;
       // Halka artık daha büyük ve gradyanlı; merkezdeki sayının çevresinde
@@ -4529,7 +4710,7 @@
         <circle cx="39" cy="39" r="${R}" fill="none" stroke="var(--tm-edge)" stroke-width="7" opacity=".6"/>
         <circle class="tl-ring-val" cx="39" cy="39" r="${R}" fill="none" stroke="url(#${ringId})" stroke-width="7"
           stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}"
-          stroke-dashoffset="${firstPaint ? C.toFixed(1) : (C * (1 - r.score / 100)).toFixed(1)}"/></svg>`;
+          stroke-dashoffset="${firstPaint ? C.toFixed(1) : (C * (1 - sc.score / 100)).toFixed(1)}"/></svg>`;
 
       const part = (label, val, max, col) => `<div style="margin-bottom:8px">
         <div class="flex justify-between" style="margin-bottom:3px">
@@ -4538,18 +4719,23 @@
         <div class="tl-bar"><i data-w="${val === null ? 0 : Math.round(val / max * 100)}" style="background:${col}"></i></div></div>`;
 
       // ── Aksiyon dağılımı ──────────────────────────────────────────
-      // whatsapp_sent (bkz. _tlBuild) diğer aksiyonlarla aynı `logs` akışına
-      // katıldığı için burada özel bir işlem gerekmiyor — byType'ta normal
-      // bir tip olarak otomatik görünür.
-      const maxType = Math.max(1, ...Object.values(r.byType));
-      const typeRows = Object.entries(r.byType).sort((a, b) => b[1] - a[1])
-        .map(([k, v]) => `<div class="tl-type-row">
+      // Sayısı 0 olan bir tip ARTIK GİZLENMİYOR ("WhatsApp'tan mesaj
+      // atmadıysa hiç yazmıyorduk" şikayeti) — bilinen TÜM aksiyon
+      // tiplerinin birleşimi (+ varsa bilinmeyen yeni bir tip) satır olarak
+      // basılır, sadece görsel ağırlığı düşürülür (bkz. .tl-type-zero).
+      const knownActionTypes = Object.keys(_TL_TYPE_LABELS).filter(k => !_TL_NON_ACTION.has(k));
+      const actionTypeKeys = Array.from(new Set([...knownActionTypes, ...Object.keys(dm.byType)]));
+      const maxType = Math.max(1, ...actionTypeKeys.map(k => dm.byType[k] || 0));
+      const typeRows = actionTypeKeys
+        .map(k => ({ k, v: dm.byType[k] || 0 }))
+        .sort((a, b) => b.v - a.v)
+        .map(({ k, v }) => `<div class="tl-type-row${v === 0 ? ' tl-type-zero' : ''}">
           <div class="flex justify-between"><span class="tl-type-name">${_escHtml(I18N.t(_TL_TYPE_LABELS[k] || k))}</span>
             <span class="tl-type-cnt">${v}</span></div>
           <div class="tl-hbar"><i data-w="${Math.round(v / maxType * 100)}" style="${
             // WhatsApp kendi marka yeşiliyle ayrışıyor (diğerleri vurgu rengi).
-            k === 'whatsapp_sent' ? 'background:linear-gradient(90deg,#25D366aa,#1da851)' : ''}"></i></div></div>`).join('')
-        || `<div style="font-size:11px;color:var(--tm-danger);padding:4px 0">${I18N.t('Bu dönemde hiç aksiyon yok.')}</div>`;
+            k === 'whatsapp_sent' ? 'background:linear-gradient(90deg,#25D366aa,#1da851)' : ''}"></i></div></div>`)
+        .join('');
 
       const stat = (label, val, sub) => `<div class="tl-stat">
         <div class="tl-stat-label">${label}</div>
@@ -4558,7 +4744,7 @@
 
       // Tablo yerine satır listesi: hücre hizası dar popup'ta bozuluyordu ve
       // hover geri bildirimi verilemiyordu.
-      const recent = r.winLogs.slice(0, 50).map(l => {
+      const recent = dm.winLogs.slice(0, 50).map(l => {
         const isAct = !_TL_NON_ACTION.has(l.action_type);
         const wa = l.action_type === 'whatsapp_sent';
         const tone = wa ? '#25D366' : (isAct ? 'var(--tm-accent)' : 'var(--tm-ink-3)');
@@ -4575,7 +4761,7 @@
             <div style="position:relative;flex:none">
               ${ring}
               <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column">
-                <span class="tl-score-num" style="color:${sCol}">${r.score}</span>
+                <span class="tl-score-num" style="color:${sCol}">${sc.score}</span>
                 <span class="tl-score-den">/100</span>
               </div>
             </div>
@@ -4586,13 +4772,13 @@
             </div>
           </div>
           ${stat(I18N.t('Son Giriş'), _tlAgoLabel(r.lastLoginAll), r.lastLoginAll ? _amFmtDateTime(r.lastLoginAll) : '')}
-          ${stat(I18N.t('Son Aksiyon'), _tlAgoLabel(r.lastAction), r.lastAction ? _amFmtDateTime(r.lastAction) : I18N.t('kayıt yok'))}
-          ${stat(I18N.t('Alarm Yükü'), r.workload, r.coverage === null ? I18N.t('aktif alarmı yok') : _escHtml(I18N.t('dokunulan {n}').replace('{n}', r.touched)))}
+          ${stat(I18N.t('Son Aksiyon'), _tlAgoLabel(dm.lastAction), dm.lastAction ? _amFmtDateTime(dm.lastAction) : I18N.t('kayıt yok'))}
+          ${stat(I18N.t('Alarm Yükü'), r.workload, dm.coverage === null ? I18N.t('hiç alarmı olmadı') : _escHtml(I18N.t('dokunulan {n} / toplam {t}').replace('{n}', dm.touched).replace('{t}', r.totalAlarms)))}
         </div>
 
         <div class="tl-card mb-3">
           <div class="tl-card-head">
-            <div class="tl-card-title">${_escHtml(I18N.t('Günlük aktivite — son {d} gün').replace('{d}', days))}</div>
+            <div class="tl-card-title">${_escHtml(I18N.t('Günlük aktivite — {r}').replace('{r}', rangeLabel))}</div>
             <div class="tl-card-note">${_escHtml(I18N.t('en yoğun gün: {n} aksiyon').replace('{n}', maxDay))}</div>
           </div>
           <div class="tl-chart" id="tlChart">${cols}<div class="tl-tip" id="tlTip"></div></div>
@@ -4607,19 +4793,19 @@
         <div class="grid md:grid-cols-2 gap-3">
           <div class="tl-card">
             <div class="tl-card-head">
-              <div class="tl-card-title">${_escHtml(I18N.t('Aksiyon dağılımı ({d} gün)').replace('{d}', days))}</div>
+              <div class="tl-card-title">${_escHtml(I18N.t('Aksiyon dağılımı ({r})').replace('{r}', rangeLabel))}</div>
             </div>
             ${typeRows}
             <div class="tl-foot-row">
               <span style="color:var(--tm-ink-3)">${I18N.t('Giriş sayısı')}</span>
-              <span style="color:var(--tm-ink);font-weight:800">${r.logins}
-                <span style="color:var(--tm-ink-3);font-weight:700">· ${_escHtml(I18N.t('{n} farklı gün').replace('{n}', r.loginDays))}</span></span>
+              <span style="color:var(--tm-ink);font-weight:800">${dm.logins}
+                <span style="color:var(--tm-ink-3);font-weight:700">· ${_escHtml(I18N.t('{n} farklı gün').replace('{n}', dm.loginDays))}</span></span>
             </div>
           </div>
           <div class="tl-card">
             <div class="tl-card-head">
               <div class="tl-card-title">${I18N.t('Son hareketler')}</div>
-              ${r.winLogs.length > 50 ? `<div class="tl-card-note">${_escHtml(I18N.t('son 50 kayıt'))}</div>` : ''}
+              ${dm.winLogs.length > 50 ? `<div class="tl-card-note">${_escHtml(I18N.t('son 50 kayıt'))}</div>` : ''}
             </div>
             <div class="tl-log">
               ${recent || `<div style="font-size:11px;color:var(--tm-ink-3);padding:4px 0">${I18N.t('Kayıt yok.')}</div>`}
@@ -4636,7 +4822,7 @@
         document.querySelectorAll('#tlDetailBody .tl-bar > i, #tlDetailBody .tl-hbar > i')
           .forEach(el => { el.style.width = (el.dataset.w || 0) + '%'; });
         const rv = document.querySelector('#tlDetailBody .tl-ring-val');
-        if (rv) rv.style.strokeDashoffset = (C * (1 - r.score / 100)).toFixed(1);
+        if (rv) rv.style.strokeDashoffset = (C * (1 - sc.score / 100)).toFixed(1);
       };
       if (firstPaint) requestAnimationFrame(() => requestAnimationFrame(go));
       else go();
@@ -4677,12 +4863,12 @@
     function exportTlUsage(format) {
       if (!_tlRows || !_tlRows.length) { showSiteNotice(I18N.t('Dışa aktarılacak veri yok.'), 'warn'); return; }
       const headers = ['Takım Lideri', 'Takım', 'Bölge', 'Durum', 'Skor', 'Son Giriş', 'Son Aksiyon',
-        'Aktif Gün', 'Aksiyon', 'Giriş', 'Alarm Yükü', 'Dokunulan', 'Kapsam %'];
+        'Aktif Gün', 'Aksiyon', 'Giriş', 'Alarm Yükü (aktif)', 'Toplam Alarm', 'Dokunulan', 'Kapsam %'];
       const dt = v => v ? String(v).slice(0, 16).replace('T', ' ') : I18N.t('kayıt yok');
       const rows = _tlRows.slice().sort((a, b) => a.score - b.score).map(r => [
         r.name, r.teamLabel, r.region, _tlStatusMeta(r.status).label, r.score,
         dt(r.lastLoginAll), dt(r.lastAction),
-        r.actionDays, r.actions, r.logins, r.workload, r.touched,
+        r.actionDays, r.actions, r.logins, r.workload, r.totalAlarms, r.touched,
         r.coverage === null ? '' : Math.round(r.coverage * 100),
       ]);
       NCExport.download(format || 'csv', headers, rows, 'lider_takibi', 'Lider Takibi — Sistem Kullanımı');
