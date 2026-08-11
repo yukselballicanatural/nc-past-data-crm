@@ -1243,10 +1243,30 @@
           <button onclick="openUserModal(null)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">+ Kullanıcı Ekle</button>
         </div>
       </div>
-      <!-- Filtreler KALDIRILDI (kullanici istegi: "gerek yok"). Liste giris
-           yetkisi olan kisilerden olusuyor, yani kisa; arama/rol/takim
-           suzgeci taramaktan daha uzun suruyordu. Tablo tum listeyi gosterir.
-           Kolonlar hala Ad Soyad'a gore sirali geliyor (uctan order=id.asc). -->
+      <!-- Filtreler: "Agent" rolü eklenip liste danışmanları da kapsayınca
+           (varsayılan gizli olsalar bile açılınca) uzayabildiği için arama +
+           rol/takım süzgeci geri eklendi. -->
+      <div class="bg-gray-900 border border-gray-800 rounded-xl p-4 mb-4">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:flex-end">
+          <div style="flex:1;min-width:220px">
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Ara</label>
+            <input type="text" id="umSearch" class="filter-input" style="width:100%" placeholder="Ad soyad, kullanıcı adı, rol, takım ara..." oninput="_umOnFilterChange()">
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Rol</label>
+            <select id="umFilterRole" class="filter-select" onchange="_umOnFilterChange()">
+              <option value="">Tüm Roller</option>
+            </select>
+          </div>
+          <div>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Takım</label>
+            <select id="umFilterTeam" class="filter-select" onchange="_umOnFilterChange()">
+              <option value="">Tüm Takımlar</option>
+            </select>
+          </div>
+          <button onclick="_umResetFilters()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700">Temizle</button>
+        </div>
+      </div>
       <!-- Loading -->
       <div id="usersLoadingState" class="flex flex-col items-center py-16 gap-4">
         <div class="spinner-anim"></div>
@@ -9983,18 +10003,27 @@
       return _usersRows[n];
     }
 
-    // Arama/rol/takim suzgecleri KALDIRILDI. Fonksiyon duruyor cunku tabloyu
-    // da export'u da bu besliyor (tek kaynak) — tek isi kalan, panele girisi
-    // olmayan danismanlari VARSAYILAN OLARAK listeden dusurmek.
-    //
-    // Anahtar neden gerekli: rol secenegine "Agent" geri eklendi. Suzgec
-    // kosulsuz olsaydi yeni eklenen danisman kaydedildigi anda listeden
-    // kaybolur, admin "eklenmedi mi?" diye ayni kaydi tekrar tekrar
-    // olusturmaya calisirdi.
+    // Panele girişi olmayan danışmanlar VARSAYILAN OLARAK listeden düşer
+    // ("Danışmanları da göster" ile açılabilir) — liste kısa kalsın diye.
+    // Arama + rol/takım süzgeci ayrıca uygulanır (bkz. _umSearch/_umFilterRole/_umFilterTeam).
     let _umShowAgents = false;
+    let _umSearch = '';
+    let _umFilterRole = '';
+    let _umFilterTeam = '';
     function _usersFilteredRows() {
-      if (_umShowAgents) return allUsers;
-      return allUsers.filter(u => !_isAgentRole(u['Role']));
+      let list = _umShowAgents ? allUsers : allUsers.filter(u => !_isAgentRole(u['Role']));
+      if (_umFilterRole) list = list.filter(u => (u['Role'] || '') === _umFilterRole);
+      if (_umFilterTeam) list = list.filter(u => uTeam(u) === _umFilterTeam);
+      const q = _umSearch.trim().toLowerCase();
+      if (q) {
+        list = list.filter(u =>
+          uName(u).toLowerCase().includes(q) ||
+          String(u['Username'] || '').toLowerCase().includes(q) ||
+          (u['Role'] || '').toLowerCase().includes(q) ||
+          uTeam(u).toLowerCase().includes(q)
+        );
+      }
+      return list;
     }
 
     function _umToggleAgents(on) {
@@ -10002,7 +10031,44 @@
       renderUsersTable();
     }
 
+    function _umOnFilterChange() {
+      _umSearch = document.getElementById('umSearch')?.value || '';
+      _umFilterRole = document.getElementById('umFilterRole')?.value || '';
+      _umFilterTeam = document.getElementById('umFilterTeam')?.value || '';
+      renderUsersTable();
+    }
+
+    function _umResetFilters() {
+      _umSearch = ''; _umFilterRole = ''; _umFilterTeam = '';
+      const s = document.getElementById('umSearch'); if (s) s.value = '';
+      const r = document.getElementById('umFilterRole'); if (r) r.value = '';
+      const t = document.getElementById('umFilterTeam'); if (t) t.value = '';
+      renderUsersTable();
+    }
+
+    // Rol/Takım dropdown'larını mevcut kullanıcı listesinden türetir — sabit
+    // bir liste yerine gerçek veriye göre (yeni bir rol/takım eklenince
+    // otomatik görünür). Odaklanılmış (açık) bir select'e dokunulmaz.
+    function _umPopulateFilterOptions() {
+      const roles = [...new Set(allUsers.map(u => u['Role']).filter(Boolean))].sort();
+      const teams = [...new Set(allUsers.map(u => uTeam(u)).filter(Boolean))].sort();
+      const fill = (id, arr, placeholder) => {
+        const sel = document.getElementById(id);
+        if (!sel) return;
+        const existing = Array.from(sel.options).slice(1).map(o => o.value);
+        if (existing.join('|') === arr.join('|')) return;
+        if (document.activeElement === sel) return;
+        const cur = sel.value;
+        sel.innerHTML = `<option value="">${placeholder}</option>` +
+          arr.map(v => `<option value="${_escHtml(v)}">${fmt(v)}</option>`).join('');
+        if (arr.includes(cur)) sel.value = cur;
+      };
+      fill('umFilterRole', roles, I18N.t('Tüm Roller'));
+      fill('umFilterTeam', teams, I18N.t('Tüm Takımlar'));
+    }
+
     function renderUsersTable() {
+      _umPopulateFilterOptions();
       const list = _usersFilteredRows();
       const roleStyle = r => {
         r = (r || '').toLowerCase();

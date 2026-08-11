@@ -479,6 +479,7 @@
     'Tüm Durumlar': 'All Statuses',
     'Tüm Stageler': 'All Stages',
     'Tüm Takımlar': 'All Teams',
+    'Tüm Roller': 'All Roles',
     'Tümü (Payment / FT)': 'All (Payment / FT)',
     'Tümü (Eksik + Fazla)': 'All (Under + Over)',
     'Tür': 'Type',
