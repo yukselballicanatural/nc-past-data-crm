@@ -377,9 +377,14 @@ export default async function handler(req, res) {
       const zohoRows = zRes.ok ? zRes.rows : [];
 
       // Onaylanmış hesap devirleri — tablo kurulmamışsa (zoho_account_handover.sql
-      // henüz çalıştırılmadı) sessizce boş Set ile devam edilir, hiçbir devir
-      // otomatik onaylanmış sayılmaz.
+      // henüz çalıştırılmadı) YA DA PostgREST şema önbelleği tabloyu az önce
+      // eklendiği için henüz görmüyorsa (Supabase'de yeni tablo oluşturunca
+      // şema önbelleğinin yenilenmesi birkaç dakika sürebilir) hoR.ok false
+      // döner. Bu durum ESKİDEN sessizce yutulup boş Set ile devam ediliyordu
+      // — admin onayladığı hâlde kişi hep "onaysız" gibi davranıyordu ve
+      // kimse bunun sebebini göremiyordu. Artık durum admin'e açıkça bildirilir.
       const approvedHandovers = new Set();
+      let handoverTableReady = true;
       {
         const hoR = await fetch(
           `${SUPABASE_URL}/rest/v1/account_handover_approvals?select=zoho_user_id,exit_date,start_date`,
@@ -389,6 +394,8 @@ export default async function handler(req, res) {
           for (const h of (Array.isArray(hoRows) ? hoRows : [])) {
             approvedHandovers.add(handoverKey(h.zoho_user_id, h.exit_date, h.start_date));
           }
+        } else {
+          handoverTableReady = false;
         }
       }
 
@@ -746,6 +753,10 @@ export default async function handler(req, res) {
         // admin'e (bkz. zoho_account_handover.sql).
         handoverCandidates: isAdmin ? handoverCandidates : [],
         departedEmployees:  isAdmin ? departedEmployees  : [],
+        // false → account_handover_approvals tablosuna erişilemedi (kurulmamış
+        // ya da Supabase şema önbelleği henüz yenilenmedi). Panel bunu admin'e
+        // açıkça söylüyor — aksi hâlde onay sessizce hiçbir işe yaramaz.
+        handoverTableReady: isAdmin ? handoverTableReady : undefined,
         // false → team_assignments.sql henüz çalıştırılmamış; elle takım
         // ataması yapılamaz. Panel bunu admin'e açıkça söylüyor (sessizce
         // çalışmayan bir buton bırakmak yerine).
@@ -783,7 +794,8 @@ export default async function handler(req, res) {
           }),
         });
       if (!r.ok) {
-        res.status(502).json({ error: 'Onay kaydedilemedi — account_handover_approvals tablosu kurulmamış olabilir (bkz. zoho_account_handover.sql).' });
+        const detail = await r.text().catch(() => '');
+        res.status(502).json({ error: 'Onay kaydedilemedi — account_handover_approvals tablosu kurulmamış olabilir ya da Supabase şema önbelleği SQL çalıştırıldıktan sonra henüz yenilenmedi (bir-iki dakika bekleyip tekrar deneyin, ya da Supabase SQL Editor\'de "NOTIFY pgrst, \'reload schema\';" çalıştırın). ' + detail });
         return;
       }
       res.status(200).json({ ok: true });

@@ -6043,6 +6043,7 @@
         _amTmUnplaced = data.unplaced || [];
         _amTmHandoverCandidates = data.handoverCandidates || [];
         _amTmDeparted = data.departedEmployees || [];
+        if (typeof data.handoverTableReady === 'boolean') _amTmHandoverReady = data.handoverTableReady;
         if (typeof renderDepartedEmployees === 'function') renderDepartedEmployees();
         if (typeof data.assignmentsInstalled === 'boolean') _amTmAssignInstalled = data.assignmentsInstalled;
         // Kadronun hangi ana ait olduğu + takımı tahminle yerleştirilenler.
@@ -6095,6 +6096,10 @@
     // (yalnızca admin'e gelir, bkz. zoho_account_handover.sql).
     let _amTmHandoverCandidates = [];
     let _amTmDeparted = [];
+    // false → account_handover_approvals tablosuna erişilemedi (kurulmamış ya
+    // da Supabase şema önbelleği zoho_account_handover.sql'den sonra henüz
+    // yenilenmedi). true = bilinmiyor/henüz yanıt gelmedi (varsayım "sorun yok").
+    let _amTmHandoverReady = true;
     // null = bilinmiyor (henüz yanıt gelmedi), false = team_assignments.sql
     // çalıştırılmamış → elle atama yapılamaz, panel bunu açıkça bildirir.
     let _amTmAssignInstalled = null;
@@ -6130,9 +6135,10 @@
       const bar = document.getElementById('tmSyncBar');
       if (!bar) return;
       const n = _amTmDrift.size, L = _amTmLeavers.length, P = _amTmUnplaced.length, H = _amTmHandoverCandidates.length;
-      if (!n && !L && !P && !H) { bar.style.display = 'none'; return; }
+      if (!n && !L && !P && !H && _amTmHandoverReady) { bar.style.display = 'none'; return; }
       bar.style.display = 'flex';
       const parts = [];
+      if (!_amTmHandoverReady) parts.push(I18N.t('Hesap devri onay tablosuna erişilemiyor.'));
       if (H) parts.push(I18N.t('{n} hesap devri onayı bekliyor.').replace('{n}', H));
       if (n) parts.push(I18N.t('{n} danışmanın takımı Zoho ile uyuşmuyor.').replace('{n}', n));
       if (L) parts.push(I18N.t('{n} kişi Zoho\'da artık aktif değil.').replace('{n}', L));
@@ -6242,6 +6248,17 @@
              </span>
            </div>`).join(''),
           _escHtml(I18N.t('"Zoho\'ya göre güncelle" Users kaydını Zoho\'daki takıma çeker. Zoho da yanlışsa "Elle ata" ile kalıcı olarak sabitleyin — senkron o kişiye bir daha dokunmaz.'))));
+      }
+
+      // Onay tablosuna erişilemiyor — kurulmamış ya da Supabase şema önbelleği
+      // henüz yenilenmedi. Bu görünmeden onaylar SESSİZCE hiçbir işe yaramaz
+      // (Onayla butonu "başarılı" dese bile kişi asla kadroya girmez), bu
+      // yüzden en üstte açıkça gösteriliyor.
+      if (!_amTmHandoverReady) {
+        out.push(`<div class="tm-sec" data-tone="danger">
+          <div class="tm-sec-head">${_escHtml(I18N.t('Hesap devri onay tablosuna erişilemiyor'))}</div>
+          <div style="font-size:11px;color:var(--tm-ink-2);line-height:1.6">${_escHtml(I18N.t('account_handover_approvals tablosu veritabanında görünmüyor. zoho_account_handover.sql çalıştırıldıysa bile Supabase\'in şema önbelleği yenilenmemiş olabilir — birkaç dakika bekleyip "↻ Yenile" ile tekrar deneyin, ya da Supabase SQL Editor\'de NOTIFY pgrst, \'reload schema\'; komutunu çalıştırın.'))}</div>
+        </div>`);
       }
 
       // ── Hesap devri onayı bekleyenler ─────────────────────────────────

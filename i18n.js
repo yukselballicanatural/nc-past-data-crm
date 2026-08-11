@@ -686,6 +686,10 @@
     'Bu hesabın çıkış tarihinden SONRA bir giriş tarihi var — muhtemelen aynı Zoho hesabını yeni biri devraldı. Onaylarsanız kişi kadroda ve Takımımdaki Kişiler\'de görünür.':
       'This account has a start date AFTER its exit date — someone else likely took over the same Zoho account. If you approve, the person will appear on staff and in My Team Members.',
     'Hesap Devrini Onayla': 'Approve Account Handover',
+    'Hesap devri onay tablosuna erişilemiyor.': 'Cannot access the account-handover approval table.',
+    'Hesap devri onay tablosuna erişilemiyor': 'Cannot access the account-handover approval table',
+    'account_handover_approvals tablosu veritabanında görünmüyor. zoho_account_handover.sql çalıştırıldıysa bile Supabase\'in şema önbelleği yenilenmemiş olabilir — birkaç dakika bekleyip "↻ Yenile" ile tekrar deneyin, ya da Supabase SQL Editor\'de NOTIFY pgrst, \'reload schema\'; komutunu çalıştırın.':
+      'The account_handover_approvals table is not visible in the database. Even if zoho_account_handover.sql has been run, Supabase\'s schema cache may not have refreshed yet — wait a couple of minutes and retry with "↻ Refresh", or run NOTIFY pgrst, \'reload schema\'; in the Supabase SQL Editor.',
     'Bu hesabın çıkış tarihi {exit}, ama giriş tarihi {start} — yani hesabı muhtemelen yeni biri devraldı. Onaylarsanız kişi kadroda ve Takımımdaki Kişiler\'de görünür.':
       'This account\'s exit date is {exit}, but its start date is {start} — meaning someone else likely took it over. If you approve, the person will appear on staff and in My Team Members.',
     'Onaylandı.': 'Approved.',
