@@ -1961,35 +1961,41 @@
         <span id="closedAlarmsExportMount"></span>
       </div>
     </div>
-    <div style="overflow-x:auto;border-radius:10px;border:1px solid #1e293b">
-      <table style="width:100%;border-collapse:collapse">
+    <!-- Tablo Alarm Listesi/Bugün Gelecekler ile AYNI cam iskelet: .am-alarm-wrap
+         (yapışkan başlık) + .am-alarm-tbl (ayrım çizgisi yüzeyden gelir, satır
+         içi #1e293b/#0f172a border-bottom KULLANILMIYOR — açık temada neredeyse
+         siyah bir çizgi çıkarıyordu, tema eşlemesi ona hiç dokunmuyordu). -->
+    <div class="am-table-wrap am-alarm-wrap">
+      <table class="am-alarm-tbl">
         <thead>
-          <tr style="background:#0f172a">
-            <th onclick="_amClosedSortBy('deal_name')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Hasta</span><span data-csort="deal_name" style="margin-left:4px;color:#6366f1"></span></th>
-            <th onclick="_amClosedSortBy('deal_id')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Deal ID</span><span data-csort="deal_id" style="margin-left:4px;color:#6366f1"></span></th>
-            <th onclick="_amClosedSortBy('deal_owner')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Danışman</span><span data-csort="deal_owner" style="margin-left:4px;color:#6366f1"></span></th>
-            <th onclick="_amClosedSortBy('team')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Takım</span><span data-csort="team" style="margin-left:4px;color:#6366f1"></span></th>
-            <th onclick="_amClosedSortBy('region')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Bölge</span><span data-csort="region" style="margin-left:4px;color:#6366f1"></span></th>
-            <th onclick="_amClosedSortBy('alarm_type')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Alarm Tipi</span><span data-csort="alarm_type" style="margin-left:4px;color:#6366f1"></span></th>
-            <th onclick="_amClosedSortBy('closed_at')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Kapatılma Tarihi</span><span data-csort="closed_at" style="margin-left:4px;color:#6366f1"></span></th>
-            <th onclick="_amClosedSortBy('closed_by')" title="Sırala" style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap;cursor:pointer;user-select:none"><span>Kapatan</span><span data-csort="closed_by" style="margin-left:4px;color:#6366f1"></span></th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Not</th>
-            <th style="padding:8px 10px;font-size:9px;text-align:left;color:#475569;font-weight:700;text-transform:uppercase;border-bottom:1px solid #1e293b;white-space:nowrap">Aksiyon</th>
+          <tr>
+            <th class="am-th am-sort" data-col="deal_name" onclick="_amClosedSortBy('deal_name')">Hasta<span class="am-sarrow" data-csort="deal_name"></span></th>
+            <th class="am-th am-sort" data-col="deal_id" onclick="_amClosedSortBy('deal_id')">Deal ID<span class="am-sarrow" data-csort="deal_id"></span></th>
+            <th class="am-th am-sort" data-col="deal_owner" onclick="_amClosedSortBy('deal_owner')">Danışman<span class="am-sarrow" data-csort="deal_owner"></span></th>
+            <th class="am-th am-sort" data-col="team" onclick="_amClosedSortBy('team')">Takım<span class="am-sarrow" data-csort="team"></span></th>
+            <th class="am-th am-sort" data-col="region" onclick="_amClosedSortBy('region')">Bölge<span class="am-sarrow" data-csort="region"></span></th>
+            <th class="am-th am-sort" data-col="alarm_type" onclick="_amClosedSortBy('alarm_type')">Alarm Tipi<span class="am-sarrow" data-csort="alarm_type"></span></th>
+            <th class="am-th am-sort" data-col="closed_at" onclick="_amClosedSortBy('closed_at')">Kapatılma Tarihi<span class="am-sarrow" data-csort="closed_at"></span></th>
+            <th class="am-th am-sort" data-col="closed_by" onclick="_amClosedSortBy('closed_by')">Kapatan<span class="am-sarrow" data-csort="closed_by"></span></th>
+            <th class="am-th">Not</th>
+            <th class="am-th">Aksiyon</th>
           </tr>
         </thead>
         <tbody id="closedAlarmsTbody"></tbody>
       </table>
       <div id="closedAlarmsEmpty" style="display:none;text-align:center;padding:40px 16px;color:#475569;font-size:13px">Kapatılan alarm bulunamadı.</div>
-      <!-- Sayfa gezinme çubuğu — kaç satırın kaçıncısına bakıldığı her zaman yazılı -->
-      <div id="closedAlarmsPager" style="display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:10px 12px;border-top:1px solid #1e293b;background:#0b1220">
-        <span id="closedAlarmsRange" style="font-size:11px;color:#64748b"></span>
-        <div style="display:flex;align-items:center;gap:6px">
-          <button onclick="_amClosedGoPage(1)" id="closedAlarmsFirst" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:10px;font-weight:700;cursor:pointer">« İlk</button>
-          <button onclick="_amClosedGoPage(_amClosedPage - 1)" id="closedAlarmsPrev" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:10px;font-weight:700;cursor:pointer">‹ Önceki</button>
-          <span id="closedAlarmsPageInfo" style="font-size:11px;color:#cbd5e1;font-weight:700;padding:0 4px"></span>
-          <button onclick="_amClosedGoPage(_amClosedPage + 1)" id="closedAlarmsNext" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:10px;font-weight:700;cursor:pointer">Sonraki ›</button>
-          <button onclick="_amClosedGoPage(_amClosedLastPage)" id="closedAlarmsLast" style="padding:5px 10px;background:#1e293b;border:1px solid #334155;border-radius:7px;color:#94a3b8;font-size:10px;font-weight:700;cursor:pointer">Son »</button>
-        </div>
+    </div>
+    <!-- Sayfa gezinme çubuğu — kaç satırın kaçıncısına bakıldığı her zaman yazılı.
+         Alarm Listesi'ndeki pager ile AYNI konum (tablo kutusunun DIŞINDA) ve
+         AYNI .am-btn buton stili. -->
+    <div id="closedAlarmsPager" style="display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:10px">
+      <span id="closedAlarmsRange" class="text-xs text-slate-400"></span>
+      <div style="display:flex;align-items:center;gap:6px">
+        <button onclick="_amClosedGoPage(1)" id="closedAlarmsFirst" class="am-btn" style="padding:4px 14px">« İlk</button>
+        <button onclick="_amClosedGoPage(_amClosedPage - 1)" id="closedAlarmsPrev" class="am-btn" style="padding:4px 14px">‹ Önceki</button>
+        <span id="closedAlarmsPageInfo" class="text-xs text-slate-400" style="padding:0 4px"></span>
+        <button onclick="_amClosedGoPage(_amClosedPage + 1)" id="closedAlarmsNext" class="am-btn" style="padding:4px 14px">Sonraki ›</button>
+        <button onclick="_amClosedGoPage(_amClosedLastPage)" id="closedAlarmsLast" class="am-btn" style="padding:4px 14px">Son »</button>
       </div>
     </div>
   </div>
@@ -3821,18 +3827,19 @@
         const tm = isPaymentTracking ? null : _amTypeMeta(AlarmStatus.effectiveType(a), false);
         const closedInfo = _amDealInfoFor(a.deal_id) || {};
         const closedRef = closedInfo.ref || '';
-        return `<tr>
-        <td style="padding:8px 10px;font-size:11px;font-weight:600;color:#f1f5f9;border-bottom:1px solid #0f172a">${fmt(a.deal_name)}</td>
-        <td style="padding:8px 10px;font-size:10px;font-family:monospace;border-bottom:1px solid #0f172a;white-space:nowrap">${a.deal_id ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted">${closedRef || a.deal_id} ↗</a>` : '—'}</td>
-        <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.deal_owner)}</td>
-        <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.team)}</td>
-        <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a">${fmt(a.region)}</td>
-        <td style="padding:8px 10px;font-size:10px;border-bottom:1px solid #0f172a;white-space:nowrap">${tm ? `<span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:#1e293b;color:${tm.color}">${tm.label}</span>` : '<span style="color:#475569">—</span>'}</td>
-        <td style="padding:8px 10px;font-size:10px;color:#cbd5e1;border-bottom:1px solid #0f172a;white-space:nowrap">${_amFmtDate(a.closed_at)}</td>
-        <td style="padding:8px 10px;font-size:10px;color:#94a3b8;border-bottom:1px solid #0f172a;white-space:nowrap">${fmt(a.closed_by)}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #0f172a;text-align:center">${_noteBtn(a.note)}</td>
-        <td style="padding:8px 10px;border-bottom:1px solid #0f172a;white-space:nowrap">
-          <button onclick="openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
+        const td = 'padding:9px 10px';
+        return `<tr class="am-alarm-row" style="cursor:pointer" onclick="openAdminAlarmModal('${a.id}')">
+        <td style="${td};font-size:11px;font-weight:600;color:#f1f5f9">${fmt(a.deal_name)}</td>
+        <td style="${td};font-size:10px;font-family:monospace;white-space:nowrap">${a.deal_id ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${a.deal_id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted">${closedRef || a.deal_id} ↗</a>` : '—'}</td>
+        <td style="${td};font-size:10px;color:#94a3b8">${fmt(a.deal_owner)}</td>
+        <td style="${td};font-size:10px;color:#94a3b8">${fmt(a.team)}</td>
+        <td style="${td};font-size:10px;color:#94a3b8">${fmt(a.region)}</td>
+        <td style="${td};font-size:10px;white-space:nowrap">${tm ? `<span style="padding:2px 8px;border-radius:9999px;font-size:9px;font-weight:700;background:#1e293b;color:${tm.color}">${tm.label}</span>` : '<span style="color:#475569">—</span>'}</td>
+        <td style="${td};font-size:10px;color:#cbd5e1;white-space:nowrap">${_amFmtDate(a.closed_at)}</td>
+        <td style="${td};font-size:10px;color:#94a3b8;white-space:nowrap">${fmt(a.closed_by)}</td>
+        <td style="${td};text-align:center">${_noteBtn(a.note)}</td>
+        <td style="${td};white-space:nowrap">
+          <button onclick="event.stopPropagation();openAdminAlarmModal('${a.id}')" style="padding:3px 10px;background:#042f2e;border:1px solid #0d9488;border-radius:6px;color:#2dd4bf;font-size:9px;font-weight:700;cursor:pointer">${I18N.t('Detay')}</button>
         </td>
       </tr>`;
       }).join('');
