@@ -9288,6 +9288,11 @@
       const cFrom  = document.getElementById('anFilterCreatedFrom')?.value || '';
       const cTo    = document.getElementById('anFilterCreatedTo')?.value || '';
       let data = list;
+      // Analitik SADECE Istanbul/Morocco satış takımlarını sayar — Finance/
+      // Executive Board/VIP Team/Profclinic/Software Development gibi satış
+      // dışı birimler (TeamMap'te hiç tanımlı değil) kalıcı olarak dışlanır.
+      // Filtre seçili olmasa BİLE bu ayıklama uygulanır (bkz. TeamMap.isSalesTeam).
+      if (window.TeamMap) data = data.filter(d => TeamMap.isSalesTeam(d['Team Group']));
       if (teams) { const set = new Set(teams); data = data.filter(d => set.has(d['Team Group'])); }
       if (dFrom || dTo) {
         data = data.filter(d => {
@@ -9422,9 +9427,12 @@
       const covEl = document.getElementById('globeCoverage');
       if (!host || !rankEl) return;
 
+      // Küre de Analytics filtrelerine (Bölge/Takım Lideri/Tarih) ve satış-dışı
+      // birim ayıklamasına uyar — dil dağılımıyla aynı desen (bkz. _anFilterDealsClientSide).
+      const scopedDeals = _anFilterDealsClientSide(allDeals);
       const counts = {};
       let withCountry = 0;
-      allDeals.forEach(d => {
+      scopedDeals.forEach(d => {
         const c = (d['Country'] || '').replace(/\s+/g, ' ').trim();
         if (!c) return;
         withCountry++;
@@ -9444,7 +9452,7 @@
       });
 
       if (covEl) {
-        const total = allDeals.length;
+        const total = scopedDeals.length;
         let txt = `${withCountry.toLocaleString('tr-TR')} / ${total.toLocaleString('tr-TR')} ` +
                   `${I18N.t("deal'de ülke bilgisi var")} · ${rows.length} ${I18N.t('ülke')}`;
         if (missing.length) txt += ` · ${missing.length} ${I18N.t('ülke haritada yok')}`;
@@ -9819,23 +9827,38 @@
         funnel: { total: total, visited: s.visited || 0, won: s.won || 0, wonPaid: wonPaid },
       });
 
-      // Languages — ayrı, tembel çekilen veri (admin_language_breakdown),
-      // filtre-bağımsız global cache'ten. Analytics filtresi değişse bile
-      // burası yeniden istek atmaz, sadece kendi grafiğini günceller —
-      // filtrelenmiş görünümün geri kalanını ASLA ezmez.
-      const langs = s.by_language || _languageBreakdownCache;
-      if (langs) { _renderLangChartOnly(langs); }
-      else {
-        document.getElementById('langChart').innerHTML = `<div class="text-xs text-slate-600 py-8 mx-auto">${I18N.t('Yükleniyor...')}</div>`;
-        _loadLanguageBreakdownIfNeeded();
+      // Languages — bir Bölge/Takım Lideri/Tarih filtresi SEÇİLİYSE dil
+      // dağılımı da o filtreye göre (allDeals üzerinden istemci tarafında)
+      // hesaplanır; filtre yoksa hızlı global cache (admin_language_breakdown)
+      // kullanılır. Böylece "Morocco" seçince dil grafiği de Morocco'ya göre olur.
+      if (analyticsFilterActive) {
+        _renderLangChartOnly(null);
+      } else {
+        const langs = s.by_language || _languageBreakdownCache;
+        if (langs) { _renderLangChartOnly(langs); }
+        else {
+          document.getElementById('langChart').innerHTML = `<div class="text-xs text-slate-600 py-8 mx-auto">${I18N.t('Yükleniyor...')}</div>`;
+          _loadLanguageBreakdownIfNeeded();
+        }
       }
     }
 
     // Ham dil adı RPC'den geliyor (dil filtresi dropdown'ı hâlâ 'Unknown' gibi
     // ham değerleri karşılaştırıyor) — sadece ekrandaki etiket Türkçeleşiyor.
+    // Bir Analytics filtresi aktifse (Bölge/Takım/Tarih) `langs` YOK SAYILIR —
+    // filtre-bağımsız global cache yerine allDeals'ten filtreye göre yeniden
+    // hesaplanır (bkz. loadAnalyticsSummary/analyticsFilterActive).
     function _renderLangChartOnly(langs) {
-      _anRenderLangDonut(langs);
-      // Ulke kuresi: dil halkasi gibi filtre-BAGIMSIZ, tum 2026 deallerinden.
+      if (analyticsFilterActive) {
+        const langMap = {};
+        _anFilterDealsClientSide(allDeals).forEach(d => {
+          const l = d['Language'] || I18N.t('Bilinmiyor');
+          langMap[l] = (langMap[l] || 0) + 1;
+        });
+        _anRenderLangDonut(Object.entries(langMap).map(([lang, cnt]) => ({ lang, cnt })));
+      } else if (langs) {
+        _anRenderLangDonut(langs);
+      }
       _anRenderCountryGlobe();
     }
 

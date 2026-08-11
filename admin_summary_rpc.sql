@@ -28,6 +28,12 @@
 -- fonksiyona (admin_language_breakdown) taşındı; Analytics sekmesi açılınca
 -- bir kez çekilir, ana KPI/rozet rakamlarını bloklamaz.
 --
+-- v7: Analytics artık YALNIZCA Istanbul/Morocco satış takımlarını sayıyor
+-- (bkz. _nc_sales_team_aliases()) — önceden sadece Profclinic dışlanıyordu,
+-- Finance/Executive Board/VIP Team/Software Development gibi diğer satış
+-- dışı birimler "region eşleşmiyor" durumunda Istanbul'a düşüyordu (bkz.
+-- team-map.js regionForTeam fallback'i) ve Analytics'i kirletiyordu.
+--
 -- Not: Cutoff tarihi (2026-06-15) admin.html'deki isBeforeCutoff ile birebir
 -- aynıdır. Değiştirirsen iki yeri birlikte güncelle.
 -- ============================================================
@@ -37,6 +43,39 @@
 -- "ambiguous function" hatası verir. Önce eskilerini temizlemek gerekiyor.
 drop function if exists public.admin_deal_summary();
 drop function if exists public.admin_deal_summary(text[], date, date);
+
+-- ============================================================
+-- SATIŞ TAKIMI BEYAZ LİSTESİ — Analytics'in saydığı TEK kaynak.
+-- team-map.js'teki TEAMS haritasının aliases[] alanlarıyla BİREBİR AYNI
+-- olmalı (biri değişirse diğeri de güncellenmeli). Finance/Executive
+-- Board/VIP Team/Profclinic/Software Development gibi satış dışı birimler
+-- ve tanınmayan/hatalı takım adları bu listede YOK — dolayısıyla
+-- Analytics'ten (hem filtresiz hem filtreli çağrılarda) kalıcı olarak dışlanır.
+-- ============================================================
+create or replace function public._nc_sales_team_aliases()
+returns text[]
+language sql
+immutable
+as $$
+  select array[
+    'Arij  Team','Arij Team','Team Leader-Arij Mahjoubi',
+    'Askif Team','Team Leader - Abdulrahman Ziad Askif',
+    'Touma Team','Team Leader- Abdulkader Touma','Toumi Team',
+    'Mihoubi Team','Team Leader - Mihoubi',
+    'Ahmed Anwar Team','Team Leader-Ahmed Anwar',
+    'Ghazal Team','Team Leader - Ahmad Ghazal',
+    'Ali Omer Team','Team Leader - Ali Omer',
+    'Aamir Ali Team','Team Leader - Aamir Ali',
+    'Joel Team','Team Leader - Joel',
+    'SM- Mert Team','Mert Jospeh - Sales Master',
+    'Sales Master - Amin Connor West','SM Amin Connor - Team',
+    'Farah Team - Morocco','Team Leader - Farah',
+    'Sara Team - Morocco','Team Leader - Sara',
+    'Selma Team - Morocco','Team Leader - Selma',
+    'Ramadan Team - Morocco','Team Leader - Abdelatif Ramadan',
+    'Moutaharrik Team - Morocco','Team Leader - Moutaharrik Marco'
+  ];
+$$;
 
 -- v6: Created Time filtresi de RPC'ye eklendi (p_created_from/p_created_to).
 -- Önceden Analytics'te Created Time filtresi seçilince RPC hiç
@@ -97,9 +136,11 @@ as $$
       and (p_date_to   is null or arrival_date <= p_date_to)
       and (p_created_from is null or created_time::date >= p_created_from)
       and (p_created_to   is null or created_time::date <= p_created_to)
-      -- Profclinic satış dışı bir birim (Finance/VIP Team/Executive Board
-      -- gibi) — özet/analitikten kalıcı olarak dışlanıyor.
-      and coalesce(team,'') <> 'Profclinic'
+      -- Yalnızca Istanbul/Morocco SATIŞ takımları sayılır (bkz.
+      -- _nc_sales_team_aliases yukarıda) — Profclinic/Finance/VIP Team/
+      -- Executive Board/Software Development gibi satış dışı birimler
+      -- Analytics'ten kalıcı olarak dışlanır.
+      and team = any(public._nc_sales_team_aliases())
   ),
   scalars as (
     select
@@ -212,10 +253,11 @@ begin
     from public.deals
     -- Sistem geneli kesim: KPI/rozet/Analytics'in tamamı gibi sadece 2026+
     -- created_time'lı dealler sayılır (önceden burada filtre YOKTU, 55K
-    -- satırın tamamı — tüm yılların verisi — sayılıyordu). Profclinic de
-    -- (satış dışı birim) diğer analitikle tutarlı şekilde dışlanıyor.
+    -- satırın tamamı — tüm yılların verisi — sayılıyordu). Satış dışı
+    -- birimler de (Profclinic/Finance/VIP Team/Executive Board/Software
+    -- Development...) diğer analitikle tutarlı şekilde dışlanıyor.
     where created_time::date >= date '2026-01-01'
-      and coalesce(team,'') <> 'Profclinic'
+      and team = any(public._nc_sales_team_aliases())
     group by 1
   ) a;
 

@@ -134,5 +134,14 @@ window.TeamMap = (function () {
     return encodeURIComponent('in.(' + values.map(v => '"' + v + '"').join(',') + ')');
   }
 
-  return { TEAMS, normalize, aliasesFor, teamsForRegion, regionForTeam, aliasesForRegion, inFilter };
+  // mapDeals'te 'Team Group' alanı TANINAN takımlarda kanonik ada eşitlenir,
+  // tanınmayan (satış dışı: Finance/Executive Board/VIP Team/Profclinic/
+  // Software Development gibi) birimlerde ise HAM deals.team değerine düşer.
+  // Bu yüzden "bu bir satış takımı mı?" sorusu doğrudan TEAMS anahtarlarına
+  // bakarak cevaplanır — Analytics'in satış-dışı birimleri ayıklaması için kullanılır.
+  function isSalesTeam(teamGroup) {
+    return Object.prototype.hasOwnProperty.call(TEAMS, teamGroup);
+  }
+
+  return { TEAMS, normalize, aliasesFor, teamsForRegion, regionForTeam, aliasesForRegion, inFilter, isSalesTeam };
 })();
