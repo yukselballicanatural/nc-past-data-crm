@@ -692,14 +692,26 @@
     'Önerilen takım': 'Suggested team',
     'Bu kişiler elle "Satış Dışı" işaretlenmiş ama Zoho\'daki rolü tanınan bir satış takımına karşılık geliyor — muhtemelen yanlışlıkla ya da geçici bir çözüm olarak yapılmış. "Takıma Ata" ile doğru takımı seçin.':
       'These people are manually marked "Non-Sales" but their Zoho role matches a recognized sales team — likely done by mistake or as a temporary workaround. Use "Assign to Team" to pick the correct team.',
-    'Sorgulanacak kişinin adını yazın:': "Enter the person's name to look up:",
     '{name} team_assignments tablosunda pasife alınmış görünüyor — kadroda görünmemesinin sebebi bu. Kadroya geri alınsın mı?':
       '{name} appears deactivated in team_assignments — that is why they are not showing on staff. Reactivate them?',
     'Kadroya Geri Al': 'Reactivate',
-    'Takımı Düzelt': 'Fix Team',
-    '{name} için team_assignments\'ta takımı BOŞ bırakılmış elle bir kayıt var — bu yüzden hiçbir takım liderinin ekranında görünmüyor (Zoho\'daki rolü "{role}" olsa bile). Şimdi doğru takımı elle atayın.':
-      '{name} has a manual team_assignments record with an EMPTY team — that is why they do not show on any team leader\'s screen (even though their Zoho role is "{role}"). Assign the correct team now.',
     'Sorgu başarısız: ': 'Lookup failed: ',
+    'Sorgu başarısız': 'Lookup failed',
+    'Sorgulanıyor...': 'Looking up...',
+    'Sorgula': 'Look up',
+    'Bulunamadı': 'Not found',
+    'Bu isimde bir Zoho kaydı yok. Ad yazımını kontrol edin (Zoho\'daki görünen ad ile aranır).':
+      'There is no Zoho record with this name. Check the spelling (search matches the name as it appears in Zoho).',
+    'Zoho rolü/takımı': 'Zoho role/team',
+    'Zoho durumu': 'Zoho status',
+    'Çıkış / Giriş': 'Exit / Start',
+    'Kadroda görünüyor': 'Shown on staff',
+    'Ayrılmış (Zoho)': 'Departed (Zoho)',
+    'Hesap devri onaylı': 'Handover approved',
+    'Engelli değil': 'Not blocked',
+    'Pasife alınmamış': 'Not deactivated',
+    'Son listede "{team}" takımı altında görünüyor.': 'Shows on the final list under the "{team}" team.',
+    'Son listede HİÇ görünmüyor.': 'Does NOT show on the final list at all.',
     'Hesap devri onay tablosuna erişilemiyor.': 'Cannot access the account-handover approval table.',
     'Hesap devri onay tablosuna erişilemiyor': 'Cannot access the account-handover approval table',
     'account_handover_approvals tablosu veritabanında görünmüyor. zoho_account_handover.sql çalıştırıldıysa bile Supabase\'in şema önbelleği yenilenmemiş olabilir — birkaç dakika bekleyip "↻ Yenile" ile tekrar deneyin, ya da Supabase SQL Editor\'de NOTIFY pgrst, \'reload schema\'; komutunu çalıştırın.':

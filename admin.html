@@ -242,11 +242,11 @@
        zaten cam görünümü alıyor. Elle renk vermek yerine sistemin kendi cam
        tanımını miras almak, popup'ın panelin geri kalanıyla aynı görünmesini
        garanti ediyor (önceden bu döküm sayfa içinde aşağı kayan bir şeritti). */
-    #tmSyncModal, #tmAssignModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
-    #tmSyncModal.open, #tmAssignModal.open { display:flex; }
-    #tmSyncModal .modal-panel, #tmAssignModal .modal-panel { overscroll-behavior: contain; }
+    #tmSyncModal, #tmAssignModal, #tmDebugModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
+    #tmSyncModal.open, #tmAssignModal.open, #tmDebugModal.open { display:flex; }
+    #tmSyncModal .modal-panel, #tmAssignModal .modal-panel, #tmDebugModal .modal-panel { overscroll-behavior: contain; }
     /* Premium giriş: cam panel hafifçe büyüyerek ve netleşerek gelir. */
-    #tmSyncModal.open .modal-panel, #tmAssignModal.open .modal-panel,
+    #tmSyncModal.open .modal-panel, #tmAssignModal.open .modal-panel, #tmDebugModal.open .modal-panel,
     #tlDetailModal.open .modal-panel {
       animation: tmPanelIn .34s cubic-bezier(.22,1,.36,1) both;
     }
@@ -255,7 +255,7 @@
       to   { opacity:1; transform:none; }
     }
     @media (prefers-reduced-motion: reduce) {
-      #tmSyncModal.open .modal-panel, #tmAssignModal.open .modal-panel,
+      #tmSyncModal.open .modal-panel, #tmAssignModal.open .modal-panel, #tmDebugModal.open .modal-panel,
       #tlDetailModal.open .modal-panel { animation:none; }
     }
 
@@ -404,8 +404,10 @@
     .tm-mini-btn:hover { background:var(--tm-hover); color:var(--tm-ink); transform:translateY(-1px); }
     .tm-mini-btn[data-tone="danger"] { background:var(--tm-danger-bg); border-color:var(--tm-danger-edge); color:var(--tm-danger); }
     .tm-mini-btn[data-tone="accent"] { background:var(--tm-accent-bg); border-color:var(--tm-accent-edge); color:var(--tm-accent); }
+    .tm-mini-btn[data-tone="ok"]     { background:var(--tm-ok-bg);     border-color:var(--tm-ok-edge);     color:var(--tm-ok); }
     .tm-mini-btn[data-tone="danger"]:hover,
-    .tm-mini-btn[data-tone="accent"]:hover { filter:brightness(1.08); transform:translateY(-1px); }
+    .tm-mini-btn[data-tone="accent"]:hover,
+    .tm-mini-btn[data-tone="ok"]:hover { filter:brightness(1.08); transform:translateY(-1px); }
 
     /* Popup başlığındaki ikon madalyonu. */
     .tm-badge {
@@ -418,6 +420,7 @@
     }
     .tm-badge[data-tone="warn"]   { --tm-sec-bg:var(--tm-warn-bg);   --tm-sec-edge:var(--tm-warn-edge);   --tm-sec-ink:var(--tm-warn); }
     .tm-badge[data-tone="accent"] { --tm-sec-bg:var(--tm-accent-bg); --tm-sec-edge:var(--tm-accent-edge); --tm-sec-ink:var(--tm-accent); }
+    .tm-badge[data-tone="info"]   { --tm-sec-bg:var(--tm-info-bg);   --tm-sec-edge:var(--tm-info-edge);   --tm-sec-ink:var(--tm-info); }
     .tm-badge svg { width:19px; height:19px; }
     .tm-modal-title { font-size:17px; font-weight:800; color:var(--tm-ink); line-height:1.25; }
     .tm-modal-sub   { font-size:11.5px; color:var(--tm-ink-2); margin-top:2px; }
@@ -2326,6 +2329,34 @@
         <button onclick="amTmCloseSyncDetail()" class="tm-close" aria-label="Kapat">&times;</button>
       </div>
       <div id="tmSyncDetail"></div>
+    </div>
+  </div>
+
+  <!-- ===== KİŞİ SORGULA =====
+       Bir kişinin kadro çözümlemesinin HER adımını (leaver mı, hesap devri
+       şüphesi mi, onaylanmış mı, hangi takıma çözüldü, son listeye girdi mi)
+       gösterir — "X görünmüyor" şikâyetlerinde canlı veriye doğrudan erişim
+       olmadan sebebi tahmin etmek imkânsızdı. ÖNCEDEN bu, tarayıcının kendi
+       prompt()'u + yeni sekmede düz JSON ile yapılıyordu (kafa karıştırıcı,
+       sitenin tasarımıyla alakasız); artık panelin kendi modal/kart dilinde. -->
+  <div id="tmDebugModal" onclick="if(event.target===this)amTmDebugClose()">
+    <div class="modal-backdrop" onclick="amTmDebugClose()"></div>
+    <div class="modal-panel" style="max-width:560px">
+      <div class="flex items-start gap-3 mb-4">
+        <span class="tm-badge" data-tone="info">
+          <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M17 11a6 6 0 11-12 0 6 6 0 0112 0z"/></svg>
+        </span>
+        <div class="min-w-0 flex-1">
+          <div class="tm-modal-title">Kişi Sorgula</div>
+          <div class="tm-modal-sub">Bir kişinin kadroda neden görünüp görünmediğini adım adım gösterir.</div>
+        </div>
+        <button onclick="amTmDebugClose()" class="tm-close" aria-label="Kapat">&times;</button>
+      </div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <input type="text" id="tmDebugInput" placeholder="Ad soyad (Zoho adı)..." class="filter-input" style="flex:1" onkeydown="if(event.key==='Enter')amTmDebugRun()">
+        <button onclick="amTmDebugRun()" id="tmDebugBtn" style="padding:8px 16px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Sorgula</button>
+      </div>
+      <div id="tmDebugResult"></div>
     </div>
   </div>
 
@@ -6385,56 +6416,126 @@
         () => _amTmSetActive([{ fullName: l.fullName || username, role: l.role }], false));
     }
 
-    // "X kişi görünmüyor" şikâyetlerinde canlı veriye doğrudan erişim
-    // olmadan sebebi tahmin etmek imkânsız hâle geliyordu. Bu, /api/team-members
-    // ?debugPerson=... ile o kişinin kadro çözümlemesinin HER adımını
-    // (leaver mı, hesap devri şüphesi mi, onaylanmış mı, hangi takıma çözüldü,
-    // son listeye girdi mi) yeni sekmede düz metin olarak gösterir.
-    async function amTmDebugPerson() {
-      const name = prompt(I18N.t('Sorgulanacak kişinin adını yazın:'));
-      if (!name || !name.trim()) return;
+    // "X kişi görünmüyor" şikâyetlerinde canlı veriye doğrudan erişim olmadan
+    // sebebi tahmin etmek imkânsız hâle geliyordu. Bu, /api/team-members
+    // ?debugPerson=... ile o kişinin kadro çözümlemesinin HER adımını (leaver
+    // mı, hesap devri şüphesi mi, onaylanmış mı, hangi takıma çözüldü, son
+    // listeye girdi mi) panelin KENDİ modal/kart diliyle gösterir. ÖNCEDEN
+    // tarayıcının prompt()'u + yeni sekmede düz JSON ile yapılıyordu — kafa
+    // karıştırıcıydı ve sitenin tasarımıyla alakasızdı.
+    function amTmDebugPerson() {
+      document.getElementById('tmDebugInput').value = '';
+      document.getElementById('tmDebugResult').innerHTML = '';
+      document.getElementById('tmDebugModal').classList.add('open');
+      _tlLockScroll(true);
+      setTimeout(() => document.getElementById('tmDebugInput').focus(), 50);
+    }
+    function amTmDebugClose() {
+      document.getElementById('tmDebugModal').classList.remove('open');
+      _tlLockScroll(false);
+    }
+
+    // "Evet/Hayır" bayraklarını küçük, tema-duyarlı renkli etiket (chip)
+    // olarak gösterir — mevcut .tm-mini-btn görselini ödünç alıyor ama
+    // buton DEĞİL, tıklanamaz bir durum göstergesi (bkz. cursor:default).
+    function _amTmDebugChip(label, isGood) {
+      return `<span class="tm-mini-btn" data-tone="${isGood ? 'ok' : 'danger'}" style="cursor:default;pointer-events:none">${_escHtml(label)}</span>`;
+    }
+
+    async function amTmDebugRun() {
+      const name = (document.getElementById('tmDebugInput').value || '').trim();
+      const resultBox = document.getElementById('tmDebugResult');
+      if (!name) return;
+      const btn = document.getElementById('tmDebugBtn');
+      btn.disabled = true; btn.textContent = I18N.t('Sorgulanıyor...');
+      resultBox.innerHTML = '';
       try {
         const token = (currentUser && currentUser.token) || '';
-        const r = await fetch('/api/team-members?debugPerson=' + encodeURIComponent(name.trim()), {
+        const r = await fetch('/api/team-members?debugPerson=' + encodeURIComponent(name), {
           headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
         const data = await r.json().catch(() => ({}));
         if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
-        const w = window.open('', '_blank');
-        if (w) {
-          w.document.write('<pre style="white-space:pre-wrap;font:12px/1.5 monospace;padding:16px">'
-            + _escHtml(JSON.stringify(data.debug || { found: false, note: 'debug alanı yok' }, null, 2))
-            + '</pre>');
-        } else {
-          alert(JSON.stringify(data.debug || {}, null, 2));
-        }
-        // Onaylanmış/leaver olmayan bir kişi hâlâ görünmüyorsa en sık sebep bu:
-        // team_assignments'ta GEÇMİŞTE (ör. yanlışlıkla) pasife alınmış olması —
-        // bu bayrak hesap devri onayından TAMAMEN bağımsız, hiçbir onay ekranı
-        // bunu göstermiyordu. Burada doğrudan düzeltme sunuluyor.
-        const dbg = data.debug;
-        if (dbg && dbg.found && dbg.isDeactivated) {
-          showSiteConfirm(
-            I18N.t('Kadroya Geri Al'),
-            I18N.t('{name} team_assignments tablosunda pasife alınmış görünüyor — kadroda görünmemesinin sebebi bu. Kadroya geri alınsın mı?').replace('{name}', _escHtml(dbg.zoho.full_name)),
-            I18N.t('Kadroya Geri Al'), '#0d9488',
-            () => _amTmSetActive([{ fullName: dbg.zoho.full_name }], true));
-        }
-        // Kadroda (nonSales=true, resolvedTeam=null) ama teamSource "manual" —
-        // yani team_assignments'ta takımı BOŞ bırakılmış ELLE bir kayıt var.
-        // Bu, Zoho'nun doğru rol/takım bilgisini EZİYOR ve kişiyi "satış dışı"
-        // gibi davranmaya zorluyor — takım liderinin ekranında hiç görünmez
-        // (admin ekranı ise Zoho'daki ham rolü yedek olarak gösterdiği için
-        // orada takımlı görünüyor gibi YANILTICI bir izlenim veriyordu).
-        else if (dbg && dbg.found && dbg.includedInActive && dbg.manualTeam && !dbg.resolvedTeam) {
-          showSiteConfirm(
-            I18N.t('Takımı Düzelt'),
-            I18N.t('{name} için team_assignments\'ta takımı BOŞ bırakılmış elle bir kayıt var — bu yüzden hiçbir takım liderinin ekranında görünmüyor (Zoho\'daki rolü "{role}" olsa bile). Şimdi doğru takımı elle atayın.').replace('{name}', _escHtml(dbg.zoho.full_name)).replace('{role}', _escHtml(dbg.zoho.role || '—')),
-            I18N.t('Takıma Ata'), '#0d9488',
-            () => amTmOpenAssign(dbg.zoho.full_name));
-        }
+        resultBox.innerHTML = _amTmDebugRenderResult(data.debug || null);
       } catch(e) {
-        showSiteNotice(I18N.t('Sorgu başarısız: ') + e.message, 'error');
+        resultBox.innerHTML = `<div class="tm-sec" data-tone="danger"><div class="tm-sec-head">${_escHtml(I18N.t('Sorgu başarısız'))}</div><div style="padding:2px 14px 12px;font-size:12px;color:var(--tm-ink-2)">${_escHtml(e.message)}</div></div>`;
+      } finally {
+        btn.disabled = false; btn.textContent = I18N.t('Sorgula');
       }
+    }
+
+    function _amTmDebugRenderResult(dbg) {
+      if (!dbg || !dbg.found) {
+        return `<div class="tm-sec" data-tone="warn">
+          <div class="tm-sec-head">${_escHtml(I18N.t('Bulunamadı'))}</div>
+          <div style="padding:2px 14px 12px;font-size:12px;color:var(--tm-ink-2)">${_escHtml(I18N.t('Bu isimde bir Zoho kaydı yok. Ad yazımını kontrol edin (Zoho\'daki görünen ad ile aranır).'))}</div>
+        </div>`;
+      }
+      const z = dbg.zoho;
+      const infoRows = [
+        [I18N.t('Zoho rolü/takımı'), z.role || '—'],
+        [I18N.t('Bölge'), z.region || '—'],
+        [I18N.t('Zoho durumu'), z.status || '—'],
+        [I18N.t('Çıkış / Giriş'), `${_amTmDate(z.exit_date)} / ${_amTmDate(z.start_date)}`],
+      ].map(([k, v]) => `<div class="tm-row" style="padding:5px 0">
+          <span class="tm-row-meta" style="min-width:130px">${_escHtml(k)}</span>
+          <span class="tm-row-name" style="font-size:12px">${_escHtml(v)}</span>
+        </div>`).join('');
+
+      const chips = [
+        _amTmDebugChip(I18N.t('Kadroda görünüyor'), dbg.includedInActive),
+        _amTmDebugChip(I18N.t('Ayrılmış (Zoho)'), !dbg.isLeaver),
+        dbg.isLeaver ? _amTmDebugChip(I18N.t('Hesap devri onaylı'), dbg.isApproved) : '',
+        _amTmDebugChip(I18N.t('Engelli değil'), !dbg.isBlocked),
+        _amTmDebugChip(I18N.t('Pasife alınmamış'), !dbg.isDeactivated),
+      ].filter(Boolean).join(' ');
+
+      const resultLine = dbg.inFinalMembersList
+        ? I18N.t('Son listede "{team}" takımı altında görünüyor.').replace('{team}', dbg.finalMemberTeam || dbg.resolvedTeam || '—')
+        : I18N.t('Son listede HİÇ görünmüyor.');
+
+      const actions = [];
+      if (dbg.isDeactivated) {
+        actions.push(`<button onclick="amTmDebugFixDeactivated('${_jsStrAttr(z.full_name)}')" class="tm-mini-btn" data-tone="accent">${_escHtml(I18N.t('Kadroya Geri Al'))}</button>`);
+      }
+      if (dbg.manualTeam && !dbg.resolvedTeam) {
+        actions.push(`<button onclick="amTmDebugFixTeam('${_jsStrAttr(z.full_name)}')" class="tm-mini-btn" data-tone="accent">${_escHtml(I18N.t('Takıma Ata'))}</button>`);
+      }
+      if (dbg.isLeaver && dbg.isHandoverCandidate && !dbg.isApproved) {
+        actions.push(`<button onclick="amTmDebugApproveHandover('${_jsStrAttr(z.id)}','${_jsStrAttr(z.exit_date)}','${_jsStrAttr(z.start_date)}','${_jsStrAttr(z.full_name)}')" class="tm-mini-btn" data-tone="accent">${_escHtml(I18N.t('Hesap Devrini Onayla'))}</button>`);
+      }
+
+      return `<div class="tm-sec" data-tone="${dbg.includedInActive ? 'ok' : 'danger'}">
+          <div class="tm-sec-head" style="display:flex;align-items:center;gap:8px">
+            <span class="tm-avatar" style="width:26px;height:26px;font-size:10px">${_escHtml(_amTmInitials(z.full_name))}</span>
+            ${_escHtml(z.full_name)}
+          </div>
+          <div style="padding:4px 14px 2px">${infoRows}</div>
+          <div style="padding:8px 14px 4px;display:flex;flex-wrap:wrap;gap:6px">${chips}</div>
+          <div class="tm-sec-foot">${_escHtml(resultLine)}</div>
+          ${actions.length ? `<div style="padding:10px 14px 14px;display:flex;flex-wrap:wrap;gap:8px">${actions.join('')}</div>` : ''}
+        </div>`;
+    }
+
+    // Bu üç fonksiyon amTmDebugPerson'ın ESKİ (showSiteConfirm zincirine
+    // bağlı) hızlı-düzeltme davranışının modal-içi karşılığı — sorgu
+    // sonucu artık modalda kaldığı için düzeltme sonrası aynı modalda
+    // otomatik yeniden sorgulanır (kullanıcı kapatıp tekrar aramak zorunda
+    // kalmasın).
+    function amTmDebugFixDeactivated(fullName) {
+      showSiteConfirm(
+        I18N.t('Kadroya Geri Al'),
+        I18N.t('{name} team_assignments tablosunda pasife alınmış görünüyor — kadroda görünmemesinin sebebi bu. Kadroya geri alınsın mı?').replace('{name}', _escHtml(fullName)),
+        I18N.t('Kadroya Geri Al'), '#0d9488',
+        async () => { await _amTmSetActive([{ fullName }], true); await amTmDebugRun(); });
+    }
+    function amTmDebugFixTeam(fullName) {
+      // İki modal aynı anda üst üste açık kalmasın — Takıma Ata kendi
+      // penceresini açacak.
+      amTmDebugClose();
+      amTmOpenAssign(fullName);
+    }
+    function amTmDebugApproveHandover(zohoUserId, exitDate, startDate, fullName) {
+      amTmApproveHandover(zohoUserId, exitDate, startDate, fullName);
     }
 
     // Hesap devri onayı — kişi Zoho'da "ayrılmış" görünüyor ama girişi çıkış
