@@ -9912,11 +9912,24 @@
         showSiteNotice(I18N.t('Admin kullanıcıları yalnızca Super Admin silebilir.'), 'error');
         return;
       }
+      // Panele girişi olan (agent DIŞI) biri silinirse KENDİSİ BİR DAHA GİRİŞ
+      // YAPAMAZ ve lider/RM ise ekibi yönetimsiz kalır. Somut vaka: bir takım
+      // liderinin kaydı "sistemden çıkarılacak hayalet kişiler" temizliğine
+      // karışıp yanlışlıkla silindi, kişi bir sonraki girişinde "kullanıcı
+      // bulunamadı" hatası aldı. Ad+kullanıcı adı zaten gösteriliyordu ama rol/
+      // takım YOKTU — "hangi Malak" belirsizliği ad düzeyinde çözülmüş olsa
+      // bile, aynı adı taşıyan farklı takımlardaki biri karışabilirdi.
+      const hasLogin = _umRoleHasLogin(u['Role']);
+      const roleTeamLine = `${fmt(u['Role'] || I18N.t('(rol yok)'))} · ${fmt(uTeam(u) || I18N.t('(takım yok)'))}`;
+      const dangerNote = hasLogin
+        ? `<div style="margin-top:10px;padding:9px 11px;border-radius:10px;background:rgba(220,38,38,.12);border:1px solid rgba(248,113,113,.35);color:#fca5a5;font-size:11px;line-height:1.5">⚠ ${I18N.t('Bu kişi panele giriş yapabiliyor. Silersen kendisi bir daha giriş yapamaz ve yönettiği takım/kapsam sahipsiz kalabilir. Geri dönüşü yok — kalıcı olarak devre dışı bırakmak için "Pasife Al / Girişi Kapat" kullanmayı düşünün.')}</div>`
+        : '';
       showSiteConfirm(
         I18N.t('Kullanıcıyı Sil'),
-        // Kullanici adi da yaziliyor: "hangi Malak" belirsizligi kalmasin, yanlis
-        // kisiyi silmenin bedeli agir.
-        `<strong style="color:#fca5a5">${fmt(userName)}</strong> <span style="opacity:.75">(${fmt(originalUsername)})</span> ${I18N.t('adlı kullanıcı kalıcı olarak silinecek. Bu işlem geri alınamaz.')}`,
+        // Kullanici adi VE rol/takim yaziliyor: "hangi Malak" belirsizligi
+        // kalmasin, yanlis kisiyi silmenin bedeli agir.
+        `<strong style="color:#fca5a5">${fmt(userName)}</strong> <span style="opacity:.75">(${fmt(originalUsername)})</span> ${I18N.t('adlı kullanıcı kalıcı olarak silinecek. Bu işlem geri alınamaz.')}`
+        + `<div style="margin-top:6px;font-size:11px;opacity:.8">${roleTeamLine}</div>` + dangerNote,
         I18N.t('Sil'), '#dc2626',
         async () => {
           try {

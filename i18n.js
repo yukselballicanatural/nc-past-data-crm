@@ -214,6 +214,11 @@
       'Cancellation result code saved; {n} open alarm(s) closed.',
     'Sonuç kodu kaydedildi ama açık alarm kapatılamadı: ':
       'Result code saved, but the open alarm could not be closed: ',
+    // Kullanıcı silme: rol/takım gösterimi + panele girişi olan için uyarı
+    '(rol yok)': '(no role)',
+    '(takım yok)': '(no team)',
+    'Bu kişi panele giriş yapabiliyor. Silersen kendisi bir daha giriş yapamaz ve yönettiği takım/kapsam sahipsiz kalabilir. Geri dönüşü yok — kalıcı olarak devre dışı bırakmak için "Pasife Al / Girişi Kapat" kullanmayı düşünün.':
+      'This person can sign in to the panel. Deleting them means they can never sign in again, and any team/scope they manage may be left without an owner. This cannot be undone — consider "Deactivate / Disable Login" instead.',
     // Takıma Ata penceresi
     'Zoho rolü tanımsız': 'No Zoho role',
     'Takım Senkronu': 'Team Sync',
