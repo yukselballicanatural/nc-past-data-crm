@@ -126,9 +126,6 @@
     .am-kpi.am-critical { border-color:rgba(248,113,113,.35); }
     .am-kpi.am-critical .am-kpi-val { animation:amCriticalGlow 2.2s ease-in-out infinite; }
     @keyframes amCriticalGlow { 0%,100%{ text-shadow:0 0 0 rgba(248,113,113,0);} 50%{ text-shadow:0 0 18px rgba(248,113,113,.65);} }
-    .am-region-card { border-radius:20px; padding:20px; background:radial-gradient(120% 140% at 0% 0%,rgba(99,102,241,.08),transparent 55%),#0d1220; border:1px solid rgba(255,255,255,.07); }
-    .am-team-row { display:flex; align-items:center; justify-content:space-between; padding:8px 12px; border-radius:12px; background:rgba(255,255,255,.03); border:1px solid rgba(255,255,255,.04); transition:background .15s; }
-    .am-team-row:hover { background:rgba(255,255,255,.06); }
     .am-clock { font-family:'Outfit',sans-serif; font-variant-numeric:tabular-nums; letter-spacing:.02em; }
 
     .am-page { position:relative; }
@@ -155,19 +152,6 @@
     .am-btn-primary:hover { filter:brightness(1.1); color:#fff; }
     .am-panel { background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0)),#0b101c; border:1px solid rgba(255,255,255,.07); border-radius:20px; }
     .am-kpi-icon { width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin:0 auto 8px; font-size:15px; background:color-mix(in srgb, var(--am-glow,#6366f1) 20%, transparent); border:1px solid color-mix(in srgb, var(--am-glow,#6366f1) 35%, transparent); }
-    .am-region-bar { height:6px; border-radius:99px; background:rgba(255,255,255,.06); overflow:hidden; margin-top:10px; }
-    .am-region-bar > div { height:100%; border-radius:99px; transition:width .6s ease; }
-
-    /* Bölge takım listesi — çok uzun olabildiği için sabit yükseklik + scroll */
-    .am-team-scroll { max-height:260px; overflow-y:auto; padding-right:4px; margin-right:-4px; }
-    .am-team-scroll::-webkit-scrollbar { width:6px; }
-    .am-team-scroll::-webkit-scrollbar-track { background:transparent; }
-    .am-team-scroll::-webkit-scrollbar-thumb { background:rgba(255,255,255,.12); border-radius:99px; }
-    .am-team-scroll::-webkit-scrollbar-thumb:hover { background:rgba(255,255,255,.22); }
-
-    .am-region-head { display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; }
-    .am-region-title { display:flex; align-items:center; gap:10px; }
-    .am-region-count { font-size:10px; font-weight:700; color:#7d8aa3; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.07); border-radius:99px; padding:3px 10px; }
 
     /* Gün Filtresi — eski "Eşik Filtresi/Motor Ayarları" panelinin yerine */
     .am-day-chip {
@@ -1657,44 +1641,6 @@
       <div class="am-kpi text-center" style="--am-glow:#22d3ee"><div class="am-kpi-icon">✈️</div><div class="am-kpi-val text-cyan-400" id="mk8">0</div><div class="am-kpi-label">FT Takip</div></div>
     </div>
 
-    <!-- İki Bölge Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-      <!-- Istanbul -->
-      <div class="am-region-card">
-        <div class="am-region-head">
-          <div class="am-region-title">
-            <div class="w-2.5 h-2.5 rounded-full bg-blue-400" style="box-shadow:0 0 10px 2px rgba(96,165,250,.6)"></div>
-            <h3 class="text-base font-bold text-white tracking-tight">Istanbul Bölgesi</h3>
-          </div>
-          <span class="am-region-count" id="istTeamCount">0 takım</span>
-        </div>
-        <div class="grid grid-cols-3 gap-2 mb-1">
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400 kpi-val" id="istOpen">0</div></div>
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Gecikmiş</div><div class="text-xl font-bold text-red-400 kpi-val" id="istOverdue">0</div></div>
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400 kpi-val" id="istNoshow">0</div></div>
-        </div>
-        <div class="am-region-bar mb-4"><div id="istRatioBar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#f87171)"></div></div>
-        <div id="istTeamList" class="space-y-1.5 am-team-scroll"></div>
-      </div>
-      <!-- Morocco -->
-      <div class="am-region-card">
-        <div class="am-region-head">
-          <div class="am-region-title">
-            <div class="w-2.5 h-2.5 rounded-full bg-orange-400" style="box-shadow:0 0 10px 2px rgba(251,146,60,.6)"></div>
-            <h3 class="text-base font-bold text-white tracking-tight">Morocco Bölgesi</h3>
-          </div>
-          <span class="am-region-count" id="morTeamCount">0 takım</span>
-        </div>
-        <div class="grid grid-cols-3 gap-2 mb-1">
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Açık</div><div class="text-xl font-bold text-amber-400 kpi-val" id="morOpen">0</div></div>
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">Gecikmiş</div><div class="text-xl font-bold text-red-400 kpi-val" id="morOverdue">0</div></div>
-          <div class="bg-gray-800/60 rounded-xl p-3 text-center border border-white/5 overflow-hidden"><div class="text-[9px] text-slate-400 uppercase font-semibold">No-show</div><div class="text-xl font-bold text-rose-400 kpi-val" id="morNoshow">0</div></div>
-        </div>
-        <div class="am-region-bar mb-4"><div id="morRatioBar" style="width:0%;background:linear-gradient(90deg,#f59e0b,#f87171)"></div></div>
-        <div id="morTeamList" class="space-y-1.5 am-team-scroll"></div>
-      </div>
-    </div>
-
     <!-- Tüm Alarmlar Listesi — .am-panel: sayfanin geri kalaniyla ayni cam
          yuzey (bg-gray-900 genel Tailwind eslemesine dusuyordu). -->
     <div class="am-panel p-5">
@@ -3044,7 +2990,6 @@
       // sığ kopya üretir), yani yamalar orada da görünür — yalnızca yeniden
       // çizmek yeterli.
       updateAdminAlarmKPIs();
-      renderRegionPanels();
       if (typeof renderAdminAlarmTable === 'function') renderAdminAlarmTable();
       const todayView = document.getElementById('view-today');
       if (todayView && !todayView.classList.contains('hidden')) renderAdminToday();
@@ -3057,7 +3002,6 @@
       _amSyncAlarmSnapshots();
       adminAllAlarms = _amAlarmsRaw.filter(a => a.deal_id != null && set.has(String(a.deal_id)));
       updateAdminAlarmKPIs();
-      renderRegionPanels();
       populateAdminAlarmFilters();
       if (typeof renderAdminAlarmTable === 'function') renderAdminAlarmTable();
       _amUpdateBadges(adminAllAlarms);
@@ -3202,68 +3146,6 @@
         document.getElementById('sAlarmOverdue').textContent = all.filter(x => _amIsOverdue(x)).length;
         document.getElementById('sAlarmMissing').textContent = all.filter(x => x.alarm_type === 'arrival_missing' && active.has(x.status)).length;
       }
-    }
-
-    function renderRegionPanels() {
-      // Gün filtresi aktifse bölge panelleri de o pencereye göre hesaplanır
-      // (KPI kartlarıyla aynı davranış — sayfadaki tüm rakamlar tutarlı kalır).
-      const source = _amDayWindowAlarms();
-      ['Istanbul','Morocco'].forEach(region => {
-        const prefix = region === 'Istanbul' ? 'ist' : 'mor';
-        const ra = source.filter(a => a.region === region);
-        const active = AlarmStatus.activeSet();
-        // Eskiden "aktif eksi arrived/examined" idi — panelde ucuncu bir
-        // "acik" tanimi. Artik mk1/TL ile ayni: open + seen.
-        const openCount    = ra.filter(a => AlarmStatus.isOpen(a.status)).length;
-        const overdueCount = ra.filter(a => _amIsOverdue(a)).length;
-        const noshowCount  = ra.filter(a => a.status === 'no_show').length;
-        ['Open','Overdue','Noshow'].forEach((suffix, i) => {
-          const el = document.getElementById(prefix + suffix);
-          if (!el) return;
-          el.textContent = [openCount, overdueCount, noshowCount][i];
-          fitKpiText(el);
-        });
-        const ratioTotal = openCount + overdueCount + noshowCount;
-        const ratioBar = document.getElementById(prefix + 'RatioBar');
-        if (ratioBar) ratioBar.style.width = ratioTotal ? Math.round((overdueCount + noshowCount) / ratioTotal * 100) + '%' : '0%';
-        // Team breakdown — bölgedeki TÜM TL takımlarıyla başla (0 alarmlılar da görünsün)
-        const teams = {};
-        if (window.TeamMap) {
-          TeamMap.teamsForRegion(region).forEach(t => {
-            teams[t.canonical] = { open:0, overdue:0, label:t.label, leader:t.leader };
-          });
-        }
-        ra.filter(a => active.has(a.status)).forEach(a => {
-          const t = (window.TeamMap && TeamMap.normalize(a.team)) || a.team || '—';
-          if (!teams[t]) teams[t] = { open:0, overdue:0, label:t, leader:'' };
-          if (AlarmStatus.isOpen(a.status)) teams[t].open++;
-          if (_amIsOverdue(a)) teams[t].overdue++;
-        });
-        const teamEntries = Object.entries(teams).sort((a,b) => (b[1].open + b[1].overdue) - (a[1].open + a[1].overdue));
-        document.getElementById(prefix + 'TeamList').innerHTML = teamEntries
-          .map(([team, v]) => `
-            <div onclick="selectAdminTeam('${_jsStrAttr(team)}')" class="am-team-row cursor-pointer">
-              <div class="min-w-0">
-                <span class="text-xs text-slate-200 font-medium truncate block max-w-[160px]">${fmt(v.label || team)}</span>
-                ${v.leader ? `<span class="text-[9px] text-slate-600">${fmt(v.leader)}</span>` : ''}
-              </div>
-              <div class="flex gap-2 text-[10px] font-bold shrink-0">
-                <span class="${v.open ? 'text-amber-400' : 'text-slate-600'}">${v.open} ${I18N.t('açık')}</span>
-                ${v.overdue ? `<span class="text-red-400">${v.overdue} ${I18N.t('gec.')}</span>` : ''}
-              </div>
-            </div>`).join('') || `<p class="text-xs text-slate-600">${I18N.t('Aktif alarm yok.')}</p>`;
-        const countEl = document.getElementById(prefix + 'TeamCount');
-        if (countEl) countEl.textContent = teamEntries.length + ' ' + I18N.t('takım');
-      });
-    }
-
-    // Bölge panelindeki bir takıma tıklanınca alt taraftaki Alarm Listesi'ni o takıma filtrele
-    function selectAdminTeam(team) {
-      const sel = document.getElementById('amFilterTeam');
-      if (sel) sel.value = team;
-      _amOnScopeFilterChange();
-      const section = document.getElementById('adminAlarmTbody')?.closest('.bg-gray-900');
-      if (section) section.scrollIntoView({ behavior:'smooth', block:'start' });
     }
 
     // ── Bugün Gelecekler ──────────────────────────────────────────────
@@ -3508,7 +3390,6 @@
         addLog(actionType === 'closed' ? 'ALARM_CLOSE' : 'ALARM_QUICK_ACTION', `Hızlı aksiyon: ${a.status} → ${status}`, a.deal_id, a.deal_name);
         _amPatchLocalAlarm(alarmId, updates);
         updateAdminAlarmKPIs();
-        renderRegionPanels();
         renderAdminToday();
         renderAdminAlarmTable();
         showSiteNotice('Güncellendi.', 'success');
@@ -3581,7 +3462,6 @@
         addLog('ALARM_RESET', `Alarm sıfırlandı — hiç işlem yapılmamış hâline döndürüldü (${prevStatus} → open)`, a.deal_id, a.deal_name);
         _amPatchLocalAlarm(alarmId, applied);
         updateAdminAlarmKPIs();
-        renderRegionPanels();
         renderAdminToday();
         renderAdminAlarmTable();
         // Alarm "İptal / Geçersiz" ile kapatılmışsa İptal Alarmları listesi onu
@@ -7409,7 +7289,6 @@
         Object.assign(a, updates);
         updateAdminAlarmKPIs();
         renderAdminAlarmTable();
-        renderRegionPanels();
         // Alarm "İptal / Geçersiz" olarak kapatıldıysa İptal Alarmları
         // listesini/rozetini de tazele — bkz. team-leader.html'deki aynı düzeltme.
         if (newStatus === 'cancelled') loadAdminCancelledDeals();
@@ -7765,14 +7644,12 @@
       ['amDateFrom','amDateTo','amCreatedFrom','amCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
       _amRenderDayFilterChips();
       updateAdminAlarmKPIs();
-      renderRegionPanels();
       renderAdminAlarmTable();
     }
 
     function _amApplyDayFilter() {
       _amRenderDayFilterChips();
       updateAdminAlarmKPIs();
-      renderRegionPanels();
       renderAdminAlarmTable();
     }
 
@@ -7780,7 +7657,6 @@
     // kartları hem bölge panelleri seçili tarih aralığına göre güncellensin.
     function _amOnDateFilterChange() {
       updateAdminAlarmKPIs();
-      renderRegionPanels();
       renderAdminAlarmTable();
     }
 
@@ -7790,7 +7666,6 @@
     // (ör. bir danışman seçilince o danışmanın rakamları her yerde yansısın).
     function _amOnScopeFilterChange() {
       updateAdminAlarmKPIs();
-      renderRegionPanels();
       renderAdminAlarmTable();
     }
 
@@ -8328,7 +8203,7 @@
         'summary':          () => renderSummary(),
         'users':            () => renderUsersTable(),
         'logs':             () => renderLogs(),
-        'alarms-monitor':   () => { updateAdminAlarmKPIs(); renderRegionPanels(); renderAdminAlarmTable(); _amRenderDayFilterChips(); },
+        'alarms-monitor':   () => { updateAdminAlarmKPIs(); renderAdminAlarmTable(); _amRenderDayFilterChips(); },
         'today':            () => renderAdminToday(),
         'closed-alarms':    () => renderAdminClosedAlarms(),
         'cancelled-alarms': () => renderAdminCancelledAlarms(),
@@ -11011,12 +10886,6 @@
         sel.disabled = true;
         sel.style.opacity = '0.7';
       });
-      // Alarm Monitoring'deki diğer bölgenin paneli gizlenir
-      const otherPrefix = window.rmRegion === 'Istanbul' ? 'mor' : 'ist';
-      const otherPanel = document.getElementById(otherPrefix + 'Open')?.closest('.am-region-card');
-      if (otherPanel) otherPanel.style.display = 'none';
-      const ownPanel = document.getElementById((window.rmRegion === 'Istanbul' ? 'ist' : 'mor') + 'Open')?.closest('.am-region-card');
-      if (ownPanel) ownPanel.style.gridColumn = '1 / -1';
       // "System Administrator" sabit metni RM için yanlış — rozet zaten
       // rolü + bölgeyi gösteriyor, altındaki satırı gereksiz kılıyor.
       const roleLabel = document.getElementById('sidebarRoleLabel');
