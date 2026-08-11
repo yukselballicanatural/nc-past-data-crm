@@ -6381,6 +6381,18 @@
         } else {
           alert(JSON.stringify(data.debug || {}, null, 2));
         }
+        // Onaylanmış/leaver olmayan bir kişi hâlâ görünmüyorsa en sık sebep bu:
+        // team_assignments'ta GEÇMİŞTE (ör. yanlışlıkla) pasife alınmış olması —
+        // bu bayrak hesap devri onayından TAMAMEN bağımsız, hiçbir onay ekranı
+        // bunu göstermiyordu. Burada doğrudan düzeltme sunuluyor.
+        const dbg = data.debug;
+        if (dbg && dbg.found && dbg.isDeactivated) {
+          showSiteConfirm(
+            I18N.t('Kadroya Geri Al'),
+            I18N.t('{name} team_assignments tablosunda pasife alınmış görünüyor — kadroda görünmemesinin sebebi bu. Kadroya geri alınsın mı?').replace('{name}', _escHtml(dbg.zoho.full_name)),
+            I18N.t('Kadroya Geri Al'), '#0d9488',
+            () => _amTmSetActive([{ fullName: dbg.zoho.full_name }], true));
+        }
       } catch(e) {
         showSiteNotice(I18N.t('Sorgu başarısız: ') + e.message, 'error');
       }
@@ -6405,6 +6417,14 @@
           const data = await r.json().catch(() => ({}));
           if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
           addLog('USER_HANDOVER_APPROVE', `Hesap devri onaylandı: ${fullName || zohoUserId} (çıkış ${exitDate} → giriş ${startDate})`);
+          // Bu isim GEÇMİŞTE (ör. hesap ayrılmış görünürken) team_assignments'ta
+          // pasife alınmış olabilir — o bayrak devir onayından TAMAMEN bağımsız
+          // ve onaylansa bile kadroya girişi engellemeye devam eder. Devir
+          // onaylandığına göre kişi kesinlikle kadroda olmalı, bu yüzden burada
+          // sessizce (hata varsa yutularak) de aktife alınmaya çalışılır.
+          if (fullName) {
+            try { await _amTmAssignRequest('PUT', { fullName, isActive: true }); } catch(e2) {}
+          }
           showSiteNotice(I18N.t('Onaylandı.'), 'success');
         } catch(e) {
           showSiteNotice(I18N.t('Onaylanamadı: ') + e.message, 'error');

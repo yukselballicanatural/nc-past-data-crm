@@ -687,6 +687,9 @@
       'This account has a start date AFTER its exit date — someone else likely took over the same Zoho account. If you approve, the person will appear on staff and in My Team Members.',
     'Hesap Devrini Onayla': 'Approve Account Handover',
     'Sorgulanacak kişinin adını yazın:': "Enter the person's name to look up:",
+    '{name} team_assignments tablosunda pasife alınmış görünüyor — kadroda görünmemesinin sebebi bu. Kadroya geri alınsın mı?':
+      '{name} appears deactivated in team_assignments — that is why they are not showing on staff. Reactivate them?',
+    'Kadroya Geri Al': 'Reactivate',
     'Sorgu başarısız: ': 'Lookup failed: ',
     'Hesap devri onay tablosuna erişilemiyor.': 'Cannot access the account-handover approval table.',
     'Hesap devri onay tablosuna erişilemiyor': 'Cannot access the account-handover approval table',
