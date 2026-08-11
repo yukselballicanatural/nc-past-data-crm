@@ -2065,6 +2065,7 @@
               <th class="am-sort" data-col="created" onclick="_caSortBy('created')">Created<span class="am-sarrow"></span></th>
               <th class="am-sort" data-col="arrival" onclick="_caSortBy('arrival')">Arrival<span class="am-sarrow"></span></th>
               <th>Sonuç Kodu</th>
+              <th style="text-align:center">Not</th>
             </tr>
           </thead>
           <tbody id="cancelledAlarmTbody"></tbody>
@@ -2149,10 +2150,10 @@
               <th data-sort="wa-region" onclick="_waSortBy('region')" style="cursor:pointer;user-select:none">Bölge<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="wa-team" onclick="_waSortBy('team')" style="cursor:pointer;user-select:none">Takım<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="wa-arrival" onclick="_waSortBy('arrival')" style="cursor:pointer;user-select:none">Arrival<span class="sarrow" style="color:#475569"> ↕</span></th>
-              <th class="text-right" data-sort="wa-amount" onclick="_waSortBy('amount')" style="cursor:pointer;user-select:none">Tutar<span class="sarrow" style="color:#475569"> ↕</span></th>
-              <th class="text-right" data-sort="wa-paid" onclick="_waSortBy('paid')" style="cursor:pointer;user-select:none">Ödenen<span class="sarrow" style="color:#475569"> ↕</span></th>
-              <th class="text-right" data-sort="wa-diff" onclick="_waSortBy('diff')" style="cursor:pointer;user-select:none">Fark<span class="sarrow" style="color:#475569"> ↕</span></th>
-              <th class="text-center">Sonuç Kodu</th>
+              <th data-sort="wa-amount" onclick="_waSortBy('amount')" style="text-align:right;cursor:pointer;user-select:none">Tutar<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="wa-paid" onclick="_waSortBy('paid')" style="text-align:right;cursor:pointer;user-select:none">Ödenen<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="wa-diff" onclick="_waSortBy('diff')" style="text-align:right;cursor:pointer;user-select:none">Fark<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th style="text-align:center">Sonuç Kodu</th>
             </tr>
           </thead>
           <tbody id="wonAlarmTbody"></tbody>
@@ -4864,6 +4865,19 @@
       const pageStart = (_caCurrentPage - 1) * CA_PAGE_SIZE;
       const pageData = data.slice(pageStart, pageStart + CA_PAGE_SIZE);
 
+      // Takım liderinin alarmı kapatırken girdiği not deal'in kendi
+      // kolonlarında değil, ilgili alarm satırında (adminAllAlarms) duruyor —
+      // _cdmRefreshReasonCard modal içinde zaten aynı eşlemeyi yapıyordu, ama
+      // tablo satırında hiç gösterilmiyordu. Aynı deal için birden fazla
+      // kapalı alarm varsa en son kapatılan kazanır.
+      const alarmNoteByDeal = new Map();
+      (adminAllAlarms || []).forEach(a => {
+        if (!a.note || !['cancelled', 'closed', 'no_show'].includes(a.status)) return;
+        const key = String(a.deal_id);
+        const prev = alarmNoteByDeal.get(key);
+        if (!prev || (a.closed_at || '') > (prev.closed_at || '')) alarmNoteByDeal.set(key, a);
+      });
+
       tbody.innerHTML = pageData.map((d, i) => {
         const dealIdCell = d.id
           ? `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted;font-family:monospace;font-size:10px" title="${I18N.t("Zoho'da Aç")}">${fmt(d.deal_id) || d.id} ↗</a>`
@@ -4871,6 +4885,7 @@
         const resultCell = d.sub_code
           ? `<span style="color:#4ade80;font-weight:700;font-size:10px;white-space:nowrap">✓ ${fmt(d.sub_code)}</span>`
           : `<span style="color:#f59e0b;font-weight:700;font-size:10px;white-space:nowrap">${I18N.t('Bekliyor')}</span>`;
+        const closeNote = alarmNoteByDeal.get(String(d.id));
         return `<tr style="cursor:pointer" onclick="openCancelledDealModal('${d.id}')">
           <td style="color:#475569;font-size:10px">${pageStart + i + 1}</td>
           <td>
@@ -4886,6 +4901,7 @@
           <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.created_time ? _amFmtDate(d.created_time) : '—'}</td>
           <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.arrival_date ? _amFmtDate(d.arrival_date) : '—'}</td>
           <td style="white-space:nowrap">${resultCell}</td>
+          <td style="text-align:center">${_noteBtn(closeNote ? closeNote.note : '')}</td>
         </tr>`;
       }).join('');
 
