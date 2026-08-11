@@ -2154,6 +2154,7 @@
               <th data-sort="wa-paid" onclick="_waSortBy('paid')" style="text-align:right;cursor:pointer;user-select:none">Ödenen<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="wa-diff" onclick="_waSortBy('diff')" style="text-align:right;cursor:pointer;user-select:none">Fark<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th style="text-align:center">Sonuç Kodu</th>
+              <th style="text-align:center">Not</th>
             </tr>
           </thead>
           <tbody id="wonAlarmTbody"></tbody>
@@ -5304,6 +5305,7 @@
                 : 'padding:4px 10px;background:#0d9488;border:none;border-radius:7px;color:#fff;font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap'}"
               title="${d.sub_code ? I18N.t('Düzenlemek için tıkla') + ': ' + fmt(d.sub_code) : ''}">${d.sub_code ? '✓ ' + fmt(d.sub_code) : I18N.t('Sonuç Kodu')}</button>
           </td>
+          <td style="text-align:center">${_noteBtn(d.agent_note)}</td>
         </tr>`;
       }).join('');
       I18N.translateDOM(tbody);
