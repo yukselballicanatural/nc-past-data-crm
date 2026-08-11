@@ -4886,6 +4886,16 @@
           ? `<span style="color:#4ade80;font-weight:700;font-size:10px;white-space:nowrap">✓ ${fmt(d.sub_code)}</span>`
           : `<span style="color:#f59e0b;font-weight:700;font-size:10px;white-space:nowrap">${I18N.t('Bekliyor')}</span>`;
         const closeNote = alarmNoteByDeal.get(String(d.id));
+        // İki AYRI not kaynağı var: alarmı kapatırken TL'nin girdiği not
+        // (closeNote.note) ve admin'in bu ekrandaki "İptal Nedeni" formuna
+        // yazdığı açıklama (d.agent_note, bkz. _cdmSaveResult). Önceden
+        // yalnızca ilki gösteriliyordu — ikinci kaynaktan girilmiş bir
+        // açıklama varsa "!" hiç çıkmıyordu. İkisi de varsa etiketlenerek
+        // birleştirilir, tek biri varsa ham hâliyle gösterilir.
+        const noteParts = [];
+        if (closeNote && closeNote.note) noteParts.push(d.agent_note ? `${I18N.t('Kapanış notu: ')}${closeNote.note}` : closeNote.note);
+        if (d.agent_note) noteParts.push(closeNote && closeNote.note ? `${I18N.t('Danışman notu: ')}${d.agent_note}` : d.agent_note);
+        const combinedNote = noteParts.join('\n\n');
         return `<tr style="cursor:pointer" onclick="openCancelledDealModal('${d.id}')">
           <td style="color:#475569;font-size:10px">${pageStart + i + 1}</td>
           <td>
@@ -4901,7 +4911,7 @@
           <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.created_time ? _amFmtDate(d.created_time) : '—'}</td>
           <td style="font-size:11px;color:#cbd5e1;white-space:nowrap">${d.arrival_date ? _amFmtDate(d.arrival_date) : '—'}</td>
           <td style="white-space:nowrap">${resultCell}</td>
-          <td style="text-align:center">${_noteBtn(closeNote ? closeNote.note : '')}</td>
+          <td style="text-align:center">${_noteBtn(combinedNote)}</td>
         </tr>`;
       }).join('');
 
