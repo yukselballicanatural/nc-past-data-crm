@@ -1274,28 +1274,22 @@
       </select>
     </div>
 
-    <!-- Sonuç Kodu — Zoho Deals Alarm Yönetimi.md tablolarına göre alarm tipine
-         özel manuel değerlendirme listesi. Seçim otomatik olarak Alarm Durumu'nu
-         önerir (Kapat/İptal Alarmı Oluştur/Takibe Al/Zoho Güncellemesini Bekle).
-         Bu alarm tipi için bir sonuç kodu tablosu varsa seçim ZORUNLUDUR. -->
-    <div id="resultCodeWrap" style="display:none;margin-bottom:12px">
-      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Sonuç Kodu <span style="color:#f87171;font-weight:700">*</span></label>
-      <select id="alarmResultCode" class="filter-sel" onchange="onResultCodeChange()">
-        <option value="">— Seç —</option>
-      </select>
-    </div>
-    <div id="followUpDateWrap" style="display:none;margin-bottom:12px">
-      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Takip Tarihi <span style="color:#f87171;font-weight:700">*</span></label>
-      <input type="date" id="followUpDateInput" class="filter-sel" style="width:100%;box-sizing:border-box">
+    <!-- Başlık — serbest metin, alarm için kısa özet (ör. "Hasta arandı, yanıt yok"). -->
+    <div style="margin-bottom:18px">
+      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:flex;justify-content:space-between;margin-bottom:6px">
+        <span>Başlık <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></span>
+        <span id="alarmTitleCount" style="color:#475569;font-weight:400;font-size:10px">0 / 50</span>
+      </label>
+      <input type="text" id="alarmTitleInput" class="filter-sel" maxlength="50" style="width:100%;box-sizing:border-box" placeholder="Kısa başlık (en fazla 50 karakter)" oninput="document.getElementById('alarmTitleCount').textContent=this.value.length+' / 50'">
     </div>
 
     <!-- Not -->
     <div style="margin-bottom:18px">
       <label style="font-size:11px;color:#94a3b8;font-weight:700;display:flex;justify-content:space-between;margin-bottom:6px">
         <span>Not <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></span>
-        <span id="noteCount" style="color:#475569;font-weight:400;font-size:10px">0 / 300</span>
+        <span id="noteCount" style="color:#475569;font-weight:400;font-size:10px">0 / 500</span>
       </label>
-      <textarea id="noteInput" class="modal-note" maxlength="300" placeholder="Hasta durumu, arama sonucu, notlar... (en fazla 300 karakter)" oninput="document.getElementById('noteCount').textContent=this.value.length+' / 300'"></textarea>
+      <textarea id="noteInput" class="modal-note" maxlength="500" placeholder="Hasta durumu, arama sonucu, notlar... (en fazla 500 karakter)" oninput="document.getElementById('noteCount').textContent=this.value.length+' / 500'"></textarea>
       <div id="alarmAttachWidget"></div>
     </div>
 
@@ -3002,86 +2996,6 @@
 
   function runEngineManual() { runEngine(true); }
 
-  // ── Sonuç Kodu (Result Code) — Zoho_Deals_Alarm_Yonetimi.md ─────────
-  // Her alarm tipi için standart manuel sonuç kodu listesi. action:
-  //   'close'    → Kapat (alarmı kapatır)
-  //   'cancel'   → İptal Alarmı Oluştur (alarmı 'cancelled' yapar)
-  //   'followup' → Takibe Al (Takip Tarihi ZORUNLU, alarm açık kalır)
-  //   'wait'     → Zoho Güncellemesini / Otomatik Kapanışı Bekle (sadece kaydeder, durum değişmez)
-  const RESULT_CODE_MAP = {
-    today: [
-      { code: 'Hasta Geliş Durumu Kontrolü İletildi',  action: 'wait' },
-      { code: 'Arrival Date Güncelleme Talebi İletildi', action: 'wait' },
-      { code: 'Hasta Statüsü Güncelleme Talebi İletildi', action: 'wait' },
-      { code: 'No Show Kontrolü İletildi',              action: 'wait' },
-      { code: 'İptal Durumu Kontrolü İletildi',         action: 'wait' },
-    ],
-    approaching: [
-      { code: 'Hasta Geliş Teyidi Talebi İletildi',       action: 'wait' },
-      { code: 'Arrival Date Kontrolü İletildi',            action: 'wait' },
-      { code: 'Seyahat Planı Kontrolü İletildi',           action: 'wait' },
-      { code: 'Uçuş Bilgisi Güncelleme Talebi İletildi',  action: 'wait' },
-      { code: 'Hasta ile İletişim Talebi İletildi',        action: 'wait' },
-    ],
-    missing: [
-      { code: 'Arrival Date Ekleme Talebi İletildi',        action: 'wait' },
-      { code: 'Hastadan Tarih Bilgisi Alınması İletildi',   action: 'wait' },
-      { code: 'Seyahat Planı Takibi İletildi',              action: 'wait' },
-      { code: 'Deal Geçerlilik Kontrolü İletildi',          action: 'wait' },
-      { code: 'İptal Bilgisi Güncelleme Talebi İletildi',   action: 'wait' },
-    ],
-    overdue: [
-      { code: 'Gecikmiş Arrival Date Kontrolü İletildi', action: 'wait' },
-      { code: 'Yeni Arrival Date Girilmesi İletildi',    action: 'wait' },
-      { code: 'Hasta Geliş Durumu Kontrolü İletildi',    action: 'wait' },
-      { code: 'No Show Güncelleme Talebi İletildi',      action: 'wait' },
-      { code: 'İptal Statüsü Güncelleme Talebi İletildi', action: 'wait' },
-    ],
-  };
-
-  // Gecikmiş (overdue) canlı hesaplanan bir durum olduğu için önce onu, sonra
-  // alarm_type'a göre eşleşen sonuç kodu grubunu döndürür.
-  function resultCodeGroupFor(a) {
-    if (isOverdue(a)) return 'overdue';
-    if (a.alarm_type === 'arrival_missing') return 'missing';
-    if (a.alarm_type === 'today_patient') return 'today';
-    if (['arrival_approaching', 'visit_approaching'].includes(a.alarm_type)) return 'approaching';
-    return null;
-  }
-
-  function populateResultCodeSelect(a) {
-    const group = resultCodeGroupFor(a);
-    const wrap  = document.getElementById('resultCodeWrap');
-    const sel   = document.getElementById('alarmResultCode');
-    if (!group || !RESULT_CODE_MAP[group]) {
-      wrap.style.display = 'none';
-      sel.innerHTML = '<option value="">— Seç —</option>';
-      document.getElementById('followUpDateWrap').style.display = 'none';
-      return;
-    }
-    wrap.style.display = 'block';
-    sel.innerHTML = '<option value="">— Seç —</option>' + RESULT_CODE_MAP[group].map(rc =>
-      `<option value="${fmt(rc.code)}" data-action="${rc.action}">${I18N.t(rc.code)}</option>`
-    ).join('');
-    sel.value = a.result_code || '';
-    document.getElementById('followUpDateInput').value = a.follow_up_date || '';
-    onResultCodeChange();
-  }
-
-  // Sonuç kodu seçilince ilgili aksiyona göre Yeni Durum'u öner ve Takip
-  // Tarihi alanını göster/gizle — kullanıcı Yeni Durum'u yine de değiştirebilir.
-  function onResultCodeChange() {
-    const sel    = document.getElementById('alarmResultCode');
-    const opt    = sel.selectedOptions[0];
-    const action = opt ? opt.getAttribute('data-action') : '';
-    document.getElementById('followUpDateWrap').style.display = action === 'followup' ? 'block' : 'none';
-    const newStatusSel = document.getElementById('newStatus');
-    if (action === 'close')       newStatusSel.value = 'closed';
-    else if (action === 'cancel') newStatusSel.value = 'cancelled';
-    else if (action === 'followup' && !newStatusSel.value) newStatusSel.value = 'in_progress';
-    newStatusSel.dispatchEvent(new Event('change'));
-  }
-
   // ── Alarm action modal ───────────────────────────────────────────
   function openAlarmById(id) {
     const a = allAlarms.find(x => x.id === id);
@@ -3110,17 +3024,18 @@
     // veritabanına zaten kaydedilmişti, yalnızca bu alan onu göstermiyordu.
     document.getElementById('noteInput').value = a.note || '';
     const _nc = document.getElementById('noteCount');
-    if (_nc) _nc.textContent = (a.note || '').length + ' / 300';
+    if (_nc) _nc.textContent = (a.note || '').length + ' / 500';
+    // Başlık de aynı şekilde kayıtlı gelir — alarms.result_code kolonu artık
+    // sonuç kodu değil, serbest metin Başlık için kullanılıyor (bkz. saveAlarmAction).
+    document.getElementById('alarmTitleInput').value = a.result_code || '';
+    const _tc = document.getElementById('alarmTitleCount');
+    if (_tc) _tc.textContent = (a.result_code || '').length + ' / 50';
     document.getElementById('closeReasonWrap').style.display = 'none';
-    populateResultCodeSelect(a);
-    // Durum seçimi de restore edilir — NOT ve Sonuç Kodu ile AYNI sorun:
-    // alarma daha önce bir aksiyon uygulanmışsa (ör. "Takipte" yapılmış)
-    // pencere her açılışta "— Durum seçin —" gösteriyordu, sanki hiç aksiyon
-    // alınmamış gibi. `a.status` seçenek listesindeki değerlerden biriyse
-    // (open/no_show gibi başlangıç durumları listede yok, o zaman boş kalır)
-    // seçili gelir. populateResultCodeSelect'TEN SONRA yapılıyor: o da
-    // action='close/cancel' olan bir sonuç koduna göre durumu değiştirebilir,
-    // kayıtlı gerçek durum ONUN ÜZERİNE yazmalı, tersi değil.
+    // Durum seçimi de restore edilir: alarma daha önce bir aksiyon
+    // uygulanmışsa (ör. "Takipte" yapılmış) pencere her açılışta
+    // "— Durum seçin —" gösteriyordu, sanki hiç aksiyon alınmamış gibi.
+    // `a.status` seçenek listesindeki değerlerden biriyse (open/no_show gibi
+    // başlangıç durumları listede yok, o zaman boş kalır) seçili gelir.
     const newStatusSel = document.getElementById('newStatus');
     if ([...newStatusSel.options].some(o => o.value === a.status)) {
       newStatusSel.value = a.status;
@@ -3169,10 +3084,7 @@
   }
 
   document.getElementById('newStatus').addEventListener('change', function() {
-    // Bu alarm tipi için bir Sonuç Kodu tablosu varsa (bkz. resultCodeGroupFor)
-    // eski genel "Kapatma Sebebi" seçimi gösterilmez — Sonuç Kodu onun yerini alır.
-    const hasResultCodeGroup = currentAlarm && !!resultCodeGroupFor(currentAlarm);
-    const needReason = ['closed','cancelled'].includes(this.value) && !hasResultCodeGroup;
+    const needReason = ['closed','cancelled'].includes(this.value);
     document.getElementById('closeReasonWrap').style.display = needReason ? 'block' : 'none';
   });
 
@@ -3224,16 +3136,10 @@
     const newStatus   = document.getElementById('newStatus').value;
     const note        = document.getElementById('noteInput').value.trim();
     const closeReason = document.getElementById('closeReason').value;
-    const resultSel    = document.getElementById('alarmResultCode');
-    const resultCode    = resultSel.value;
-    const resultAction  = resultCode ? (resultSel.selectedOptions[0]?.getAttribute('data-action') || '') : '';
-    const followUpDate  = document.getElementById('followUpDateInput').value;
-    // Bu alarm tipi için bir Sonuç Kodu tablosu varsa seçim ZORUNLUDUR.
-    const resultCodeRequired = document.getElementById('resultCodeWrap').style.display !== 'none';
-    if (resultCodeRequired && !resultCode) { showNotice('Sonuç Kodu seçilmelidir.', 'error'); return; }
-    if (!newStatus && !note && !resultCode) { showNotice('Durum seçin, sonuç kodu seçin veya not girin.', 'error'); return; }
-    // Takibe Al seçilen hiçbir işlem, yeni takip tarihi girilmeden tamamlanmamalıdır.
-    if (resultAction === 'followup' && !followUpDate) { showNotice('Bu sonuç kodu için Takip Tarihi girilmelidir.', 'error'); return; }
+    // Not: bu alan artık serbest metin Başlık — alarms.result_code kolonunda
+    // saklanıyor (kolonu değiştirmemek için eski kolon yeniden kullanıldı).
+    const title = document.getElementById('alarmTitleInput').value.trim();
+    if (!newStatus && !note && !title) { showNotice('Durum seçin, başlık girin veya not girin.', 'error'); return; }
     const btn = document.getElementById('btnSaveAction');
     btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
 
@@ -3241,8 +3147,7 @@
     const updates = {};
     if (newStatus) updates.status = newStatus;
     if (note)      updates.note   = note;
-    if (resultCode) updates.result_code = resultCode;
-    if (resultAction === 'followup') updates.follow_up_date = followUpDate;
+    updates.result_code = title || null;
 
     if (newStatus === 'seen') {
       updates.seen_at = now;
@@ -3252,20 +3157,12 @@
     if (['no_show','closed','cancelled'].includes(newStatus)) {
       updates.closed_at  = now;
       updates.closed_by  = currentUser.fullName || currentUser.username;
-      updates.close_reason = newStatus === 'no_show' ? 'no_show' : (resultCode || closeReason);
+      updates.close_reason = newStatus === 'no_show' ? 'no_show' : closeReason;
     }
 
     try {
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
       let r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${currentAlarm.id}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
-      // alarms.result_code / follow_up_date kolonları henüz eklenmediyse
-      // (alarm_result_code_columns.sql çalıştırılmadan önce) PostgREST 400
-      // döner — bu iki alanı çıkarıp tekrar dene, kayıt bu yüzden bloklanmasın.
-      if (!r.ok && (updates.result_code !== undefined || updates.follow_up_date !== undefined)) {
-        const { result_code, follow_up_date, ...fallbackUpdates } = updates;
-        r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${currentAlarm.id}`, { method: 'PATCH', headers: H, body: JSON.stringify(fallbackUpdates) });
-        if (r.ok) showNotice('Kaydedildi (Sonuç Kodu/Takip Tarihi için alarm_result_code_columns.sql henüz çalıştırılmamış).', 'error');
-      }
       if (!r.ok) throw new Error('HTTP ' + r.status);
       // Aksiyon geçmişine yaz
       const actionType = ['no_show','closed','cancelled'].includes(newStatus) ? 'closed' : (newStatus ? 'status_change' : 'note');
@@ -3293,13 +3190,16 @@
 
   // "WhatsApp'tan Agent'a Bildirim Gönder" butonu — Kaydet'ten BAĞIMSIZ bir
   // aksiyon. Kaydetmeden de, kaydettikten sonra da kullanılabilir; modaldaki
-  // o anki Sonuç Kodu / Not alanlarını okuyup ilgili danışmanın WhatsApp'ını açar.
+  // o anki Başlık / Not / Alarm Durumu alanlarını okuyup ilgili danışmanın
+  // WhatsApp'ını açar. Başlık ve Alarm Durumu ikisi de zorunludur.
   function sendResultCodeWhatsAppClick() {
     if (!currentAlarm) return;
-    const resultCode = document.getElementById('alarmResultCode').value;
-    if (!resultCode) { showNotice('WhatsApp bildirimi göndermek için önce bir Sonuç Kodu seçin.', 'error'); return; }
+    const title = document.getElementById('alarmTitleInput').value.trim();
+    if (!title) { showNotice('WhatsApp bildirimi göndermek için önce bir Başlık girin.', 'error'); return; }
+    const newStatus = document.getElementById('newStatus').value;
+    if (!newStatus) { showNotice('WhatsApp bildirimi göndermek için önce Alarm Durumu seçin.', 'error'); return; }
     const note = document.getElementById('noteInput').value.trim();
-    sendResultCodeWhatsApp(currentAlarm, resultCode, note);
+    sendResultCodeWhatsApp(currentAlarm, title, note);
   }
 
   // Telefon numarası Takımımdaki Kişiler (api/team-members) üzerinden, deal_owner
@@ -3307,7 +3207,7 @@
   // sohbeti açar; WhatsApp'ın kendi sayfasındaki "Gönder" tuşuna dışarıdan bir
   // web sitesinin JS ile basması tarayıcı/WhatsApp güvenlik kısıtları yüzünden
   // mümkün değildir (cross-origin) — bu yüzden son "Gönder" tıklaması kullanıcıda kalır.
-  async function sendResultCodeWhatsApp(alarm, resultCode, note) {
+  async function sendResultCodeWhatsApp(alarm, title, note) {
     try {
       const ownerName = (alarm.deal_owner || '').trim();
       if (!ownerName) return;
@@ -3329,28 +3229,27 @@
           showNotice(`${ownerName} ${I18N.t('için kayıtlı telefon numarası yok, WhatsApp mesajı gönderilemedi.')}`, 'error');
           return;
         }
-        _waPendingCtx = { alarm, resultCode, note, member };
+        _waPendingCtx = { alarm, title, note, member };
         _openWaPhoneModal(member);
         return;
       }
-      await _openWhatsAppLink(alarm, resultCode, note, digits);
+      await _openWhatsAppLink(alarm, title, note, digits);
     } catch(e) { /* WhatsApp yönlendirmesi ana kayıt akışını bozmasın */ }
   }
 
-  async function _openWhatsAppLink(alarm, resultCode, note, digits) {
+  async function _openWhatsAppLink(alarm, title, note, digits) {
     const dealLink = alarm.deal_id ? `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${alarm.deal_id}` : '';
     const isEN = I18N.getLang() === 'en';
-    const translatedCode = isEN ? I18N.t(resultCode) : resultCode;
     const lines = [
-      isEN ? 'Alarm Result Code Update' : 'Alarm Güncelleme Bildirimi',
+      isEN ? 'Alarm Update Notification' : 'Alarm Güncelleme Bildirimi',
       `Deal: ${alarm.deal_name || '-'}`,
       dealLink ? `Link: ${dealLink}` : '',
-      `${isEN ? 'Result Code' : 'Sonuç Kodu'}: ${translatedCode}`,
+      `${isEN ? 'Title' : 'Başlık'}: ${title}`,
       note ? `${isEN ? 'Note' : 'Not'}: ${note}` : '',
     ].filter(Boolean);
     window.open(`https://web.whatsapp.com/send?phone=${digits}&text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
     if (alarm.id) {
-      const logNote = `Sonuç Kodu: ${resultCode}${note ? ' | Not: ' + note : ''}`;
+      const logNote = `Başlık: ${title}${note ? ' | Not: ' + note : ''}`;
       logAlarmAction(alarm, 'whatsapp_sent', alarm.status, alarm.status, logNote);
     }
   }
@@ -3386,7 +3285,7 @@
     btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
     try {
       const token = (currentUser && currentUser.token) || '';
-      const { alarm, resultCode, note, member } = _waPendingCtx;
+      const { alarm, title, note, member } = _waPendingCtx;
       const r = await fetch('/api/team-members', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
@@ -3398,7 +3297,7 @@
       const cached = (_teamMembers || []).find(m => m.username === member.username);
       if (cached) cached.phone = check.val;
       document.getElementById('waPhoneModal').classList.remove('open');
-      await _openWhatsAppLink(alarm, resultCode, note, _waDigits(check.val));
+      await _openWhatsAppLink(alarm, title, note, _waDigits(check.val));
       _waPendingCtx = null;
     } catch(e) {
       errEl.textContent = I18N.t('Kaydedilemedi: ') + e.message;
@@ -6052,7 +5951,7 @@
 
   function exportClosedAlarms(format) {
     const data = allAlarms.filter(a => a.status === 'closed');
-    const headers = ['Hasta','Deal ID','Danışman','Takım','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Sonuç Kodu','Not'];
+    const headers = ['Hasta','Deal ID','Danışman','Takım','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Başlık','Not'];
     const rows = data.map(a => {
       const fin = dealFinanceMap[a.deal_id] || {};
       const typeLabel = a.alarm_type === 'payment_tracking' ? '' : alarmTypeMeta(AlarmStatus.effectiveType(a), false).label;

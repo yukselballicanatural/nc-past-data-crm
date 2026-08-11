@@ -2421,23 +2421,20 @@
         </select>
       </div>
 
-      <div id="aamResultCodeWrap" style="display:none;margin-bottom:12px">
-        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Sonuç Kodu <span style="color:#f87171;font-weight:700">*</span></label>
-        <select id="aamResultCode" class="filter-select" onchange="onAamResultCodeChange()">
-          <option value="">— Seç —</option>
-        </select>
-      </div>
-      <div id="aamFollowUpDateWrap" style="display:none;margin-bottom:12px">
-        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Takip Tarihi <span style="color:#f87171;font-weight:700">*</span></label>
-        <input type="date" id="aamFollowUpDateInput" class="filter-select" style="width:100%;box-sizing:border-box">
+      <div style="margin-bottom:18px">
+        <label style="font-size:11px;color:#94a3b8;font-weight:700;display:flex;justify-content:space-between;margin-bottom:6px">
+          <span>Başlık <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></span>
+          <span id="aamTitleCount" style="color:#475569;font-weight:400;font-size:10px">0 / 50</span>
+        </label>
+        <input type="text" id="aamTitleInput" class="filter-select" maxlength="50" style="width:100%;box-sizing:border-box" placeholder="Kısa başlık (en fazla 50 karakter)" oninput="document.getElementById('aamTitleCount').textContent=this.value.length+' / 50'">
       </div>
 
       <div style="margin-bottom:18px">
         <label style="font-size:11px;color:#94a3b8;font-weight:700;display:flex;justify-content:space-between;margin-bottom:6px">
           <span>Not <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></span>
-          <span id="aamNoteCount" style="color:#475569;font-weight:400;font-size:10px">0 / 300</span>
+          <span id="aamNoteCount" style="color:#475569;font-weight:400;font-size:10px">0 / 500</span>
         </label>
-        <textarea id="aamNoteInput" class="aam-note" maxlength="300" placeholder="Hasta durumu, arama sonucu, notlar... (en fazla 300 karakter)" oninput="document.getElementById('aamNoteCount').textContent=this.value.length+' / 300'"></textarea>
+        <textarea id="aamNoteInput" class="aam-note" maxlength="500" placeholder="Hasta durumu, arama sonucu, notlar... (en fazla 500 karakter)" oninput="document.getElementById('aamNoteCount').textContent=this.value.length+' / 500'"></textarea>
         <div id="aamAttachWidget"></div>
       </div>
 
@@ -3417,7 +3414,6 @@
       close_reason: null,
       note: null,
       result_code: null,
-      follow_up_date: null,
     };
 
     function adminResetAlarm(alarmId) {
@@ -3425,7 +3421,7 @@
       if (!a) return;
       // Statik cümleyi ayrıca I18N.t'den geçiriyoruz — showSiteConfirm tüm
       // metni tek parça çevirmeye çalışsa deal adı yüzünden sözlükte eşleşmezdi.
-      const body = I18N.t('Bu alarmdaki tüm aksiyonlar silinecek: durum Açık\'a döner; sonuç kodu, not, takip tarihi ve kapatma bilgisi temizlenir. Alarm hiç işlem yapılmamış hâline döner. Bu işlem geri alınamaz.')
+      const body = I18N.t('Bu alarmdaki tüm aksiyonlar silinecek: durum Açık\'a döner; başlık, not ve kapatma bilgisi temizlenir. Alarm hiç işlem yapılmamış hâline döner. Bu işlem geri alınamaz.')
         + `<br><br><b>${_escHtml(a.deal_name || a.deal_id || '')}</b>`;
       showSiteConfirm('Alarmı Sıfırla', body, 'Sıfırla', '#dc2626', () => _doAdminResetAlarm(alarmId));
     }
@@ -3439,14 +3435,6 @@
       try {
         let applied = { ..._ALARM_RESET_FIELDS };
         let r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${alarmId}`, { method: 'PATCH', headers: H, body: JSON.stringify(applied) });
-        // alarms.result_code / follow_up_date kolonları henüz eklenmediyse
-        // (alarm_result_code_columns.sql çalıştırılmadan önce) PostgREST 400
-        // döner — bu iki alanı çıkarıp tekrar dene, sıfırlama bloklanmasın.
-        if (!r.ok) {
-          const { result_code, follow_up_date, ...fallback } = applied;
-          const r2 = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${alarmId}`, { method: 'PATCH', headers: H, body: JSON.stringify(fallback) });
-          if (r2.ok) { applied = fallback; r = r2; }
-        }
         if (!r.ok) throw new Error('HTTP ' + r.status);
         // Notu ayrı PATCH ile de sil — bazı PostgREST sürümlerinde birleşik
         // PATCH'te null değer atlanabiliyor (bkz. team-leader.html aynı düzeltme).
@@ -5669,79 +5657,6 @@
       });
     }
 
-    // ── Sonuç Kodu (Result Code) — Zoho_Deals_Alarm_Yonetimi.md ─────────
-    // team-leader.html'deki RESULT_CODE_MAP ile aynı liste/mantık (bkz. oradaki
-    // yorum). action: 'close' | 'cancel' | 'followup' (Takip Tarihi zorunlu) | 'wait'
-    const AAM_RESULT_CODE_MAP = {
-      today: [
-        { code: 'Hasta Geliş Durumu Kontrolü İletildi',      action: 'wait' },
-        { code: 'Arrival Date Güncelleme Talebi İletildi',   action: 'wait' },
-        { code: 'Hasta Statüsü Güncelleme Talebi İletildi', action: 'wait' },
-        { code: 'No Show Kontrolü İletildi',                 action: 'wait' },
-        { code: 'İptal Durumu Kontrolü İletildi',            action: 'wait' },
-      ],
-      approaching: [
-        { code: 'Hasta Geliş Teyidi Talebi İletildi',      action: 'wait' },
-        { code: 'Arrival Date Kontrolü İletildi',           action: 'wait' },
-        { code: 'Seyahat Planı Kontrolü İletildi',          action: 'wait' },
-        { code: 'Uçuş Bilgisi Güncelleme Talebi İletildi', action: 'wait' },
-        { code: 'Hasta ile İletişim Talebi İletildi',       action: 'wait' },
-      ],
-      missing: [
-        { code: 'Arrival Date Ekleme Talebi İletildi',       action: 'wait' },
-        { code: 'Hastadan Tarih Bilgisi Alınması İletildi',  action: 'wait' },
-        { code: 'Seyahat Planı Takibi İletildi',             action: 'wait' },
-        { code: 'Deal Geçerlilik Kontrolü İletildi',         action: 'wait' },
-        { code: 'İptal Bilgisi Güncelleme Talebi İletildi',  action: 'wait' },
-      ],
-      overdue: [
-        { code: 'Gecikmiş Arrival Date Kontrolü İletildi',  action: 'wait' },
-        { code: 'Yeni Arrival Date Girilmesi İletildi',     action: 'wait' },
-        { code: 'Hasta Geliş Durumu Kontrolü İletildi',     action: 'wait' },
-        { code: 'No Show Güncelleme Talebi İletildi',       action: 'wait' },
-        { code: 'İptal Statüsü Güncelleme Talebi İletildi', action: 'wait' },
-      ],
-    };
-
-    function aamResultCodeGroupFor(a) {
-      if (_amIsOverdue(a)) return 'overdue';
-      if (a.alarm_type === 'arrival_missing') return 'missing';
-      if (a.alarm_type === 'today_patient') return 'today';
-      if (['arrival_approaching', 'visit_approaching'].includes(a.alarm_type)) return 'approaching';
-      return null;
-    }
-
-    function populateAamResultCodeSelect(a) {
-      const group = aamResultCodeGroupFor(a);
-      const wrap  = document.getElementById('aamResultCodeWrap');
-      const sel   = document.getElementById('aamResultCode');
-      if (!group || !AAM_RESULT_CODE_MAP[group]) {
-        wrap.style.display = 'none';
-        sel.innerHTML = '<option value="">— Seç —</option>';
-        document.getElementById('aamFollowUpDateWrap').style.display = 'none';
-        return;
-      }
-      wrap.style.display = 'block';
-      sel.innerHTML = '<option value="">— Seç —</option>' + AAM_RESULT_CODE_MAP[group].map(rc =>
-        `<option value="${fmt(rc.code)}" data-action="${rc.action}">${I18N.t(rc.code)}</option>`
-      ).join('');
-      sel.value = a.result_code || '';
-      document.getElementById('aamFollowUpDateInput').value = a.follow_up_date || '';
-      onAamResultCodeChange();
-    }
-
-    function onAamResultCodeChange() {
-      const sel    = document.getElementById('aamResultCode');
-      const opt    = sel.selectedOptions[0];
-      const action = opt ? opt.getAttribute('data-action') : '';
-      document.getElementById('aamFollowUpDateWrap').style.display = action === 'followup' ? 'block' : 'none';
-      const newStatusSel = document.getElementById('aamNewStatus');
-      if (action === 'close')       newStatusSel.value = 'closed';
-      else if (action === 'cancel') newStatusSel.value = 'cancelled';
-      else if (action === 'followup' && !newStatusSel.value) newStatusSel.value = 'in_progress';
-      newStatusSel.dispatchEvent(new Event('change'));
-    }
-
     // ── Admin alarm detay/aksiyon modalı ─────────────────────────────
     let currentAdminAlarm = null;
 
@@ -5813,21 +5728,22 @@
       // görünüyordu.
       document.getElementById('aamNoteInput').value = a.note || '';
       const aamNC = document.getElementById('aamNoteCount');
-      if (aamNC) aamNC.textContent = (a.note || '').length + ' / 300';
+      if (aamNC) aamNC.textContent = (a.note || '').length + ' / 500';
+      // Başlık de aynı şekilde kayıtlı gelir — alarms.result_code kolonu artık
+      // sonuç kodu değil, serbest metin Başlık için kullanılıyor (bkz. saveAdminAlarmAction).
+      document.getElementById('aamTitleInput').value = a.result_code || '';
+      const aamTC = document.getElementById('aamTitleCount');
+      if (aamTC) aamTC.textContent = (a.result_code || '').length + ' / 50';
       document.getElementById('aamCloseReasonWrap').style.display = 'none';
       // "Alarmı Sıfırla" yalnızca üzerinde gerçekten bir aksiyon varsa anlamlı —
-      // hiç dokunulmamış (open + not/sonuç kodu/damga yok) bir alarmda gizle.
+      // hiç dokunulmamış (open + not/başlık/damga yok) bir alarmda gizle.
       const resetBtn = document.getElementById('aamBtnReset');
       if (resetBtn) {
         const touched = (a.status && a.status !== 'open') || !!a.note || !!a.result_code ||
-                        !!a.follow_up_date || !!a.seen_at || !!a.actioned_at || !!a.closed_at;
+                        !!a.seen_at || !!a.actioned_at || !!a.closed_at;
         resetBtn.style.display = touched ? 'flex' : 'none';
       }
-      populateAamResultCodeSelect(a);
-      // Durum secimi de restore edilir — bkz. team-leader.html'deki ayni
-      // duzeltme. populateAamResultCodeSelect'TEN SONRA yapiliyor: sonuc kodu
-      // action='close/cancel' ise durumu degistirebilir, kayitli gercek durum
-      // ONUN UZERINE yazmali.
+      // Durum seçimi de restore edilir — bkz. team-leader.html'deki aynı düzeltme.
       const aamNewStatusSel = document.getElementById('aamNewStatus');
       if ([...aamNewStatusSel.options].some(o => o.value === a.status)) {
         aamNewStatusSel.value = a.status;
@@ -5884,8 +5800,7 @@
     }
 
     document.getElementById('aamNewStatus').addEventListener('change', function() {
-      const hasResultCodeGroup = currentAdminAlarm && !!aamResultCodeGroupFor(currentAdminAlarm);
-      const needReason = ['closed','cancelled'].includes(this.value) && !hasResultCodeGroup;
+      const needReason = ['closed','cancelled'].includes(this.value);
       document.getElementById('aamCloseReasonWrap').style.display = needReason ? 'block' : 'none';
     });
 
@@ -5913,16 +5828,19 @@
     }
 
     // "WhatsApp'tan Agent'a Bildirim Gönder" butonu — Kaydet'ten BAĞIMSIZ.
+    // Başlık ve Alarm Durumu ikisi de zorunludur.
     function sendAdminResultCodeWhatsAppClick() {
       if (!currentAdminAlarm) return;
-      const resultCode = document.getElementById('aamResultCode').value;
-      if (!resultCode) { showSiteNotice(I18N.t('WhatsApp bildirimi göndermek için önce bir Sonuç Kodu seçin.'), 'error'); return; }
+      const title = document.getElementById('aamTitleInput').value.trim();
+      if (!title) { showSiteNotice(I18N.t('WhatsApp bildirimi göndermek için önce bir Başlık girin.'), 'error'); return; }
+      const newStatus = document.getElementById('aamNewStatus').value;
+      if (!newStatus) { showSiteNotice(I18N.t('WhatsApp bildirimi göndermek için önce Alarm Durumu seçin.'), 'error'); return; }
       const note = document.getElementById('aamNoteInput').value.trim();
-      sendAdminResultCodeWhatsApp(currentAdminAlarm, resultCode, note);
+      sendAdminResultCodeWhatsApp(currentAdminAlarm, title, note);
     }
 
-    // Sonuç Kodu ile ilgili danışmanın WhatsApp'ına yönlendirir
-    // — bkz. team-leader.html'deki sendResultCodeWhatsApp aynı mantık/kısıt.
+    // İlgili danışmanın WhatsApp'ına yönlendirir — bkz. team-leader.html'deki
+    // sendResultCodeWhatsApp aynı mantık/kısıt.
     // NOT: api/team-members.js çağıranın KENDİ "Takim Adi"sine göre kapsamlanır;
     // admin/super-admin/RM hesaplarının çoğunda bu alan boş olduğundan telefon
     // bulunamayabilir — bu durumda kullanıcıya net bir hata bildirimi gösterilir.
@@ -5930,7 +5848,7 @@
       return String(phone || '').replace(/[^\d]/g, '');
     }
     let _amTeamMembers = null;
-    async function sendAdminResultCodeWhatsApp(alarm, resultCode, note) {
+    async function sendAdminResultCodeWhatsApp(alarm, title, note) {
       try {
         const ownerName = (alarm.deal_owner || '').trim();
         if (!ownerName) return;
@@ -5946,28 +5864,27 @@
             showSiteNotice(`${ownerName} ${I18N.t('için kayıtlı telefon numarası yok, WhatsApp mesajı gönderilemedi.')}`, 'error');
             return;
           }
-          _amWaPendingCtx = { alarm, resultCode, note, member };
+          _amWaPendingCtx = { alarm, title, note, member };
           _amOpenWaPhoneModal(member);
           return;
         }
-        await _amOpenWhatsAppLink(alarm, resultCode, note, digits);
+        await _amOpenWhatsAppLink(alarm, title, note, digits);
       } catch(e) { /* WhatsApp yönlendirmesi ana kayıt akışını bozmasın */ }
     }
 
-    async function _amOpenWhatsAppLink(alarm, resultCode, note, digits) {
+    async function _amOpenWhatsAppLink(alarm, title, note, digits) {
       const dealLink = alarm.deal_id ? `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${alarm.deal_id}` : '';
       const isEN = I18N.getLang() === 'en';
-      const translatedCode = isEN ? I18N.t(resultCode) : resultCode;
       const lines = [
-        isEN ? 'Alarm Result Code Update' : 'Alarm Güncelleme Bildirimi',
+        isEN ? 'Alarm Update Notification' : 'Alarm Güncelleme Bildirimi',
         `Deal: ${alarm.deal_name || '-'}`,
         dealLink ? `Link: ${dealLink}` : '',
-        `${isEN ? 'Result Code' : 'Sonuç Kodu'}: ${translatedCode}`,
+        `${isEN ? 'Title' : 'Başlık'}: ${title}`,
         note ? `${isEN ? 'Note' : 'Not'}: ${note}` : '',
       ].filter(Boolean);
       window.open(`https://web.whatsapp.com/send?phone=${digits}&text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
       if (alarm.id) {
-        const logNote = `Sonuç Kodu: ${resultCode}${note ? ' | Not: ' + note : ''}`;
+        const logNote = `Başlık: ${title}${note ? ' | Not: ' + note : ''}`;
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
         fetch(`${SUPABASE_URL}/rest/v1/alarm_logs`, {
           method: 'POST', headers: H,
@@ -6016,7 +5933,7 @@
       btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
       try {
         const token = (currentUser && currentUser.token) || '';
-        const { alarm, resultCode, note, member } = _amWaPendingCtx;
+        const { alarm, title, note, member } = _amWaPendingCtx;
         const r = await fetch('/api/team-members', {
           method: 'PATCH',
           headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
@@ -6028,7 +5945,7 @@
         const cached = (_amTeamMembers || []).find(m => m.username === member.username);
         if (cached) cached.phone = check.val;
         document.getElementById('amWaPhoneModal').classList.remove('open');
-        await _amOpenWhatsAppLink(alarm, resultCode, note, _amWaDigits(check.val));
+        await _amOpenWhatsAppLink(alarm, title, note, _amWaDigits(check.val));
         _amWaPendingCtx = null;
       } catch(e) {
         errEl.textContent = I18N.t('Kaydedilemedi: ') + e.message;
@@ -7226,14 +7143,10 @@
       const newStatus   = document.getElementById('aamNewStatus').value;
       const note        = document.getElementById('aamNoteInput').value.trim();
       const closeReason = document.getElementById('aamCloseReason').value;
-      const aamResultSel   = document.getElementById('aamResultCode');
-      const resultCode     = aamResultSel.value;
-      const resultAction   = resultCode ? (aamResultSel.selectedOptions[0]?.getAttribute('data-action') || '') : '';
-      const followUpDate   = document.getElementById('aamFollowUpDateInput').value;
-      const resultCodeRequired = document.getElementById('aamResultCodeWrap').style.display !== 'none';
-      if (resultCodeRequired && !resultCode) { alert(I18N.t('Sonuç Kodu seçilmelidir.')); return; }
-      if (!newStatus && !note && !resultCode) { alert(I18N.t('Durum seçin veya not girin.')); return; }
-      if (resultAction === 'followup' && !followUpDate) { alert(I18N.t('Bu sonuç kodu için Takip Tarihi girilmelidir.')); return; }
+      // Not: bu alan artık serbest metin Başlık — alarms.result_code kolonunda
+      // saklanıyor (kolonu değiştirmemek için eski kolon yeniden kullanıldı).
+      const title = document.getElementById('aamTitleInput').value.trim();
+      if (!newStatus && !note && !title) { alert(I18N.t('Durum seçin, başlık girin veya not girin.')); return; }
       const btn = document.getElementById('aamBtnSave');
       btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
 
@@ -7242,12 +7155,11 @@
       const updates = {};
       if (newStatus) updates.status = newStatus;
       if (note)      updates.note   = note;
-      if (resultCode) updates.result_code = resultCode;
-      if (resultAction === 'followup') updates.follow_up_date = followUpDate;
+      updates.result_code = title || null;
       if (['no_show','closed','cancelled'].includes(newStatus)) {
         updates.closed_at    = now;
         updates.closed_by    = adminName;
-        updates.close_reason = newStatus === 'no_show' ? 'no_show' : (resultCode || closeReason);
+        updates.close_reason = newStatus === 'no_show' ? 'no_show' : closeReason;
       } else if (newStatus === 'open') {
         updates.close_reason = null; updates.closed_at = null; updates.closed_by = null;
       }
@@ -7255,14 +7167,6 @@
       try {
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
         let r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${a.id}`, { method: 'PATCH', headers: H, body: JSON.stringify(updates) });
-        // alarms.result_code / follow_up_date kolonları henüz eklenmediyse
-        // (alarm_result_code_columns.sql çalıştırılmadan önce) PostgREST 400
-        // döner — bu iki alanı çıkarıp tekrar dene, kayıt bu yüzden bloklanmasın.
-        if (!r.ok && (updates.result_code !== undefined || updates.follow_up_date !== undefined)) {
-          const { result_code, follow_up_date, ...fallbackUpdates } = updates;
-          r = await fetch(`${SUPABASE_URL}/rest/v1/alarms?id=eq.${a.id}`, { method: 'PATCH', headers: H, body: JSON.stringify(fallbackUpdates) });
-          if (r.ok) showSiteNotice('Kaydedildi (Sonuç Kodu/Takip Tarihi için alarm_result_code_columns.sql henüz çalıştırılmamış).', 'error');
-        }
         if (!r.ok) throw new Error('HTTP ' + r.status);
 
         const actionType = ['no_show','closed','cancelled'].includes(newStatus) ? 'closed'
@@ -7337,7 +7241,7 @@
 
     function exportAdminAlarms(format) {
       const data = filterAdminAlarms();
-      const headers = ['Hasta','Danışman','Deal ID','Stage','Takım','Bölge','Alarm Tipi','P/FT','Eşik','Alan','Tarih','Kalan','Tutar','Ödenen','Durum','Sonuç Kodu','TL Notu','Oluşturma','Kapatan','Kapatma Nedeni'];
+      const headers = ['Hasta','Danışman','Deal ID','Stage','Takım','Bölge','Alarm Tipi','P/FT','Eşik','Alan','Tarih','Kalan','Tutar','Ödenen','Durum','Başlık','TL Notu','Oluşturma','Kapatan','Kapatma Nedeni'];
       const rows = data.map(a => {
         const info = _amDealInfoFor(a.deal_id) || {};
         return [a.deal_name, a.deal_owner, info.ref || a.deal_id, info.stage, a.team, a.region,
@@ -7375,7 +7279,7 @@
       // Dosya, ekranda görünen SIRAYLA insin — kullanıcı tabloyu bir kolona
       // göre sıralayıp indirdiğinde farklı sıra gelmesi şaşırtıcı olurdu.
       data = _amClosedApplySort(data);
-      const headers = ['Hasta','Deal ID','Danışman','Takım','Bölge','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Sonuç Kodu','Not'];
+      const headers = ['Hasta','Deal ID','Danışman','Takım','Bölge','Alarm Tipi','Ref. Tarih','Kapatılma Tarihi','Kapatan','Başlık','Not'];
       const rows = data.map(a => {
         const info = _amDealInfoFor(a.deal_id) || {};
         const typeLabel = a.alarm_type === 'payment_tracking' ? '' : _amTypeMeta(AlarmStatus.effectiveType(a), false).label;
