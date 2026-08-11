@@ -735,6 +735,58 @@ export default async function handler(req, res) {
 
       members.sort((a, b) =>
         (a.team || '').localeCompare(b.team || '') || a.fullName.localeCompare(b.fullName));
+
+      // ── Tanı aracı: ?debugPerson=<ad> ────────────────────────────────
+      // "Onayladım ama görünmüyor" gibi şikâyetlerde canlı veriye doğrudan
+      // erişim olmadan sebebi bulmak imkânsız hâle geliyordu. Bu, bir kişinin
+      // kadro çözümlemesinin HER adımını (leaver mı, hesap devri şüphesi mi,
+      // onaylanmış mı, hangi takıma çözüldü, son listeye girdi mi) admin'e
+      // açıkça gösterir. Yalnızca admin, yalnızca query parametresi verilince.
+      let debug = null;
+      const debugQ = String(req.query?.debugPerson || '').trim();
+      if (isAdmin && debugQ) {
+        const qKey = nameKey(debugQ);
+        const z = zohoRows.find(x => nameKey(x.full_name).includes(qKey) || qKey.includes(nameKey(x.full_name)));
+        if (!z) {
+          debug = { found: false, query: debugQ, zohoRowCount: zohoRows.length };
+        } else {
+          const leaver = isLeaver(z);
+          const handoverCand = isHandoverCandidate(z);
+          const hKey = handoverKey(z.id, z.exit_date, z.start_date);
+          const approved = approvedHandovers.has(hKey);
+          const blocked = isBlocked(z.full_name);
+          const deactivated = isDeactivated(assignIdx, z.full_name, null);
+          const includedInActive = !blocked && !deactivated && (!leaver || (handoverCand && approved));
+          const resolvedEntry = resolvedAll && resolvedAll.find(p => nameKey(p.z.full_name) === nameKey(z.full_name));
+          const inMembers = members.find(m => nameKey(m.fullName) === nameKey(z.full_name));
+          debug = {
+            found: true,
+            zoho: {
+              id: z.id, full_name: z.full_name, status: z.status,
+              exit_date: z.exit_date, start_date: z.start_date,
+              team: z.team, role: z.role, region: z.region,
+            },
+            isLeaver: leaver,
+            isHandoverCandidate: handoverCand,
+            handoverKey: hKey,
+            handoverTableReady,
+            approvedHandoverCount: approvedHandovers.size,
+            isApproved: approved,
+            isBlocked: blocked,
+            isDeactivated: deactivated,
+            includedInActive,
+            resolvedTeam: resolvedEntry ? resolvedEntry.team : null,
+            teamSource: resolvedEntry ? resolvedEntry.teamSource : null,
+            nonSales: resolvedEntry ? resolvedEntry.nonSales : null,
+            manualTeam: resolvedEntry ? resolvedEntry.manual : null,
+            inFinalMembersList: !!inMembers,
+            finalMemberTeam: inMembers ? inMembers.team : null,
+            callerScopeLabel: scopeLabel,
+            callerRole: claims.r,
+          };
+        }
+      }
+
       res.status(200).json({
         team: scopeLabel,
         members,
@@ -757,6 +809,7 @@ export default async function handler(req, res) {
         // ya da Supabase şema önbelleği henüz yenilenmedi). Panel bunu admin'e
         // açıkça söylüyor — aksi hâlde onay sessizce hiçbir işe yaramaz.
         handoverTableReady: isAdmin ? handoverTableReady : undefined,
+        debug: debug || undefined,
         // false → team_assignments.sql henüz çalıştırılmamış; elle takım
         // ataması yapılamaz. Panel bunu admin'e açıkça söylüyor (sessizce
         // çalışmayan bir buton bırakmak yerine).

@@ -1316,6 +1316,7 @@
         </div>
         <div class="flex gap-2 flex-wrap items-center">
           <span id="teamMembersExportMount"></span>
+          <button onclick="amTmDebugPerson()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700" title="Bir kişinin neden kadroda görünmediğini adım adım gösterir">🔍 Kişi Sorgula</button>
           <button onclick="loadAdminTeamMembers(true)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700">↻ Yenile</button>
         </div>
       </div>
@@ -6356,6 +6357,33 @@
            </div>`;
       showSiteConfirm(_amTmDeactLabel(hasLogin), body, _amTmDeactLabel(hasLogin), '#dc2626',
         () => _amTmSetActive([{ fullName: l.fullName || username, role: l.role }], false));
+    }
+
+    // "X kişi görünmüyor" şikâyetlerinde canlı veriye doğrudan erişim
+    // olmadan sebebi tahmin etmek imkânsız hâle geliyordu. Bu, /api/team-members
+    // ?debugPerson=... ile o kişinin kadro çözümlemesinin HER adımını
+    // (leaver mı, hesap devri şüphesi mi, onaylanmış mı, hangi takıma çözüldü,
+    // son listeye girdi mi) yeni sekmede düz metin olarak gösterir.
+    async function amTmDebugPerson() {
+      const name = prompt(I18N.t('Sorgulanacak kişinin adını yazın:'));
+      if (!name || !name.trim()) return;
+      try {
+        const token = (currentUser && currentUser.token) || '';
+        const r = await fetch('/api/team-members?debugPerson=' + encodeURIComponent(name.trim()), {
+          headers: { Authorization: 'Bearer ' + token }, cache: 'no-store' });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
+        const w = window.open('', '_blank');
+        if (w) {
+          w.document.write('<pre style="white-space:pre-wrap;font:12px/1.5 monospace;padding:16px">'
+            + _escHtml(JSON.stringify(data.debug || { found: false, note: 'debug alanı yok' }, null, 2))
+            + '</pre>');
+        } else {
+          alert(JSON.stringify(data.debug || {}, null, 2));
+        }
+      } catch(e) {
+        showSiteNotice(I18N.t('Sorgu başarısız: ') + e.message, 'error');
+      }
     }
 
     // Hesap devri onayı — kişi Zoho'da "ayrılmış" görünüyor ama girişi çıkış
