@@ -3105,7 +3105,6 @@
     } else {
       document.getElementById('modalExistingNoteWrap').style.display = 'none';
     }
-    document.getElementById('newStatus').value = '';
     // ÖNCEDEN her açılışta boşaltılıyordu: aynı alarma tekrar tıklandığında
     // az önce girilen not sıfırdan yazılıyor gibi görünüyordu — oysa a.note
     // veritabanına zaten kaydedilmişti, yalnızca bu alan onu göstermiyordu.
@@ -3114,6 +3113,21 @@
     if (_nc) _nc.textContent = (a.note || '').length + ' / 300';
     document.getElementById('closeReasonWrap').style.display = 'none';
     populateResultCodeSelect(a);
+    // Durum seçimi de restore edilir — NOT ve Sonuç Kodu ile AYNI sorun:
+    // alarma daha önce bir aksiyon uygulanmışsa (ör. "Takipte" yapılmış)
+    // pencere her açılışta "— Durum seçin —" gösteriyordu, sanki hiç aksiyon
+    // alınmamış gibi. `a.status` seçenek listesindeki değerlerden biriyse
+    // (open/no_show gibi başlangıç durumları listede yok, o zaman boş kalır)
+    // seçili gelir. populateResultCodeSelect'TEN SONRA yapılıyor: o da
+    // action='close/cancel' olan bir sonuç koduna göre durumu değiştirebilir,
+    // kayıtlı gerçek durum ONUN ÜZERİNE yazmalı, tersi değil.
+    const newStatusSel = document.getElementById('newStatus');
+    if ([...newStatusSel.options].some(o => o.value === a.status)) {
+      newStatusSel.value = a.status;
+      newStatusSel.dispatchEvent(new Event('change'));
+    } else {
+      newStatusSel.value = '';
+    }
     document.getElementById('alarmModal').classList.add('open');
     document.body.style.overflow = 'hidden';
     loadAlarmHistory(a.id);
@@ -3323,42 +3337,20 @@
     } catch(e) { /* WhatsApp yönlendirmesi ana kayıt akışını bozmasın */ }
   }
 
-  // Not'a eklenmiş görseller varsa imzalı bağlantılarını çeker — mesaja link
-  // olarak eklenir. wa.me/web.whatsapp.com URL şeması dosya EKLEMEYİ
-  // desteklemiyor (yalnızca metin doldurur), bu yüzden gönderilebilecek tek
-  // şey görsele giden bir bağlantı; agent tıklayınca görseli açar.
-  // NOT: bağlantı 1 saat geçerli (bkz. api/alarm-files.js SIGN_TTL) — mesaj
-  // hemen gönderildiği için pratikte yeterli.
-  async function _fetchAttachmentLinks(attachId) {
-    if (!attachId) return [];
-    try {
-      const token = (currentUser && currentUser.token) || '';
-      const r = await fetch(`/api/alarm-files?alarm_id=${encodeURIComponent(attachId)}`,
-        { headers: { Authorization: 'Bearer ' + token } });
-      const data = await r.json().catch(() => ({}));
-      return Array.isArray(data.files) ? data.files.map(f => f.url).filter(Boolean) : [];
-    } catch(e) { return []; }
-  }
-
   async function _openWhatsAppLink(alarm, resultCode, note, digits) {
     const dealLink = alarm.deal_id ? `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${alarm.deal_id}` : '';
     const isEN = I18N.getLang() === 'en';
     const translatedCode = isEN ? I18N.t(resultCode) : resultCode;
-    // Ekler alarm.id (normal alarm modalı) veya alarm.deal_id (Won/İptal gibi
-    // deal bazlı akışlar — NCAttach.load orada deal.id ile çağrılıyor) ile
-    // saklanıyor; hangisi varsa o kullanılır.
-    const attachLinks = await _fetchAttachmentLinks(alarm.id || alarm.deal_id);
     const lines = [
       isEN ? 'Alarm Result Code Update' : 'Alarm Güncelleme Bildirimi',
       `Deal: ${alarm.deal_name || '-'}`,
       dealLink ? `Link: ${dealLink}` : '',
       `${isEN ? 'Result Code' : 'Sonuç Kodu'}: ${translatedCode}`,
       note ? `${isEN ? 'Note' : 'Not'}: ${note}` : '',
-      ...attachLinks.map((u, i) => `${isEN ? 'Attachment' : 'Görsel'} ${i + 1}: ${u}`),
     ].filter(Boolean);
     window.open(`https://web.whatsapp.com/send?phone=${digits}&text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
     if (alarm.id) {
-      const logNote = `Sonuç Kodu: ${resultCode}${note ? ' | Not: ' + note : ''}${attachLinks.length ? ' | ' + attachLinks.length + ' görsel' : ''}`;
+      const logNote = `Sonuç Kodu: ${resultCode}${note ? ' | Not: ' + note : ''}`;
       logAlarmAction(alarm, 'whatsapp_sent', alarm.status, alarm.status, logNote);
     }
   }

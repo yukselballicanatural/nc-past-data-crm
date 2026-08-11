@@ -5807,7 +5807,6 @@
       } else {
         document.getElementById('aamExistingNoteWrap').style.display = 'none';
       }
-      document.getElementById('aamNewStatus').value = '';
       // ÖNCEDEN her açılışta boşaltılıyordu (bkz. team-leader.html'deki aynı
       // düzeltme): a.note veritabanında zaten kayıtlıydı, yalnızca bu alan
       // onu göstermiyordu ve tekrar açılışta sıfırdan başlanıyormuş gibi
@@ -5825,6 +5824,17 @@
         resetBtn.style.display = touched ? 'flex' : 'none';
       }
       populateAamResultCodeSelect(a);
+      // Durum secimi de restore edilir — bkz. team-leader.html'deki ayni
+      // duzeltme. populateAamResultCodeSelect'TEN SONRA yapiliyor: sonuc kodu
+      // action='close/cancel' ise durumu degistirebilir, kayitli gercek durum
+      // ONUN UZERINE yazmali.
+      const aamNewStatusSel = document.getElementById('aamNewStatus');
+      if ([...aamNewStatusSel.options].some(o => o.value === a.status)) {
+        aamNewStatusSel.value = a.status;
+        aamNewStatusSel.dispatchEvent(new Event('change'));
+      } else {
+        aamNewStatusSel.value = '';
+      }
       document.getElementById('adminAlarmModal').classList.add('open');
       document.body.style.overflow = 'hidden';
       loadAdminAlarmHistory(a.id);
@@ -5944,38 +5954,20 @@
       } catch(e) { /* WhatsApp yönlendirmesi ana kayıt akışını bozmasın */ }
     }
 
-    // Not'a eklenmiş görselleri çeker — bkz. team-leader.html'deki
-    // _fetchAttachmentLinks ile AYNI mantık/kısıt (wa.me dosya eklemeyi
-    // desteklemiyor, yalnızca link gönderilebilir).
-    async function _amFetchAttachmentLinks(attachId) {
-      if (!attachId) return [];
-      try {
-        const token = (currentUser && currentUser.token) || '';
-        const r = await fetch(`/api/alarm-files?alarm_id=${encodeURIComponent(attachId)}`,
-          { headers: { Authorization: 'Bearer ' + token } });
-        const data = await r.json().catch(() => ({}));
-        return Array.isArray(data.files) ? data.files.map(f => f.url).filter(Boolean) : [];
-      } catch(e) { return []; }
-    }
-
     async function _amOpenWhatsAppLink(alarm, resultCode, note, digits) {
       const dealLink = alarm.deal_id ? `https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${alarm.deal_id}` : '';
       const isEN = I18N.getLang() === 'en';
       const translatedCode = isEN ? I18N.t(resultCode) : resultCode;
-      // Ekler alarm.id (normal alarm modalı) veya alarm.deal_id (Won modal —
-      // NCAttach.load orada deal.id ile çağrılıyor) ile saklanıyor.
-      const attachLinks = await _amFetchAttachmentLinks(alarm.id || alarm.deal_id);
       const lines = [
         isEN ? 'Alarm Result Code Update' : 'Alarm Güncelleme Bildirimi',
         `Deal: ${alarm.deal_name || '-'}`,
         dealLink ? `Link: ${dealLink}` : '',
         `${isEN ? 'Result Code' : 'Sonuç Kodu'}: ${translatedCode}`,
         note ? `${isEN ? 'Note' : 'Not'}: ${note}` : '',
-        ...attachLinks.map((u, i) => `${isEN ? 'Attachment' : 'Görsel'} ${i + 1}: ${u}`),
       ].filter(Boolean);
       window.open(`https://web.whatsapp.com/send?phone=${digits}&text=${encodeURIComponent(lines.join('\n'))}`, '_blank', 'noopener');
       if (alarm.id) {
-        const logNote = `Sonuç Kodu: ${resultCode}${note ? ' | Not: ' + note : ''}${attachLinks.length ? ' | ' + attachLinks.length + ' görsel' : ''}`;
+        const logNote = `Sonuç Kodu: ${resultCode}${note ? ' | Not: ' + note : ''}`;
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
         fetch(`${SUPABASE_URL}/rest/v1/alarm_logs`, {
           method: 'POST', headers: H,
