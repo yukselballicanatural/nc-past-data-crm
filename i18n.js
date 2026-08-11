@@ -686,6 +686,12 @@
     'Bu hesabın çıkış tarihinden SONRA bir giriş tarihi var — muhtemelen aynı Zoho hesabını yeni biri devraldı. Onaylarsanız kişi kadroda ve Takımımdaki Kişiler\'de görünür.':
       'This account has a start date AFTER its exit date — someone else likely took over the same Zoho account. If you approve, the person will appear on staff and in My Team Members.',
     'Hesap Devrini Onayla': 'Approve Account Handover',
+    '{n} kişi elle "Satış Dışı" işaretlenmiş ama Zoho takımı var.': '{n} people are manually marked "Non-Sales" but have a Zoho team.',
+    '{n} elle satış dışı': '{n} manually non-sales',
+    'Elle "Satış Dışı" ama Zoho takımı var': 'Manually "Non-Sales" but has a Zoho team',
+    'Önerilen takım': 'Suggested team',
+    'Bu kişiler elle "Satış Dışı" işaretlenmiş ama Zoho\'daki rolü tanınan bir satış takımına karşılık geliyor — muhtemelen yanlışlıkla ya da geçici bir çözüm olarak yapılmış. "Takıma Ata" ile doğru takımı seçin.':
+      'These people are manually marked "Non-Sales" but their Zoho role matches a recognized sales team — likely done by mistake or as a temporary workaround. Use "Assign to Team" to pick the correct team.',
     'Sorgulanacak kişinin adını yazın:': "Enter the person's name to look up:",
     '{name} team_assignments tablosunda pasife alınmış görünüyor — kadroda görünmemesinin sebebi bu. Kadroya geri alınsın mı?':
       '{name} appears deactivated in team_assignments — that is why they are not showing on staff. Reactivate them?',

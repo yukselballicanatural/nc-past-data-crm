@@ -416,6 +416,7 @@ export default async function handler(req, res) {
       let scopeLabel;
       let unplaced = [];
       let conflicts = [];
+      let manualEmptyTeam = [];
       let handoverCandidates = [];
       let departedEmployees = [];
       // Dizin, kapsamlanmış listeyle AYNI çözümlemeyi kullansın diye dışarıda
@@ -537,6 +538,30 @@ export default async function handler(req, res) {
             };
           })
           .filter(Boolean);
+
+        // ── Elle "Satış Dışı" işaretlenmiş (takımı BOŞ) kayıtlar ───────────
+        // Nicholas Parker vakasında bulunan üçüncü ve en sinsi sorun: admin
+        // panelinden "Elle ata" ile bir kişiye takım seçilmeden (ya da
+        // "— Satış Dışı —" seçilerek) kayıt yapılırsa team_assignments'ta
+        // team=NULL bir satır oluşuyor. Bu, Zoho'nun doğru rol/takım bilgisini
+        // EZER ve kişiyi Finance/IT gibi gerçekten satış dışı biriymiş gibi
+        // davranmaya zorlar — hiçbir takım liderinin ekranında görünmez.
+        // Admin ekranı ise ham Zoho rolünü YEDEK olarak gösterdiği için orada
+        // "takımlı" görünüyormuş gibi YANILTICI bir izlenim verir (bkz.
+        // members mapping'indeki `p.team || z.team || z.role` yedeği).
+        // Bu liste, gerçek bir satış-dışı biriminin (rolü zaten tanınmayan)
+        // elle "Satış Dışı" işaretlenmesiyle KARIŞMASIN diye yalnızca Zoho
+        // rolü/takımı GERÇEKTEN bir satış takımına karşılık gelenleri gösterir
+        // — aksi hâlde her gerçek Finance/IT kaydı da burada görünür ve
+        // gürültü asıl sorunu gizlerdi (bkz. unplaced'teki aynı ders).
+        manualEmptyTeam = resolved
+          .filter(p => p.manual && !p.team && (normalizeTeam(p.z.team) || normalizeTeam(p.z.role)))
+          .map(p => ({
+            fullName: p.z.full_name || '',
+            zohoRole: p.z.role || '',
+            zohoTeam: p.z.team || '',
+            suggestedTeam: normalizeTeam(p.z.team) || normalizeTeam(p.z.role) || '',
+          }));
 
         // ── Hesap devri onayı bekleyenler + ayrılan kişiler arşivi ─────────
         // (bkz. yukarıdaki isHandoverCandidate notu ve zoho_account_handover.sql)
@@ -801,6 +826,10 @@ export default async function handler(req, res) {
         // (ayrıca başka takımların kişilerini içerir).
         unplaced:  isAdmin ? unplaced  : [],
         conflicts: isAdmin ? conflicts : [],
+        // Elle "Satış Dışı" (takımı boş) işaretlenmiş ama Zoho rolü/takımı
+        // gerçek bir satış takımına karşılık gelen kayıtlar — bkz. yukarıdaki
+        // manualEmptyTeam notu (Nicholas Parker vakasının 3. sorunu).
+        manualEmptyTeam: isAdmin ? manualEmptyTeam : [],
         // Hesap devri onayı bekleyenler + ayrılan kişiler arşivi — yalnızca
         // admin'e (bkz. zoho_account_handover.sql).
         handoverCandidates: isAdmin ? handoverCandidates : [],

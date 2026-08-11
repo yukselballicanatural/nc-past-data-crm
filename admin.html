@@ -6042,6 +6042,7 @@
         if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
         _amTeamMembers = data.members || [];
         _amTmUnplaced = data.unplaced || [];
+        _amTmManualEmptyTeam = data.manualEmptyTeam || [];
         _amTmHandoverCandidates = data.handoverCandidates || [];
         _amTmDeparted = data.departedEmployees || [];
         if (typeof data.handoverTableReady === 'boolean') _amTmHandoverReady = data.handoverTableReady;
@@ -6092,6 +6093,11 @@
     // Zoho'da aktif ama hiçbir sinyalle takıma bağlanamayanlar — kaynağı
     // /api/team-members yanıtındaki `unplaced` (yalnızca admin'e gelir).
     let _amTmUnplaced = [];
+    // Elle "Satış Dışı" (takımı boş) işaretlenmiş ama Zoho rolü/takımı gerçek
+    // bir satış takımına karşılık gelen kayıtlar — bkz. api/team-members.js
+    // manualEmptyTeam notu (Nicholas Parker vakasının 3. sorunu: bu ARTIK
+    // debug aracı olmadan da kendiliğinden görünür).
+    let _amTmManualEmptyTeam = [];
     // Zoho hesap devri onayı bekleyenler + ayrılan kişiler arşivi — kaynağı
     // /api/team-members yanıtındaki `handoverCandidates`/`departedEmployees`
     // (yalnızca admin'e gelir, bkz. zoho_account_handover.sql).
@@ -6135,12 +6141,13 @@
     function _amTmRenderSyncBar() {
       const bar = document.getElementById('tmSyncBar');
       if (!bar) return;
-      const n = _amTmDrift.size, L = _amTmLeavers.length, P = _amTmUnplaced.length, H = _amTmHandoverCandidates.length;
-      if (!n && !L && !P && !H && _amTmHandoverReady) { bar.style.display = 'none'; return; }
+      const n = _amTmDrift.size, L = _amTmLeavers.length, P = _amTmUnplaced.length, H = _amTmHandoverCandidates.length, M = _amTmManualEmptyTeam.length;
+      if (!n && !L && !P && !H && !M && _amTmHandoverReady) { bar.style.display = 'none'; return; }
       bar.style.display = 'flex';
       const parts = [];
       if (!_amTmHandoverReady) parts.push(I18N.t('Hesap devri onay tablosuna erişilemiyor.'));
       if (H) parts.push(I18N.t('{n} hesap devri onayı bekliyor.').replace('{n}', H));
+      if (M) parts.push(I18N.t('{n} kişi elle "Satış Dışı" işaretlenmiş ama Zoho takımı var.').replace('{n}', M));
       if (n) parts.push(I18N.t('{n} danışmanın takımı Zoho ile uyuşmuyor.').replace('{n}', n));
       if (L) parts.push(I18N.t('{n} kişi Zoho\'da artık aktif değil.').replace('{n}', L));
       if (P) parts.push(I18N.t('{n} kişi hiçbir takıma bağlanamadı.').replace('{n}', P));
@@ -6277,6 +6284,25 @@
              <button onclick="amTmApproveHandover('${_jsStrAttr(h.zohoUserId)}','${_jsStrAttr(h.exitDate)}','${_jsStrAttr(h.startDate)}','${_jsStrAttr(h.fullName || '')}')" class="tm-mini-btn" data-tone="accent" style="margin-left:auto">${_escHtml(I18N.t('Onayla'))}</button>
            </div>`).join(''),
           _escHtml(I18N.t('Bu hesabın çıkış tarihinden SONRA bir giriş tarihi var — muhtemelen aynı Zoho hesabını yeni biri devraldı. Onaylarsanız kişi kadroda ve Takımımdaki Kişiler\'de görünür.'))));
+      }
+
+      // ── Elle "Satış Dışı" işaretlenmiş ama Zoho takımı olanlar ─────────
+      // Bir kişiye "Elle ata" ile takım seçilmeden (ya da "— Satış Dışı —"
+      // seçilerek) kayıt yapılırsa Zoho'nun doğru rol/takım bilgisi EZİLİR ve
+      // kişi hiçbir takım liderinin ekranında görünmez olur — admin ekranı
+      // ham Zoho rolünü yedek gösterdiği için orada "takımlı" gibi
+      // YANILTICI görünür. Bu, önceden yalnızca "Kişi Sorgula" ile tek tek
+      // bulunabiliyordu (bkz. Nicholas Parker vakası).
+      if (_amTmManualEmptyTeam.length) {
+        sub.push(I18N.t('{n} elle satış dışı').replace('{n}', _amTmManualEmptyTeam.length));
+        out.push(SEC(I18N.t('Elle "Satış Dışı" ama Zoho takımı var'), 'danger', _amTmManualEmptyTeam.length,
+          _amTmManualEmptyTeam.map(p => `<div class="tm-row">
+             <span class="tm-row-name">${_escHtml(p.fullName || '—')}</span>
+             <span class="tm-row-meta">${I18N.t('Zoho rolü')}: ${_escHtml(p.zohoRole || '—')}</span>
+             <span class="tm-row-meta">${I18N.t('Önerilen takım')}: <b style="color:var(--tm-accent)">${_escHtml(p.suggestedTeam)}</b></span>
+             <button onclick="amTmOpenAssign('${_jsStrAttr(p.fullName || '')}')" class="tm-mini-btn" data-tone="accent" style="margin-left:auto">${_escHtml(I18N.t('Takıma Ata'))}</button>
+           </div>`).join(''),
+          _escHtml(I18N.t('Bu kişiler elle "Satış Dışı" işaretlenmiş ama Zoho\'daki rolü tanınan bir satış takımına karşılık geliyor — muhtemelen yanlışlıkla ya da geçici bir çözüm olarak yapılmış. "Takıma Ata" ile doğru takımı seçin.'))));
       }
 
       // ── Takıma bağlanamayanlar ────────────────────────────────────────
