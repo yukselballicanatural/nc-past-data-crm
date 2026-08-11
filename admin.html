@@ -6393,6 +6393,19 @@
             I18N.t('Kadroya Geri Al'), '#0d9488',
             () => _amTmSetActive([{ fullName: dbg.zoho.full_name }], true));
         }
+        // Kadroda (nonSales=true, resolvedTeam=null) ama teamSource "manual" —
+        // yani team_assignments'ta takımı BOŞ bırakılmış ELLE bir kayıt var.
+        // Bu, Zoho'nun doğru rol/takım bilgisini EZİYOR ve kişiyi "satış dışı"
+        // gibi davranmaya zorluyor — takım liderinin ekranında hiç görünmez
+        // (admin ekranı ise Zoho'daki ham rolü yedek olarak gösterdiği için
+        // orada takımlı görünüyor gibi YANILTICI bir izlenim veriyordu).
+        else if (dbg && dbg.found && dbg.includedInActive && dbg.manualTeam && !dbg.resolvedTeam) {
+          showSiteConfirm(
+            I18N.t('Takımı Düzelt'),
+            I18N.t('{name} için team_assignments\'ta takımı BOŞ bırakılmış elle bir kayıt var — bu yüzden hiçbir takım liderinin ekranında görünmüyor (Zoho\'daki rolü "{role}" olsa bile). Şimdi doğru takımı elle atayın.').replace('{name}', _escHtml(dbg.zoho.full_name)).replace('{role}', _escHtml(dbg.zoho.role || '—')),
+            I18N.t('Takıma Ata'), '#0d9488',
+            () => amTmOpenAssign(dbg.zoho.full_name));
+        }
       } catch(e) {
         showSiteNotice(I18N.t('Sorgu başarısız: ') + e.message, 'error');
       }

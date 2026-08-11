@@ -690,6 +690,9 @@
     '{name} team_assignments tablosunda pasife alınmış görünüyor — kadroda görünmemesinin sebebi bu. Kadroya geri alınsın mı?':
       '{name} appears deactivated in team_assignments — that is why they are not showing on staff. Reactivate them?',
     'Kadroya Geri Al': 'Reactivate',
+    'Takımı Düzelt': 'Fix Team',
+    '{name} için team_assignments\'ta takımı BOŞ bırakılmış elle bir kayıt var — bu yüzden hiçbir takım liderinin ekranında görünmüyor (Zoho\'daki rolü "{role}" olsa bile). Şimdi doğru takımı elle atayın.':
+      '{name} has a manual team_assignments record with an EMPTY team — that is why they do not show on any team leader\'s screen (even though their Zoho role is "{role}"). Assign the correct team now.',
     'Sorgu başarısız: ': 'Lookup failed: ',
     'Hesap devri onay tablosuna erişilemiyor.': 'Cannot access the account-handover approval table.',
     'Hesap devri onay tablosuna erişilemiyor': 'Cannot access the account-handover approval table',
