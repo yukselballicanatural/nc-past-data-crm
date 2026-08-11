@@ -2587,7 +2587,11 @@
       <div style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">İptal Sonuç Kodu</label>
-          <button id="cdmDeleteResultBtn" type="button" onclick="_cdmDeleteResult()" style="display:none;padding:2px 8px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:9px;font-weight:700;cursor:pointer;flex-shrink:0">Sonuç Kodunu Sil</button>
+          <!-- Ham koyu kirmizi (#450a0a) kaldirildi: acik temada camurlu/
+               okunaksiz duruyordu. Diger "tehlikeli aksiyon" butonlariyla
+               (Kisi Sorgula, Takim Yonetimi) AYNI tema-duyarli jeton
+               (--tm-danger*) uzerinden .tm-mini-btn[data-tone="danger"]. -->
+          <button id="cdmDeleteResultBtn" type="button" onclick="_cdmDeleteResult()" class="tm-mini-btn" data-tone="danger" style="display:none;flex-shrink:0">Sonuç Kodunu Sil</button>
         </div>
         <!-- Ham koyu-renkli inline stil KALDIRILDI: native <select>'in acilir
              listesi (secenekler) select'in KENDI arkaplan/yazi rengini
@@ -2681,7 +2685,8 @@
       <div style="margin-bottom:12px">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
           <label style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Sonuç Kodu <span style="color:#f87171">*</span></label>
-          <button id="wrmDeleteResultBtn" type="button" onclick="_wrmDeleteResult()" style="display:none;padding:2px 8px;background:#450a0a;border:1px solid #7f1d1d;border-radius:6px;color:#f87171;font-size:9px;font-weight:700;cursor:pointer;flex-shrink:0">Sonuç Kodunu Sil</button>
+          <!-- bkz. cdmDeleteResultBtn notu: ayni ham koyu kirmizi, ayni fix. -->
+          <button id="wrmDeleteResultBtn" type="button" onclick="_wrmDeleteResult()" class="tm-mini-btn" data-tone="danger" style="display:none;flex-shrink:0">Sonuç Kodunu Sil</button>
         </div>
         <!-- bkz. cdmResultCode notu: ayni sebeple .filter-select'e gecirildi
              (native secenek listesi acik temada siyah cikiyordu). -->
