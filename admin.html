@@ -113,7 +113,12 @@
        sabitleniyor; box-sizing olmadan mevcut dolgu bu yüksekliği aşardı. */
     .nc-toolbar { display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; }
     .nc-toolbar .nc-refresh-btn,
+    .nc-toolbar .nc-ghost-btn,
     .nc-toolbar .nc-export-btn,
+    /* input.filter-select native kalıyor (liquid-ui yalnızca <select>'i
+       kendi bileşenine çeviriyor) — o yüzden ayrıca hizalanmalı. */
+    .nc-toolbar input.filter-select,
+    .nc-toolbar input.filter-input,
     .nc-toolbar .lq-trigger { height:32px; box-sizing:border-box; }
 
     /* ── Özel takvim (date picker) ─────────────────────────────────── */
@@ -1463,29 +1468,44 @@
          zoho_account_handover.sql) — gerçek ad/telefon/e-posta burada
          kaybolmadan kalır. ===== -->
     <div id="view-departed-employees" class="hidden">
-      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+      <div class="flex items-start justify-between mb-4 flex-wrap gap-3">
         <div>
           <h2 class="text-xl font-bold text-white">Ayrılan Kişiler</h2>
-          <p class="text-[11px] text-slate-500 mt-1">Zoho hesabı "ayrılmış" görünen kişilerin arşivlenmiş bilgileri — hesap sonradan başka biri tarafından devralınmış olsa bile kalıcı olarak burada tutulur.</p>
+          <p class="text-xs text-slate-400 mt-0.5">Zoho hesabı "ayrılmış" görünen kişilerin arşivlenmiş bilgileri — hesap sonradan başka biri tarafından devralınmış olsa bile kalıcı olarak burada tutulur.</p>
         </div>
-        <button onclick="loadAdminTeamMembers(true)" class="nc-refresh-btn">↻ Yenile</button>
+        <div class="nc-toolbar">
+          <input id="depEmpSearch" placeholder="İsim, takım, bölge..." oninput="renderDepartedEmployees()" class="filter-select" style="width:180px">
+          <select id="depEmpRegionFilter" onchange="renderDepartedEmployees()" class="filter-select" style="width:150px">
+            <option value="">Tüm Bölgeler</option>
+          </select>
+          <span id="departedExportMount"></span>
+          <button onclick="loadAdminTeamMembers(true)" class="nc-refresh-btn">↻ Yenile</button>
+        </div>
       </div>
-      <div class="overflow-auto rounded-xl border border-gray-800">
-        <table class="tbl w-full">
+      <div class="am-totals">
+        <span class="am-totals-count" id="depEmpCount"></span>
+      </div>
+      <!-- Tablo Kapatılan Alarmlar / Alarm Listesi ile AYNI cam iskelet:
+           .am-alarm-wrap (yapışkan başlık) + .am-alarm-tbl. Önceden .tbl +
+           "overflow-auto rounded-xl border border-gray-800" idi; başlık
+           kaydırmada kayboluyor ve açık temada kenarlık neredeyse siyah
+           çıkıyordu (tema eşlemesi o satır içi sınıflara dokunmuyor). -->
+      <div class="am-table-wrap am-alarm-wrap">
+        <table class="am-alarm-tbl">
           <thead>
-            <tr class="text-slate-400">
-              <th>Ad Soyad</th>
-              <th>Telefon</th>
-              <th>E-posta</th>
-              <th>Takım</th>
-              <th>Bölge</th>
-              <th>Çıkış Tarihi</th>
+            <tr>
+              <th class="am-th am-sort" onclick="_depEmpSortBy('fullName')">Ad Soyad<span class="am-sarrow" data-depsort="fullName"></span></th>
+              <th class="am-th am-sort" onclick="_depEmpSortBy('phone')">Telefon<span class="am-sarrow" data-depsort="phone"></span></th>
+              <th class="am-th am-sort" onclick="_depEmpSortBy('email')">E-posta<span class="am-sarrow" data-depsort="email"></span></th>
+              <th class="am-th am-sort" onclick="_depEmpSortBy('team')">Takım<span class="am-sarrow" data-depsort="team"></span></th>
+              <th class="am-th am-sort" onclick="_depEmpSortBy('region')">Bölge<span class="am-sarrow" data-depsort="region"></span></th>
+              <th class="am-th am-sort" onclick="_depEmpSortBy('exitDate')">Çıkış Tarihi<span class="am-sarrow" data-depsort="exitDate"></span></th>
             </tr>
           </thead>
           <tbody id="departedEmployeesBody"></tbody>
         </table>
+        <div id="departedEmployeesEmpty" style="display:none;text-align:center;padding:40px 16px;color:#475569;font-size:13px">Kayıtlı ayrılan kişi yok.</div>
       </div>
-      <div id="departedEmployeesEmpty" class="hidden text-center py-12 text-slate-500 text-sm">Kayıtlı ayrılan kişi yok.</div>
     </div>
 
     <!-- ===== TAKIMIMDAKI KISILER VIEW (admin/super-admin: tüm takımlar, RM: kendi bölgesi) ===== -->
@@ -7398,24 +7418,104 @@
     }
 
     let _amTmFiltered = [];
+
+    let _depEmpSort = { key: 'exitDate', dir: 'desc' };   // en son ayrılan en üstte
+    let _depEmpFiltered = [];
+
+    function _depEmpSortBy(key) {
+      if (_depEmpSort.key === key) _depEmpSort.dir = _depEmpSort.dir === 'asc' ? 'desc' : 'asc';
+      // Tarih sütununda ilk tıklama "en yeni önce" olmalı; metinlerde A→Z.
+      else _depEmpSort = { key, dir: key === 'exitDate' ? 'desc' : 'asc' };
+      renderDepartedEmployees();
+    }
+
+    // Bölge süzgeci seçenekleri veriden türetilir (sabit liste değil) —
+    // yeni bir bölge eklenirse elle güncelleme gerekmesin.
+    function _depEmpPopulateRegions() {
+      const sel = document.getElementById('depEmpRegionFilter');
+      if (!sel) return;
+      const cur = sel.value;
+      const regions = [...new Set((_amTmDeparted || []).map(d => d.region).filter(Boolean))]
+        .sort((a, b) => a.localeCompare(b, 'tr'));
+      sel.innerHTML = `<option value="">${I18N.t('Tüm Bölgeler')}</option>` +
+        regions.map(r => `<option value="${_escHtml(r)}">${_escHtml(r)}</option>`).join('');
+      if (regions.includes(cur)) sel.value = cur;
+    }
+
     // Ayrılan Kişiler sayfası — veri /api/team-members yanıtındaki
     // departedEmployees'ten geliyor (loadAdminTeamMembers zaten çekiyor,
     // bkz. o fonksiyonun sonu). Ayrı bir ağ çağrısı yok.
     function renderDepartedEmployees() {
       const tbody = document.getElementById('departedEmployeesBody');
       const empty = document.getElementById('departedEmployeesEmpty');
+      const countEl = document.getElementById('depEmpCount');
       if (!tbody) return;
-      const rows = _amTmDeparted || [];
-      if (!rows.length) { tbody.innerHTML = ''; if (empty) empty.classList.remove('hidden'); return; }
-      if (empty) empty.classList.add('hidden');
-      tbody.innerHTML = rows.map(d => `<tr>
-        <td>${_escHtml(d.fullName || '—')}</td>
-        <td>${_escHtml(d.phone || '—')}</td>
-        <td>${_escHtml(d.email || '—')}</td>
-        <td>${_escHtml(d.team || '—')}</td>
-        <td>${_escHtml(d.region || '—')}</td>
-        <td>${_amTmDate(d.exitDate)}</td>
+      _depEmpPopulateRegions();
+
+      const all = _amTmDeparted || [];
+      const search = (document.getElementById('depEmpSearch')?.value || '').toLowerCase().trim();
+      const regionF = document.getElementById('depEmpRegionFilter')?.value || '';
+      let rows = all.filter(d => {
+        if (regionF && d.region !== regionF) return false;
+        if (search && ![d.fullName, d.team, d.region, d.email, d.phone]
+              .join(' ').toLowerCase().includes(search)) return false;
+        return true;
+      });
+
+      // Sıralama: Türkçe harf sırası (İ, Ş, Ğ...) için localeCompare('tr').
+      // Çıkış tarihi ISO metin olduğu için düz karşılaştırmayla doğru sıralanır.
+      const { key, dir } = _depEmpSort;
+      const mul = dir === 'asc' ? 1 : -1;
+      const coll = new Intl.Collator('tr', { numeric: true, sensitivity: 'base' });
+      rows = rows.slice().sort((x, y) => {
+        const vx = x[key] || '', vy = y[key] || '';
+        // Boş değerler her iki yönde de EN SONA — dolu satırların arasına
+        // karışırsa tablo rastgele görünür.
+        if (!vx && !vy) return 0;
+        if (!vx) return 1;
+        if (!vy) return -1;
+        const c = key === 'exitDate' ? (vx < vy ? -1 : vx > vy ? 1 : 0) : coll.compare(vx, vy);
+        return c !== 0 ? c * mul : coll.compare(x.fullName || '', y.fullName || '');
+      });
+      _depEmpFiltered = rows;
+
+      document.querySelectorAll('#view-departed-employees [data-depsort]').forEach(el => {
+        const on = el.getAttribute('data-depsort') === key;
+        el.textContent = on ? (dir === 'asc' ? '▲' : '▼') : '';
+      });
+      if (countEl) {
+        countEl.textContent = (rows.length === all.length)
+          ? I18N.t('{n} kişi').replace('{n}', all.length)
+          : I18N.t('{n} / {t} kişi').replace('{n}', rows.length).replace('{t}', all.length);
+      }
+
+      if (!rows.length) {
+        tbody.innerHTML = '';
+        if (empty) {
+          empty.textContent = all.length
+            ? I18N.t('Süzgece uyan kişi yok.')
+            : I18N.t('Kayıtlı ayrılan kişi yok.');
+          empty.style.display = 'block';
+        }
+        return;
+      }
+      if (empty) empty.style.display = 'none';
+      const td = 'padding:9px 10px';
+      tbody.innerHTML = rows.map(d => `<tr class="am-alarm-row">
+        <td style="${td};font-size:11px;font-weight:600;color:#f1f5f9">${_escHtml(d.fullName || '—')}</td>
+        <td style="${td};font-size:10px;color:#94a3b8;font-family:monospace;white-space:nowrap">${_escHtml(d.phone || '—')}</td>
+        <td style="${td};font-size:10px;color:#94a3b8;max-width:220px;overflow:hidden;text-overflow:ellipsis">${_escHtml(d.email || '—')}</td>
+        <td style="${td};font-size:10px;color:#94a3b8">${_escHtml(d.team || '—')}</td>
+        <td style="${td};font-size:10px;color:#94a3b8">${_escHtml(d.region || '—')}</td>
+        <td style="${td};font-size:10px;color:#cbd5e1;white-space:nowrap">${_amTmDate(d.exitDate)}</td>
       </tr>`).join('');
+    }
+
+    function exportDepartedEmployees(format) {
+      const headers = ['Ad Soyad', 'Telefon', 'E-posta', 'Takım', 'Bölge', 'Çıkış Tarihi'];
+      const src = _depEmpFiltered.length ? _depEmpFiltered : (_amTmDeparted || []);
+      const rows = src.map(d => [d.fullName, d.phone, d.email, d.team, d.region, d.exitDate]);
+      NCExport.download(format || 'csv', headers, rows, 'ayrilan_kisiler', 'Ayrılan Kişiler');
     }
 
     function renderAdminTeamMembers() {
@@ -8131,6 +8231,7 @@
         cancelledExportMount:    { fn: 'exportAdminCancelled', size: 'sm' },
         wonExportMount:          { fn: 'exportAdminWon', size: 'sm' },
         teamMembersExportMount:  { fn: 'exportTeamMembersAdmin', size: 'lg' },
+        departedExportMount:     { fn: 'exportDepartedEmployees', size: 'lg' },
         depExportMount:          { fn: 'exportDailyEntryAdmin', size: 'lg' },
         // Aşağıdakiler sonradan eklendi — bu sayfalarda ya hiç export yoktu ya
         // da tek biçimlik (yalnızca CSV/XLSX) bir buton vardı. Artık hepsi aynı
