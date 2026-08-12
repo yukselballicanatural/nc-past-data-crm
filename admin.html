@@ -714,6 +714,15 @@
     .tl-daterange-note { font-size:9.5px; color:var(--tm-ink-3); margin-left:auto; }
     .tl-daterange.tl-daterange-active { border-color:var(--tm-accent-edge); background:var(--tm-accent-bg); }
 
+    /* Son hareketler kartı, yan yana durduğu "Aksiyon dağılımı" kartıyla
+       AYNI yüksekliğe uzuyor (grid satırı stretch) ama liste SABİT 252px'e
+       kilitliydi: kartın altında boş bir şerit kalıyor, liste de yarıda
+       kesiliyordu. Artık kart bir flex sütun ve liste kalan tüm yüksekliği
+       yutuyor — flex-basis:0 + min-height ikilisi sayesinde kendi içeriği
+       satırı büyütmüyor, yalnızca komşu kart kadar uzayıp içinde kayıyor. */
+    .tl-card-col { display:flex; flex-direction:column; min-height:0; }
+    .tl-card-col .tl-log { flex:1 1 0; min-height:200px; max-height:none; }
+
     /* Son hareketler listesi. Kaydırma çubuğu ince ve tema-duyarlı — varsayılan
        kalın çubuk cam panelin içinde yabancı duruyordu. */
     .tl-log { max-height:252px; overflow-y:auto; overscroll-behavior:contain; margin:-4px -6px -4px 0; padding-right:6px;
@@ -4910,7 +4919,7 @@
                 <span style="color:var(--tm-ink-3);font-weight:700">· ${_escHtml(I18N.t('{n} farklı gün').replace('{n}', dm.loginDays))}</span></span>
             </div>
           </div>
-          <div class="tl-card">
+          <div class="tl-card tl-card-col">
             <div class="tl-card-head">
               <div class="tl-card-title">${I18N.t('Son hareketler')}</div>
               ${dm.winLogs.length > 50 ? `<div class="tl-card-note">${_escHtml(I18N.t('son 50 kayıt'))}</div>` : ''}
