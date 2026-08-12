@@ -13,7 +13,15 @@ import { isBlocked } from './_blocked-users.js';
 import { fetchTeamAssignments, buildAssignmentIndex, effectiveTeam, isDeactivated } from './_teams.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
-const TOKEN_TTL_MS = 8 * 60 * 60 * 1000; // 8 saat — bir mesai günü
+// Oturumun kendisi sessionStorage'da yaşıyor ve sekme kapanınca zaten siliniyor
+// -- asıl güvenlik sınırı bu. Token'ın kendi süresi bundan KISA olunca (önceden
+// 8 saat), sekmesini açık bırakan biri (tipik bir CRM kullanım şekli) hâlâ
+// "giriş yapmış" görünürken token'ı sessizce geçersiz kalıyor ve
+// api/admin-users.js gibi token isteyen uçlar 401 dönmeye başlıyordu — somut
+// belirti: Lider Takibi'nde "Kullanıcı listesi alınamadı" uyarısı. Süre artık
+// sekmenin gerçekçi ömrünü aşacak kadar uzun (30 gün) ki token, sessionStorage
+// zaten sildiği zamandan ÖNCE hiç dolmasın.
+const TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 gün
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
