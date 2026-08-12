@@ -281,6 +281,7 @@ html[data-theme="dark"] .dep-quick-btn:active { transform: scale(.955); }
 
 /* Birincil butonlar — Yenile / Güncelle / Sonuç Kodu / Kaydet */
 html[data-theme="dark"] button[style*="background:#0d9488" i]:not(aside button),
+html[data-theme="dark"] .nc-refresh-btn,
 html[data-theme="dark"] button[style*="background: rgb(13, 148, 136)" i]:not(aside button),
 html[data-theme="dark"] button[style*="background:#0f766e" i]:not(aside button),
 html[data-theme="dark"] button[style*="background: rgb(15, 118, 110)" i]:not(aside button) {
@@ -295,19 +296,23 @@ html[data-theme="dark"] button[style*="background: rgb(15, 118, 110)" i]:not(asi
   transition: box-shadow .26s var(--d-ease), transform .3s var(--d-spring), filter .2s var(--d-ease) !important;
 }
 html[data-theme="dark"] button[style*="background:#0d9488" i]:not(aside button)::after,
+html[data-theme="dark"] .nc-refresh-btn::after,
 html[data-theme="dark"] button[style*="background: rgb(13, 148, 136)" i]:not(aside button)::after {
   content: ""; position: absolute; inset: 0 0 52% 0;
   background: linear-gradient(rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0));
   border-radius: inherit; pointer-events: none;
 }
 html[data-theme="dark"] button[style*="background:#0d9488" i]:not(aside button):hover,
+html[data-theme="dark"] .nc-refresh-btn:hover,
 html[data-theme="dark"] button[style*="background: rgb(13, 148, 136)" i]:not(aside button):hover {
   transform: translateY(-1.5px); filter: saturate(115%) brightness(1.08);
 }
-html[data-theme="dark"] button[style*="background:#0d9488" i]:not(aside button):active { transform: scale(.965); }
+html[data-theme="dark"] button[style*="background:#0d9488" i]:not(aside button):active,
+html[data-theme="dark"] .nc-refresh-btn:active { transform: scale(.965); }
 
 /* İkincil butonlar */
 html[data-theme="dark"] button[style*="background:#1e293b" i]:not(aside button),
+html[data-theme="dark"] .nc-ghost-btn,
 html[data-theme="dark"] button[style*="background: rgb(30, 41, 59)" i]:not(aside button) {
   background: var(--d-3) !important;
   border: 1px solid var(--d-edge-soft) !important;
@@ -317,6 +322,7 @@ html[data-theme="dark"] button[style*="background: rgb(30, 41, 59)" i]:not(aside
   transition: background .22s var(--d-ease), transform .3s var(--d-spring) !important;
 }
 html[data-theme="dark"] button[style*="background:#1e293b" i]:not(aside button):hover,
+html[data-theme="dark"] .nc-ghost-btn:hover,
 html[data-theme="dark"] button[style*="background: rgb(30, 41, 59)" i]:not(aside button):hover {
   background: var(--d-hover) !important; color: var(--d-ink) !important; transform: translateY(-1px);
 }

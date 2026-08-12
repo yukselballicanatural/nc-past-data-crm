@@ -58,6 +58,24 @@
     .filter-inp:focus { outline:none; border-color:#0D9488; }
     .filter-sel { transition:border-color .15s; }
 
+    /* ── ↻ Yenile — admin panelindeki .nc-refresh-btn ile BİREBİR aynı ────
+       Ölçü export-util.js'teki SIZES.lg (8px 14px · 11px · r10) ile aynı ki
+       yanındaki Export düğmesiyle hizalansın. Bu sayfada Yenile düğmeleri
+       daha önce her başlıkta ayrı ayrı, farklı ölçülerde yazılıydı. */
+    .nc-refresh-btn {
+      padding:8px 14px; background:#0d9488; border:none; border-radius:10px;
+      color:#fff; font-size:11px; font-weight:700; cursor:pointer;
+      display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+      line-height:1.25; transition:background .15s;
+    }
+    .nc-refresh-btn:hover { background:#0f766e; }
+    /* Başlık araç çubuğu: yan yana duran denetimlerin doğal yükseklikleri
+       birkaç piksel farklı olduğu için üstleri kayıyordu. */
+    .nc-toolbar { display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; }
+    .nc-toolbar .nc-refresh-btn,
+    .nc-toolbar .nc-export-btn,
+    .nc-toolbar .lq-trigger { height:32px; box-sizing:border-box; }
+
     /* ── Filtre kartı (Deal Listesi vb.) — etiketli, gruplu filtre alanı ── */
     .filter-card { background:#0f172a; border:1px solid #1e293b; border-radius:14px; padding:14px 16px 16px; margin-bottom:16px; }
     .filter-card-head { display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px; margin-bottom:14px; }
@@ -660,7 +678,7 @@
             <button class="nc-seg-btn on" onclick="setDealsViewMode('table')" id="dealsViewBtnTable" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;transition:all .15s;">☰ Tablo</button>
             <button class="nc-seg-btn" onclick="setDealsViewMode('kanban')" id="dealsViewBtnKanban" style="padding:6px 10px;font-size:11px;font-weight:700;border-radius:6px;border:none;cursor:pointer;transition:all .15s;">▦ Kanban</button>
           </div>
-          <button onclick="loadDeals(true)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">↻ Yenile</button>
+          <button onclick="loadDeals(true)" class="nc-refresh-btn">↻ Yenile</button>
           <span id="dealsExportMount"></span>
         </div>
       </div>
@@ -767,12 +785,9 @@
         <h2 style="font-size:20px;font-weight:700;color:#f1f5f9;margin:0">Yönetim Özeti</h2>
         <p style="font-size:11px;color:#64748b;margin:3px 0 0" id="rmRegionLabel">—</p>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <div class="nc-toolbar" style="align-items:center">
         <span id="rmLastRefresh" style="font-size:10px;color:#475569"></span>
-        <button onclick="loadRmOverview()" style="padding:8px 14px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;transition:all 0.15s" onmouseover="this.style.background='#0d9488';this.style.borderColor='#0d9488';this.style.color='#fff'" onmouseout="this.style.background='#1e293b';this.style.borderColor='#334155';this.style.color='#94a3b8'">
-          <svg style="width:13px;height:13px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          Yenile
-        </button>
+        <button onclick="loadRmOverview()" class="nc-refresh-btn">↻ Yenile</button>
         <span id="rmExportMount"></span>
       </div>
     </div>
@@ -1090,11 +1105,8 @@
              "takımım güncel mi?" sorusunun cevabı gizli kalmasın. -->
         <p id="tmFreshNote" style="font-size:10.5px;color:#64748b;margin:5px 0 0;display:none"></p>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <button onclick="loadTeamMembers(true)" id="tmRefreshBtn" style="padding:7px 14px;background:#1e293b;border:1px solid #334155;border-radius:9px;color:#cbd5e1;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
-          <svg style="width:13px;height:13px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h5M20 20v-5h-5M20 9A8 8 0 006.3 6.3M4 15a8 8 0 0013.7 2.7"/></svg>
-          Yenile
-        </button>
+      <div class="nc-toolbar" style="align-items:center">
+        <button onclick="loadTeamMembers(true)" id="tmRefreshBtn" class="nc-refresh-btn">↻ Yenile</button>
         <span id="teamMembersExportMount"></span>
       </div>
     </div>

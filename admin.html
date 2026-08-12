@@ -81,6 +81,41 @@
     input.filter-input { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:100%; }
     input.filter-input:focus { outline:none; border-color:#6366F1; }
 
+    /* ── ↻ Yenile — TEK tanım, tüm sayfalarda ────────────────────────────
+       Ölçü/renk daha önce her sayfada elle tekrarlanıyordu; bir kısmı
+       (Aktivite, Lider Takibi, Takımımdaki Kişiler, Ayrılan Kişiler) eski
+       Tailwind gri/indigo düğmesinde kalmış, Deal'ler/Kullanıcılar/Loglar
+       ise turkuaz olmuştu. Artık tek sınıf — bir daha ayrışamaz.
+       Ölçü export-util.js'teki SIZES.lg ile BİLEREK aynı (8px 14px · 11px
+       · r10): Yenile ile Export yan yana duruyor. */
+    .nc-refresh-btn {
+      padding:8px 14px; background:#0d9488; border:none; border-radius:10px;
+      color:#fff; font-size:11px; font-weight:700; cursor:pointer;
+      display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+      line-height:1.25; transition:background .15s;
+    }
+    .nc-refresh-btn:hover { background:#0f766e; }
+    /* İKİNCİL eylem (ör. "Kişi Sorgula"): Yenile ile AYNI geometri, farklı
+       ton — yan yana dururken yükseklikleri tutsun, önem sırası yine belli
+       olsun. Önceden Tailwind "px-3 py-1.5" idi ve 3px daha kısaydı. */
+    .nc-ghost-btn {
+      padding:8px 14px; background:#1e293b; border:1px solid #334155; border-radius:10px;
+      color:#cbd5e1; font-size:11px; font-weight:700; cursor:pointer;
+      display:inline-flex; align-items:center; gap:6px; white-space:nowrap;
+      line-height:1.25; transition:background .15s, border-color .15s, color .15s;
+    }
+    .nc-ghost-btn:hover { background:#334155; border-color:#475569; color:#fff; }
+
+    /* Başlık araç çubuğu: "Dönem" gibi ETİKETLİ bir kutu ile etiketsiz
+       düğmeler yan yanayken alta hizalanmalı (items-end) — ama üç denetimin
+       doğal yüksekliği birbirinden 2-3px farklı olduğu için üstleri
+       kayıyordu ("aşağı yukarı duruyorlar"). Hepsi burada aynı yüksekliğe
+       sabitleniyor; box-sizing olmadan mevcut dolgu bu yüksekliği aşardı. */
+    .nc-toolbar { display:flex; align-items:flex-end; gap:8px; flex-wrap:wrap; }
+    .nc-toolbar .nc-refresh-btn,
+    .nc-toolbar .nc-export-btn,
+    .nc-toolbar .lq-trigger { height:32px; box-sizing:border-box; }
+
     /* ── Özel takvim (date picker) ─────────────────────────────────── */
     .nc-date-field { position:relative; display:inline-block; flex-shrink:0; }
     .nc-date-trigger { background:#111827; border:1px solid #374151; color:#E2E8F0; border-radius:8px; padding:6px 10px; font-size:12px; width:135px; cursor:pointer; display:flex; align-items:center; gap:6px; transition:border-color .15s,box-shadow .15s; user-select:none; }
@@ -982,7 +1017,7 @@
           <!-- Takim liderindeki Yenile ile BIREBIR ayni: satir ici turkuaz,
                10px yaricap, 8px 14px dolgu, 11px kalin yazi. Boylece cam
                katmanindaki ayni kural (birincil buton) ikisine de uyuyor. -->
-          <button onclick="loadDeals(true)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">↻ Yenile</button>
+          <button onclick="loadDeals(true)" class="nc-refresh-btn">↻ Yenile</button>
           <span id="dealsExportMount"></span>
         </div>
       </div>
@@ -1364,7 +1399,7 @@
                loadUsers(TRUE): yenile butonu 5 dakikalik oturum onbellegini
                atlayip gercekten yeni veri cekmeli, yoksa "yenile" hicbir sey
                yapmiyor gibi gorunuyordu. -->
-          <button onclick="loadUsers(true)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">↻ Yenile</button>
+          <button onclick="loadUsers(true)" class="nc-refresh-btn">↻ Yenile</button>
           <button onclick="openUserModal(null)" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">+ Kullanıcı Ekle</button>
         </div>
       </div>
@@ -1433,7 +1468,7 @@
           <h2 class="text-xl font-bold text-white">Ayrılan Kişiler</h2>
           <p class="text-[11px] text-slate-500 mt-1">Zoho hesabı "ayrılmış" görünen kişilerin arşivlenmiş bilgileri — hesap sonradan başka biri tarafından devralınmış olsa bile kalıcı olarak burada tutulur.</p>
         </div>
-        <button onclick="loadAdminTeamMembers(true)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700">↻ Yenile</button>
+        <button onclick="loadAdminTeamMembers(true)" class="nc-refresh-btn">↻ Yenile</button>
       </div>
       <div class="overflow-auto rounded-xl border border-gray-800">
         <table class="tbl w-full">
@@ -1462,10 +1497,10 @@
           <!-- Kadro CANLI: her açılışta Supabase'den çekilir, saklanmaz. -->
           <p class="text-[10.5px] text-slate-500 mt-1" id="tmFreshNote" style="display:none"></p>
         </div>
-        <div class="flex gap-2 flex-wrap items-center">
+        <div class="nc-toolbar">
           <span id="teamMembersExportMount"></span>
-          <button onclick="amTmDebugPerson()" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700" title="Bir kişinin neden kadroda görünmediğini adım adım gösterir">🔍 Kişi Sorgula</button>
-          <button onclick="loadAdminTeamMembers(true)" class="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 text-slate-300 text-xs rounded-lg font-semibold border border-gray-700">↻ Yenile</button>
+          <button onclick="amTmDebugPerson()" class="nc-ghost-btn" title="Bir kişinin neden kadroda görünmediğini adım adım gösterir">🔍 Kişi Sorgula</button>
+          <button onclick="loadAdminTeamMembers(true)" class="nc-refresh-btn">↻ Yenile</button>
         </div>
       </div>
       <div class="mb-4 flex flex-wrap gap-2">
@@ -1575,7 +1610,7 @@
                (8px 14px · 11px · r10 · turkuaz). Boylece cam katmanindaki
                tek birincil-buton kurali buna da uyuyor; Tum Deal'ler ve
                Kullanicilar ekranlarindaki Yenile ile ayni dugme. -->
-          <button onclick="loadLogs()" style="padding:8px 14px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">↻ Yenile</button>
+          <button onclick="loadLogs()" class="nc-refresh-btn">↻ Yenile</button>
         </div>
       </div>
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-3 mb-4 flex flex-wrap gap-3 items-end">
@@ -2329,10 +2364,10 @@
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Tarih (baş.)</label><input type="date" id="actDateFrom" onchange="renderAdminActivity()"></div>
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Tarih (bit.)</label><input type="date" id="actDateTo" onchange="renderAdminActivity()"></div>
         </div>
-        <div style="margin-left:auto" class="flex items-end gap-3">
+        <div style="margin-left:auto" class="nc-toolbar">
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Toplam</label><span id="actCount" class="text-white font-bold text-sm">—</span></div>
           <span id="activityExportMount"></span>
-          <button onclick="loadAdminActivity()" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-lg font-semibold">↻ Yenile</button>
+          <button onclick="loadAdminActivity()" class="nc-refresh-btn">↻ Yenile</button>
         </div>
       </div>
     </div>
@@ -2359,7 +2394,7 @@
         <h2 class="text-xl font-bold text-white">Lider Takibi — Sistem Kullanımı</h2>
         <p class="text-xs text-slate-400 mt-0.5">Hangi takım lideri sistemi gerçekten kullanıyor, kim sadece giriş yapıp iş yapmıyor, kim hiç girmiyor.</p>
       </div>
-      <div class="flex items-end gap-2">
+      <div class="nc-toolbar">
         <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Dönem</label>
           <select id="tlPeriod" onchange="renderTlUsage()" class="filter-select" style="width:130px">
@@ -2369,7 +2404,7 @@
           </select>
         </div>
         <span id="tlUsageExportMount"></span>
-        <button onclick="loadTlUsage(true)" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs rounded-lg font-semibold">↻ Yenile</button>
+        <button onclick="loadTlUsage(true)" class="nc-refresh-btn">↻ Yenile</button>
       </div>
     </div>
 
@@ -8080,28 +8115,30 @@
     // Sayfa başlıklarındaki "Export" butonları — bkz. export-util.js
     //
     // size neden her mount için ayrı yazılı: export butonu komşularıyla aynı
-    // boyda görünmeli. Bu panelde hakim ölçü Tailwind'in
-    // "px-3 py-1.5 text-xs rounded-lg" butonları ve .filter-select kutuları,
-    // ikisi de 6px/12px · 12px · r8 → 'sm'. İstisnalar:
+    // boyda görünmeli.
+    //   • Yanında ↻ Yenile (.nc-refresh-btn) olan her başlık → 'lg'.
+    //     SIZES.lg (8px 14px · 11px · r10) o düğmeyle BİREBİR aynı ölçü.
     //   • Alarm İzleme başlığı .am-btn kullanıyor → 'am' (sınıfı paylaşıyor)
-    //   • Günlük Ekip Girişi'ndeki kaydet butonu daha iri (9px/18px) → 'lg'
+    //   • Günlük Ekip Girişi'ndeki kaydet butonu da iri (9px/18px) → 'lg'
+    //   • Geri kalanlar .filter-select kutularının yanında → 'sm'
+    //     (6px/12px · 12px · r8).
     function mountAdminExportButtons() {
       NCExport.mount({
         alarmsExportMount:       { fn: 'exportAdminAlarms', size: 'am' },
         todayExportMount:        { fn: 'exportAdminToday', size: 'sm' },
-        dealsExportMount:        { fn: 'exportDealsAdmin', size: 'sm' },
+        dealsExportMount:        { fn: 'exportDealsAdmin', size: 'lg' },
         closedAlarmsExportMount: { fn: 'exportAdminClosedAlarms', size: 'sm' },
         cancelledExportMount:    { fn: 'exportAdminCancelled', size: 'sm' },
         wonExportMount:          { fn: 'exportAdminWon', size: 'sm' },
-        teamMembersExportMount:  { fn: 'exportTeamMembersAdmin', size: 'sm' },
+        teamMembersExportMount:  { fn: 'exportTeamMembersAdmin', size: 'lg' },
         depExportMount:          { fn: 'exportDailyEntryAdmin', size: 'lg' },
         // Aşağıdakiler sonradan eklendi — bu sayfalarda ya hiç export yoktu ya
         // da tek biçimlik (yalnızca CSV/XLSX) bir buton vardı. Artık hepsi aynı
         // CSV/XLSX/PDF/HTML menüsünü kullanıyor.
-        logsExportMount:         { fn: 'exportLogsAdmin', size: 'sm' },
-        usersExportMount:        { fn: 'exportUsersAdmin', size: 'sm' },
-        activityExportMount:     { fn: 'exportActivityAdmin', size: 'sm' },
-        tlUsageExportMount:      { fn: 'exportTlUsage', size: 'sm' },
+        logsExportMount:         { fn: 'exportLogsAdmin', size: 'lg' },
+        usersExportMount:        { fn: 'exportUsersAdmin', size: 'lg' },
+        activityExportMount:     { fn: 'exportActivityAdmin', size: 'lg' },
+        tlUsageExportMount:      { fn: 'exportTlUsage', size: 'lg' },
         resultCodeExportMount:   { fn: 'exportResultCodes', size: 'sm' },
         teamSummaryExportMount:  { fn: 'exportTeamSummary', size: 'sm' },
         agentSummaryExportMount: { fn: 'exportAgentSummary', size: 'sm' },
