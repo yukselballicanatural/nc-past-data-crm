@@ -4072,6 +4072,10 @@
       return 'agent';
     }
 
+    // Gerçekte var olmayan / test-demo takım lideri hesapları — kadroda veya
+    // Logs'ta görünse bile Lider Takibi'nde hiç listelenmesin.
+    const _TL_EXCLUDED_NAMES = new Set(['el gtay zakaria', 'demo lider', 'mohammed benali']);
+
     function _tlKey(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
     function _tlDayStr(d) { return new Date(d).toISOString().slice(0, 10); }
     function _tlDaysAgo(iso) {
@@ -4260,6 +4264,7 @@
         if (u['is_active'] === false) return;          // devre dışı hesap takip edilmez
         const k = _tlKey(u.Username);
         if (!k) return;
+        if (_TL_EXCLUDED_NAMES.has(_tlKey(u['Deal Owner Name'])) || _TL_EXCLUDED_NAMES.has(k)) return;
         people.set(k, {
           key: k,
           username: u.Username || '',
@@ -4272,6 +4277,7 @@
         if (_tlNormRole(l.role) !== 'team-leader') return;
         const k = _tlKey(l.username) || _tlKey(l.full_name);
         if (!k || people.has(k)) return;
+        if (_TL_EXCLUDED_NAMES.has(_tlKey(l.full_name)) || _TL_EXCLUDED_NAMES.has(k)) return;
         people.set(k, {
           key: k, username: l.username || '', name: l.full_name || l.username || '',
           team: l.team || '', inRoster: false,
