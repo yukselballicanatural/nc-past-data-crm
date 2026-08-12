@@ -224,6 +224,29 @@
     var sw = document.getElementById('themeSwitch');
     if (sw) sw.setAttribute('aria-checked', String(document.documentElement.getAttribute('data-theme') === 'dark'));
   });
+
+  // Başlangıç/bitiş tarih çiftlerinde ters sıra seçilemesin (bitiş <
+  // başlangıç veya başlangıç > bitiş) — admin.html'deki NCDatePicker.linkRange
+  // ile AYNI kural, burada native <input type="date"> min/max ile uygulanıyor.
+  function ncBindDateRangePair(fromId, toId) {
+    var f = document.getElementById(fromId), t = document.getElementById(toId);
+    if (!f || !t) return;
+    function sync() {
+      if (f.value) t.min = f.value; else t.removeAttribute('min');
+      if (t.value) f.max = t.value; else f.removeAttribute('max');
+    }
+    f.addEventListener('change', sync);
+    t.addEventListener('change', sync);
+    sync();
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    [
+      ['alarmArrFrom', 'alarmArrTo'], ['alarmCreatedFrom', 'alarmCreatedTo'],
+      ['dealDateFrom', 'dealDateTo'], ['dealCreatedFrom', 'dealCreatedTo'],
+      ['tlcaArrFrom', 'tlcaArrTo'], ['tlcaCreatedFrom', 'tlcaCreatedTo'],
+      ['tlwaArrFrom', 'tlwaArrTo'], ['tlwaCreatedFrom', 'tlwaCreatedTo'],
+    ].forEach(function(pair) { ncBindDateRangePair(pair[0], pair[1]); });
+  });
 </script>
 
 <!-- ════════════════ SIDEBAR FULL ════════════════ -->

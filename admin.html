@@ -104,6 +104,7 @@
     .nc-cal-day.muted { color:#334155; }
     .nc-cal-day.today:not(.selected)::after { content:''; position:absolute; bottom:3px; left:50%; transform:translateX(-50%); width:3px; height:3px; border-radius:50%; background:#2dd4bf; }
     .nc-cal-day.selected { background:#0d9488; color:#fff; font-weight:700; box-shadow:0 2px 10px rgba(13,148,136,0.5); }
+    .nc-cal-day.disabled { color:#2a3752; cursor:not-allowed; pointer-events:none; }
     .nc-cal-footer { display:flex; justify-content:space-between; margin-top:10px; padding-top:10px; border-top:1px solid #223049; }
     .nc-cal-footer button { background:transparent; border:none; color:#64748b; font-size:10.5px; font-weight:700; cursor:pointer; padding:5px 9px; border-radius:6px; transition:all .15s; }
     .nc-cal-footer button:hover { background:#1e2c45; color:#2dd4bf; }
@@ -234,7 +235,8 @@
        ise panelin sonuna gelindiğinde kaydırmanın arkadaki sayfaya
        "zincirlenmesini" (scroll chaining) durdurur — ikisi birlikte gerekli. */
     body.nc-scroll-lock { overflow: hidden; }
-    #tlDetailModal .modal-panel { overscroll-behavior: contain; }
+    #tlDetailModal .modal-panel { overscroll-behavior: contain; border-top:3px solid var(--tm-accent); }
+    #tlDetailModal .tl-detail-head { padding-bottom:12px; margin-bottom:14px; border-bottom:1px solid var(--tm-edge); }
 
     /* Takım senkron dökümü ("Kimler?") ve takım atama popup'ları.
        .modal-backdrop/.modal-panel BİLEREK yeniden kullanılıyor: bu iki sınıf
@@ -2346,7 +2348,7 @@
   <div id="tlDetailModal" onclick="if(event.target===this)closeTlDetail()">
     <div class="modal-backdrop" onclick="closeTlDetail()"></div>
     <div class="modal-panel" style="max-width:900px">
-      <div class="flex items-start gap-3 mb-4">
+      <div class="flex items-start gap-3 tl-detail-head">
         <div class="tl-avatar" id="tlDetailAvatar">—</div>
         <div class="min-w-0 flex-1">
           <div class="flex items-center gap-2 flex-wrap">
@@ -4129,7 +4131,10 @@
         } catch (e) { /* _tlRosterOk false kalır → uyarı gösterilir */ }
 
         // 2) Aktivite. Pencere 90 gün — dönem seçici en fazla 90 gün gösteriyor.
-        const sinceIso = new Date(Date.now() - 90 * 86400000).toISOString();
+        // Sistemde şu an yalnızca 2026 verisi kullanılıyor (bkz. CREATED_2026_MIN)
+        // -- 90 günlük pencere yıl başına yakın tarihlerde 2025'e taşabileceği
+        // için alt sınır ne olursa olsun 2026-01-01'in gerisine inmiyor.
+        const sinceIso = new Date(Math.max(Date.now() - 90 * 86400000, new Date(CREATED_2026_MIN).getTime())).toISOString();
         let cached = null;
         if (!force) {
           try {
@@ -4144,8 +4149,10 @@
           const [win, logins, waSent] = await Promise.all([
             _tlFetchLogs(`Logs?${sel}&created_at=gte.${encodeURIComponent(sinceIso)}&order=created_at.desc`, 20000),
             // Tüm zamanların son girişi: "90 günden eski" ile "hiç girmemiş"
-            // ayrımı ancak pencerenin dışına bakarak yapılabilir.
-            _tlFetchLogs('Logs?select=username,full_name,created_at&action_type=eq.LOGIN&order=created_at.desc', 20000),
+            // ayrımı ancak pencerenin dışına bakarak yapılabilir. Yine de
+            // sistemde yalnızca 2026 verisi kullanıldığı için 2026 öncesi
+            // (eski/test) girişler bu ayrımı bozmasın diye elenir.
+            _tlFetchLogs(`Logs?select=username,full_name,created_at&action_type=eq.LOGIN&created_at=gte.${encodeURIComponent(CREATED_2026_MIN)}&order=created_at.desc`, 20000),
             // Takım liderinin alarm sonuç kodundan gönderdiği WhatsApp mesajları
             // `alarm_logs` tablosunda action_type='whatsapp_sent' olarak tutuluyor
             // (bkz. sendAdminResultCodeWhatsApp) — action_by alanı gönderenin adı.
@@ -4464,9 +4471,9 @@
         const m = _tlStatusMeta(r.status);
         const scoreCol = r.score >= 70 ? '#34d399' : r.score >= 40 ? '#fbbf24' : '#ef4444';
         const covTxt = r.coverage === null
-          ? '<span style="color:#475569">—</span>'
+          ? '<span style="color:var(--tm-ink-3)">—</span>'
           : `<span style="color:${r.coverage >= 0.3 ? '#34d399' : r.coverage >= 0.1 ? '#fbbf24' : '#ef4444'}">${Math.round(r.coverage * 100)}%</span>
-             <span style="color:#475569;font-size:9px"> (${r.touched}/${r.totalAlarms})</span>`;
+             <span style="color:var(--tm-ink-3);font-size:9px"> (${r.touched}/${r.totalAlarms})</span>`;
         return `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
           <td class="py-1.5"><span style="color:${scoreCol};font-weight:800;font-size:13px">${r.score}</span></td>
           <td class="py-1.5"><span class="tl-pill" data-tone="${m.tone || ''}">${m.label}</span></td>
@@ -4635,7 +4642,7 @@
       av.textContent = _tlInitials(r.name);
       av.style.background = _tlAvatarColor(r.name);
       document.getElementById('tlDetailSub').innerHTML =
-        `${_escHtml(r.teamLabel)} · ${_escHtml(r.region || '—')}${r.username ? ' · <span style="color:#475569;font-family:monospace">' + _escHtml(r.username) + '</span>' : ''}`;
+        `${_escHtml(r.teamLabel)} · ${_escHtml(r.region || '—')}${r.username ? ' · <span style="color:var(--tm-ink-3);font-family:monospace">' + _escHtml(r.username) + '</span>' : ''}`;
 
       // ── Tarih aralığı: özel seçim varsa onu, yoksa üstteki genel dönemi
       // kullan. Popup bu aralığa göre TAM bir rapor kartı — skor/durum
@@ -8482,6 +8489,10 @@
         const daysInMonth = new Date(year, month + 1, 0).getDate();
         const daysInPrevMonth = new Date(year, month, 0).getDate();
         const today = new Date();
+        const inputEl = openState && document.getElementById(openState.inputId);
+        const minD = inputEl && inputEl.min ? fromISO(inputEl.min) : null;
+        const maxD = inputEl && inputEl.max ? fromISO(inputEl.max) : null;
+        const outOfRange = d => (minD && d < minD) || (maxD && d > maxD);
         let cells = '';
         for (let i = 0; i < startDow; i++) {
           const dnum = daysInPrevMonth - startDow + i + 1;
@@ -8490,7 +8501,8 @@
         for (let d = 1; d <= daysInMonth; d++) {
           const isToday = today.getFullYear()===year && today.getMonth()===month && today.getDate()===d;
           const isSel = selected && selected.getFullYear()===year && selected.getMonth()===month && selected.getDate()===d;
-          cells += `<div class="nc-cal-day${isToday?' today':''}${isSel?' selected':''}" data-day="${d}">${d}</div>`;
+          const disabled = outOfRange(new Date(year, month, d));
+          cells += `<div class="nc-cal-day${isToday?' today':''}${isSel?' selected':''}${disabled?' disabled':''}" data-day="${d}">${d}</div>`;
         }
         const totalCells = startDow + daysInMonth;
         const remain = (7 - (totalCells % 7)) % 7;
@@ -8571,7 +8583,22 @@
         }
       });
 
-      return { attach, refreshTrigger, setValue };
+      // İki alanı "başlangıç"/"bitiş" olarak birbirine bağlar: birinde tarih
+      // seçilince diğerinin min/max'ı güncellenir, ters sıra seçilemez.
+      function linkRange(fromId, toId) {
+        const f = document.getElementById(fromId), t = document.getElementById(toId);
+        if (!f || !t) return;
+        const sync = () => {
+          if (f.value) t.min = f.value; else t.removeAttribute('min');
+          if (t.value) f.max = t.value; else f.removeAttribute('max');
+          if (openState && openState.inputId === fromId || openState && openState.inputId === toId) render();
+        };
+        f.addEventListener('change', sync);
+        t.addEventListener('change', sync);
+        sync();
+      }
+
+      return { attach, refreshTrigger, setValue, linkRange };
     })();
 
     function ncClearDealDates() {
@@ -11505,7 +11532,18 @@
         // sütun başlıkları, modal iskeletleri) çevir — dinamik olarak
         // render edilen içerik zaten kendi translateDOM çağrısını yapıyor.
         I18N.translateDOM(document.body);
-        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo', 'logDateFrom', 'logDateTo', 'caArrFrom', 'caArrTo', 'caCreatedFrom', 'caCreatedTo', 'waArrFrom', 'waArrTo', 'waCreatedFrom', 'waCreatedTo', 'actDateFrom', 'actDateTo', 'adeDate'].forEach(id => NCDatePicker.attach(id));
+        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo', 'logDateFrom', 'logDateTo', 'caArrFrom', 'caArrTo', 'caCreatedFrom', 'caCreatedTo', 'waArrFrom', 'waArrTo', 'waCreatedFrom', 'waCreatedTo', 'actDateFrom', 'actDateTo', 'adeDate', 'tlDetailFrom', 'tlDetailTo'].forEach(id => NCDatePicker.attach(id));
+        // Başlangıç/bitiş tarih çiftlerinde ters sıra (bitiş < başlangıç)
+        // seçilemesin -- tüm sistemde (admin + regional manager burada,
+        // team leader panelinde ayrıca) aynı kural uygulanıyor.
+        [
+          ['dealDateFrom', 'dealDateTo'], ['createdDateFrom', 'createdDateTo'],
+          ['amDateFrom', 'amDateTo'], ['amCreatedFrom', 'amCreatedTo'],
+          ['anFilterDateFrom', 'anFilterDateTo'], ['anFilterCreatedFrom', 'anFilterCreatedTo'],
+          ['logDateFrom', 'logDateTo'], ['caArrFrom', 'caArrTo'], ['caCreatedFrom', 'caCreatedTo'],
+          ['waArrFrom', 'waArrTo'], ['waCreatedFrom', 'waCreatedTo'], ['actDateFrom', 'actDateTo'],
+          ['tlDetailFrom', 'tlDetailTo'],
+        ].forEach(([a, b]) => NCDatePicker.linkRange(a, b));
         _anPopulateTeamOptions();
         // Kayıtlı görünüm, herhangi bir switchView çağrısından ÖNCE okunmalı —
         // switchView kaydı güncelliyor, sonra okursak kendi yazdığımızı okuruz.
