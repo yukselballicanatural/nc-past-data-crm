@@ -4447,9 +4447,8 @@
       const leads = _tlLeadsByTeam();
       const workload = _tlWorkloadByTeam(leads.ids);
 
-      // Kadro: girişi olan takım liderleri. Logs'ta team-leader olarak görünüp
-      // kadroda olmayan biri varsa (silinmiş/yeniden adlandırılmış kullanıcı)
-      // o da eklenir — sessizce kaybolmasın.
+      // Kadro (Users) bu sayfanın TEK doğruluk kaynağı: kim takım lideri,
+      // kim değil oradan belirlenir.
       const people = new Map();
       (roster || []).forEach(u => {
         if (_tlNormRole(u.Role) !== 'team-leader') return;
@@ -4465,16 +4464,30 @@
           inRoster: true,
         });
       });
-      (_tlLogs || []).forEach(l => {
-        if (_tlNormRole(l.role) !== 'team-leader') return;
-        const k = _tlKey(l.username) || _tlKey(l.full_name);
-        if (!k || people.has(k)) return;
-        if (_TL_EXCLUDED_NAMES.has(_tlKey(l.full_name)) || _TL_EXCLUDED_NAMES.has(k)) return;
-        people.set(k, {
-          key: k, username: l.username || '', name: l.full_name || l.username || '',
-          team: l.team || '', inRoster: false,
+      // Logs'tan türetme YALNIZCA kadro çekilemediğinde devreye girer.
+      //
+      // Bu geri-ekleme "kadroda görünmeyen biri sessizce kaybolmasın" diye
+      // vardı, ama kadro BAŞARIYLA geldiğinde ters etki yapıyordu: Users'tan
+      // silinen bir kullanıcının Logs satırları duruyor, bu döngü de onu her
+      // seferinde listeye geri koyuyordu — panelden silmek bu sayfada hiçbir
+      // şey değiştirmiyordu (somut vaka: "takım lideri test" hesabı).
+      //
+      // Kadro geldiyse, kişinin orada olmaması artık bir bilgidir: silinmiş
+      // ya da pasife alınmıştır — listede yeri yoktur. Kadro ÇEKİLEMEDİYSE
+      // (ağ/yetki hatası) eski davranış korunur, yoksa sayfa bomboş görünür;
+      // o durumda zaten üstte uyarı şeridi çıkıyor (bkz. _tlRosterOk).
+      if (!_tlRosterOk) {
+        (_tlLogs || []).forEach(l => {
+          if (_tlNormRole(l.role) !== 'team-leader') return;
+          const k = _tlKey(l.username) || _tlKey(l.full_name);
+          if (!k || people.has(k)) return;
+          if (_TL_EXCLUDED_NAMES.has(_tlKey(l.full_name)) || _TL_EXCLUDED_NAMES.has(k)) return;
+          people.set(k, {
+            key: k, username: l.username || '', name: l.full_name || l.username || '',
+            team: l.team || '', inRoster: false,
+          });
         });
-      });
+      }
 
       // Kişi bazında log gruplama (tek geçiş)
       const logsBy = new Map();
@@ -10745,6 +10758,9 @@
             addLog(act ? 'USER_DEACTIVATE' : 'USER_ACTIVATE',
                    `${act ? 'Kullanıcı pasife alındı' : 'Kullanıcı aktife alındı'}: ${name} (${username})`);
             await loadUsers(true);
+            // Pasife alınan kişi Lider Takibi'nde de takip edilmiyor
+            // (is_active===false elenir) — eldeki karneler bayat kalmasın.
+            _tlRows = null;
             showSiteResult(
               I18N.t(act ? 'Giriş Kapatıldı' : 'Giriş Açıldı'),
               `<strong style="color:#4ade80">${fmt(name)}</strong> ${
@@ -10808,7 +10824,15 @@
             const respBody = await resp.json().catch(() => ({}));
             if (!resp.ok || respBody.error) throw new Error(respBody.error || ('HTTP ' + resp.status));
             addLog('DELETE_USER', `Kullanıcı silindi: ${userName} (${originalUsername})`);
-            await loadUsers();
+            // force=true ŞART: loadUsers() önce 5 dakikalık oturum
+            // önbelleğini basıyor — silinen kişi listede durmaya devam eder
+            // ve silme işe yaramamış gibi görünürdü. Pasife alma ve
+            // ekleme/düzenleme yolları zaten force kullanıyor.
+            await loadUsers(true);
+            // Lider Takibi kadroyu her açılışta yeniden çekiyor ama elindeki
+            // hesaplanmış karneleri (_tlRows) o gelene kadar gösteriyor —
+            // silinen kişi orada bir süre daha görünmesin diye düşürülüyor.
+            _tlRows = null;
             showSiteResult(
               I18N.t('Kullanıcı Silindi'),
               `<strong style="color:#4ade80">${fmt(userName)}</strong> ${I18N.t('adlı kullanıcı kalıcı olarak silindi.')}`,
