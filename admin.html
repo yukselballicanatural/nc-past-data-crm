@@ -1472,6 +1472,11 @@
         <div>
           <h2 class="text-xl font-bold text-white">Ayrılan Kişiler</h2>
           <p class="text-xs text-slate-400 mt-0.5">Zoho hesabı "ayrılmış" görünen kişilerin arşivlenmiş bilgileri — hesap sonradan başka biri tarafından devralınmış olsa bile kalıcı olarak burada tutulur.</p>
+          <!-- Sayaç, Takımımdaki Kişiler'deki #tmFreshNote ile AYNI yerde ve
+               ölçüde: kişi sayfalarının idiomu bu. Önce .am-totals cam şeridi
+               kullanılıyordu — o alarm tablolarının dili, .tbl'nin üstünde
+               yabancı duruyordu. -->
+          <p class="text-[10.5px] text-slate-500 mt-1" id="depEmpCount"></p>
         </div>
         <div class="nc-toolbar">
           <input id="depEmpSearch" placeholder="İsim, takım, bölge..." oninput="renderDepartedEmployees()" class="filter-select" style="width:180px">
@@ -1482,30 +1487,29 @@
           <button onclick="loadAdminTeamMembers(true)" class="nc-refresh-btn">↻ Yenile</button>
         </div>
       </div>
-      <div class="am-totals">
-        <span class="am-totals-count" id="depEmpCount"></span>
-      </div>
-      <!-- Tablo Kapatılan Alarmlar / Alarm Listesi ile AYNI cam iskelet:
-           .am-alarm-wrap (yapışkan başlık) + .am-alarm-tbl. Önceden .tbl +
-           "overflow-auto rounded-xl border border-gray-800" idi; başlık
-           kaydırmada kayboluyor ve açık temada kenarlık neredeyse siyah
-           çıkıyordu (tema eşlemesi o satır içi sınıflara dokunmuyor). -->
-      <div class="am-table-wrap am-alarm-wrap">
-        <table class="am-alarm-tbl">
+      <!-- Tablo iskeleti Kullanıcılar / Takımımdaki Kişiler ile AYNI:
+           "overflow-auto rounded-xl border border-gray-800" + .tbl.
+           Bu üçü de KİŞİ listesi, bu yüzden aynı tipografiyi paylaşıyorlar
+           (.tbl → 11px, 8px 10px hücre); alarm/deal tabloları .am-alarm-tbl
+           ile daha yoğun bir ölçü kullanıyor, kişi listelerine o uymuyordu.
+           Sıralama başlıkları .sortable-th + .sort-arrow — .tbl tabanlı
+           diğer sıralanabilir tablolarla (Sonuç Kodları, Takım Özeti) aynı. -->
+      <div class="overflow-auto rounded-xl border border-gray-800">
+        <table class="tbl w-full">
           <thead>
-            <tr>
-              <th class="am-th am-sort" onclick="_depEmpSortBy('fullName')">Ad Soyad<span class="am-sarrow" data-depsort="fullName"></span></th>
-              <th class="am-th am-sort" onclick="_depEmpSortBy('phone')">Telefon<span class="am-sarrow" data-depsort="phone"></span></th>
-              <th class="am-th am-sort" onclick="_depEmpSortBy('email')">E-posta<span class="am-sarrow" data-depsort="email"></span></th>
-              <th class="am-th am-sort" onclick="_depEmpSortBy('team')">Takım<span class="am-sarrow" data-depsort="team"></span></th>
-              <th class="am-th am-sort" onclick="_depEmpSortBy('region')">Bölge<span class="am-sarrow" data-depsort="region"></span></th>
-              <th class="am-th am-sort" onclick="_depEmpSortBy('exitDate')">Çıkış Tarihi<span class="am-sarrow" data-depsort="exitDate"></span></th>
+            <tr class="text-slate-400">
+              <th class="sortable-th" onclick="_depEmpSortBy('fullName')">Ad Soyad<span class="sort-arrow" data-depsort="fullName"></span></th>
+              <th class="sortable-th" onclick="_depEmpSortBy('phone')">Telefon<span class="sort-arrow" data-depsort="phone"></span></th>
+              <th class="sortable-th" onclick="_depEmpSortBy('email')">E-posta<span class="sort-arrow" data-depsort="email"></span></th>
+              <th class="sortable-th" onclick="_depEmpSortBy('team')">Takım<span class="sort-arrow" data-depsort="team"></span></th>
+              <th class="sortable-th" onclick="_depEmpSortBy('region')">Bölge<span class="sort-arrow" data-depsort="region"></span></th>
+              <th class="sortable-th" onclick="_depEmpSortBy('exitDate')">Çıkış Tarihi<span class="sort-arrow" data-depsort="exitDate"></span></th>
             </tr>
           </thead>
           <tbody id="departedEmployeesBody"></tbody>
         </table>
-        <div id="departedEmployeesEmpty" style="display:none;text-align:center;padding:40px 16px;color:#475569;font-size:13px">Kayıtlı ayrılan kişi yok.</div>
       </div>
+      <div id="departedEmployeesEmpty" class="hidden text-center py-12 text-slate-500 text-sm">Kayıtlı ayrılan kişi yok.</div>
     </div>
 
     <!-- ===== TAKIMIMDAKI KISILER VIEW (admin/super-admin: tüm takımlar, RM: kendi bölgesi) ===== -->
@@ -7544,19 +7548,21 @@
           empty.textContent = all.length
             ? I18N.t('Süzgece uyan kişi yok.')
             : I18N.t('Kayıtlı ayrılan kişi yok.');
-          empty.style.display = 'block';
+          empty.classList.remove('hidden');
         }
         return;
       }
-      if (empty) empty.style.display = 'none';
-      const td = 'padding:9px 10px';
-      tbody.innerHTML = rows.map(d => `<tr class="am-alarm-row">
-        <td style="${td};font-size:11px;font-weight:600;color:#f1f5f9">${_escHtml(d.fullName || '—')}</td>
-        <td style="${td};font-size:10px;color:#94a3b8;font-family:monospace;white-space:nowrap">${_escHtml(d.phone || '—')}</td>
-        <td style="${td};font-size:10px;color:#94a3b8;max-width:220px;overflow:hidden;text-overflow:ellipsis">${_escHtml(d.email || '—')}</td>
-        <td style="${td};font-size:10px;color:#94a3b8">${_escHtml(d.team || '—')}</td>
-        <td style="${td};font-size:10px;color:#94a3b8">${_escHtml(d.region || '—')}</td>
-        <td style="${td};font-size:10px;color:#cbd5e1;white-space:nowrap">${_amTmDate(d.exitDate)}</td>
+      if (empty) empty.classList.add('hidden');
+      // Hücre tipografisi Kullanıcılar sayfasıyla AYNI: taban ölçü .tbl'den
+      // (11px, 8px 10px dolgu), vurgular aynı Tailwind sınıflarıyla —
+      // ad beyaz+kalın, kimlik alanları mono, geri kalanı slate-300.
+      tbody.innerHTML = rows.map(d => `<tr>
+        <td class="py-2 text-white font-semibold">${_escHtml(d.fullName || '—')}</td>
+        <td class="py-2 text-slate-300 font-mono text-sm">${_escHtml(d.phone || '—')}</td>
+        <td class="py-2 text-slate-300 text-sm">${_escHtml(d.email || '—')}</td>
+        <td class="py-2 text-slate-300 text-sm">${_escHtml(d.team || '—')}</td>
+        <td class="py-2 text-slate-300 text-sm">${_escHtml(d.region || '—')}</td>
+        <td class="py-2 text-slate-300 text-sm">${_amTmDate(d.exitDate)}</td>
       </tr>`).join('');
     }
 
