@@ -2468,7 +2468,7 @@
               <th style="cursor:pointer" onclick="_tlSort('actionDays')" title="Dönem içinde aksiyon aldığı farklı gün sayısı">Aktif Gün</th>
               <th style="cursor:pointer" onclick="_tlSort('actions')" title="Dönem içindeki alarm aksiyonu sayısı (giriş/çıkış hariç)">Aksiyon</th>
               <th style="cursor:pointer" onclick="_tlSort('workload')" title="Takımının şu anki aktif alarm sayısı">Alarm Yükü</th>
-              <th title="Dönem içinde dokunduğu farklı alarm / takımın toplam alarm sayısı — en fazla %100">Kapsam</th>
+              <th title="Dönem içinde işlem yaptığı farklı 2026 lead'i / takımın 2026'da gelen toplam lead sayısı — en fazla %100">Kapsam</th>
               <th></th>
             </tr>
           </thead>
@@ -2483,7 +2483,7 @@
       <strong class="text-slate-400">Skor nasıl hesaplanıyor?</strong>
       <span id="tlFormulaText">Tazelik (40 puan): son aksiyondan bu yana geçen gün — aynı gün 40, 1 gün 36, 3 güne kadar 28, 7 güne kadar 18, 14 güne kadar 8, sonrası 0.
       Süreklilik (30 puan): aksiyon alınan farklı gün sayısı / dönem hedefi (30 günde 10 gün = tam puan).
-      Kapsam (30 puan): dönem içinde dokunulan farklı alarm sayısı / takımın TOPLAM alarm sayısı (yalnızca şu an aktif olanlar değil, tüm durumlar) — %30'a ulaşınca tam puan, oran hiçbir zaman %100'ü geçmez.
+      Kapsam (30 puan): dönem içinde işlem yapılan farklı 2026 lead sayısı / takımın 2026'da gelen toplam lead sayısı — %30'a ulaşınca tam puan, oran hiçbir zaman %100'ü geçmez.
       Tüm bileşenler tabloda ayrı ayrı görünür; skor hiçbir veriyi gizlemez.</span>
       <div class="mt-1.5 text-slate-600">Kaynak: <code>Logs</code> tablosu (giriş ve tüm alarm aksiyonları) + takımın anlık aktif alarm sayısı.</div>
     </div>
@@ -4323,7 +4323,12 @@
 
         // 3) İş yükü bağlamı: 5 alarmı olanla 300 alarmı olanı aynı kefeye
         //    koymamak için takımın anlık aktif alarm sayısı gerekiyor.
-        if (!adminAllAlarms || !adminAllAlarms.length) { try { await loadAdminAlarms(true); } catch (e) {} }
+        if (!_amAlarmsRaw || !_amAlarmsRaw.length) { try { await loadAdminAlarms(true); } catch (e) {} }
+
+        // 4) Kapsam'ın PAYDASI 2026 lead havuzundan geliyor (bkz.
+        //    _tlLeadsByTeam) — deal'ler inmemişse payda 0 olur ve tüm
+        //    Kapsam sütunu sessizce "—" görünürdü. Bu yüzden beklenir.
+        if (!allDeals || !allDeals.length) { try { await loadDeals(); } catch (e) {} }
 
         _tlBuild(roster);
         loading.style.display = 'none';
@@ -4339,30 +4344,44 @@
       }
     }
 
-    // Takım -> anlık aktif alarm sayısı (payment_tracking ve kapalı/iptal hariç)
-    function _tlWorkloadByTeam() {
+    // ── 2026 lead havuzu — bu sayfanın TEK doğruluk kaynağı ───────────────
+    // Takım -> { 2026'da gelen lead sayısı, o lead'lerin deal id kümesi }.
+    // Kaynak `allDeals`: sorgusu DEALS_2026_Q ile zaten
+    // "created_time >= 2026-01-01" olduğu için havuz tanımı gereği 2026.
+    //
+    // Neden alarm tablosu DEĞİL: `adminAllAlarms` iki yönden güvenilmezdi —
+    //   (1) yalnızca AKTİF + no_show satırları yüklüyor; kapatılanlar ancak
+    //       admin "Kapatılan Alarmlar" sayfasını AÇARSA listeye ekleniyor,
+    //       yani payda oturum içinde gezilen sayfalara göre değişiyordu;
+    //   (2) üstteki yıl seçicisine (amSelectedYear) bağlı — başka bir sayfada
+    //       yıl değiştirilince bu sayfanın oranları da kayıyordu.
+    // Lead havuzu ikisinden de bağımsız ve deterministik.
+    function _tlLeadsByTeam() {
+      const count = {}, ids = {};
+      (allDeals || []).forEach(d => {
+        const canon = d['Team Group'] || '(bos)';
+        if (!ids[canon]) { ids[canon] = new Set(); count[canon] = 0; }
+        const id = d['Deal Id'];
+        if (id == null || id === '') return;
+        // Aynı deal iki kez sayılmasın (sayfalı indirmede kuramsal olarak
+        // mümkün) — sayaç kümenin boyutundan türüyor.
+        ids[canon].add(String(id));
+        count[canon] = ids[canon].size;
+      });
+      return { count, ids };
+    }
+
+    // Takım -> anlık aktif alarm sayısı (payment_tracking hariç).
+    // 2026 lead kümesine kısıtlı: bu sayfa yıl seçicisinden BAĞIMSIZ olmalı.
+    function _tlWorkloadByTeam(leadIds) {
       const ACTIVE = AlarmStatus.activeSet();
       const m = {};
-      (adminAllAlarms || []).forEach(a => {
+      (_amAlarmsRaw || []).forEach(a => {
         if (!ACTIVE.has(a.status)) return;
         if (a.alarm_type === 'payment_tracking') return;
         const canon = (window.TeamMap && TeamMap.normalize(a.team)) || a.team || '(bos)';
-        m[canon] = (m[canon] || 0) + 1;
-      });
-      return m;
-    }
-
-    // Kapsam oranının PAYDASI: takımın TÜM zamanlardaki/durumlardaki alarm
-    // sayısı (yalnızca şu anki aktif kadro değil). Önceden Kapsam,
-    // "dönem içinde dokunulan alarm" / "şu anki canlı workload" olarak
-    // hesaplanıyordu — dönem içinde kapatılan alarmlar workload'dan düşünce
-    // touched > workload olabiliyordu ve yüzde %100'ü aşıyordu. Bu paydayla
-    // (touched ⊆ bu havuz olduğu için) oran hiçbir zaman %100'ü geçemez.
-    function _tlTotalByTeam() {
-      const m = {};
-      (adminAllAlarms || []).forEach(a => {
-        if (a.alarm_type === 'payment_tracking') return;
-        const canon = (window.TeamMap && TeamMap.normalize(a.team)) || a.team || '(bos)';
+        const set = leadIds && leadIds[canon];
+        if (set && !set.has(String(a.deal_id))) return;   // 2026 dışı deal
         m[canon] = (m[canon] || 0) + 1;
       });
       return m;
@@ -4371,7 +4390,10 @@
     // Bir log kümesini herhangi bir [fromMs,toMs] penceresi için özet
     // metriklere çevirir — hem ana tablonun sabit 7/30/90 günlük dönemi hem
     // de detay popup'undaki özel tarih aralığı filtresi AYNI hesabı kullanır.
-    function _tlMetricsFromLogs(allLogs, fromMs, toMs, totalAlarms) {
+    //
+    // leadCount / leadIds: takımın 2026 lead havuzu (bkz. _tlLeadsByTeam).
+    // Kapsam = işlem yapılan 2026 lead'i / takımın 2026 lead sayısı.
+    function _tlMetricsFromLogs(allLogs, fromMs, toMs, leadCount, leadIds) {
       const inWin = (allLogs || []).filter(l => {
         const t = new Date(l.created_at).getTime();
         return t >= fromMs && t <= toMs;
@@ -4381,10 +4403,21 @@
       const actionDays = new Set(acts.map(l => _tlDayStr(l.created_at))).size;
       const loginDays = new Set(logins.map(l => _tlDayStr(l.created_at))).size;
       const lastAction = acts.length ? acts.reduce((mx, l) => l.created_at > mx ? l.created_at : mx, acts[0].created_at) : null;
-      const touched = new Set(acts.map(l => l.deal_id).filter(Boolean)).size;
+      // Dokunulan deal'ler 2026 havuzuna KISITLI: hem "sadece 2026" kuralı
+      // gereği, hem de pay ⊆ payda olsun diye (aksi halde 2025'ten kalma bir
+      // deal'e yapılan işlem oranı şişirirdi). Log'lardaki deal_id ile
+      // deals.id aynı alan — alarms.deal_id = String(deal.id).
+      const touchedSet = new Set();
+      acts.forEach(l => {
+        if (!l.deal_id) return;
+        const id = String(l.deal_id);
+        if (leadIds && !leadIds.has(id)) return;
+        touchedSet.add(id);
+      });
+      const touched = touchedSet.size;
       // Math.min(1, ...) EK bir güvenlik: payda mantığı doğru kurulsa bile
       // (silinen/takım değiştirilen deal gibi) uç durumlarda %100'ü aşmasın.
-      const coverage = totalAlarms > 0 ? Math.min(1, touched / totalAlarms) : null;
+      const coverage = leadCount > 0 ? Math.min(1, touched / leadCount) : null;
       const byType = {};
       acts.forEach(l => { byType[l.action_type] = (byType[l.action_type] || 0) + 1; });
       return { winLogs: inWin, actions: acts.length, logins: logins.length, actionDays, loginDays, lastAction, touched, coverage, byType };
@@ -4411,7 +4444,8 @@
     }
 
     function _tlBuild(roster) {
-      const workload = _tlWorkloadByTeam();
+      const leads = _tlLeadsByTeam();
+      const workload = _tlWorkloadByTeam(leads.ids);
 
       // Kadro: girişi olan takım liderleri. Logs'ta team-leader olarak görünüp
       // kadroda olmayan biri varsa (silinmiş/yeniden adlandırılmış kullanıcı)
@@ -4482,6 +4516,10 @@
           teamLabel: (window.TeamMap && TeamMap.TEAMS[canon] && TeamMap.TEAMS[canon].label) || p.team || '—',
           region,
           workload: workload[canon] || 0,
+          // Takımın 2026 lead havuzu — Kapsam'ın paydası ve dokunulan
+          // deal'lerin süzgeci (bkz. _tlLeadsByTeam / _tlMetricsFromLogs).
+          leads: leads.count[canon] || 0,
+          leadIds: leads.ids[canon] || null,
           logs,
           lastLoginAll: _tlLastLogin[p.key] || null,
         };
@@ -4494,12 +4532,10 @@
       const days = Number(document.getElementById('tlPeriod')?.value || 30);
       const cutoff = Date.now() - days * 86400000;
       const targetDays = _tlTargetDaysFor(days);
-      const totalByTeam = _tlTotalByTeam();
 
       (_tlRows || []).forEach(r => {
         r.periodDays = days;
-        r.totalAlarms = totalByTeam[r.canonTeam] || 0;
-        const dm = _tlMetricsFromLogs(r.logs, cutoff, Date.now(), r.totalAlarms);
+        const dm = _tlMetricsFromLogs(r.logs, cutoff, Date.now(), r.leads, r.leadIds);
         Object.assign(r, dm);
         r.lastLogin = r.lastLoginAll;
 
@@ -4629,7 +4665,7 @@
         const covTxt = r.coverage === null
           ? '<span style="color:var(--tm-ink-2)">—</span>'
           : `<span style="color:${r.coverage >= 0.3 ? '#34d399' : r.coverage >= 0.1 ? '#fbbf24' : '#ef4444'};font-weight:800">${Math.round(r.coverage * 100)}%</span>
-             <span class="tl-cov-frac">${r.touched}/${r.totalAlarms}</span>`;
+             <span class="tl-cov-frac">${r.touched}/${r.leads}</span>`;
         return `<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">
           <td class="py-1.5"><span style="color:${scoreCol};font-weight:800;font-size:13px">${r.score}</span></td>
           <td class="py-1.5"><span class="tl-pill" data-tone="${m.tone || ''}">${m.label}</span></td>
@@ -4820,7 +4856,7 @@
         ? `${_tlFmtDayShort(_tlDetailFrom)} – ${_tlFmtDayShort(_tlDetailTo)}`
         : I18N.t('son {d} gün').replace('{d}', days);
 
-      const dm = _tlMetricsFromLogs(r.logs, fromMs, toMs, r.totalAlarms);
+      const dm = _tlMetricsFromLogs(r.logs, fromMs, toMs, r.leads, r.leadIds);
       const targetDays = _tlTargetDaysFor(days);
       const sc = _tlScoreFor(dm.lastAction, dm.actionDays, targetDays, dm.coverage);
       const dStatus = _tlStatusFor(_tlDaysAgo(r.lastLoginAll), _tlDaysAgo(dm.lastAction), dm.actions, r.workload, sc.score);
@@ -4945,7 +4981,7 @@
           </div>
           ${stat('→', I18N.t('Son Giriş'), _tlAgoLabel(r.lastLoginAll), r.lastLoginAll ? _amFmtDateTime(r.lastLoginAll) : '')}
           ${stat('⚡', I18N.t('Son Aksiyon'), _tlAgoLabel(dm.lastAction), dm.lastAction ? _amFmtDateTime(dm.lastAction) : I18N.t('kayıt yok'))}
-          ${stat('◉', I18N.t('Alarm Yükü'), r.workload, dm.coverage === null ? I18N.t('hiç alarmı olmadı') : _escHtml(I18N.t('dokunulan {n} / toplam {t}').replace('{n}', dm.touched).replace('{t}', r.totalAlarms)))}
+          ${stat('◉', I18N.t('Alarm Yükü'), r.workload, dm.coverage === null ? I18N.t('2026 yılında hiç lead gelmedi') : _escHtml(I18N.t('işlem yapılan {n} / 2026 lead {t}').replace('{n}', dm.touched).replace('{t}', r.leads)))}
         </div>
 
         <div class="tl-card mb-3">
@@ -5035,12 +5071,12 @@
     function exportTlUsage(format) {
       if (!_tlRows || !_tlRows.length) { showSiteNotice(I18N.t('Dışa aktarılacak veri yok.'), 'warn'); return; }
       const headers = ['Takım Lideri', 'Takım', 'Bölge', 'Durum', 'Skor', 'Son Giriş', 'Son Aksiyon',
-        'Aktif Gün', 'Aksiyon', 'Giriş', 'Alarm Yükü (aktif)', 'Toplam Alarm', 'Dokunulan', 'Kapsam %'];
+        'Aktif Gün', 'Aksiyon', 'Giriş', 'Alarm Yükü (aktif)', '2026 Lead', 'İşlem Yapılan', 'Kapsam %'];
       const dt = v => v ? String(v).slice(0, 16).replace('T', ' ') : I18N.t('kayıt yok');
       const rows = _tlRows.slice().sort((a, b) => a.score - b.score).map(r => [
         r.name, r.teamLabel, r.region, _tlStatusMeta(r.status).label, r.score,
         dt(r.lastLoginAll), dt(r.lastAction),
-        r.actionDays, r.actions, r.logins, r.workload, r.totalAlarms, r.touched,
+        r.actionDays, r.actions, r.logins, r.workload, r.leads, r.touched,
         r.coverage === null ? '' : Math.round(r.coverage * 100),
       ]);
       NCExport.download(format || 'csv', headers, rows, 'lider_takibi', 'Lider Takibi — Sistem Kullanımı');
