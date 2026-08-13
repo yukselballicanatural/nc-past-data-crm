@@ -195,49 +195,6 @@
     .am-panel { background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0)),#0b101c; border:1px solid rgba(255,255,255,.07); border-radius:20px; }
     .am-kpi-icon { width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center; margin:0 auto 8px; font-size:15px; background:color-mix(in srgb, var(--am-glow,#6366f1) 20%, transparent); border:1px solid color-mix(in srgb, var(--am-glow,#6366f1) 35%, transparent); }
 
-    /* ── Sistem Etkisi (para) sayfası ────────────────────────────────────
-       .am-kpi küçük sayaçlar için tasarlandı; buradaki rakamlar sayfanın
-       ana mesajı (yedi haneli €) olduğu için daha büyük, degrade dolgulu
-       ayrı bir kart tipi var. Aynı cam dilini sürdürüyor: köşe yarıçapı,
-       kenar opaklığı ve hover kalkışı .am-kpi ile birebir. */
-    .im-hero { position:relative; overflow:hidden; border-radius:22px; padding:22px 22px 20px;
-      border:1px solid rgba(255,255,255,.07); border-top:3px solid color-mix(in srgb, var(--im-glow,#6366f1) 60%, transparent);
-      background:linear-gradient(155deg,rgba(255,255,255,.06),rgba(255,255,255,0) 58%),#0c1220;
-      transition:transform .25s ease, box-shadow .25s ease; }
-    .im-hero:hover { transform:translateY(-3px); box-shadow:0 18px 40px -14px rgba(0,0,0,.6); }
-    .im-hero::after { content:''; position:absolute; right:-30px; top:-30px; width:130px; height:130px;
-      border-radius:50%; filter:blur(30px); opacity:.3; background:var(--im-glow,#6366f1); pointer-events:none; }
-    .im-hero-top { display:flex; align-items:center; gap:9px; margin-bottom:12px; position:relative; }
-    .im-hero-ic { width:30px; height:30px; border-radius:10px; display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;
-      background:color-mix(in srgb, var(--im-glow,#6366f1) 20%, transparent);
-      border:1px solid color-mix(in srgb, var(--im-glow,#6366f1) 38%, transparent); }
-    .im-hero-label { font-size:10.5px; font-weight:800; text-transform:uppercase; letter-spacing:.09em; color:#8b98b0; line-height:1.3; }
-    .im-hero-val { font-family:'Outfit',sans-serif; font-weight:800; letter-spacing:-.025em; line-height:1;
-      font-size:clamp(1.7rem,3.3vw,2.6rem); font-variant-numeric:tabular-nums; position:relative;
-      background:linear-gradient(120deg, var(--im-glow,#6366f1), color-mix(in srgb, var(--im-glow,#6366f1) 35%, #ffffff));
-      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; }
-    .im-hero-sub { font-size:11px; color:#7d8aa3; margin-top:9px; line-height:1.5; position:relative; }
-    .im-hero-sub b { color:#c3cddd; font-weight:700; }
-
-    /* Ölçüm kaynağını her rakamın altında göstermek şeffaflığın taşıyıcısı:
-       hangi rakam nereden geliyor sorusu sayfada cevapsız kalmamalı. */
-    .im-src { display:inline-flex; align-items:center; gap:4px; margin-top:8px; padding:2px 7px; border-radius:6px;
-      font-size:9.5px; font-weight:700; letter-spacing:.03em; color:#64748b;
-      background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); }
-    .im-card { background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,0)),#0b101c;
-      border:1px solid rgba(255,255,255,.07); border-radius:20px; padding:20px; }
-    .im-card-h { font-size:13px; font-weight:800; color:#e8edf5; letter-spacing:-.01em; }
-    .im-card-s { font-size:10.5px; color:#6c7a92; margin-top:3px; line-height:1.55; }
-    .im-age-row { display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.05); }
-    .im-age-row:last-child { border-bottom:none; }
-    .im-age-tag { font-size:10px; font-weight:800; letter-spacing:.03em; padding:3px 8px; border-radius:6px; white-space:nowrap; min-width:82px; text-align:center; }
-    .im-age-bar { flex:1; height:7px; border-radius:99px; background:rgba(255,255,255,.05); overflow:hidden; }
-    .im-age-fill { height:100%; border-radius:99px; width:0; transition:width .7s cubic-bezier(.22,1,.36,1); }
-    /* Katman 2 (ödeme defteri) henüz kurulmadıysa gösterilen bilgi kutusu —
-       burada UYDURMA rakam yerine ölçümün neden yok olduğu yazıyor. */
-    .im-off { border:1px dashed rgba(148,163,184,.28); border-radius:18px; padding:22px;
-      background:repeating-linear-gradient(135deg,rgba(255,255,255,.022) 0 12px,transparent 12px 24px); }
-
     /* Gün Filtresi — eski "Eşik Filtresi/Motor Ayarları" panelinin yerine */
     .am-day-chip {
       padding:7px 15px; border-radius:11px; font-size:12px; font-weight:700; letter-spacing:.01em;
@@ -2405,158 +2362,166 @@
   </div>
 
   <!-- ═══════════════ SİSTEM ETKİSİ (PARA) VIEW ═══════════════
-       Bu sayfanın tek sorusu: "bu sistem kasaya para kazandırdı mı?"
-       KURAL: buradaki HER rakam Supabase'deki gerçek satırdan gelir.
-       Tahmin, katsayı, projeksiyon YOK. Ölçülemeyen bir şey varsa rakam
-       uydurmak yerine "ölçüm devrede değil" yazılır (bkz. #imLedgerOff).
-       Kapsam diğer analitikle aynı: created_time >= 2026-01-01 ve yalnızca
-       satış takımları (bkz. TeamMap / _nc_sales_team_aliases). -->
-  <div id="view-impact" class="hidden space-y-5">
-    <div class="flex items-start justify-between gap-3 flex-wrap">
+       Sayfanın tek sorusu: "bu sistem devreye girdiğinden bu yana kasaya
+       ne kadar para girdi?"
+
+       KURAL 1 — VERİ: her rakam Supabase'deki gerçek satırdan gelir. Tahmin,
+       katsayı, projeksiyon YOK. Ölçülemeyen bir şey varsa rakam uydurmak
+       yerine "ölçüm devrede değil" yazılır (bkz. #imLedgerOff).
+
+       KURAL 2 — TASARIM: burada YENİ görsel sınıf TANIMLANMIYOR. Sayfa
+       yalnızca zaten İKİ TEMADA DA eşlenmiş yapı taşlarını kullanıyor:
+       .am-panel / .am-kpi / .tbl / .nc-toolbar / .nc-refresh-btn ve
+       text-slate-* + bg-gray-900 yardımcıları (bkz. liquid-glass.css
+       "am-* bileşenleri" bölümü + liquid-glass-dark.css). İlk sürümde kendi
+       .im-* sınıflarım vardı; onların AÇIK TEMA karşılığı olmadığı için sayfa
+       açık temada siyah kalıyordu — kaldırıldı. Çubuk renkleri accent
+       tonlarının düşük alfası (ör. #ef444422): beyaz/siyah değil renk tonu
+       olduğu için hem açık hem koyu zeminde görünür, tema değişkeni
+       gerektirmez. -->
+  <div id="view-impact" class="hidden">
+    <div class="flex items-start justify-between gap-3 mb-4 flex-wrap">
       <div>
         <h2 class="text-xl font-bold text-white">Sistem Etkisi — Para</h2>
         <p class="text-xs text-slate-400 mt-0.5">
-          Sistemin yakaladığı ve kasaya giren para. Tüm rakamlar gerçek kayıtlardan —
-          tahmin yok. <span id="imScopeNote" class="text-slate-500"></span>
+          Bu sistem devreye girdiğinden bu yana kasaya giren para.
+          Her rakam gerçek kayıttan geliyor — tahmin yok.
+          <span id="imScopeNote" class="text-slate-500"></span>
         </p>
       </div>
-      <div class="flex items-center gap-2">
+      <div class="nc-toolbar">
         <span id="imExportMount"></span>
-        <button onclick="loadImpact(true)" class="am-btn" id="imRefreshBtn">
-          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
-          Yenile
-        </button>
+        <button onclick="loadImpact(true)" class="nc-refresh-btn" id="imRefreshBtn">↻ Yenile</button>
       </div>
     </div>
 
-    <!-- ── HERO: sayfanın ana mesajı, 3 büyük para rakamı ── -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <!-- 1) Sistemin ŞU AN işaret ettiği, tahsil edilmesi gereken para -->
-      <div class="im-hero" style="--im-glow:#f59e0b">
-        <div class="im-hero-top">
-          <div class="im-hero-ic">⚠️</div>
-          <div class="im-hero-label">Tahsil Edilmeyi<br>Bekleyen Para</div>
-        </div>
-        <div class="im-hero-val" id="imOutstanding">—</div>
-        <div class="im-hero-sub" id="imOutstandingSub">—</div>
-        <span class="im-src">deals · Stage=Won &amp; ödeme eksik</span>
+    <!-- ── ANA CEVAP: solda "kasaya girdi", sağda "hâlâ duruyor" ── -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div class="am-kpi" style="--am-glow:#22c55e;padding:22px 24px">
+        <div class="am-kpi-label" style="margin-top:0">İşaretlediğimiz deal'lerden kasaya giren</div>
+        <div class="am-kpi-val text-emerald-400" id="imHeroIn" style="font-size:clamp(2rem,4.2vw,3rem);margin-top:10px">—</div>
+        <p class="text-xs text-slate-400 mt-2" id="imHeroInSub">—</p>
       </div>
-      <!-- 2) İşaretlenip sonra tahsil edilen (alarms.close_reason kanıtı) -->
-      <div class="im-hero" style="--im-glow:#22c55e">
-        <div class="im-hero-top">
-          <div class="im-hero-ic">✅</div>
-          <div class="im-hero-label">İşaretlendi,<br>Sonra Tahsil Edildi</div>
-        </div>
-        <div class="im-hero-val" id="imRecovered">—</div>
-        <div class="im-hero-sub" id="imRecoveredSub">—</div>
-        <span class="im-src">alarms · ödeme ile kapanan alarmlar</span>
-      </div>
-      <!-- 3) Fazla ödeme = finansal veri hatası (para riski) -->
-      <div class="im-hero" style="--im-glow:#ec4899">
-        <div class="im-hero-top">
-          <div class="im-hero-ic">🔎</div>
-          <div class="im-hero-label">Yakalanan<br>Fazla Ödeme</div>
-        </div>
-        <div class="im-hero-val" id="imOverpaid">—</div>
-        <div class="im-hero-sub" id="imOverpaidSub">—</div>
-        <span class="im-src">deals · ödenen &gt; sözleşme</span>
+      <div class="am-kpi" style="--am-glow:#f59e0b;padding:22px 24px">
+        <div class="am-kpi-label" style="margin-top:0">Sistem buldu, henüz tahsil edilmedi</div>
+        <div class="am-kpi-val text-amber-400" id="imHeroWait" style="font-size:clamp(2rem,4.2vw,3rem);margin-top:10px">—</div>
+        <p class="text-xs text-slate-400 mt-2" id="imHeroWaitSub">—</p>
       </div>
     </div>
 
-    <!-- ── KATMAN 2: ödeme defteri (kesin € ölçümü) ── -->
-    <div id="imLedgerOn" style="display:none">
-      <div class="im-card">
-        <div class="flex items-start justify-between gap-3 flex-wrap mb-3">
-          <div>
-            <div class="im-card-h">💰 İşaretlemeden Sonra Gelen Tahsilat — kesin ölçüm</div>
-            <div class="im-card-s">
-              Ödeme defteri her tutar değişimini zaman damgasıyla yazıyor. Aşağıdaki rakam,
-              sistem deal'i işaretledikten <b>sonra</b> hesaba giren paranın toplamı.
-              Bu bir zaman sırası tespitidir — "işaretlenmese gelmezdi" demez.
-            </div>
-          </div>
-          <div class="text-right">
-            <div class="im-hero-val" style="--im-glow:#22c55e;font-size:clamp(1.4rem,2.4vw,2rem)" id="imLedgerTotal">—</div>
-            <div class="text-[10px] text-slate-500 mt-1" id="imLedgerMeta">—</div>
-          </div>
+    <!-- ── Destekleyici dört rakam ── -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
+      <div class="am-kpi text-center" style="--am-glow:#22c55e">
+        <div class="am-kpi-icon">✅</div>
+        <div class="am-kpi-val text-emerald-400" id="imKpiDeals">—</div>
+        <div class="am-kpi-label">Tahsili tamamlanan deal</div>
+      </div>
+      <div class="am-kpi text-center" style="--am-glow:#38bdf8">
+        <div class="am-kpi-icon">⚡</div>
+        <div class="am-kpi-val text-cyan-400" id="imKpiDays">—</div>
+        <div class="am-kpi-label">İşaretten tahsile (medyan)</div>
+      </div>
+      <div class="am-kpi text-center" style="--am-glow:#ec4899">
+        <div class="am-kpi-icon">🔎</div>
+        <div class="am-kpi-val text-pink-400" id="imKpiOver">—</div>
+        <div class="am-kpi-label">Yakalanan fazla ödeme</div>
+      </div>
+      <div class="am-kpi text-center" style="--am-glow:#6366f1">
+        <div class="am-kpi-icon">📅</div>
+        <div class="am-kpi-val text-indigo-400" id="imKpiAge">—</div>
+        <div class="am-kpi-label">Sistem kaç gündür çalışıyor</div>
+      </div>
+    </div>
+
+    <!-- ── KATMAN 2: kesin € ölçümü (ödeme defteri) ── -->
+    <div id="imLedgerOn" class="am-panel p-5 mb-4" style="display:none">
+      <div class="flex items-start justify-between gap-3 flex-wrap mb-4">
+        <div>
+          <h3 class="text-sm font-bold text-white">💰 İşaretlemeden sonra gelen tahsilat — kesin ölçüm</h3>
+          <p class="text-[11px] text-slate-400 mt-1" style="max-width:640px;line-height:1.7">
+            Ödeme defteri her tutar değişimini zaman damgasıyla yazıyor. Aşağıdaki rakam,
+            sistem deal'i işaretledikten <b class="text-slate-200">sonra</b> hesaba giren paranın toplamı.
+          </p>
         </div>
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <div>
-            <div class="im-card-s mb-2" style="font-weight:700;color:#94a3b8">Günlük tahsilat akışı</div>
-            <div id="imLedgerChart"></div>
-          </div>
-          <div>
-            <div class="im-card-s mb-2" style="font-weight:700;color:#94a3b8">Takım bazlı</div>
-            <div id="imLedgerTeams"></div>
-          </div>
+        <div class="text-right">
+          <div class="am-kpi-val text-emerald-400" id="imLedgerTotal" style="font-size:clamp(1.4rem,2.6vw,2rem)">—</div>
+          <div class="text-[10px] text-slate-500 mt-1" id="imLedgerMeta">—</div>
         </div>
-        <div class="mt-4">
-          <div class="im-card-s mb-2" style="font-weight:700;color:#94a3b8">
-            En büyük kalemler — rakamın arkasındaki gerçek deal'ler
-          </div>
-          <div class="overflow-auto" style="max-height:340px">
-            <table class="tbl w-full">
-              <thead><tr class="text-slate-400">
-                <th>Deal</th><th>Takım</th><th>Danışman</th>
-                <th class="text-right">Gelen Tutar</th><th class="text-right">Sözleşme</th>
-                <th class="text-right">Gün</th><th>Tarih</th>
-              </tr></thead>
-              <tbody id="imLedgerTbody"></tbody>
-            </table>
-          </div>
+      </div>
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        <div>
+          <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Günlük tahsilat akışı</div>
+          <div id="imLedgerChart"></div>
+        </div>
+        <div>
+          <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">Takım bazlı</div>
+          <div id="imLedgerTeams"></div>
+        </div>
+      </div>
+      <div class="mt-5">
+        <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+          En büyük kalemler — rakamın arkasındaki gerçek deal'ler
+        </div>
+        <div class="overflow-auto" style="max-height:340px">
+          <table class="tbl w-full">
+            <thead><tr class="text-slate-400">
+              <th>Deal</th><th>Takım</th><th>Danışman</th>
+              <th class="text-right">Gelen Tutar</th><th class="text-right">Sözleşme</th>
+              <th class="text-right">Gün</th><th>Tarih</th>
+            </tr></thead>
+            <tbody id="imLedgerTbody"></tbody>
+          </table>
         </div>
       </div>
     </div>
     <!-- Defter kurulmamışsa: sahte rakam yerine dürüst açıklama -->
-    <div id="imLedgerOff" class="im-off" style="display:none">
+    <div id="imLedgerOff" class="am-panel p-5 mb-4" style="display:none">
       <div class="flex items-start gap-3">
-        <div style="font-size:22px;line-height:1">🧾</div>
+        <div style="font-size:20px;line-height:1;flex-shrink:0">🧾</div>
         <div>
-          <div class="im-card-h">Kesin € ölçümü henüz devrede değil</div>
-          <div class="im-card-s" style="max-width:820px">
-            "Alarmdan <b>sonra</b> tam olarak kaç € geldi?" sorusunu kanıtlamak için ödemenin
-            zaman içindeki değişimi gerekiyor. Bu bilgi şu anda hiçbir yerde tutulmuyor:
-            Zoho senkronu <code style="color:#94a3b8">total_paid_amount</code> alanını üzerine yazıyor,
-            Zoho'nun 169 ham alanı arasında ödeme tarihi yok. Bu yüzden geriye dönük
-            <b>üretilemez</b> — ve burada tahmini bir rakam gösterilmiyor.
-            <br><br>
-            Ölçümü başlatmak için <code style="color:#94a3b8">deal_payment_history.sql</code> dosyasını
-            Supabase SQL Editor'de bir kez çalıştırmak yeterli. O andan itibaren her ödeme
-            değişimi zaman damgasıyla kaydedilir ve bu bölüm kendiliğinden açılır.
-            Yukarıdaki üç rakam bundan bağımsız, bugün de gerçek.
-          </div>
+          <h3 class="text-sm font-bold text-white" id="imLedgerOffTitle">Kesin € ölçümü henüz devrede değil</h3>
+          <p class="text-[11px] text-slate-400 mt-1.5" style="max-width:860px;line-height:1.75">
+            Yukarıdaki rakamlar bugün de gerçek. Ama "alarmdan <b class="text-slate-200">sonra</b> tam olarak
+            kaç € geldi?" sorusunu kanıtlamak için ödemenin zaman içindeki değişimi gerekiyor ve bu bilgi
+            şu anda hiçbir yerde tutulmuyor: Zoho senkronu ödenen tutarı üzerine yazıyor, Zoho'nun 169 ham
+            alanı arasında ödeme tarihi yok. Bu yüzden geriye dönük <b class="text-slate-200">üretilemez</b>
+            — ve burada tahmini bir rakam gösterilmiyor. Ölçümü başlatmak için
+            <code class="text-slate-300">deal_payment_history.sql</code> dosyasını Supabase SQL Editor'de
+            bir kez çalıştırmak yeterli; o andan sonra her ödeme değişimi zaman damgasıyla kaydedilir ve
+            bu bölüm kendiliğinden açılır.
+          </p>
         </div>
       </div>
     </div>
 
-    <!-- ── Bekleyen paranın yaşlanması + takım dağılımı ── -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div class="im-card">
-        <div class="im-card-h">⏳ Bekleyen paranın yaşı</div>
-        <div class="im-card-s mb-3">
-          Hastanın geliş tarihinden bu yana geçen süre. Yaşlı para tahsil edilmesi
-          en zor olan paradır — en üstteki dilim en acil olan.
-        </div>
+    <!-- ── Bekleyen paranın yaşı + takım dağılımı ── -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+      <div class="am-panel p-5">
+        <h3 class="text-sm font-bold text-white">⏳ Bekleyen paranın yaşı</h3>
+        <p class="text-[11px] text-slate-400 mt-1 mb-4">
+          Hastanın geliş tarihinden bu yana geçen süre. Yaşlı para, tahsil edilmesi en zor olan para.
+        </p>
         <div id="imAging"></div>
       </div>
-      <div class="im-card">
-        <div class="im-card-h">🏷️ Takım bazlı bekleyen para</div>
-        <div class="im-card-s mb-3">Hangi takımın üzerinde ne kadar tahsil edilmemiş para var.</div>
+      <div class="am-panel p-5">
+        <h3 class="text-sm font-bold text-white">🏷️ Takım bazlı bekleyen para</h3>
+        <p class="text-[11px] text-slate-400 mt-1 mb-4">
+          Hangi takımın üzerinde ne kadar tahsil edilmemiş para var.
+        </p>
         <div id="imTeamBars"></div>
       </div>
     </div>
 
-    <!-- ── Kanıt tablosu: en büyük bekleyen kalemler ── -->
-    <div class="im-card">
-      <div class="flex items-start justify-between gap-3 flex-wrap mb-3">
+    <!-- ── Bekleyen kalemler ── -->
+    <div class="am-panel p-5">
+      <div class="flex items-start justify-between gap-3 flex-wrap mb-4">
         <div>
-          <div class="im-card-h">📋 En büyük bekleyen kalemler</div>
-          <div class="im-card-s">
+          <h3 class="text-sm font-bold text-white">📋 En büyük bekleyen kalemler</h3>
+          <p class="text-[11px] text-slate-400 mt-1">
             Won olmuş ama ödemesi eksik deal'ler — en büyük tutardan başlayarak.
-            Bu liste "işaretlenen para"nın tek tek nereden geldiğini gösterir.
-          </div>
+          </p>
         </div>
-        <span class="im-src" id="imTableCount">—</span>
+        <span class="text-[10px] text-slate-500 font-semibold" id="imTableCount">—</span>
       </div>
       <div class="overflow-auto" style="max-height:420px">
         <table class="tbl w-full">
@@ -8522,6 +8487,7 @@
     let _imLedgerOff = false;    // true = defter kurulmamış (RPC yok)
     let _imRows = [];            // bekleyen kalemler, render/export için
     let _imLoading = false;
+    let _imFirstAlarmAt = null;  // ilk alarmin tarihi = sistemin devreye girdigi an
 
     function _imSalesDeals() {
       return (allDeals || []).filter(d =>
@@ -8561,28 +8527,24 @@
       const won = sales.filter(d => String(d['Stage'] || '').toLowerCase().includes('won'));
       const under = won.filter(d => _imShortfall(d) > 0.5);
       const over  = won.filter(d => _imShortfall(d) < -0.5);
-
-      const outTotal = under.reduce((s, d) => s + _imShortfall(d), 0);
+      const waiting = under.reduce((s, d) => s + _imShortfall(d), 0);
       const overTotal = over.reduce((s, d) => s - _imShortfall(d), 0);
 
       const scope = document.getElementById('imScopeNote');
-      if (scope) scope.textContent = I18N.t('Kapsam: 2026 · satış takımları') +
+      if (scope) scope.textContent = '· ' + I18N.t('Kapsam: 2026 · satış takımları') +
         ' · ' + sales.length.toLocaleString('tr-TR') + ' ' + I18N.t('deal');
 
-      // ── 1) Tahsil edilmeyi bekleyen ──
-      document.getElementById('imOutstanding').textContent = fmtMoney(outTotal);
-      document.getElementById('imOutstandingSub').innerHTML =
-        '<b>' + under.length.toLocaleString('tr-TR') + '</b> ' +
-        I18N.t("Won olmuş ama ödemesi eksik deal. Sistemin işaret ettiği, kasaya girmesi gereken para.");
-
-      // ── 2) İşaretlendi, sonra tahsil edildi (alarm kanıtı) ──
-      const rec = document.getElementById('imRecovered');
-      const recSub = document.getElementById('imRecoveredSub');
+      // ── ANA CEVAP (sol): işaretlenen deal'lerden kasaya giren ──
+      // Kanıt: ödeme eksikliği yüzünden alarm açılmış, sonra ödemesi
+      // tamamlandığı için motor tarafından kapatılmış deal'ler.
+      const heroIn = document.getElementById('imHeroIn');
+      const heroInSub = document.getElementById('imHeroInSub');
       if (_imAlarms === null) {
-        rec.textContent = '…';
-        recSub.textContent = I18N.t('Alarm kanıtı yükleniyor…');
+        heroIn.textContent = '…';
+        heroInSub.textContent = I18N.t('Alarm kanıtı yükleniyor…');
+        document.getElementById('imKpiDeals').textContent = '…';
+        document.getElementById('imKpiDays').textContent = '…';
       } else {
-        // alarms.deal_id -> deal eşlemesi; yalnızca satış takımı deal'leri
         const byId = new Map(sales.map(d => [String(d['Deal Id']), d]));
         const ids = new Set(_imAlarms.map(a => String(a.deal_id)));
         const matched = [...ids].map(i => byId.get(i)).filter(Boolean);
@@ -8592,23 +8554,34 @@
           .map(a => (new Date(a.closed_at) - new Date(a.created_at)) / 86400000)
           .sort((a, b) => a - b);
         const med = days.length ? days[Math.floor(days.length / 2)] : null;
-        rec.textContent = fmtMoney(collected);
-        recSub.innerHTML =
-          '<b>' + matched.length.toLocaleString('tr-TR') + '</b> ' +
-          I18N.t('deal ödeme eksikliği nedeniyle işaretlendi, ardından tahsilatı tamamlandı') +
-          (med === null ? '' : ' · ' + I18N.t('medyan') + ' <b>' + med.toFixed(1) + ' ' + I18N.t('gün') + '</b>') +
-          '.<br><span style="color:#64748b">' +
-          I18N.t('Bu, deal’lerin bugünkü toplam tahsilatı — tamamı alarmdan sonra gelmiş olmayabilir. Kesin ayrım için ödeme defteri gerekiyor (aşağıda).') +
+
+        heroIn.textContent = fmtMoney(collected);
+        heroInSub.innerHTML = '<b class="text-slate-200">' + matched.length.toLocaleString('tr-TR') + '</b> ' +
+          I18N.t('deal ödeme eksikliği yüzünden işaretlendi, sonra ödemesi tamamlandı.') +
+          ' <span class="text-slate-500">' +
+          I18N.t('Bu tutarın tamamı işaretlemeden sonra gelmiş olmayabilir — kesin ayrım için aşağıdaki ödeme defteri gerekiyor.') +
           '</span>';
+        document.getElementById('imKpiDeals').textContent = matched.length.toLocaleString('tr-TR');
+        document.getElementById('imKpiDays').textContent =
+          med === null ? '—' : (med.toFixed(1) + ' ' + I18N.t('gün'));
       }
 
-      // ── 3) Fazla ödeme (finansal veri hatası) ──
-      document.getElementById('imOverpaid').textContent = fmtMoney(overTotal);
-      document.getElementById('imOverpaidSub').innerHTML =
-        '<b>' + over.length.toLocaleString('tr-TR') + '</b> ' +
-        I18N.t("deal'de ödenen tutar sözleşmeden fazla. Ya iade ya da hatalı kayıt — her iki durumda da para riski.");
+      // ── ANA CEVAP (sağ): bulundu ama hâlâ tahsil edilmedi ──
+      document.getElementById('imHeroWait').textContent = fmtMoney(waiting);
+      document.getElementById('imHeroWaitSub').innerHTML =
+        '<b class="text-slate-200">' + under.length.toLocaleString('tr-TR') + '</b> ' +
+        I18N.t("deal Won olarak işaretlenmiş ama ödemesi eksik. Sistemin bulduğu, kasaya girmesi gereken para.");
 
-      // ── Yaşlanma ──
+      document.getElementById('imKpiOver').textContent = fmtMoney(overTotal);
+      const ageEl = document.getElementById('imKpiAge');
+      if (_imFirstAlarmAt) {
+        const d = Math.max(0, Math.floor((Date.now() - new Date(_imFirstAlarmAt)) / 86400000));
+        ageEl.textContent = d.toLocaleString('tr-TR') + ' ' + I18N.t('gün');
+      } else ageEl.textContent = '—';
+
+      // ── Bekleyen paranın yaşı ──
+      // Tema notu: çubuk rengi accent tonunun düşük alfası; beyaz/siyah
+      // kullanılmadığı için iki temada da görünür (tema değişkeni gerekmez).
       const agg = {};
       IM_AGE_BUCKETS.forEach(b => { agg[b.key] = { n: 0, sum: 0 }; });
       under.forEach(d => {
@@ -8621,23 +8594,30 @@
         agg[key].n++; agg[key].sum += _imShortfall(d);
       });
       const maxSum = Math.max(1, ...IM_AGE_BUCKETS.map(b => agg[b.key].sum));
-      const ageHost = document.getElementById('imAging');
-      ageHost.innerHTML = IM_AGE_BUCKETS.filter(b => agg[b.key].n > 0).map(b => {
-        const a = agg[b.key];
-        return '<div class="im-age-row">' +
-          '<span class="im-age-tag" style="background:' + b.color + '22;color:' + b.color + ';border:1px solid ' + b.color + '44">' +
-            _escHtml(I18N.t(b.label)) + '</span>' +
-          '<span class="im-age-bar"><span class="im-age-fill" data-w="' +
-            (a.sum / maxSum * 100).toFixed(1) + '" style="background:linear-gradient(90deg,' + b.color + ',' + b.color + '99)"></span></span>' +
-          '<span style="min-width:118px;text-align:right;font-size:12px;font-weight:800;color:#e2e8f0;font-variant-numeric:tabular-nums">' +
-            fmtMoney(a.sum) + '</span>' +
-          '<span style="min-width:62px;text-align:right;font-size:10.5px;color:#64748b">' +
-            a.n + ' ' + I18N.t('deal') + '</span>' +
-        '</div>';
-      }).join('') || '<div class="ac-empty">' + I18N.t('Veri yok.') + '</div>';
+      const shown = IM_AGE_BUCKETS.filter(b => agg[b.key].n > 0);
+      document.getElementById('imAging').innerHTML = !shown.length
+        ? '<p class="text-xs text-slate-500">' + I18N.t('Veri yok.') + '</p>'
+        : '<table class="tbl w-full"><tbody>' + shown.map(b => {
+            const a = agg[b.key];
+            return '<tr>' +
+              '<td class="py-2" style="width:104px">' +
+                '<span style="display:inline-block;padding:3px 9px;border-radius:6px;font-size:10px;font-weight:800;white-space:nowrap;' +
+                  'color:' + b.color + ';background:' + b.color + '1f;border:1px solid ' + b.color + '3d">' +
+                  _escHtml(I18N.t(b.label)) + '</span></td>' +
+              '<td class="py-2">' +
+                '<span style="display:block;height:8px;border-radius:99px;background:' + b.color + '1f;overflow:hidden">' +
+                  '<span class="im-age-fill" data-w="' + (a.sum / maxSum * 100).toFixed(1) + '" ' +
+                    'style="display:block;height:100%;width:0;border-radius:99px;background:' + b.color +
+                    ';transition:width .7s cubic-bezier(.22,1,.36,1)"></span></span></td>' +
+              '<td class="py-2 text-right font-bold text-slate-200" style="width:126px;font-variant-numeric:tabular-nums">' +
+                fmtMoney(a.sum) + '</td>' +
+              '<td class="py-2 text-right text-slate-500" style="width:70px;font-size:11px">' +
+                a.n + ' ' + I18N.t('deal') + '</td>' +
+            '</tr>';
+          }).join('') + '</tbody></table>';
       // Genişlik bir sonraki karede — 0'dan büyüyünce animasyon tetiklenir
       requestAnimationFrame(() => {
-        ageHost.querySelectorAll('.im-age-fill').forEach(el => { el.style.width = el.dataset.w + '%'; });
+        document.querySelectorAll('#imAging .im-age-fill').forEach(el => { el.style.width = el.dataset.w + '%'; });
       });
 
       // ── Takım bazlı bekleyen para ──
@@ -8652,7 +8632,7 @@
           { fmt: _imMoney, unit: '', emptyText: I18N.t('Veri yok.') });
       }
 
-      // ── Bekleyen kalemler tablosu ──
+      // ── Bekleyen kalemler ──
       _imRows = under.slice().sort((a, b) => _imShortfall(b) - _imShortfall(a));
       const cnt = document.getElementById('imTableCount');
       if (cnt) cnt.textContent = _imRows.length.toLocaleString('tr-TR') + ' ' + I18N.t('kayıt');
@@ -8680,18 +8660,21 @@
       const on = document.getElementById('imLedgerOn');
       const off = document.getElementById('imLedgerOff');
       if (!on || !off) return;
+      // Yükleme bitmeden ikisi de gizli: defterin var olup olmadığı henüz
+      // bilinmiyorken "kurulu değil" demek yanlış bilgi olurdu.
       if (_imLedgerOff || !_imLedger) {
         on.style.display = 'none';
         off.style.display = _imLedgerOff ? 'block' : 'none';
         return;
       }
       const L = _imLedger;
-      // Defter kurulu ama henüz hiç ödeme değişimi yakalanmadıysa da dürüst ol
+      // Defter kurulu ama henüz hiç ödeme değişimi yakalanmadıysa da dürüst ol:
+      // 0 € bir "kazanç" gibi gösterilmemeli.
       if (!Number(L.ledger_rows)) {
         on.style.display = 'none';
         off.style.display = 'block';
-        const h = off.querySelector('.im-card-h');
-        if (h) h.textContent = I18N.t('Ödeme defteri kurulu — ilk ödeme değişimi bekleniyor');
+        const t = document.getElementById('imLedgerOffTitle');
+        if (t) t.textContent = I18N.t('Ödeme defteri kurulu — ilk ödeme değişimi bekleniyor');
         return;
       }
       on.style.display = 'block';
@@ -8699,7 +8682,7 @@
       document.getElementById('imLedgerTotal').textContent = fmtMoney(L.recovered_total || 0);
       const started = L.ledger_started_at ? formatDate(String(L.ledger_started_at).slice(0, 10)) : '—';
       document.getElementById('imLedgerMeta').innerHTML =
-        '<b style="color:#94a3b8">' + Number(L.recovered_deals || 0).toLocaleString('tr-TR') + '</b> ' +
+        '<b class="text-slate-300">' + Number(L.recovered_deals || 0).toLocaleString('tr-TR') + '</b> ' +
         I18N.t('deal') + ' · ' +
         (L.days_median == null ? '' : I18N.t('medyan') + ' ' + Number(L.days_median).toFixed(1) + ' ' + I18N.t('gün') + ' · ') +
         I18N.t('ölçüm başlangıcı') + ': ' + started;
@@ -8742,12 +8725,15 @@
         // sunucu tarafında filtrelenip yalnızca ilgili ~300 satır iniyor.
         const alarmUrl = `${SUPABASE_URL}/rest/v1/alarms` +
           `?select=deal_id,created_at,closed_at,close_reason&${IM_PAY_CLOSE_Q}&limit=2000`;
-        // (b) Ölçüm: ödeme defteri RPC'si. Kurulmadıysa 404/PGRST202 döner —
+        // (b) Sistemin yaşı = ilk alarmın tarihi (tek satır iniyor)
+        const firstUrl = `${SUPABASE_URL}/rest/v1/alarms?select=created_at&order=created_at.asc&limit=1`;
+        // (c) Ölçüm: ödeme defteri RPC'si. Kurulmadıysa 404/PGRST202 döner —
         // bu bir hata değil, "henüz kurulmamış" demek.
         const rpcUrl = `${SUPABASE_URL}/rest/v1/rpc/admin_payment_recovery`;
 
-        const [aRes, lRes] = await Promise.all([
+        const [aRes, fRes, lRes] = await Promise.all([
           fetch(alarmUrl, { headers: H }).catch(() => null),
+          fetch(firstUrl, { headers: H }).catch(() => null),
           fetch(rpcUrl, {
             method: 'POST', headers: { ...H, 'Content-Type': 'application/json' },
             body: JSON.stringify({ p_payment_only: false }),
@@ -8756,6 +8742,11 @@
 
         if (aRes && aRes.ok) _imAlarms = await aRes.json().catch(() => []);
         else if (_imAlarms === null) _imAlarms = [];
+
+        if (fRes && fRes.ok) {
+          const rows = await fRes.json().catch(() => []);
+          if (rows && rows[0]) _imFirstAlarmAt = rows[0].created_at;
+        }
 
         if (lRes && lRes.ok) { _imLedger = await lRes.json().catch(() => null); _imLedgerOff = !_imLedger; }
         else { _imLedger = null; _imLedgerOff = true; }
