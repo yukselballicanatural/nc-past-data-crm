@@ -1247,9 +1247,15 @@
         <div style="font-size:11px;color:#64748b" id="noshowPatientName"></div>
       </div>
     </div>
-    <label id="noshowNoteLabel" style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Not <span style="color:#475569;font-weight:400">(isteğe bağlı)</span></label>
+    <label id="noshowNoteLabel" style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Not <span id="noshowNoteReq" style="color:#475569;font-weight:400">(isteğe bağlı)</span></label>
     <textarea id="noshowNote" rows="3" maxlength="200" placeholder="Kısa not (isteğe bağlı)…" class="filter-inp" style="width:100%;box-sizing:border-box;resize:none;font-size:12px" oninput="document.getElementById('noshowNoteCount').textContent=this.value.length+' / 200'"></textarea>
     <div style="text-align:right;font-size:10px;color:#475569;margin-top:3px;margin-bottom:16px"><span id="noshowNoteCount">0 / 200</span></div>
+    <!-- Yalnızca "Gelemedi" (no_show) — alarmı KAPATAN tek sonuç bu popup
+         içinde — gösteriliyor: Hasta Geldi/Muayenede/İşlemlerde alarmı
+         kapatmıyor, görsel zorunluluğu onlara uygulanmıyor. -->
+    <div id="noshowAttachWrap" style="display:none;margin-bottom:16px">
+      <div id="noshowAttachWidget"></div>
+    </div>
     <div style="display:flex;gap:8px">
       <button onclick="closeNoshowModal()" class="nc-out-cancel" style="flex:1;padding:10px;background:#1e293b;border:1px solid #334155;border-radius:11px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">İptal</button>
       <button id="noshowConfirmBtn" onclick="confirmNoshow()" class="nc-out-ok" style="flex:1;padding:10px;background:#0d9488;border:none;border-radius:11px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kaydet</button>
@@ -3175,7 +3181,24 @@
     // saklanıyor (kolonu değiştirmemek için eski kolon yeniden kullanıldı).
     const title = document.getElementById('alarmTitleInput').value.trim();
     if (!newStatus && !note && !title) { showNotice('Durum seçin, başlık girin veya not girin.', 'error'); return; }
+
+    // Alarmı KAPATAN durumlar (closed_at yazılan üçlü, aşağıdaki blokla AYNI
+    // liste olmak zorunda) not + en az bir görsel olmadan geçemez — "kafasına
+    // göre kapatma" buradan giriyordu. Diğer durum değişiklikleri (seen,
+    // takipte vb.) hâlâ serbest.
     const btn = document.getElementById('btnSaveAction');
+    if (['no_show', 'closed', 'cancelled'].includes(newStatus)) {
+      if (!note) { showNotice('Alarmı kapatmak için not yazmak zorunludur.', 'error'); return; }
+      btn.disabled = true; btn.textContent = I18N.t('Kontrol ediliyor...');
+      // DOM'daki önizleme yerine sunucuya soruyor (bkz. NCAttach.hasFiles) —
+      // yükleme sessizce başarısız olduysa yerel state yanıltıcı olurdu.
+      const hasImg = await NCAttach.hasFiles(currentAlarm.id);
+      if (!hasImg) {
+        btn.disabled = false; btn.textContent = I18N.t('Kaydet');
+        showNotice('Alarmı kapatmak için en az bir görsel eklemek zorunludur.', 'error');
+        return;
+      }
+    }
     btn.disabled = true; btn.textContent = I18N.t('Kaydediliyor...');
 
     const now = new Date().toISOString();
@@ -3459,6 +3482,22 @@
     const btn = document.getElementById('noshowConfirmBtn');
     btn.style.background = meta.btn;
     btn.textContent = I18N.t(meta.btnText);
+
+    // Yalnızca "Gelemedi" alarmı KAPATIYOR (bkz. quickAction) — not ve
+    // görsel zorunluluğu yalnızca bu durumda geçerli. Hasta Geldi/Muayenede/
+    // İşlemlerde alarmı açık bırakır, buradaki serbest davranış korunuyor.
+    const isClosing = status === 'no_show';
+    document.getElementById('noshowNoteReq').textContent = I18N.t(isClosing ? '(zorunlu)' : '(isteğe bağlı)');
+    note.placeholder = I18N.t(isClosing ? 'Neden gelmedi? (zorunlu)…' : 'Kısa not (isteğe bağlı)…');
+    const attachWrap = document.getElementById('noshowAttachWrap');
+    attachWrap.style.display = isClosing ? 'block' : 'none';
+    if (isClosing) {
+      document.getElementById('noshowAttachWidget').innerHTML =
+        NCAttach.renderWidget(`'${_jsStrAttr(String(alarmId))}'`, 'noshowAttachInput', 'noshowAttachMount');
+      NCAttach.load(alarmId, 'noshowAttachMount');
+      NCAttach.bindPaste('noshowNote', alarmId, 'noshowAttachMount');
+    }
+
     document.getElementById('noshowModal').style.display = 'flex';
     setTimeout(() => note.focus(), 50);
   }
@@ -3481,11 +3520,26 @@
     else if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); confirmNoshow(); }
   });
 
-  function confirmNoshow() {
+  async function confirmNoshow() {
     if (!_noshowPendingId) return;
     const alarmId = _noshowPendingId;
     const status = _noshowPendingStatus || 'no_show';
     const note = document.getElementById('noshowNote').value.trim();
+
+    // "Gelemedi" alarmı kapatıyor — not + en az bir görsel zorunlu (bkz.
+    // saveAlarmAction'daki AYNI kural, oradaki üç kapatma durumundan biri).
+    // Modal burada KAPATILMIYOR: kullanıcı eksiği tamamlayıp tekrar
+    // deneyebilsin.
+    if (status === 'no_show') {
+      if (!note) { showNotice('Gelemedi olarak kapatmak için not yazmak zorunludur.', 'error'); return; }
+      const btn = document.getElementById('noshowConfirmBtn');
+      const prevText = btn.textContent;
+      btn.disabled = true; btn.textContent = I18N.t('Kontrol ediliyor...');
+      const hasImg = await NCAttach.hasFiles(alarmId);
+      btn.disabled = false; btn.textContent = prevText;
+      if (!hasImg) { showNotice('Gelemedi olarak kapatmak için en az bir görsel eklemek zorunludur.', 'error'); return; }
+    }
+
     closeNoshowModal();
     quickAction(alarmId, status, note);
   }

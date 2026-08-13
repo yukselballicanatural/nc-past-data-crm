@@ -27,6 +27,20 @@ window.NCAttach = (function () {
     return { Authorization: 'Bearer ' + (_getToken() || '') };
   }
 
+  // Bir alarmın en az bir görsel eki var mı — kapatma zorunluluğu gibi
+  // doğrulamalar için. DOM'daki (mount) önizleme yerine SUNUCUYA soruyor:
+  // yükleme sessizce başarısız olduysa mount'ta önizleme kalıp kalmadığına
+  // güvenmek yanıltıcı olurdu, bu yüzden gerçek kaynağa (api/alarm-files)
+  // bakıyor.
+  async function hasFiles(alarmId) {
+    try {
+      const fetchFn = window.NCNet ? NCNet.fetch : fetch;
+      const r = await fetchFn(`/api/alarm-files?alarm_id=${encodeURIComponent(alarmId)}`, { headers: _headers() });
+      const data = await r.json().catch(() => ({}));
+      return Array.isArray(data.files) && data.files.length > 0;
+    } catch (e) { return false; }
+  }
+
   // Mevcut ekleri listeler ve mountId'ye bağlı önizleme şeridini çizer.
   async function load(alarmId, mountId) {
     const mount = document.getElementById(mountId);
@@ -184,5 +198,5 @@ window.NCAttach = (function () {
     document.addEventListener('paste', window._ncDocPasteHandler);
   }
 
-  return { init, load, handleFiles, remove, renderWidget, bindPaste };
+  return { init, load, handleFiles, remove, renderWidget, bindPaste, hasFiles };
 })();
