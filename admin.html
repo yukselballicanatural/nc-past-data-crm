@@ -1331,6 +1331,7 @@
                 <th class="sortable-th" onclick="sortAgentTable('agent')">Danışman</th>
                 <th class="sortable-th" onclick="sortAgentTable('deals')">Deal</th>
                 <th class="sortable-th" onclick="sortAgentTable('paid')">Ödenen</th>
+                <th class="sortable-th" onclick="sortAgentTable('unpaid')">Ödenmeyen</th>
                 <th class="sortable-th" onclick="sortAgentTable('wonPaid')" title="Stage'i Won VE ödemesi %100 tamamlanmış deal sayısı">Tamamlanan</th>
               </tr></thead>
               <tbody id="agentSummaryBody"></tbody>
@@ -8263,8 +8264,8 @@
       // Tabloda ilk 30 gösteriliyor; export TAMAMINI veriyor (bkz. yukarıdaki not).
       const rows = _agentSummarySorted();
       if (!rows.length) { showSiteNotice(I18N.t('Dışa aktarılacak veri yok.'), 'warn'); return; }
-      NCExport.download(format || 'csv', ['Danışman','Deal','Ödenen','Tamamlanan'],
-        rows.map(v => [v.agent, v.deals, v.paid, v.wonPaid || 0]), 'en_iyi_danismanlar', 'Deal Sayısına Göre En İyi Danışmanlar');
+      NCExport.download(format || 'csv', ['Danışman','Deal','Ödenen','Ödenmeyen','Tamamlanan'],
+        rows.map(v => [v.agent, v.deals, v.paid, v.unpaid || 0, v.wonPaid || 0]), 'en_iyi_danismanlar', 'Deal Sayısına Göre En İyi Danışmanlar');
     }
 
     // Sayfa başlıklarındaki "Export" butonları — bkz. export-util.js
@@ -9811,11 +9812,12 @@
             <td class="py-1 text-slate-200">${fmt(v.agent)}</td>
             <td class="py-1 text-right text-slate-300">${v.deals}</td>
             <td class="py-1 text-right text-emerald-400">${fmtMoney(v.paid)}</td>
+            <td class="py-1 text-right text-amber-400">${fmtMoney(v.unpaid)}</td>
             <td class="py-1 text-right text-indigo-400">${v.wonPaid || 0}</td>
-          </tr>`).join('') || `<tr><td colspan="4" class="py-4 text-center text-slate-600 text-xs">${I18N.t('Veri yok.')}</td></tr>`;
+          </tr>`).join('') || `<tr><td colspan="5" class="py-4 text-center text-slate-600 text-xs">${I18N.t('Veri yok.')}</td></tr>`;
       const ths = document.querySelectorAll('#view-summary table')[2]?.querySelectorAll('th') || [];
       ths.forEach(th => { th.querySelectorAll('.sort-arrow').forEach(a=>a.remove()); });
-      const cols = ['agent','deals','paid','wonPaid'];
+      const cols = ['agent','deals','paid','unpaid','wonPaid'];
       const idx = cols.indexOf(_agentSortCol);
       if (idx >= 0 && ths[idx]) ths[idx].insertAdjacentHTML('beforeend', _sortArrowHtml(_agentSortCol, _agentSortCol, _agentSortDir));
     }
@@ -10211,15 +10213,16 @@
       const agentMap = {};
       data.forEach(d => {
         const a = d['Deal Owner Name']||I18N.t('Bilinmiyor');
-        if (!agentMap[a]) agentMap[a] = { deals:0, paid:0, results:0, wonPaid:0 };
+        if (!agentMap[a]) agentMap[a] = { deals:0, paid:0, unpaid:0, results:0, wonPaid:0 };
         agentMap[a].deals++;
         agentMap[a].paid += (Number(d['Paid Amount'])||0);
+        agentMap[a].unpaid += (Number(d['Unpaid Amount'])||0);
         if (d.result_code) agentMap[a].results++;
         // Tamamlanan (G3): Stage Won VE ödeme %100+
         const amt = Number(d['Deal Amount'])||0, pd = Number(d['Paid Amount'])||0;
         if ((d['Stage']||'').toLowerCase().includes('won') && amt > 0 && pd >= amt) agentMap[a].wonPaid++;
       });
-      _agentSummaryRows = Object.entries(agentMap).map(([a,v]) => ({ agent:a, deals:v.deals, paid:v.paid, results:v.results, wonPaid:v.wonPaid }));
+      _agentSummaryRows = Object.entries(agentMap).map(([a,v]) => ({ agent:a, deals:v.deals, paid:v.paid, unpaid:v.unpaid, results:v.results, wonPaid:v.wonPaid }));
       renderAgentSummaryTable();
 
       // Languages
@@ -10408,7 +10411,7 @@
       renderTeamSummaryTable();
 
       // Agents (ham deal_owner)
-      _agentSummaryRows = (s.by_owner||[]).map(o => ({ agent: o.owner || I18N.t('Bilinmiyor'), deals:o.deals, paid:o.paid, results:o.results, wonPaid: o.won_paid || 0 }));
+      _agentSummaryRows = (s.by_owner||[]).map(o => ({ agent: o.owner || I18N.t('Bilinmiyor'), deals:o.deals, paid:o.paid, unpaid: o.unpaid || 0, results:o.results, wonPaid: o.won_paid || 0 }));
       renderAgentSummaryTable();
 
       // Grafikler — istemci yoluyla AYNI fonksiyon (bkz. _anRenderCharts).
