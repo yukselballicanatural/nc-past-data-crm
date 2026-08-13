@@ -31,6 +31,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="pdf-fonts.js"></script>
   <style>
     /* Tüm tablolardaki sütun başlıkları (th) kırmızı — hangi sınıf/inline
        stil kullanılırsa kullanılsın tek noktadan geçerli olsun diye !important */
@@ -6137,6 +6138,10 @@
     if (!data.length) { showNotice('Dışa aktarılacak veri yok.', 'error'); return; }
 
     const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+    // Türkçe'ye özgü ş/ğ/ı/İ/Ş/Ğ harfleri jsPDF'in yerleşik "helvetica"
+    // fontunda (Windows-1252) yok — bkz. pdf-fonts.js.
+    if (window.NCPdfFont) NCPdfFont.apply(doc);
+    const FONT = window.NCPdfFont ? NCPdfFont.FONT : 'helvetica';
     const pageW = doc.internal.pageSize.getWidth();
     const pageH = doc.internal.pageSize.getHeight();
     const M = 30;
@@ -6160,7 +6165,7 @@
       : '00:00';
 
     // ── Başlık ──
-    doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.setTextColor(...NAVY);
+    doc.setFont(FONT, 'bold'); doc.setFontSize(22); doc.setTextColor(...NAVY);
     doc.text('NATURAL CLINIC', pageW / 2, 42, { align: 'center' });
     doc.setFontSize(12); doc.setTextColor(...TEAL);
     doc.text('DAILY TEAM PERFORMANCE REPORT', pageW / 2, 60, { align: 'center' });
@@ -6169,7 +6174,7 @@
     doc.autoTable({
       startY: 78,
       theme: 'grid',
-      styles: { fontSize: 9, cellPadding: 7, lineColor: NAVY, lineWidth: 0.5, textColor: NAVY, valign: 'middle' },
+      styles: { font: FONT, fontSize: 9, cellPadding: 7, lineColor: NAVY, lineWidth: 0.5, textColor: NAVY, valign: 'middle' },
       columnStyles: {
         0: { fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold', cellWidth: 130 },
         1: { fillColor: [255, 255, 255] },
@@ -6190,9 +6195,9 @@
       head: [['Customers', 'Calls', 'Interested', 'Sales Opp.', 'Avg Talk', 'Consultation Completed', 'Offer Shared', 'Deals', 'Same-day €', 'Flights']],
       body: [[sum('customers'), sum('total_calls'), sum('interested_patients'), sum('sales_opportunities'), avgTalk, sum('consultation_completed'), sum('offer_shared'), sum('deals'), '€' + sum('same_day_payment').toFixed(2), sum('flight_tickets')]],
       theme: 'grid',
-      styles: { fontSize: 8.5, cellPadding: 7, textColor: NAVY, lineColor: [203, 213, 225], lineWidth: 0.5, valign: 'middle' },
-      headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
-      bodyStyles: { fontStyle: 'bold', fillColor: [240, 249, 248] },
+      styles: { font: FONT, fontSize: 8.5, cellPadding: 7, textColor: NAVY, lineColor: [203, 213, 225], lineWidth: 0.5, valign: 'middle' },
+      headStyles: { font: FONT, fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+      bodyStyles: { font: FONT, fontStyle: 'bold', fillColor: [240, 249, 248] },
       margin: { left: M, right: M },
     });
 
@@ -6207,8 +6212,8 @@
         r.consultation_completed, r.offer_shared, r.deals, '€' + (Number(r.same_day_payment) || 0).toFixed(2), r.flight_tickets,
       ]),
       theme: 'grid',
-      styles: { fontSize: 8, cellPadding: 5, textColor: NAVY, lineColor: [226, 232, 240], lineWidth: 0.5, valign: 'middle' },
-      headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
+      styles: { font: FONT, fontSize: 8, cellPadding: 5, textColor: NAVY, lineColor: [226, 232, 240], lineWidth: 0.5, valign: 'middle' },
+      headStyles: { font: FONT, fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7.5 },
       alternateRowStyles: { fillColor: [240, 249, 248] },
       columnStyles: { 0: { fontStyle: 'bold', cellWidth: 110 }, 1: { fontStyle: 'bold', cellWidth: 62 } },
       margin: { left: M, right: M, top: 30, bottom: 30 },

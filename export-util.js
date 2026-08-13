@@ -61,6 +61,11 @@ window.NCExport = (function () {
     if (format === 'pdf') {
       if (typeof jspdf === 'undefined') { alert('PDF kütüphanesi yüklenemedi. İnternet bağlantınızı kontrol edin.'); return; }
       const doc = new jspdf.jsPDF({ orientation: headers.length > 6 ? 'landscape' : 'portrait', unit: 'pt' });
+      // jsPDF'in yerleşik "helvetica" fontu Windows-1252 kodlu — ş/ğ/ı/İ/Ş/Ğ gibi
+      // Türkçe'ye özgü harfleri İÇERMEZ, PDF'te bozuk/boş kutu çıkardı. Gömülü
+      // Unicode fontu (bkz. pdf-fonts.js) kaydedip varsayılan yapıyoruz.
+      if (window.NCPdfFont) NCPdfFont.apply(doc);
+      const FONT = window.NCPdfFont ? NCPdfFont.FONT : 'helvetica';
       const pageW = doc.internal.pageSize.getWidth();
       const pageH = doc.internal.pageSize.getHeight();
       const M = 28;                       // sayfa kenar boşluğu
@@ -73,8 +78,8 @@ window.NCExport = (function () {
         body: safeRows,
         startY: 84,                        // başlık bandının altından başla
         theme: 'grid',
-        styles: { fontSize: 7.5, cellPadding: 4, lineColor: [226, 232, 240], lineWidth: 0.5, textColor: [30, 41, 59], overflow: 'linebreak', valign: 'middle' },
-        headStyles: { fillColor: [13, 148, 136], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, halign: 'left', cellPadding: 5 },
+        styles: { font: FONT, fontSize: 7.5, cellPadding: 4, lineColor: [226, 232, 240], lineWidth: 0.5, textColor: [30, 41, 59], overflow: 'linebreak', valign: 'middle' },
+        headStyles: { font: FONT, fillColor: [13, 148, 136], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8, halign: 'left', cellPadding: 5 },
         alternateRowStyles: { fillColor: [240, 249, 248] },
         margin: { left: M, right: M, top: 84 },
         didDrawPage: function (data) {
@@ -84,10 +89,10 @@ window.NCExport = (function () {
           doc.setFillColor(13, 148, 136);
           doc.rect(0, 60, pageW, 3, 'F');   // teal alt çizgi
           doc.setTextColor(255, 255, 255);
-          doc.setFont('helvetica', 'bold');
+          doc.setFont(FONT, 'bold');
           doc.setFontSize(15);
           doc.text('NATURAL CLINIC', M, 26);
-          doc.setFont('helvetica', 'normal');
+          doc.setFont(FONT, 'normal');
           doc.setFontSize(10);
           doc.setTextColor(148, 163, 184);
           doc.text(title, M, 44);

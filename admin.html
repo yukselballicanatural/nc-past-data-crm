@@ -50,6 +50,7 @@
   <!-- PDF export için (xlsx zaten yukarıda cdn.sheetjs.com'dan yükleniyor) -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.2/dist/jspdf.umd.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js"></script>
+  <script src="pdf-fonts.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@300;400;500&display=swap" rel="stylesheet">
   <style>
     *, *::before, *::after { box-sizing: border-box; }
@@ -7872,6 +7873,10 @@
       const data = _adeExportData();
       if (!data.length) { showSiteNotice('Dışa aktarılacak veri yok.', 'error'); return; }
       const doc = new jspdf.jsPDF({ orientation: 'landscape', unit: 'pt', format: 'a4' });
+      // Türkçe'ye özgü ş/ğ/ı/İ/Ş/Ğ harfleri jsPDF'in yerleşik "helvetica"
+      // fontunda (Windows-1252) yok — bkz. pdf-fonts.js.
+      if (window.NCPdfFont) NCPdfFont.apply(doc);
+      const FONT = window.NCPdfFont ? NCPdfFont.FONT : 'helvetica';
       const pageW = doc.internal.pageSize.getWidth(), pageH = doc.internal.pageSize.getHeight();
       const M = 30, NAVY = [15, 34, 62], TEAL = [13, 148, 136];
       const now = new Date(), pad = n => String(n).padStart(2, '0');
@@ -7885,14 +7890,14 @@
       const workRows = data.filter(r => r.attendance !== 'off');
       const avgTalk = workRows.length ? _adeSecToTalk(workRows.reduce((a, r) => a + _adeTalkToSec(r.avg_talk_time), 0) / workRows.length) : '00:00';
 
-      doc.setFont('helvetica', 'bold'); doc.setFontSize(22); doc.setTextColor(...NAVY);
+      doc.setFont(FONT, 'bold'); doc.setFontSize(22); doc.setTextColor(...NAVY);
       doc.text('NATURAL CLINIC', pageW / 2, 42, { align: 'center' });
       doc.setFontSize(12); doc.setTextColor(...TEAL);
       doc.text('DAILY TEAM PERFORMANCE REPORT', pageW / 2, 60, { align: 'center' });
 
       doc.autoTable({
         startY: 78, theme: 'grid',
-        styles: { fontSize: 9, cellPadding: 7, lineColor: NAVY, lineWidth: 0.5, textColor: NAVY, valign: 'middle' },
+        styles: { font: FONT, fontSize: 9, cellPadding: 7, lineColor: NAVY, lineWidth: 0.5, textColor: NAVY, valign: 'middle' },
         columnStyles: { 0: { fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold', cellWidth: 130 }, 1: { fillColor: [255, 255, 255] }, 2: { fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold', cellWidth: 200 }, 3: { fillColor: [255, 255, 255] } },
         body: [
           ['Report Date', dmy(adeDate), 'Scope', scopeLabel],
@@ -7906,9 +7911,9 @@
         head: [['Customers', 'Calls', 'Interested', 'Sales Opp.', 'Avg Talk', 'Consultation Completed', 'Offer Shared', 'Deals', 'Same-day €', 'Flights']],
         body: [[sum('customers'), sum('total_calls'), sum('interested_patients'), sum('sales_opportunities'), avgTalk, sum('consultation_completed'), sum('offer_shared'), sum('deals'), '€' + sum('same_day_payment').toFixed(2), sum('flight_tickets')]],
         theme: 'grid',
-        styles: { fontSize: 8.5, cellPadding: 7, textColor: NAVY, lineColor: [203, 213, 225], lineWidth: 0.5, valign: 'middle' },
-        headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
-        bodyStyles: { fontStyle: 'bold', fillColor: [240, 249, 248] },
+        styles: { font: FONT, fontSize: 8.5, cellPadding: 7, textColor: NAVY, lineColor: [203, 213, 225], lineWidth: 0.5, valign: 'middle' },
+        headStyles: { font: FONT, fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8 },
+        bodyStyles: { font: FONT, fontStyle: 'bold', fillColor: [240, 249, 248] },
         margin: { left: M, right: M },
       });
       doc.autoTable({
@@ -7916,8 +7921,8 @@
         head: [['Agent', 'Team', 'Status', 'Cust.', 'Calls', 'Interested', 'Sales Opp.', 'Talk', 'Consultation Completed', 'Offer Shared', 'Deals', 'Same-day €', 'Flights']],
         body: data.map(r => [r.fullName, r.team, r.attendance === 'off' ? 'OFF DAY' : 'WORKING', r.customers, r.total_calls, r.interested_patients, r.sales_opportunities, r.avg_talk_time, r.consultation_completed, r.offer_shared, r.deals, '€' + (Number(r.same_day_payment) || 0).toFixed(2), r.flight_tickets]),
         theme: 'grid',
-        styles: { fontSize: 7.5, cellPadding: 4.5, textColor: NAVY, lineColor: [226, 232, 240], lineWidth: 0.5, valign: 'middle' },
-        headStyles: { fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
+        styles: { font: FONT, fontSize: 7.5, cellPadding: 4.5, textColor: NAVY, lineColor: [226, 232, 240], lineWidth: 0.5, valign: 'middle' },
+        headStyles: { font: FONT, fillColor: NAVY, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 7 },
         alternateRowStyles: { fillColor: [240, 249, 248] },
         columnStyles: { 0: { fontStyle: 'bold', cellWidth: 96 }, 1: { cellWidth: 82 }, 2: { fontStyle: 'bold', cellWidth: 54 } },
         margin: { left: M, right: M, top: 30, bottom: 30 },
