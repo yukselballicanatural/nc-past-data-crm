@@ -272,6 +272,12 @@
     #engineSettingsModal.open { display:flex; }
     #tlDetailModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
     #tlDetailModal.open { display:flex; }
+    /* Sistem Etkisi: "kasaya giren deal'leri gör" listesi. Diğer modallarla
+       AYNI iskelet (.modal-backdrop + .modal-panel) — o ikisi liquid-glass.css
+       ve liquid-glass-dark.css'te zaten iki temada da eşlendiği için burada
+       tema kuralı yazmaya gerek yok. */
+    #imDealsModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
+    #imDealsModal.open { display:flex; }
     /* Modal açıkken arka sayfanın kaymasını engelle. overscroll-behavior
        ise panelin sonuna gelindiğinde kaydırmanın arkadaki sayfaya
        "zincirlenmesini" (scroll chaining) durdurur — ikisi birlikte gerekli. */
@@ -2382,7 +2388,7 @@
   <div id="view-impact" class="hidden">
     <div class="flex items-start justify-between gap-3 mb-4 flex-wrap">
       <div>
-        <h2 class="text-xl font-bold text-white">Sistem Etkisi — Para</h2>
+        <h2 class="text-xl font-bold text-white">Sistem Etkisi</h2>
         <p class="text-xs text-slate-400 mt-0.5">
           Bu sistem devreye girdiğinden bu yana kasaya giren para.
           Her rakam gerçek kayıttan geliyor — tahmin yok.
@@ -2397,10 +2403,17 @@
 
     <!-- ── ANA CEVAP: solda "kasaya girdi", sağda "hâlâ duruyor" ── -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-      <div class="am-kpi" style="--am-glow:#22c55e;padding:22px 24px">
+      <div class="am-kpi" style="--am-glow:#22c55e;padding:22px 24px;display:flex;flex-direction:column">
         <div class="am-kpi-label" style="margin-top:0">İşaretlediğimiz deal'lerden kasaya giren</div>
         <div class="am-kpi-val text-emerald-400" id="imHeroIn" style="font-size:clamp(2rem,4.2vw,3rem);margin-top:10px">—</div>
         <p class="text-xs text-slate-400 mt-2" id="imHeroInSub">—</p>
+        <!-- Rakamın arkasındaki deal'ler tek tek görülebilsin: hangi tarihte
+             işaretlendi, hangi tarihte ödemesi tamamlandı. -->
+        <div style="margin-top:auto;padding-top:14px;display:flex;justify-content:flex-end">
+          <button onclick="openImDeals()" class="nc-ghost-btn" id="imSeeDealsBtn">
+            Kasaya giren deal'leri gör →
+          </button>
+        </div>
       </div>
       <div class="am-kpi" style="--am-glow:#f59e0b;padding:22px 24px">
         <div class="am-kpi-label" style="margin-top:0">Sistem buldu, henüz tahsil edilmedi</div>
@@ -2438,10 +2451,14 @@
       <div class="flex items-start justify-between gap-3 flex-wrap mb-4">
         <div>
           <h3 class="text-sm font-bold text-white">💰 İşaretlemeden sonra gelen tahsilat — kesin ölçüm</h3>
-          <p class="text-[11px] text-slate-400 mt-1" style="max-width:640px;line-height:1.7">
-            Ödeme defteri her tutar değişimini zaman damgasıyla yazıyor. Aşağıdaki rakam,
-            sistem deal'i işaretledikten <b class="text-slate-200">sonra</b> hesaba giren paranın toplamı.
+          <p class="text-[11px] text-slate-400 mt-1" style="max-width:700px;line-height:1.7">
+            Ödeme defteri devreye girdiği andan itibaren, bir deal'in ödenen tutarı her
+            değiştiğinde tek satır yazıyor. Buradaki rakam <b class="text-slate-200">o andan
+            sonra fiilen hesaba giren para</b> — sistemin daha önce işaretlediği deal'lerde.
+            Yani yukarıdaki büyük rakamın aksine bu tutarın <b class="text-slate-200">tamamı</b>
+            işaretlemeden sonra gelmiştir; kuruşu kuruşuna ölçülmüştür.
           </p>
+          <p class="text-[10px] text-slate-500 mt-1.5" id="imLedgerNote">—</p>
         </div>
         <div class="text-right">
           <div class="am-kpi-val text-emerald-400" id="imLedgerTotal" style="font-size:clamp(1.4rem,2.6vw,2rem)">—</div>
@@ -2460,14 +2477,18 @@
       </div>
       <div class="mt-5">
         <div class="text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-          En büyük kalemler — rakamın arkasındaki gerçek deal'ler
+          Rakamın arkasındaki gerçek para hareketleri
         </div>
         <div class="overflow-auto" style="max-height:340px">
           <table class="tbl w-full">
             <thead><tr class="text-slate-400">
-              <th>Deal</th><th>Takım</th><th>Danışman</th>
-              <th class="text-right">Gelen Tutar</th><th class="text-right">Sözleşme</th>
-              <th class="text-right">Gün</th><th>Tarih</th>
+              <th class="sortable-th" onclick="_imLedgerSort('deal')">Hasta / Deal<span class="sort-arrow"> ↕</span></th>
+              <th class="sortable-th" onclick="_imLedgerSort('team')">Takım<span class="sort-arrow"> ↕</span></th>
+              <th class="sortable-th" onclick="_imLedgerSort('owner')">Danışman<span class="sort-arrow"> ↕</span></th>
+              <th class="sortable-th text-right" onclick="_imLedgerSort('delta')">Gelen Tutar<span class="sort-arrow"> ↕</span></th>
+              <th class="sortable-th text-right" onclick="_imLedgerSort('amount')">Tutar<span class="sort-arrow"> ↕</span></th>
+              <th class="sortable-th text-right" onclick="_imLedgerSort('days')">Gün<span class="sort-arrow"> ↕</span></th>
+              <th class="sortable-th" onclick="_imLedgerSort('date')">Para Giriş Tarihi<span class="sort-arrow"> ↕</span></th>
             </tr></thead>
             <tbody id="imLedgerTbody"></tbody>
           </table>
@@ -2494,8 +2515,11 @@
       </div>
     </div>
 
-    <!-- ── Bekleyen paranın yaşı + takım dağılımı ── -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+    <!-- ── Bekleyen paranın yaşı + takım dağılımı ──
+         items-start: ızgara varsayılanı "stretch" olduğu için kısa olan kart
+         (yaş dilimleri) uzun olanın (takım listesi) boyuna çekiliyor ve altında
+         büyük bir boşluk kalıyordu. Her kart kendi doğal yüksekliğinde duruyor. -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4 items-start">
       <div class="am-panel p-5">
         <h3 class="text-sm font-bold text-white">⏳ Bekleyen paranın yaşı</h3>
         <p class="text-[11px] text-slate-400 mt-1 mb-4">
@@ -2526,9 +2550,15 @@
       <div class="overflow-auto" style="max-height:420px">
         <table class="tbl w-full">
           <thead><tr class="text-slate-400">
-            <th>Deal</th><th>Takım</th><th>Danışman</th>
-            <th class="text-right">Sözleşme</th><th class="text-right">Ödenen</th>
-            <th class="text-right">Eksik</th><th>Geliş Tarihi</th><th class="text-right">Yaş</th>
+            <th class="sortable-th" onclick="_imWaitSort('name')">Hasta / Deal<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th" onclick="_imWaitSort('dealId')">Deal ID<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th" onclick="_imWaitSort('team')">Takım<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th" onclick="_imWaitSort('owner')">Danışman<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th text-right" onclick="_imWaitSort('amount')">Tutar<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th text-right" onclick="_imWaitSort('paid')">Ödenen<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th text-right" onclick="_imWaitSort('short')">Eksik<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th" onclick="_imWaitSort('arrival')">Geliş Tarihi<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th text-right" onclick="_imWaitSort('age')">Yaş<span class="sort-arrow"> ↕</span></th>
           </tr></thead>
           <tbody id="imTbody"></tbody>
         </table>
@@ -3191,6 +3221,49 @@
       <div class="aam-info-grid mb-5" id="modalFieldsGrid"></div>
 
       <div id="modalResultSection" class="border-t border-gray-800 pt-4"></div>
+    </div>
+  </div>
+
+  <!-- Sistem Etkisi: "kasaya giren deal'leri gör" — rakamın arkasındaki
+       deal'ler tek tek, işaretlenme ve ödeme tamamlanma tarihleriyle. -->
+  <div id="imDealsModal" onclick="if(event.target===this)closeImDeals()">
+    <div class="modal-backdrop" onclick="closeImDeals()"></div>
+    <div class="modal-panel" style="max-width:1120px;width:100%">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h3 class="text-base font-bold text-white">Kasaya giren deal'ler</h3>
+          <p class="text-[11px] text-slate-400 mt-1" style="max-width:760px;line-height:1.65">
+            Bu deal'ler ödemesi eksikken sistem tarafından işaretlendi ve bugün ödemesi
+            <b class="text-slate-200">%100 tamamlanmış</b> durumda. "İşaretlendi" alarmın açıldığı,
+            "Ödeme tamamlandı" ise sistemin ödemeyi tam görüp alarmı kapattığı tarih.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <span id="imDealsExportMount"></span>
+          <button onclick="closeImDeals()" class="text-slate-500 hover:text-white transition-colors">
+            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+          </button>
+        </div>
+      </div>
+      <div class="flex items-center gap-3 flex-wrap mb-3">
+        <span class="text-[11px] text-slate-500" id="imDealsSummary">—</span>
+      </div>
+      <div class="overflow-auto" style="max-height:60vh">
+        <table class="tbl w-full">
+          <thead><tr class="text-slate-400">
+            <th class="sortable-th" onclick="_imDealsSort('name')">Hasta / Deal<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th" onclick="_imDealsSort('dealId')">Deal ID<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th" onclick="_imDealsSort('team')">Takım<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th" onclick="_imDealsSort('owner')">Danışman<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th text-right" onclick="_imDealsSort('amount')">Tutar<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th text-right" onclick="_imDealsSort('paid')">Ödenen<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th" onclick="_imDealsSort('flag')">İşaretlendi<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th" onclick="_imDealsSort('done')">Ödeme tamamlandı<span class="sort-arrow"> ↕</span></th>
+            <th class="sortable-th text-right" onclick="_imDealsSort('days')">Gün<span class="sort-arrow"> ↕</span></th>
+          </tr></thead>
+          <tbody id="imDealsTbody"></tbody>
+        </table>
+      </div>
     </div>
   </div>
 
@@ -8488,6 +8561,38 @@
     let _imRows = [];            // bekleyen kalemler, render/export için
     let _imLoading = false;
     let _imFirstAlarmAt = null;  // ilk alarmin tarihi = sistemin devreye girdigi an
+    let _imDealRows = [];        // "kasaya giren" deal'ler (modal + export)
+    // Defter hareketlerinin deal adları. Bellekteki allDeals YETMİYOR: defter
+    // her ödeme değişimini kaydediyor, aralarında 2026 öncesi deal'ler de
+    // çıkıyor (ölçüldü: 7 hareketten 2'si 2025 kaydı) ve onlar allDeals'ta
+    // olmadığı için tabloda ham Zoho kayıt no görünüyordu.
+    let _imLedgerNames = new Map();
+    let _imDealsSortCol = 'paid', _imDealsSortDir = -1;
+    let _imLedgerSortCol = 'delta', _imLedgerSortDir = -1;
+    let _imWaitSortCol = 'short', _imWaitSortDir = -1;
+
+    // Ödemesi bugün itibarıyla %100 tamamlanmış mı? (sözleşme > 0 olmalı —
+    // tutarı 0 olan kayıt "ödendi" sayılamaz)
+    function _imIsFullyPaid(d) {
+      const amt = Number(d['Deal Amount']) || 0;
+      return amt > 0 && (Number(d['Paid Amount']) || 0) >= amt - 0.5;
+    }
+    // Zoho kaydına doğrudan link — proje genelindeki tek kalıp (deals.id ile,
+    // ekranda insan-okunur deal_id gösterilir).
+    function _imZohoLink(zohoId, label) {
+      if (!zohoId) return fmt(label);
+      return `<a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${_escAttr(String(zohoId))}"` +
+        ` target="_blank" rel="noopener" onclick="event.stopPropagation()"` +
+        ` style="color:#818cf8;text-decoration:underline;text-decoration-style:dotted;font-family:monospace;font-size:10px"` +
+        ` title="${I18N.t("Zoho'da Aç")}">${fmt(label || zohoId)} ↗</a>`;
+    }
+    function _imDateTime(v) {
+      if (!v) return '—';
+      const d = new Date(v);
+      if (isNaN(d)) return '—';
+      const p = n => String(n).padStart(2, '0');
+      return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
+    }
 
     function _imSalesDeals() {
       return (allDeals || []).filter(d =>
@@ -8535,8 +8640,15 @@
         ' · ' + sales.length.toLocaleString('tr-TR') + ' ' + I18N.t('deal');
 
       // ── ANA CEVAP (sol): işaretlenen deal'lerden kasaya giren ──
-      // Kanıt: ödeme eksikliği yüzünden alarm açılmış, sonra ödemesi
-      // tamamlandığı için motor tarafından kapatılmış deal'ler.
+      // Kanıt zinciri: ödeme eksikliği yüzünden alarm açılmış, sonra ödemesi
+      // tamamlandığı için motor kapatmış (alarms.close_reason).
+      //
+      // ÖNEMLİ: burada yalnızca ödemesi BUGÜN İTİBARIYLA %100 TAMAMLANMIŞ
+      // deal'ler sayılıyor. Alarmın "ödeme tamamlandı" diye kapanmış olması
+      // tek başına yetmiyor: ölçümde, kapanıştan sonra tutarı artıp yeniden
+      // eksiğe düşen deal'ler çıktı (2 deal, 579 €). Onları "kasaya girdi"
+      // diye saymak rakamı yanlış şişirirdi — bu yüzden canlı ödeme durumu
+      // ayrıca doğrulanıyor.
       const heroIn = document.getElementById('imHeroIn');
       const heroInSub = document.getElementById('imHeroInSub');
       if (_imAlarms === null) {
@@ -8546,24 +8658,43 @@
         document.getElementById('imKpiDays').textContent = '…';
       } else {
         const byId = new Map(sales.map(d => [String(d['Deal Id']), d]));
-        const ids = new Set(_imAlarms.map(a => String(a.deal_id)));
-        const matched = [...ids].map(i => byId.get(i)).filter(Boolean);
-        const collected = matched.reduce((s, d) => s + (Number(d['Paid Amount']) || 0), 0);
-        const days = _imAlarms
-          .filter(a => a.created_at && a.closed_at)
-          .map(a => (new Date(a.closed_at) - new Date(a.created_at)) / 86400000)
-          .sort((a, b) => a - b);
-        const med = days.length ? days[Math.floor(days.length / 2)] : null;
+        // Her deal için en ERKEN işaretlenme ve en SON ödeme-tamamlandı damgası
+        const flagInfo = new Map();
+        _imAlarms.forEach(a => {
+          const k = String(a.deal_id);
+          const cur = flagInfo.get(k) || { flag: null, done: null };
+          if (a.created_at && (!cur.flag || a.created_at < cur.flag)) cur.flag = a.created_at;
+          if (a.closed_at && (!cur.done || a.closed_at > cur.done)) cur.done = a.closed_at;
+          flagInfo.set(k, cur);
+        });
+
+        _imDealRows = [];
+        flagInfo.forEach((info, id) => {
+          const d = byId.get(id);
+          if (!d) return;                                  // satış dışı / 2026 dışı
+          if (!_imIsFullyPaid(d)) return;                  // ödemesi hâlâ eksik → sayılmaz
+          const days = (info.flag && info.done)
+            ? (new Date(info.done) - new Date(info.flag)) / 86400000 : null;
+          _imDealRows.push({
+            id, name: d['Deal Name'], dealId: d['DealID'], team: d['Team Group'],
+            owner: d['Deal Owner Name'], amount: Number(d['Deal Amount']) || 0,
+            paid: Number(d['Paid Amount']) || 0, flag: info.flag, done: info.done, days,
+          });
+        });
+
+        const collected = _imDealRows.reduce((s, r) => s + r.paid, 0);
+        const dayList = _imDealRows.map(r => r.days).filter(v => v != null).sort((a, b) => a - b);
+        const med = dayList.length ? dayList[Math.floor(dayList.length / 2)] : null;
 
         heroIn.textContent = fmtMoney(collected);
-        heroInSub.innerHTML = '<b class="text-slate-200">' + matched.length.toLocaleString('tr-TR') + '</b> ' +
-          I18N.t('deal ödeme eksikliği yüzünden işaretlendi, sonra ödemesi tamamlandı.') +
-          ' <span class="text-slate-500">' +
-          I18N.t('Bu tutarın tamamı işaretlemeden sonra gelmiş olmayabilir — kesin ayrım için aşağıdaki ödeme defteri gerekiyor.') +
-          '</span>';
-        document.getElementById('imKpiDeals').textContent = matched.length.toLocaleString('tr-TR');
+        heroInSub.innerHTML = '<b class="text-slate-200">' + _imDealRows.length.toLocaleString('tr-TR') + '</b> ' +
+          I18N.t('deal ödemesi eksikken işaretlendi, sonra ödemesi %100 tamamlandı.') +
+          (med === null ? '' : ' ' + I18N.t('Medyan') + ' <b class="text-slate-200">' +
+            med.toFixed(1) + ' ' + I18N.t('gün') + '</b>.');
+        document.getElementById('imKpiDeals').textContent = _imDealRows.length.toLocaleString('tr-TR');
         document.getElementById('imKpiDays').textContent =
           med === null ? '—' : (med.toFixed(1) + ' ' + I18N.t('gün'));
+        if (document.getElementById('imDealsModal').classList.contains('open')) _imRenderDealsModal();
       }
 
       // ── ANA CEVAP (sağ): bulundu ama hâlâ tahsil edilmedi ──
@@ -8633,13 +8764,47 @@
       }
 
       // ── Bekleyen kalemler ──
-      _imRows = under.slice().sort((a, b) => _imShortfall(b) - _imShortfall(a));
+      _imRows = under.slice();
       const cnt = document.getElementById('imTableCount');
       if (cnt) cnt.textContent = _imRows.length.toLocaleString('tr-TR') + ' ' + I18N.t('kayıt');
-      document.getElementById('imTbody').innerHTML = _imRows.slice(0, 300).map(d => {
+      _imRenderWaitTable();
+
+      _imRenderLedger();
+    }
+
+    // Bekleyen kalemler tablosu — sıralanabilir, Deal ID Zoho'ya link.
+    // Ekranda ilk 300 satır çiziliyor (tarayıcıyı boğmamak için); export
+    // TAMAMINI veriyor.
+    function _imRenderWaitTable() {
+      const tb = document.getElementById('imTbody');
+      if (!tb) return;
+      const col = _imWaitSortCol, dir = _imWaitSortDir;
+      const val = (d, c) => {
+        switch (c) {
+          case 'name':    return d['Deal Name'] || '';
+          case 'dealId':  return d['DealID'] || '';
+          case 'team':    return d['Team Group'] || '';
+          case 'owner':   return d['Deal Owner Name'] || '';
+          case 'amount':  return Number(d['Deal Amount']) || 0;
+          case 'paid':    return Number(d['Paid Amount']) || 0;
+          case 'short':   return _imShortfall(d);
+          case 'arrival': return d['Arrival Date'] || '';
+          case 'age':     { const a = _imDaysSince(d['Arrival Date']); return a === null ? -1e9 : a; }
+          default:        return _imShortfall(d);
+        }
+      };
+      const rows = _imRows.slice().sort((a, b) => {
+        const va = val(a, col), vb = val(b, col);
+        if (typeof va === 'string' || typeof vb === 'string') {
+          return dir * String(va).localeCompare(String(vb), 'tr');
+        }
+        return dir * (va - vb);
+      });
+      tb.innerHTML = rows.slice(0, 300).map(d => {
         const age = _imDaysSince(d['Arrival Date']);
         return '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">' +
           '<td class="py-1.5 text-slate-200">' + fmt(d['Deal Name']) + '</td>' +
+          '<td class="py-1.5">' + _imZohoLink(d['Deal Id'], d['DealID']) + '</td>' +
           '<td class="py-1.5 text-slate-400">' + fmt(d['Team Group']) + '</td>' +
           '<td class="py-1.5 text-slate-400">' + fmt(d['Deal Owner Name']) + '</td>' +
           '<td class="py-1.5 text-right text-slate-300">' + fmtMoney(d['Deal Amount']) + '</td>' +
@@ -8649,9 +8814,12 @@
           '<td class="py-1.5 text-right text-slate-500">' + (age === null ? '—' : age + 'g') + '</td>' +
         '</tr>';
       }).join('') ||
-        '<tr><td colspan="8" class="py-4 text-center text-slate-600 text-xs">' + I18N.t('Veri yok.') + '</td></tr>';
-
-      _imRenderLedger();
+        '<tr><td colspan="9" class="py-4 text-center text-slate-600 text-xs">' + I18N.t('Veri yok.') + '</td></tr>';
+    }
+    function _imWaitSort(col) {
+      if (_imWaitSortCol === col) _imWaitSortDir = -_imWaitSortDir;
+      else { _imWaitSortCol = col; _imWaitSortDir = ['amount','paid','short','age'].includes(col) ? -1 : 1; }
+      _imRenderWaitTable();
     }
 
     // Katman 2 — ödeme defteri bölümü. Defter kurulmamışsa (RPC yok) sahte
@@ -8687,27 +8855,141 @@
         (L.days_median == null ? '' : I18N.t('medyan') + ' ' + Number(L.days_median).toFixed(1) + ' ' + I18N.t('gün') + ' · ') +
         I18N.t('ölçüm başlangıcı') + ': ' + started;
 
+      // Defterin ne zamandan beri ölçtüğü + kaç hareket yakaladığı: rakamın
+      // neden küçük olduğu (ölçüm yeni başladı) tek bakışta anlaşılsın.
+      const note = document.getElementById('imLedgerNote');
+      if (note) {
+        note.innerHTML = I18N.t('Defter') + ' <b class="text-slate-400">' + started + '</b> ' +
+          I18N.t('tarihinde devreye girdi') + ' · ' +
+          '<b class="text-slate-400">' + Number(L.ledger_rows || 0).toLocaleString('tr-TR') + '</b> ' +
+          I18N.t('ödeme hareketi kaydedildi') + ' · ' +
+          I18N.t('bunlardan işaretlenmiş deal\'lere ait olan') + ': <b class="text-slate-400">' +
+          Number(L.recovered_events || 0).toLocaleString('tr-TR') + '</b>';
+      }
+
       if (typeof NCCharts !== 'undefined') {
-        NCCharts.area(document.getElementById('imLedgerChart'),
-          (L.by_day || []).map(p => ({ label: formatDate(p.d), count: 1, amount: Number(p.recovered) || 0 })),
-          { moneyFmt: fmtMoney, countUnit: I18N.t('gün'), emptyText: I18N.t('Veri yok.'),
-            singleText: I18N.t('Eğilim için en az iki gün gerekli.') });
+        // Günlük akış ÇUBUK: area() en az iki nokta istiyor ve defter yeni
+        // kurulduğunda tek gün oluyor — o durumda grafik hiç çizilmiyordu
+        // ("grafik görünmüyor"). Çubuk tek günde de çiziliyor.
+        NCCharts.bars(document.getElementById('imLedgerChart'),
+          (L.by_day || []).map(p => ({ label: formatDate(p.d), value: Number(p.recovered) || 0 })),
+          { fmt: _imMoney, unit: '', emptyText: I18N.t('Veri yok.') });
         NCCharts.bars(document.getElementById('imLedgerTeams'),
           (L.by_team || []).map(t => ({ label: t.team, value: Number(t.recovered) || 0 })),
           { fmt: _imMoney, unit: '', emptyText: I18N.t('Veri yok.') });
       }
 
-      document.getElementById('imLedgerTbody').innerHTML = (L.top_events || []).map(e =>
+      _imRenderLedgerTable();
+    }
+
+    // Defter hareketleri tablosu — sıralanabilir; deal_id (Zoho kayıt no) tek
+    // başına okunmaz olduğu için bellekteki deal'lerle eşleştirilip hasta adı
+    // ve insan-okunur Deal ID gösteriliyor, ID Zoho'ya link.
+    function _imRenderLedgerTable() {
+      const tb = document.getElementById('imLedgerTbody');
+      if (!tb || !_imLedger) return;
+      const byId = new Map((allDeals || []).map(d => [String(d['Deal Id']), d]));
+      const rows = (_imLedger.top_events || []).map(e => {
+        const key = String(e.deal_id);
+        const ext = _imLedgerNames.get(key);
+        const d = byId.get(key);
+        return {
+          zohoId: e.deal_id,
+          name: (ext && ext.name) || (d ? d['Deal Name'] : null),
+          dealId: (ext && ext.dealId) || (d ? d['DealID'] : null),
+          team: e.team, owner: e.owner,
+          delta: Number(e.delta) || 0,
+          amount: Number(e.amount) || 0,
+          days: e.days == null ? null : Number(e.days),
+          date: e.changed_at,
+        };
+      });
+      const dir = _imLedgerSortDir, col = _imLedgerSortCol;
+      rows.sort((a, b) => {
+        let va = a[col], vb = b[col];
+        if (col === 'deal') { va = a.name || a.zohoId; vb = b.name || b.zohoId; }
+        if (typeof va === 'string' || typeof vb === 'string') {
+          return dir * String(va || '').localeCompare(String(vb || ''), 'tr');
+        }
+        return dir * ((va || 0) - (vb || 0));
+      });
+      tb.innerHTML = rows.map(r =>
         '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">' +
-          '<td class="py-1.5 text-slate-400" style="font-family:monospace;font-size:10.5px">' + fmt(e.deal_id) + '</td>' +
-          '<td class="py-1.5 text-slate-400">' + fmt(e.team) + '</td>' +
-          '<td class="py-1.5 text-slate-400">' + fmt(e.owner) + '</td>' +
-          '<td class="py-1.5 text-right text-emerald-400 font-bold">' + fmtMoney(e.delta) + '</td>' +
-          '<td class="py-1.5 text-right text-slate-300">' + fmtMoney(e.amount) + '</td>' +
-          '<td class="py-1.5 text-right text-slate-500">' + (e.days == null ? '—' : e.days) + '</td>' +
-          '<td class="py-1.5 text-slate-400">' + fmt(formatDate(String(e.changed_at || '').slice(0, 10))) + '</td>' +
+          '<td class="py-1.5 text-slate-200">' + fmt(r.name) +
+            (r.dealId ? ' <span style="opacity:.85">' + _imZohoLink(r.zohoId, r.dealId) + '</span>'
+                      : ' ' + _imZohoLink(r.zohoId, r.zohoId)) + '</td>' +
+          '<td class="py-1.5 text-slate-400">' + fmt(r.team) + '</td>' +
+          '<td class="py-1.5 text-slate-400">' + fmt(r.owner) + '</td>' +
+          '<td class="py-1.5 text-right text-emerald-400 font-bold">' + fmtMoney(r.delta) + '</td>' +
+          '<td class="py-1.5 text-right text-slate-300">' + fmtMoney(r.amount) + '</td>' +
+          '<td class="py-1.5 text-right text-slate-500">' + (r.days == null ? '—' : r.days) + '</td>' +
+          '<td class="py-1.5 text-slate-400">' + _imDateTime(r.date) + '</td>' +
         '</tr>').join('') ||
         '<tr><td colspan="7" class="py-4 text-center text-slate-600 text-xs">' + I18N.t('Veri yok.') + '</td></tr>';
+    }
+    function _imLedgerSort(col) {
+      if (_imLedgerSortCol === col) _imLedgerSortDir = -_imLedgerSortDir;
+      else { _imLedgerSortCol = col; _imLedgerSortDir = (col === 'deal' || col === 'team' || col === 'owner') ? 1 : -1; }
+      _imRenderLedgerTable();
+    }
+
+    // ── "Kasaya giren deal'leri gör" listesi ──────────────────────────
+    function openImDeals() {
+      document.getElementById('imDealsModal').classList.add('open');
+      _imRenderDealsModal();
+      try { NCExport.mount({ imDealsExportMount: { fn: 'exportImDeals', size: 'sm' } }); } catch (e) {}
+    }
+    function closeImDeals() {
+      document.getElementById('imDealsModal').classList.remove('open');
+    }
+    function _imDealsSort(col) {
+      if (_imDealsSortCol === col) _imDealsSortDir = -_imDealsSortDir;
+      else { _imDealsSortCol = col; _imDealsSortDir = (col === 'amount' || col === 'paid' || col === 'days') ? -1 : 1; }
+      _imRenderDealsModal();
+    }
+    function _imRenderDealsModal() {
+      const tb = document.getElementById('imDealsTbody');
+      if (!tb) return;
+      const col = _imDealsSortCol, dir = _imDealsSortDir;
+      const rows = _imDealRows.slice().sort((a, b) => {
+        const map = { name: 'name', dealId: 'dealId', team: 'team', owner: 'owner',
+                      amount: 'amount', paid: 'paid', flag: 'flag', done: 'done', days: 'days' };
+        const k = map[col] || 'paid';
+        const va = a[k], vb = b[k];
+        if (k === 'flag' || k === 'done') return dir * (new Date(va || 0) - new Date(vb || 0));
+        if (typeof va === 'string' || typeof vb === 'string') {
+          return dir * String(va || '').localeCompare(String(vb || ''), 'tr');
+        }
+        return dir * ((va || 0) - (vb || 0));
+      });
+      const total = rows.reduce((s, r) => s + r.paid, 0);
+      const sum = document.getElementById('imDealsSummary');
+      if (sum) {
+        sum.innerHTML = '<b class="text-slate-300">' + rows.length.toLocaleString('tr-TR') + '</b> ' +
+          I18N.t('deal') + ' · ' + I18N.t('toplam tahsilat') +
+          ': <b class="text-emerald-400">' + fmtMoney(total) + '</b>';
+      }
+      tb.innerHTML = rows.map(r =>
+        '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">' +
+          '<td class="py-1.5 text-slate-200">' + fmt(r.name) + '</td>' +
+          '<td class="py-1.5">' + _imZohoLink(r.id, r.dealId) + '</td>' +
+          '<td class="py-1.5 text-slate-400">' + fmt(r.team) + '</td>' +
+          '<td class="py-1.5 text-slate-400">' + fmt(r.owner) + '</td>' +
+          '<td class="py-1.5 text-right text-slate-300">' + fmtMoney(r.amount) + '</td>' +
+          '<td class="py-1.5 text-right text-emerald-400 font-bold">' + fmtMoney(r.paid) + '</td>' +
+          '<td class="py-1.5 text-slate-400" style="font-size:11px">' + _imDateTime(r.flag) + '</td>' +
+          '<td class="py-1.5 text-slate-400" style="font-size:11px">' + _imDateTime(r.done) + '</td>' +
+          '<td class="py-1.5 text-right text-slate-500">' + (r.days == null ? '—' : r.days.toFixed(1)) + '</td>' +
+        '</tr>').join('') ||
+        '<tr><td colspan="9" class="py-4 text-center text-slate-600 text-xs">' + I18N.t('Veri yok.') + '</td></tr>';
+    }
+    function exportImDeals(format) {
+      if (!_imDealRows.length) { showSiteNotice(I18N.t('Dışa aktarılacak veri yok.'), 'warn'); return; }
+      NCExport.download(format || 'csv',
+        ['Hasta / Deal','Deal ID','Takım','Danışman','Tutar','Ödenen','İşaretlendi','Ödeme tamamlandı','Gün'],
+        _imDealRows.map(r => [r.name, r.dealId, r.team, r.owner, r.amount, r.paid,
+          _imDateTime(r.flag), _imDateTime(r.done), r.days == null ? '' : r.days.toFixed(1)]),
+        'kasaya_giren_deallar', 'Kasaya Giren Deal\'ler');
     }
 
     async function loadImpact(force) {
@@ -8750,6 +9032,22 @@
 
         if (lRes && lRes.ok) { _imLedger = await lRes.json().catch(() => null); _imLedgerOff = !_imLedger; }
         else { _imLedger = null; _imLedgerOff = true; }
+
+        // Defter hareketlerinin deal adlarını doğrudan çek — aralarında 2026
+        // öncesi kayıtlar olabildiği için bellekteki allDeals yetmiyor.
+        const evIds = [...new Set(((_imLedger && _imLedger.top_events) || [])
+          .map(e => String(e.deal_id)).filter(Boolean))];
+        if (evIds.length) {
+          const inList = evIds.map(x => '"' + x + '"').join(',');
+          const nRes = await fetch(
+            `${SUPABASE_URL}/rest/v1/deals?select=id,deal_id,deal_name&id=in.(${encodeURIComponent(inList)})`,
+            { headers: H }).catch(() => null);
+          if (nRes && nRes.ok) {
+            const rows = await nRes.json().catch(() => []);
+            _imLedgerNames = new Map((rows || []).map(r =>
+              [String(r.id), { name: r.deal_name, dealId: r.deal_id }]));
+          }
+        }
       } finally {
         _imLoading = false;
         if (btn) btn.disabled = false;
@@ -8760,7 +9058,7 @@
     function exportImpact(format) {
       if (!_imRows.length) { showSiteNotice(I18N.t('Dışa aktarılacak veri yok.'), 'warn'); return; }
       NCExport.download(format || 'csv',
-        ['Deal','Takım','Danışman','Sözleşme','Ödenen','Eksik','Geliş Tarihi','Yaş (gün)'],
+        ['Deal','Takım','Danışman','Tutar','Ödenen','Eksik','Geliş Tarihi','Yaş (gün)'],
         _imRows.map(d => [d['Deal Name'], d['Team Group'], d['Deal Owner Name'],
           d['Deal Amount'], d['Paid Amount'], _imShortfall(d), d['Arrival Date'],
           _imDaysSince(d['Arrival Date'])]),
