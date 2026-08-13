@@ -86,6 +86,8 @@ index.html          — Login sayfası. Kullanıcı adı/şifre alır, rol tespi
 agent.html           — Agent paneli: kendi dealleri, "Sonuç Gir" modalı, Unlock talebi.
 team-leader.html     — Team Leader paneli: Deal Listesi, Alarmlar, Bugün Gelecekler,
                        No-show, İptal Edilenler, Won Alarmı, Aktivite (Aksiyon Geçmişi).
+                       (admin.html'de ayrıca "Sistem Etkisi" para sayfası var —
+                       bkz. Bölüm 12 / deal_payment_history.sql.)
                        RM rolü BU SAYFAYA HİÇ ULAŞMAZ — kendi init()'i içinde,
                        role==='regional-manager' ise admin.html'e yönlendirir
                        (index.html'in kendi yönlendirmesi zaten RM'yi admin.html'e
@@ -547,6 +549,7 @@ bak** — muhtemelen ilgili migration hazır ama henüz çalıştırılmamışt�
 | `alarm_dedup_cleanup.sql` / `_v2.sql` | Muhtemelen çalıştırılmış (tek seferlik temizlik scriptleri) — kesin teyit edilmedi |
 | `users_rls_lockdown.sql` | ✅ Çalıştırıldı — asıl etkiyi dosyada YAZILI OLMAYAN, ek olarak verilen `alter table public."Users" enable row level security;` sağladı (RLS hiç açık değilmiş). |
 | `rls_hardening.sql` | ✅ **Çalıştırıldı ve TAM olarak doğrulandı (2026-07-22)** — `deals`/`alarms`/`Logs`/`alarm_logs`/`app_settings`'te artık `ALL`/`DELETE` policy YOK, sadece uygulamanın gerçekten kullandığı SELECT/INSERT/UPDATE var. Dosyanın kendi DROP komutları `alarms`/`alarm_logs`/`app_settings`'teki gerçek policy adını (`"Public Access"`, dosyadaki `"Public Access Policy"` değil) YAKALAYAMADIĞI için ilk denemede eksik kaldı, ikinci bir `drop policy if exists "Public Access" on ...` turuyla tamamlandı. Bkz. Bölüm 5.2, tuzak #2. |
+| `deal_payment_history.sql` | ❌ **HENÜZ ÇALIŞTIRILMADI** — admin "Sistem Etkisi" sayfasındaki *kesin € kurtarma ölçümü* buna bağlı. `deals` üzerine `AFTER UPDATE` trigger + `deal_payment_history` defteri + `admin_payment_recovery()` RPC'si kurar. Çalıştırılmadan da sayfa çalışır: RPC yoksa sayfa "ölçüm devrede değil" kutusunu gösterir (uydurma rakam ÜRETMEZ). Ölçüm ancak çalıştırıldığı andan İTİBAREN birikir — ödeme geçmişi hiçbir yerde tutulmadığı için geriye dönük doldurulamaz. |
 
 **Şu an bilinen, bekleyen hiçbir kritik güvenlik migration'ı YOK.** Yeni bir
 tablo/kolon eklenirse aynı disiplin izlenmeli: SQL dosyası yaz → kullanıcıya

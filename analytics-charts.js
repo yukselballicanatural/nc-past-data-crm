@@ -92,6 +92,11 @@
   function bars(host, items, opts) {
     if (!host) return;
     opts = opts || {};
+    // opts.fmt / opts.unit: bu katman başta yalnızca "deal sayısı" çiziyordu,
+    // birim de gövdeye gömülüydü. Sistem Etkisi sayfası aynı grafikleri PARA
+    // için kullanıyor; biçimlendiriciyi dışarıdan alarak tek kaynak korunuyor.
+    // Verilmezse eski davranış birebir aynı kalır.
+    var vf = opts.fmt || nfmt, unit = opts.unit == null ? ' deal' : (opts.unit ? ' ' + opts.unit : '');
     host.innerHTML = '';
     items = (items || []).filter(function (i) { return i && (Number(i.value) || 0) > 0; })
       .sort(function (a, b) { return b.value - a.value; });
@@ -110,7 +115,7 @@
       row.innerHTML =
         '<div class="ac-bar-head">' +
           '<span class="ac-bar-label">' + esc(it.label) + '</span>' +
-          '<span class="ac-bar-val"><b>' + nfmt(it.value) + '</b>' +
+          '<span class="ac-bar-val"><b>' + vf(it.value) + '</b>' +
           '<i class="ac-bar-pct">' + pct(it.value, total) + '%</i></span>' +
         '</div>' +
         '<div class="ac-bar-track"><div class="ac-bar-fill"></div></div>';
@@ -121,7 +126,7 @@
         fill.style.width = Math.max(2, it.value / max * 100).toFixed(1) + '%';
       });
       bindTip(row, function () {
-        return '<b>' + esc(it.label) + '</b><br>' + nfmt(it.value) + ' deal · ' +
+        return '<b>' + esc(it.label) + '</b><br>' + vf(it.value) + unit + ' · ' +
                pct(it.value, total) + '%';
       });
       wrap.appendChild(row);
@@ -323,7 +328,7 @@
       dotA.setAttribute('cx', X(i)); dotA.setAttribute('cy', Ya(p.amount)); dotA.setAttribute('opacity', '1');
       showTip(
         '<b>' + esc(p.label) + '</b><br>' +
-        '<span class="ac-k" style="--c:#6366f1"></span>' + nfmt(p.count) + ' deal<br>' +
+        '<span class="ac-k" style="--c:#6366f1"></span>' + nfmt(p.count) + ' ' + (opts.countUnit || 'deal') + '<br>' +
         '<span class="ac-k" style="--c:#0d9488"></span>' + moneyFmt(p.amount),
         e.clientX, e.clientY
       );
