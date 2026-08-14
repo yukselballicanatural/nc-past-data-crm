@@ -1129,7 +1129,7 @@ html[data-theme="light"] main > div[id^="view-"] > div:has(> span[id$="ExportMou
   z-index: 70;
 }
 html[data-theme="light"] .nc-export-wrap { position: relative; z-index: 300; }
-html[data-theme="light"] .nc-export-menu { z-index: 500 !important; }
+html[data-theme="light"] .nc-export-menu { z-index: 10050 !important; }
 /* Tablo sarmalayıcıları her zaman altta kalsın */
 html[data-theme="light"] main > div[id^="view-"] > div:has(> table) { position: relative; z-index: 1; }
 
@@ -2602,7 +2602,7 @@ html[data-theme="dark"]  .am-table-wrap,
 html[data-theme="light"] .am-panel:has(table),
 html[data-theme="dark"]  .am-panel:has(table) { position: relative; z-index: 1; }
 html[data-theme="light"] .nc-export-menu,
-html[data-theme="dark"]  .nc-export-menu { z-index: 400 !important; }
+html[data-theme="dark"]  .nc-export-menu { z-index: 10050 !important; }
 
 /* ── 3) Deal detay modalı: kaydırma çubuğu yuvarlak köşeden taşmasın ──
    Takım liderindeki .modal-box ile aynı çözüm. */

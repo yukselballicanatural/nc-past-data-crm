@@ -511,7 +511,7 @@ html[data-theme="dark"] main > div[id^="view-"] > div:has(.nc-date-field),
 html[data-theme="dark"] main > div[id^="view-"] > div:has(.nc-export-wrap),
 html[data-theme="dark"] main > div[id^="view-"] > div:has(> span[id$="ExportMount"]) { position: relative; z-index: 70; }
 html[data-theme="dark"] .nc-export-wrap { position: relative; z-index: 300; }
-html[data-theme="dark"] .nc-export-menu { z-index: 500 !important; }
+html[data-theme="dark"] .nc-export-menu { z-index: 10050 !important; }
 html[data-theme="dark"] main > div[id^="view-"] > div:has(> table) { position: relative; z-index: 1; }
 html[data-theme="dark"] #dealTableWrap,
 html[data-theme="dark"] #dealsKanbanView,
