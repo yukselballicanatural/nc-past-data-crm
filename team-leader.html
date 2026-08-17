@@ -536,11 +536,11 @@
         <option value="3">3 Gün</option>
       </select>
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-        <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Arrival</span>
-        <input type="date" id="alarmArrFrom" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Arrival Date — başlangıç">
+        <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Konsültasyon</span>
+        <input type="date" id="alarmArrFrom" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Konsültasyon/Seyahat Tarihi — başlangıç">
         <span style="color:#475569;font-size:11px">–</span>
-        <input type="date" id="alarmArrTo" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Arrival Date — bitiş">
-        <button onclick="NCDatePicker.setValue('alarmArrFrom','');NCDatePicker.setValue('alarmArrTo','')" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Arrival tarih filtresini temizle">✕</button>
+        <input type="date" id="alarmArrTo" class="filter-inp" onchange="updateTabCounts();renderAlarms()" style="width:135px" title="Konsültasyon/Seyahat Tarihi — bitiş">
+        <button onclick="NCDatePicker.setValue('alarmArrFrom','');NCDatePicker.setValue('alarmArrTo','')" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer" title="Tarih filtresini temizle">✕</button>
       </div>
       <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
         <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Created</span>
@@ -699,11 +699,11 @@
           <input id="dealOwnerFilter" class="filter-inp" placeholder="Danışman filtrele..." oninput="debounceDealSearch()">
         </div>
         <div class="filter-group">
-          <label class="filter-label">Arrival Tarihi Aralığı</label>
+          <label class="filter-label">Konsültasyon/Seyahat Tarihi Aralığı</label>
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-            <input type="date" id="dealDateFrom" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Arrival Date — başlangıç">
+            <input type="date" id="dealDateFrom" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Konsültasyon/Seyahat Tarihi — başlangıç">
             <span style="color:#475569;font-size:11px">–</span>
-            <input type="date" id="dealDateTo" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Arrival Date — bitiş">
+            <input type="date" id="dealDateTo" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Konsültasyon/Seyahat Tarihi — bitiş">
             <button onclick="ncClearDealDates()" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0" title="Tarih filtresini temizle">✕</button>
           </div>
         </div>
@@ -756,7 +756,7 @@
             <th onclick="dealSortBy('deal_id')" style="cursor:pointer;user-select:none">Deal ID<span id="dsort-deal_id" class="sarrow"></span></th>
             <th onclick="dealSortBy('stage')" style="cursor:pointer;user-select:none">Stage<span id="dsort-stage" class="sarrow"></span></th>
             <th onclick="dealSortBy('deal_owner')" style="cursor:pointer;user-select:none">Danışman<span id="dsort-deal_owner" class="sarrow"></span></th>
-            <th onclick="dealSortBy('arrival_date')" style="cursor:pointer;user-select:none">Arrival<span id="dsort-arrival_date" class="sarrow"></span></th>
+            <th onclick="dealSortBy('arrival_date')" style="cursor:pointer;user-select:none">Konsültasyon<span id="dsort-arrival_date" class="sarrow"></span></th>
             <th onclick="dealSortBy('created_time')" style="cursor:pointer;user-select:none">Oluşturulma<span id="dsort-created_time" class="sarrow"></span></th>
             <th onclick="dealSortBy('payment_or_flight_ticket')" style="cursor:pointer;user-select:none">P/F<span id="dsort-payment_or_flight_ticket" class="sarrow"></span></th>
             <th>Alarm</th>
@@ -927,7 +927,7 @@
           </select>
         </div>
         <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-          <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Arrival</span>
+          <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Konsültasyon</span>
           <input type="date" id="tlcaArrFrom" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
           <span style="color:#475569">–</span>
           <input type="date" id="tlcaArrTo" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
@@ -952,7 +952,7 @@
               <th style="text-align:right;cursor:pointer;user-select:none" onclick="_tlcaSort('amount')">Tutar<span id="tlcasort-amount" class="sarrow"></span></th>
               <th style="text-align:right;cursor:pointer;user-select:none" onclick="_tlcaSort('paid')">Ödenen<span id="tlcasort-paid" class="sarrow"></span></th>
               <th onclick="_tlcaSort('created')" style="cursor:pointer;user-select:none">Created<span id="tlcasort-created" class="sarrow"></span></th>
-              <th onclick="_tlcaSort('arrival')" style="cursor:pointer;user-select:none">Arrival<span id="tlcasort-arrival" class="sarrow"></span></th>
+              <th onclick="_tlcaSort('arrival')" style="cursor:pointer;user-select:none">Konsültasyon<span id="tlcasort-arrival" class="sarrow"></span></th>
               <th>Sonuç Kodu</th>
             </tr>
           </thead>
@@ -1025,7 +1025,7 @@
               <th onclick="wonSortBy('name')" style="cursor:pointer;user-select:none">Hasta / Danışman<span id="wsort-name" class="sarrow"></span></th>
               <th onclick="wonSortBy('dealId')" style="cursor:pointer;user-select:none">Deal ID<span id="wsort-dealId" class="sarrow"></span></th>
               <th onclick="wonSortBy('owner')" style="cursor:pointer;user-select:none">Danışman<span id="wsort-owner" class="sarrow"></span></th>
-              <th onclick="wonSortBy('arrival')" style="cursor:pointer;user-select:none">Arrival<span id="wsort-arrival" class="sarrow"></span></th>
+              <th onclick="wonSortBy('arrival')" style="cursor:pointer;user-select:none">Konsültasyon<span id="wsort-arrival" class="sarrow"></span></th>
               <th style="text-align:right;cursor:pointer;user-select:none" onclick="wonSortBy('amount')">Tutar<span id="wsort-amount" class="sarrow"></span></th>
               <th style="text-align:right;cursor:pointer;user-select:none" onclick="wonSortBy('paid')">Ödenen<span id="wsort-paid" class="sarrow"></span></th>
               <th style="text-align:right;cursor:pointer;user-select:none" onclick="wonSortBy('diff')">Fark<span id="wsort-diff" class="sarrow"></span></th>
@@ -1389,7 +1389,7 @@
     </div>
     <div style="display:grid;grid-template-columns:repeat(3,minmax(96px,1fr));gap:8px;margin-bottom:14px">
       <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;min-width:0"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Stage</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px;overflow-wrap:anywhere" id="tlcaStage">—</div></div>
-      <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;min-width:0"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Arrival</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px;overflow-wrap:anywhere" id="tlcaArrival">—</div></div>
+      <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;min-width:0"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Konsültasyon</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px;overflow-wrap:anywhere" id="tlcaArrival">—</div></div>
       <div style="background:#111827;border:1px solid #1e293b;border-radius:8px;padding:8px 10px;min-width:0"><div style="font-size:9px;color:#475569;font-weight:700;text-transform:uppercase">Tutar / Ödenen</div><div style="font-size:12px;color:#e2e8f0;margin-top:2px;overflow-wrap:anywhere" id="tlcaMoney">—</div></div>
     </div>
     <div style="background:#1e293b;border:1px solid #334155;border-radius:10px;padding:12px;margin-bottom:14px">
@@ -2034,12 +2034,14 @@
     await Promise.all(chunks.map(async chunk => {
       try {
         // arrival_date + created_time de çekiliyor — Alarmlar sayfasındaki
-        // Arrival Date / Created Time filtreleri (G2) bunları kullanır.
+        // Konsültasyon/Seyahat Tarihi / Created Time filtreleri (G2) bunları
+        // kullanır. arrival_date artık deals.consultation_ref_date'ten geliyor
+        // (bkz. consultation_reference_date.sql).
         // deal_name/deal_owner DA cekiliyor: alarms satirindaki ayni alanlar
         // alarmin dogdugu anda donmus bir ANLIK KOPYA ve motor
         // ignore-duplicates ile yazdigi icin guncellenmiyordu (bkz.
         // _tlSyncAlarmSnapshots). deals tablosu Zoho'nun guncel halidir.
-        const url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_id,deal_name,deal_owner,amount,total_paid_amount,stage,arrival_date,created_time&id=in.(${chunk.join(',')})`;
+        const url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_id,deal_name,deal_owner,amount,total_paid_amount,stage,arrival_date:consultation_ref_date,created_time&id=in.(${chunk.join(',')})`;
         const r = await fetch(url, { headers: H });
         if (!r.ok) return;
         const rows = await r.json();
@@ -2099,7 +2101,9 @@
       ['Yolcu Sayısı', raw.No_of_Passengers],
 
       ['__section__', 'Tarihler'],
-      ['Arrival Date',    formatDate(raw.Arrival_Date)],
+      // Arrival Date artik gosterilmiyor — takim liderlerinin/agent'larin Zoho'da
+      // bu alani guncelleme yetkisi yok. Ayni oncelik: alarm-engine.js effectiveArrivalDate().
+      ['Konsültasyon/Seyahat Tarihi', formatDate(raw.Consultation_Date || raw.Estimated_Travel_Date)],
       ['Eklenme Tarihi',  formatDate(raw.Created_Time)],
       ['1. Vizit',        formatDate(raw.Visit_Date  || raw.Visit_Date_1)],
       ['2. Vizit',        formatDate(raw.Visit_Date1 || raw.Visit_Date_2)],
@@ -2459,7 +2463,7 @@
     const thF = document.getElementById('alarmThreshFilter')?.value || '';
     if (thF) data = data.filter(a => String(liveThreshBucket(a)) === thF);
 
-    // Arrival Date aralığı (G2) — deal'in gerçek arrival_date'i dealFinanceMap'ten
+    // Konsültasyon/Seyahat Tarihi aralığı (G2) — deal'in gerçek arrival_date'i dealFinanceMap'ten
     const arrFrom = document.getElementById('alarmArrFrom')?.value || '';
     const arrTo   = document.getElementById('alarmArrTo')?.value || '';
     if (arrFrom || arrTo) data = data.filter(a => {
@@ -3677,8 +3681,15 @@
 
       // Postgres varsayılanı DESC'te null'ları öne koyar — nullslast ile boş değerleri sona at
       const nullsMod = dealSortDir === 'desc' ? '.nullslast' : '';
-      const orderParam = `${dealSortCol}.${dealSortDir}${nullsMod}${dealSortCol !== 'id' ? ',id.asc' : ''}`;
-      let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date,payment_or_flight_ticket,raw&order=${orderParam},id.asc&limit=${DEAL_PAGE_SIZE}&offset=${offset}${DEALS_2026_Q}`;
+      // arrival_date sunucu tarafi sirala/filtrele icin GERCEK kolon adi
+      // (consultation_ref_date) gerekiyor — select alias'i sadece ciktiya
+      // uygulanir, order/filter parametrelerinde gecerli degildir. Bkz.
+      // consultation_reference_date.sql: takim liderlerinin Zoho'da Arrival
+      // Date guncelleme yetkisi yok, referans artik Consultation_Date ->
+      // Estimated_Travel_Date onceligiyle bu kolonda tutuluyor.
+      const _dealSortDbCol = dealSortCol === 'arrival_date' ? 'consultation_ref_date' : dealSortCol;
+      const orderParam = `${_dealSortDbCol}.${dealSortDir}${nullsMod}${dealSortCol !== 'id' ? ',id.asc' : ''}`;
+      let url = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date:consultation_ref_date,payment_or_flight_ticket,raw&order=${orderParam},id.asc&limit=${DEAL_PAGE_SIZE}&offset=${offset}${DEALS_2026_Q}`;
       // Rol bazlı kapsam: TL kendi takımı (tüm yazım varyantları), RM kendi bölgesindeki tüm takımlar
       if (!isRM) {
         url += _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
@@ -3688,8 +3699,8 @@
       if (stage)  url += `&stage=eq.${encodeURIComponent(stage)}`;
       url += _dealSearchQuery(search);
       if (owner)  url += `&deal_owner=ilike.*${encodeURIComponent(owner)}*`;
-      if (dateFrom) url += `&arrival_date=gte.${encodeURIComponent(dateFrom)}`;
-      if (dateTo)   url += `&arrival_date=lte.${encodeURIComponent(dateTo)}`;
+      if (dateFrom) url += `&consultation_ref_date=gte.${encodeURIComponent(dateFrom)}`;
+      if (dateTo)   url += `&consultation_ref_date=lte.${encodeURIComponent(dateTo)}`;
       if (createdFrom) url += `&created_time=gte.${encodeURIComponent(createdFrom)}`;
       if (createdTo)   url += `&created_time=lte.${encodeURIComponent(createdTo)}T23:59:59`;
 
@@ -3809,8 +3820,8 @@
       if (stage)  base += `&stage=eq.${encodeURIComponent(stage)}`;
       base += _dealSearchQuery(search);
       if (owner)  base += `&deal_owner=ilike.*${encodeURIComponent(owner)}*`;
-      if (dateFrom) base += `&arrival_date=gte.${encodeURIComponent(dateFrom)}`;
-      if (dateTo)   base += `&arrival_date=lte.${encodeURIComponent(dateTo)}`;
+      if (dateFrom) base += `&consultation_ref_date=gte.${encodeURIComponent(dateFrom)}`;
+      if (dateTo)   base += `&consultation_ref_date=lte.${encodeURIComponent(dateTo)}`;
       if (createdFrom) base += `&created_time=gte.${encodeURIComponent(createdFrom)}`;
       if (createdTo)   base += `&created_time=lte.${encodeURIComponent(createdTo)}T23:59:59`;
 
@@ -3904,14 +3915,14 @@
       const dateTo   = document.getElementById('dealDateTo')?.value || '';
       const { from: createdFrom, to: createdTo } = _dealCreatedRange();
       const PAGE = 1000;
-      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date,payment_or_flight_ticket,created_time&order=id.asc${DEALS_2026_Q}`;
+      let baseUrl = `${SUPABASE_URL}/rest/v1/deals?select=id,deal_id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date:consultation_ref_date,payment_or_flight_ticket,created_time&order=id.asc${DEALS_2026_Q}`;
       if (!isRM) baseUrl += _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
       else if (isRM) baseUrl += `&team=${TeamMap.inFilter(TeamMap.aliasesForRegion(getRegion(currentUser)))}`;
       if (stage)  baseUrl += `&stage=eq.${encodeURIComponent(stage)}`;
       baseUrl += _dealSearchQuery(search);
       if (owner)  baseUrl += `&deal_owner=ilike.*${encodeURIComponent(owner)}*`;
-      if (dateFrom) baseUrl += `&arrival_date=gte.${encodeURIComponent(dateFrom)}`;
-      if (dateTo)   baseUrl += `&arrival_date=lte.${encodeURIComponent(dateTo)}`;
+      if (dateFrom) baseUrl += `&consultation_ref_date=gte.${encodeURIComponent(dateFrom)}`;
+      if (dateTo)   baseUrl += `&consultation_ref_date=lte.${encodeURIComponent(dateTo)}`;
       if (createdFrom) baseUrl += `&created_time=gte.${encodeURIComponent(createdFrom)}`;
       if (createdTo)   baseUrl += `&created_time=lte.${encodeURIComponent(createdTo)}T23:59:59`;
 
@@ -4007,7 +4018,10 @@
 
     tbody.innerHTML = data.map((d, i) => {
       const raw  = typeof d.raw === 'string' ? (()=>{ try{return JSON.parse(d.raw);}catch(e){return {};} })() : (d.raw || {});
-      const arrival = d.arrival_date || raw.Arrival_Date || '—';
+      // d.arrival_date artik deals.consultation_ref_date'ten geliyor (Consultation_Date
+      // -> Estimated_Travel_Date onceligi) — raw.Arrival_Date'e fallback YAPILMAZ,
+      // yoksa takim liderlerinin guncelleyemedigi alan geri sizmis olur.
+      const arrival = d.arrival_date || '—';
       const pft  = d.payment_or_flight_ticket || raw.Payment_Or_Flight_Ticket || '—';
       const amount = d.amount ?? raw.Amount ?? raw.Grand_Total_2 ?? null;
       const paidAmount = d.total_paid_amount ?? raw.Total_Paid_Amount ?? null;
@@ -4154,7 +4168,8 @@
       // stage Cancelled (Zoho'dan) VEYA agent'ın kendi girdiği sonuç kodu
       // "8. Cancelled" olan dealler — bkz. admin.html'deki aynı düzeltme.
       const orInner = 'stage.ilike.*cancel*,result_code.ilike.8.*';
-      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,payment_or_flight_ticket,created_time,result_code,sub_code,agent_note';
+      // arrival_date ARTIK deals.consultation_ref_date'ten geliyor — bkz. consultation_reference_date.sql.
+      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date:consultation_ref_date,amount,total_paid_amount,payment_or_flight_ticket,created_time,result_code,sub_code,agent_note';
       const PAGE = 1000;
       // NOT: bu sorguda İKİ tane or= oluyor (iptal koşulu + kapsam). Bu
       // güvenli: PostgREST tekrarlanan or= parametrelerini AND'liyor, biri
@@ -4666,7 +4681,8 @@
       // icin raw fallback'ine ihtiyac yok. Sayfalar paralel cekilir.
       const isRM = currentUser.role === 'regional-manager';
       const stageParam = encodeURIComponent('ilike.*won*');
-      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,created_time,result_code,sub_code,agent_note';
+      // arrival_date ARTIK deals.consultation_ref_date'ten geliyor — bkz. consultation_reference_date.sql.
+      const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date:consultation_ref_date,amount,total_paid_amount,created_time,result_code,sub_code,agent_note';
       const PAGE = 1000;
       let baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
       if (!isRM) baseUrl += _tlScopeParam(TeamMap.aliasesFor(currentUser.team));
@@ -4781,7 +4797,8 @@
   async function _waOpenDealModal(id) {
     try {
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
-      const sel = 'id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date,payment_or_flight_ticket,raw';
+      // arrival_date ARTIK deals.consultation_ref_date'ten geliyor — bkz. consultation_reference_date.sql.
+      const sel = 'id,deal_name,deal_owner,stage,team,amount,total_paid_amount,arrival_date:consultation_ref_date,payment_or_flight_ticket,raw';
       const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(id)}&select=${sel}&limit=1`, { headers: H });
       if (r.ok) {
         const rows = await r.json();
@@ -6048,7 +6065,7 @@
 
   function exportCancelled(format) {
     const data = cancelledDealsList || [];
-    const headers = ['Hasta','Danışman','Takım','Deal ID','Stage','Tutar','Ödenen','Kalan','Oluşturulma','Arrival Date','Sonuç Kodu','Danışman Notu'];
+    const headers = ['Hasta','Danışman','Takım','Deal ID','Stage','Tutar','Ödenen','Kalan','Oluşturulma','Konsültasyon/Seyahat Tarihi','Sonuç Kodu','Danışman Notu'];
     const rows = data.map(d => {
       const amount = d.amount ?? null, paid = d.total_paid_amount ?? null;
       const remaining = (amount !== null && paid !== null) ? (amount - paid) : null;
@@ -6063,7 +6080,7 @@
   // _tlKanbanDeals (tüm sayfalar çekilmiş hali) kullanılır; boşsa mevcut sayfa (allDeals).
   function exportDeals(format) {
     const data = (_tlKanbanDeals && _tlKanbanDeals.length) ? _tlKanbanDeals : (allDeals || []);
-    const headers = ['Hasta','Deal ID','Stage','Danışman','Takım','Arrival Date','Oluşturulma','P/F','Tutar','Ödenen','Kalan'];
+    const headers = ['Hasta','Deal ID','Stage','Danışman','Takım','Konsültasyon/Seyahat Tarihi','Oluşturulma','P/F','Tutar','Ödenen','Kalan'];
     const rows = data.map(d => {
       const amount = d.amount ?? null, paid = d.total_paid_amount ?? null;
       const remaining = (amount !== null && paid !== null) ? (amount - paid) : null;
@@ -6074,7 +6091,7 @@
 
   function exportWonAlarms(format) {
     const data = _waLastFiltered && _waLastFiltered.length ? _waLastFiltered : (wonMismatchDeals || []);
-    const headers = ['Hasta','Danışman','Deal ID','Arrival Date','Tutar','Ödenen','Fark','Sonuç Kodu'];
+    const headers = ['Hasta','Danışman','Deal ID','Konsültasyon/Seyahat Tarihi','Tutar','Ödenen','Fark','Sonuç Kodu'];
     const rows = data.map(d => [d.deal_name,d.deal_owner,d.deal_id,d.arrival_date,d._total,d._paid,d._diff,d.sub_code]);
     NCExport.download(format || 'csv', headers, rows, 'won_alarmi', 'Won Alarmı');
   }

@@ -191,7 +191,7 @@
         All Data <span id="badge-all" class="tab-badge bg-indigo-800 text-white">0</span>
       </button>
       <button onclick="switchTab('arrival')" id="tab-arrival" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
-        Arrival Date <span id="badge-arrival" class="tab-badge bg-gray-800 text-slate-400">0</span>
+        Consultation Date <span id="badge-arrival" class="tab-badge bg-gray-800 text-slate-400">0</span>
       </button>
       <button onclick="switchTab('visit1')" id="tab-visit1" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
         Visit Date 1 <span id="badge-visit1" class="tab-badge bg-gray-800 text-slate-400">0</span>
@@ -232,7 +232,7 @@
               <th data-sort="name"    onclick="sortBy('name')"    style="cursor:pointer;user-select:none">Deal Name<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="id"      onclick="sortBy('id')"      style="cursor:pointer;user-select:none">Deal ID<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="stage"   onclick="sortBy('stage')"   style="cursor:pointer;user-select:none">Stage<span class="sarrow" style="color:#475569"> ↕</span></th>
-              <th data-sort="arrival" onclick="sortBy('arrival')" style="cursor:pointer;user-select:none">Arrival Date<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="arrival" onclick="sortBy('arrival')" style="cursor:pointer;user-select:none">Consultation Date<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="created" onclick="sortBy('created')" style="cursor:pointer;user-select:none">Created<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="lang"    onclick="sortBy('lang')"    style="cursor:pointer;user-select:none">Language<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="amount"  onclick="sortBy('amount')"  style="cursor:pointer;user-select:none">Deal Amount<span class="sarrow" style="color:#475569"> ↕</span></th>
@@ -264,7 +264,7 @@
 
       <div class="grid grid-cols-2 gap-2 mb-5 text-xs">
         <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Stage</div><div id="modalStage">—</div></div>
-        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Arrival Date</div><div class="text-slate-200 font-medium" id="modalArrival">—</div></div>
+        <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Consultation Date</div><div class="text-slate-200 font-medium" id="modalArrival">—</div></div>
         <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Language</div><div class="text-slate-200" id="modalLanguage">—</div></div>
         <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Region</div><div class="text-slate-200" id="modalRegion">—</div></div>
         <div class="bg-gray-900/80 rounded-lg p-3"><div class="text-[9px] text-slate-500 font-semibold uppercase mb-1">Deal Amount</div><div class="text-blue-400 font-bold" id="modalDealAmt">—</div></div>
@@ -903,7 +903,11 @@
         const dealAmount   = parseAmount(row.amount ?? row.rawAmount);
         const paidAmount   = parseAmount(row.total_paid_amount ?? row.rawPaid);
         const unpaidAmount = row.remaining_amount != null ? parseAmount(row.remaining_amount) : Math.max(0, dealAmount - paidAmount);
-        const arrivalDate  = dateOnly(row.arrival_date || row.rawArrival);
+        // arrival_date ARTIK deals.consultation_ref_date'ten geliyor (Consultation_Date
+        // -> Estimated_Travel_Date önceliği) — agent'ların Zoho'da Arrival Date
+        // güncelleme yetkisi yok, bkz. consultation_reference_date.sql. raw'a fallback
+        // YAPILMAZ, yoksa güncellenemeyen alan geri sızmış olur.
+        const arrivalDate  = dateOnly(row.arrival_date);
         const paymentStatus = paidAmount <= 0 ? 'Unpaid' : (dealAmount > 0 && paidAmount >= dealAmount) ? 'Paid' : 'Partial';
         const v1 = dateOnly(row.visit_date_1 || row.rawV1);
         const v2 = dateOnly(row.visit_date_2 || row.rawV2);
@@ -946,10 +950,10 @@
     // deals-live.js de aynı kolon listesini kullanıyor — bu yüzden loadData'nın
     // içinden modül kapsamına çıkarıldı.
     const DEALS_SELECT = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,remaining_amount,' +
-      'arrival_date,visit_date_1,visit_date_2,visit_date_3,payment_or_flight_ticket,created_time,' +
+      'arrival_date:consultation_ref_date,visit_date_1,visit_date_2,visit_date_3,payment_or_flight_ticket,created_time,' +
       'result_code,sub_code,agent_note,deal_status,lock_approval_requested,' +
       'rawLang:raw->>Language,rawAmount:raw->>Amount,rawPaid:raw->>Total_Paid_Amount,' +
-      'rawArrival:raw->>Arrival_Date,rawV1:raw->>Visit_Date,rawV2:raw->>Visit_Date1,rawV3:raw->>Visit_Date2,' +
+      'rawV1:raw->>Visit_Date,rawV2:raw->>Visit_Date1,rawV3:raw->>Visit_Date2,' +
       'rawPft:raw->>Payment_Or_Flight_Ticket';
 
     async function loadData(forceRefresh) {

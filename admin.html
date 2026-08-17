@@ -1088,7 +1088,7 @@
         </div>
         <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;padding-top:8px">
           <div>
-            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date</label>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon/Seyahat Tarihi</label>
             <div style="display:flex;align-items:center;gap:6px">
               <input type="date" id="dealDateFrom" onchange="applyFilters()">
               <span class="text-slate-500 text-xs">—</span>
@@ -1120,7 +1120,7 @@
           Tüm Veri <span id="badge-all" class="tab-badge bg-indigo-800 text-white">0</span>
         </button>
         <button onclick="switchTab('arrival')" id="tab-arrival" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
-          Arrival Date <span id="badge-arrival" class="tab-badge bg-gray-800 text-slate-400">0</span>
+          Konsültasyon Tarihi <span id="badge-arrival" class="tab-badge bg-gray-800 text-slate-400">0</span>
         </button>
         <button onclick="switchTab('visit1')" id="tab-visit1" class="px-3 py-2 text-xs font-semibold rounded-lg text-slate-400 hover:text-white flex items-center gap-1.5 transition-all">
           Ziyaret Tarihi 1 <span id="badge-visit1" class="tab-badge bg-gray-800 text-slate-400">0</span>
@@ -1175,7 +1175,7 @@
                   <th data-sort="team"    onclick="sortBy('team')"    style="cursor:pointer;user-select:none">Takım<span class="sarrow" style="color:#475569"> ↕</span></th>
                   <th data-sort="agent"   onclick="sortBy('agent')"   style="cursor:pointer;user-select:none">Danışman<span class="sarrow" style="color:#475569"> ↕</span></th>
                   <th data-sort="stage"   onclick="sortBy('stage')"   style="cursor:pointer;user-select:none">Stage<span class="sarrow" style="color:#475569"> ↕</span></th>
-                  <th data-sort="arrival" onclick="sortBy('arrival')" style="cursor:pointer;user-select:none">Arrival Date<span class="sarrow" style="color:#475569"> ↕</span></th>
+                  <th data-sort="arrival" onclick="sortBy('arrival')" style="cursor:pointer;user-select:none">Konsültasyon Tarihi<span class="sarrow" style="color:#475569"> ↕</span></th>
                   <th data-sort="created" onclick="sortBy('created')" style="cursor:pointer;user-select:none">Oluşturma<span class="sarrow" style="color:#475569"> ↕</span></th>
                   <th data-sort="lang"    onclick="sortBy('lang')"    style="cursor:pointer;user-select:none">Dil<span class="sarrow" style="color:#475569"> ↕</span></th>
                   <th data-sort="amount"  onclick="sortBy('amount')"  style="cursor:pointer;user-select:none">Tutar<span class="sarrow" style="color:#475569"> ↕</span></th>
@@ -1231,11 +1231,11 @@
             </select>
           </div>
           <div style="border-left:1px solid #1e293b;padding-left:16px">
-            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date</label>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon/Seyahat Tarihi</label>
             <div style="display:flex;align-items:center;gap:6px">
-              <input id="anFilterDateFrom" type="date" onchange="loadAnalyticsSummary()" title="Arrival Date başlangıç">
+              <input id="anFilterDateFrom" type="date" onchange="loadAnalyticsSummary()" title="Konsültasyon/Seyahat Tarihi başlangıç">
               <span class="text-slate-500 text-xs">—</span>
-              <input id="anFilterDateTo" type="date" onchange="loadAnalyticsSummary()" title="Arrival Date bitiş">
+              <input id="anFilterDateTo" type="date" onchange="loadAnalyticsSummary()" title="Konsültasyon/Seyahat Tarihi bitiş">
             </div>
           </div>
           <div style="border-left:1px solid #1e293b;padding-left:16px">
@@ -1285,7 +1285,7 @@
       </div>
 
       <div class="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <h3 class="text-sm font-bold text-white mb-1">Aylık Deal & Ciro Trendi (Arrival Date)</h3>
+        <h3 class="text-sm font-bold text-white mb-1">Aylık Deal & Ciro Trendi (Konsültasyon/Seyahat Tarihi)</h3>
         <p class="text-[10px] text-slate-500 mb-3">Grafiğin üzerinde gezinerek aylık değerleri görebilirsiniz.</p>
         <div id="trendChart"></div>
       </div>
@@ -2009,7 +2009,7 @@
              etiket + iki kutu. Tum Deal'ler ekranindaki duzenin aynisi. -->
         <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;padding-top:10px">
           <div>
-            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival Date</label>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon/Seyahat Tarihi</label>
             <div style="display:flex;align-items:center;gap:6px">
               <input type="date" id="amDateFrom" onchange="_amOnDateFilterChange()">
               <span class="text-slate-500 text-xs">—</span>
@@ -2259,7 +2259,7 @@
               <th class="am-sort" style="text-align:right" data-col="amount" onclick="_caSortBy('amount')">Tutar<span class="am-sarrow"></span></th>
               <th class="am-sort" style="text-align:right" data-col="paid" onclick="_caSortBy('paid')">Ödenen<span class="am-sarrow"></span></th>
               <th class="am-sort" data-col="created" onclick="_caSortBy('created')">Created<span class="am-sarrow"></span></th>
-              <th class="am-sort" data-col="arrival" onclick="_caSortBy('arrival')">Arrival<span class="am-sarrow"></span></th>
+              <th class="am-sort" data-col="arrival" onclick="_caSortBy('arrival')">Konsültasyon<span class="am-sarrow"></span></th>
               <th>Sonuç Kodu</th>
               <th style="text-align:center">Not</th>
             </tr>
@@ -2345,7 +2345,7 @@
               <th data-sort="wa-dealId" onclick="_waSortBy('dealId')" style="cursor:pointer;user-select:none">Deal ID<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="wa-region" onclick="_waSortBy('region')" style="cursor:pointer;user-select:none">Bölge<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="wa-team" onclick="_waSortBy('team')" style="cursor:pointer;user-select:none">Takım<span class="sarrow" style="color:#475569"> ↕</span></th>
-              <th data-sort="wa-arrival" onclick="_waSortBy('arrival')" style="cursor:pointer;user-select:none">Arrival<span class="sarrow" style="color:#475569"> ↕</span></th>
+              <th data-sort="wa-arrival" onclick="_waSortBy('arrival')" style="cursor:pointer;user-select:none">Konsültasyon<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="wa-amount" onclick="_waSortBy('amount')" style="text-align:right;cursor:pointer;user-select:none">Tutar<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="wa-paid" onclick="_waSortBy('paid')" style="text-align:right;cursor:pointer;user-select:none">Ödenen<span class="sarrow" style="color:#475569"> ↕</span></th>
               <th data-sort="wa-diff" onclick="_waSortBy('diff')" style="text-align:right;cursor:pointer;user-select:none">Fark<span class="sarrow" style="color:#475569"> ↕</span></th>
@@ -2872,7 +2872,7 @@
       <div class="aam-info-grid mb-5" id="aamDealDetailGrid">
         <div class="aam-info-card"><div class="aam-info-label">Deal ID</div><div class="aam-info-val" id="aamDealRef">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Stage</div><div class="aam-info-val" id="aamDealStage">—</div></div>
-        <div class="aam-info-card"><div class="aam-info-label">Arrival Date</div><div class="aam-info-val" id="aamDealArrival">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Konsültasyon/Seyahat Tarihi</div><div class="aam-info-val" id="aamDealArrival">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Deal Amount</div><div class="aam-info-val" id="aamDealAmount">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Paid / Unpaid</div><div class="aam-info-val" id="aamDealPaidUnpaid">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Payment Status</div><div class="aam-info-val" id="aamDealPaymentStatus">—</div></div>
@@ -2981,7 +2981,7 @@
       </div>
       <div class="aam-info-grid mb-4" style="grid-template-columns:repeat(3,minmax(96px,1fr))">
         <div class="aam-info-card"><div class="aam-info-label">Stage</div><div class="aam-info-val" id="cdmStage">—</div></div>
-        <div class="aam-info-card"><div class="aam-info-label">Arrival Date</div><div class="aam-info-val" id="cdmArrival">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Konsültasyon/Seyahat Tarihi</div><div class="aam-info-val" id="cdmArrival">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Tutar / Ödenen</div><div class="aam-info-val" id="cdmMoney">—</div></div>
       </div>
 
@@ -3050,7 +3050,7 @@
         <div class="aam-info-card"><div class="aam-info-label">Bölge</div><div class="aam-info-val" id="wamRegion">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Takım</div><div class="aam-info-val" id="wamTeam">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Stage</div><div class="aam-info-val" id="wamStage">—</div></div>
-        <div class="aam-info-card"><div class="aam-info-label">Arrival Date</div><div class="aam-info-val" id="wamArrival">—</div></div>
+        <div class="aam-info-card"><div class="aam-info-label">Konsültasyon/Seyahat Tarihi</div><div class="aam-info-val" id="wamArrival">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Tutar</div><div class="aam-info-val" id="wamAmount">—</div></div>
         <div class="aam-info-card"><div class="aam-info-label">Ödenen</div><div class="aam-info-val" id="wamPaid">—</div></div>
         <div class="aam-info-card" style="grid-column:span 2"><div class="aam-info-label">Fark</div><div class="aam-info-val" id="wamDiff">—</div></div>
@@ -5401,7 +5401,11 @@
         // agent bir deali kendi ekranından "Cancelled" olarak işaretlediğinde
         // (Zoho stage'i hâlâ eskisi olduğu için) bu liste/rozet hiç güncellenmezdi.
         const orParam = encodeURIComponent('(stage.ilike.*cancel*,result_code.ilike.8.*)');
-        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,created_time,result_code,sub_code,agent_note';
+        // arrival_date ARTIK deals.consultation_ref_date'ten geliyor (Consultation_Date
+        // -> Estimated_Travel_Date onceligi, bkz. consultation_reference_date.sql) —
+        // takim liderleri/agent'larin Zoho'da Arrival Date guncelleme yetkisi yok.
+        // Alias ayni kaldigi icin asagidaki tum d.arrival_date kullanimlari degismedi.
+        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,created_time,result_code,sub_code,agent_note,arrival_date:consultation_ref_date';
         const PAGE = 1000;
         const teamQ = window.rmTeams ? `&team=${TeamMap.inFilter(window.rmTeams)}` : '';
         const baseUrl = `${SUPABASE_URL}/rest/v1/deals?or=${orParam}${teamQ}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
@@ -5804,7 +5808,8 @@
         // (sayfa sayisi x tek istek suresi) yerine tek bir istek suresine iner.
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'count=exact' };
         const stageParam = encodeURIComponent('ilike.*won*');
-        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,arrival_date,amount,total_paid_amount,created_time,result_code,sub_code,agent_note';
+        // arrival_date ARTIK deals.consultation_ref_date'ten geliyor — bkz. yukarıdaki not.
+        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,created_time,result_code,sub_code,agent_note,arrival_date:consultation_ref_date';
         const PAGE = 1000;
         const teamQ = window.rmTeams ? `&team=${TeamMap.inFilter(window.rmTeams)}` : '';
         const baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}${teamQ}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
@@ -6605,7 +6610,8 @@
       if (!dealId) return;
       try {
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
-        const sel = 'id,stage,amount,total_paid_amount,remaining_amount,arrival_date,visit_date_1,visit_date_2,visit_date_3,rawLang:raw->>Language';
+        // arrival_date ARTIK deals.consultation_ref_date'ten geliyor — bkz. consultation_reference_date.sql.
+        const sel = 'id,stage,amount,total_paid_amount,remaining_amount,visit_date_1,visit_date_2,visit_date_3,rawLang:raw->>Language,arrival_date:consultation_ref_date';
         const r = await fetch(`${SUPABASE_URL}/rest/v1/deals?id=eq.${encodeURIComponent(dealId)}&select=${sel}&limit=1`, { headers: H });
         if (!r.ok) return;
         const rows = await r.json();
@@ -8502,7 +8508,7 @@
 
     function exportAdminCancelled(format) {
       const data = _caLastFiltered && _caLastFiltered.length ? _caLastFiltered : [];
-      const headers = ['Hasta','Danışman','Deal ID','Bölge','Takım','Stage','Tutar','Ödenen','Kalan','Oluşturulma','Arrival Date','Sonuç Kodu','Danışman Notu'];
+      const headers = ['Hasta','Danışman','Deal ID','Bölge','Takım','Stage','Tutar','Ödenen','Kalan','Oluşturulma','Konsültasyon/Seyahat Tarihi','Sonuç Kodu','Danışman Notu'];
       const rows = data.map(d => {
         const amount = d.amount ?? null, paid = d.total_paid_amount ?? null;
         const remaining = (amount !== null && paid !== null) ? (amount - paid) : null;
@@ -8514,7 +8520,7 @@
 
     function exportAdminWon(format) {
       const data = _waLastFiltered && _waLastFiltered.length ? _waLastFiltered : (adminWonMismatchDeals || []);
-      const headers = ['Hasta','Danışman','Deal ID','Bölge','Takım','Arrival Date','Tutar','Ödenen','Fark','Sonuç Kodu'];
+      const headers = ['Hasta','Danışman','Deal ID','Bölge','Takım','Konsültasyon/Seyahat Tarihi','Tutar','Ödenen','Fark','Sonuç Kodu'];
       const rows = data.map(d => [d.deal_name,d.deal_owner,d.deal_id,d._region,d.team,d.arrival_date,d._total,d._paid,d._diff,d.sub_code]);
       NCExport.download(format || 'csv', headers, rows, 'won_alarmi_admin', 'Won Alarmı');
     }
@@ -10393,7 +10399,7 @@
         ['Yolcu Sayısı', raw.No_of_Passengers],
 
         ['__section__', 'Tarihler'],
-        ['Arrival Date',   formatDate(d['Arrival Date'])],
+        ['Konsültasyon/Seyahat Tarihi', formatDate(d['Arrival Date'])],
         ['Eklenme Tarihi', formatDate(d['Created Time'])],
         ['1. Vizit', formatDate(d['1. Visit Date'])],
         ['2. Vizit', formatDate(d['2. Visit Date'])],
@@ -10586,7 +10592,7 @@
 
     function exportDealsAdmin(format) {
       if (!filteredDeals.length) { showSiteNotice(I18N.t('Dışa aktarılacak veri yok.'), 'warn'); return; }
-      const headers = ['Deal Name','Deal ID','Team','Agent','Stage','Language','Arrival Date','Oluşturulma','Visit 1','Visit 2','Visit 3','Deal Amount','Paid Amount','Unpaid Amount','Payment Status','Visit Status','Result Code','Sub Code','Agent Note','Status'];
+      const headers = ['Deal Name','Deal ID','Team','Agent','Stage','Language','Konsültasyon/Seyahat Tarihi','Oluşturulma','Visit 1','Visit 2','Visit 3','Deal Amount','Paid Amount','Unpaid Amount','Payment Status','Visit Status','Result Code','Sub Code','Agent Note','Status'];
       const rows = filteredDeals.map(d => [
         d['Deal Name']||'', d['DealID']||'', d['Team Group']||'', d['Deal Owner Name']||'',
         d['Stage']||'', d['Language']||'', d['Arrival Date']||'', d['Created Time']||'', d['1. Visit Date']||'',
@@ -11021,7 +11027,7 @@
       const regionMap = {};
       data.forEach(d => { const r = d['Region']||I18N.t('Bilinmiyor'); regionMap[r] = (regionMap[r]||0)+1; });
 
-      // Monthly trend (by Arrival Date)
+      // Monthly trend (by Konsültasyon/Seyahat Tarihi — bkz. consultation_reference_date.sql)
       const trendMap = {};
       data.forEach(d => {
         const dt = d['Arrival Date'];
@@ -12392,8 +12398,13 @@
     // Language için doğrudan kolon yok, sadece o alan raw JSONB'den çekiliyor.
     // Diğer alanların hepsinin zaten doğrudan kolonu var — raw->> ile tekrar
     // çekmek her satırda büyük JSONB'yi parse ettirip DB'yi zorluyor (statement timeout / 500).
+    // arrival_date ARTIK deals.consultation_ref_date'ten geliyor (Consultation_Date ->
+    // Estimated_Travel_Date önceliği, bkz. consultation_reference_date.sql) — takım
+    // liderlerinin/agent'ların Zoho'da Arrival Date güncelleme yetkisi yok. Alias adı
+    // aynı kaldığı için allDeals'i tüketen HİÇBİR yer (sıralama, filtre, export, KPI,
+    // Sistem Etkisi) değişmedi — sadece bu alanın kaynağı değişti.
     const _DEALS_SELECT = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,remaining_amount,' +
-      'arrival_date,visit_date_1,visit_date_2,visit_date_3,payment_or_flight_ticket,created_time,' +
+      'arrival_date:consultation_ref_date,visit_date_1,visit_date_2,visit_date_3,payment_or_flight_ticket,created_time,' +
       'result_codes,rawLang:raw->>Language,rawCountry:raw->>Country_Name';
 
     // onBatch(rows) her parça indikçe çağrılır — böylece tablo hepsi
