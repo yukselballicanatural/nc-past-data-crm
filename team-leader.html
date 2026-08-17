@@ -2265,7 +2265,7 @@
   // zaman" ifadeli tipler yerine tutarlı şekilde "Gecikmiş" gösterilir.
   function alarmTypeMeta(type, overdue) {
     const m = {
-      'arrival_approaching': { label:I18N.t('Arrival Yaklaşıyor'), bg:'#431407', color:'#fb923c' },
+      'arrival_approaching': { label:I18N.t('Tarih Yaklaşıyor'), bg:'#431407', color:'#fb923c' },
       'visit_approaching':   { label:I18N.t('Vizit Yaklaşıyor'),   bg:'#1e3a5f', color:'#60a5fa' },
       'arrival_missing':     { label:I18N.t('Tarih Eksik'),         bg:'#450a0a', color:'#f87171' },
       'today_patient':       { label:I18N.t('Bugün Gelecek'),       bg:'#052e16', color:'#4ade80' },
@@ -2295,7 +2295,10 @@
 
   function fieldLabel(f) {
     const m = {
-      'arrival_date':      'Arrival Date',
+      // Motor artık Zoho'daki Consultation_Date'i (yoksa Estimated_Travel_Date'i)
+      // referans alıyor — bkz. alarm-engine.js effectiveArrivalDate(). İç
+      // anahtar hâlâ 'arrival_date' ama gösterilen etiket artık bunu yansıtıyor.
+      'arrival_date':      I18N.t('Konsültasyon/Seyahat Tarihi'),
       'visit_date_1':      I18N.t('1. Vizit'),
       'visit_date_2':      I18N.t('2. Vizit'),
       'visit_date_3':      I18N.t('3. Vizit'),
@@ -2627,7 +2630,7 @@
     return t || 'unknown';
   }
 
-  // Kanban — Alarm Tipine göre ayrı sütunlar (Bugün Gelecek / Arrival Yaklaşıyor /
+  // Kanban — Alarm Tipine göre ayrı sütunlar (Bugün Gelecek / Tarih Yaklaşıyor /
   // Vizit Yaklaşıyor / Tarih Eksik / Gecikmiş), Durum tablodaki gibi kart üzerinde
   // rozet olarak gösterilir. Deal Listesi Kanban'ıyla aynı desen — ayrı bir fetch
   // yok, tablo için zaten hesaplanmış filtrelenmiş `data` seti Tipe göre gruplanır.

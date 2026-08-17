@@ -1946,7 +1946,7 @@
             <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Alarm Tipi</label>
             <select id="amFilterType" onchange="_amOnScopeFilterChange()" class="filter-select">
               <option value="">Tüm Tipler</option>
-              <option value="arrival_approaching">Arrival Yaklaşıyor</option>
+              <option value="arrival_approaching">Tarih Yaklaşıyor</option>
               <option value="visit_approaching">Vizit Yaklaşıyor</option>
               <option value="arrival_missing">Tarih Eksik</option>
               <option value="today_patient">Bugün Gelecek</option>
@@ -3412,7 +3412,7 @@
     // hâlâ oluşturulduğu andaki (artık yanlış) etiketle görünmeye devam ederdi.
     function _amTypeMeta(type, overdue) {
       const m = {
-        'arrival_approaching':{ label:I18N.t('Arrival Yaklaşıyor'), color:'#fb923c' },
+        'arrival_approaching':{ label:I18N.t('Tarih Yaklaşıyor'), color:'#fb923c' },
         'visit_approaching':  { label:I18N.t('Vizit Yaklaşıyor'),   color:'#60a5fa' },
         'arrival_missing':    { label:I18N.t('Tarih Eksik'),         color:'#f87171' },
         'today_patient':      { label:I18N.t('Bugün Gelecek'),       color:'#4ade80' },
@@ -3422,6 +3422,20 @@
         return { label: I18N.t('Gecikmiş'), color:'#f87171' };
       }
       return m[type] || { label: type, color:'#94a3b8' };
+    }
+
+    // Alarmın reference_field'ı ham hâliyle ('arrival_date' vb.) kullanıcıya
+    // gösterilmemeli — motor artık bu alanı Consultation_Date/Estimated_Travel_Date'ten
+    // türetiyor (bkz. alarm-engine.js effectiveArrivalDate()), iç ad değişmedi.
+    function _amFieldLabel(f) {
+      const m = {
+        'arrival_date':       I18N.t('Konsültasyon/Seyahat Tarihi'),
+        'visit_date_1':       I18N.t('1. Vizit'),
+        'visit_date_2':       I18N.t('2. Vizit'),
+        'visit_date_3':       I18N.t('3. Vizit'),
+        'last_activity_time': I18N.t('Son Aktivite'),
+      };
+      return m[f] || f || '—';
     }
 
     function _amStatusMeta(s) {
@@ -6509,7 +6523,7 @@
       }
       document.getElementById('aamAlarmType').innerHTML   = `<span style="padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;background:${tm.color}22;color:${tm.color}">${fmt(tm.label)}</span>`;
       document.getElementById('aamAlarmStatus').innerHTML = `<span style="padding:2px 8px;border-radius:9999px;font-size:10px;font-weight:700;background:${sm.color}22;color:${sm.color}">${fmt(sm.label)}</span>`;
-      document.getElementById('aamRefField').textContent  = a.reference_field || '—';
+      document.getElementById('aamRefField').textContent  = _amFieldLabel(a.reference_field);
       document.getElementById('aamRefDate').textContent   = _amFmtDate(a.reference_date);
       document.getElementById('aamCreatedAt').textContent = _amFmtDateTime(a.created_at);
       const days = _amDaysUntil(a.reference_date);
@@ -8443,7 +8457,7 @@
         const info = _amDealInfoFor(a.deal_id) || {};
         return [a.deal_name, a.deal_owner, info.ref || a.deal_id, info.stage, a.team, a.region,
           _amTypeMeta(AlarmStatus.effectiveType(a), _amIsOverdue(a)).label, a.payment_or_flight_ticket, a.threshold_days,
-          a.reference_field, a.reference_date, a.days_remaining, info.amount, info.paid,
+          _amFieldLabel(a.reference_field), a.reference_date, a.days_remaining, info.amount, info.paid,
           _amStatusMeta(a.status).label, a.result_code, a.note, a.created_at, a.closed_by, a.close_reason];
       });
       NCExport.download(format || 'csv', headers, rows, 'alarmlar_admin', 'Alarmlar');

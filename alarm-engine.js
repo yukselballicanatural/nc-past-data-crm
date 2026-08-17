@@ -88,6 +88,22 @@ window.AlarmEngine = (function () {
     return r;
   }
 
+  // "arrival_date" referansı ARTIK Zoho'nun Arrival_Date alanından gelmiyor.
+  // Sebep: takım liderlerinin ve agent'ların Zoho'da Arrival Date güncelleme
+  // yetkisi yok — bu alan onların erişemediği bir yerden (uçuş/karşılama
+  // ekibi) doldurulduğu için sistemi ona göre kurmak yanlış hasta takibine
+  // yol açıyordu. Yeni öncelik: önce Consultation_Date, o boşsa
+  // Estimated_Travel_Date, o da boşsa "tarih eksik" alarmı üretilir.
+  // reference_field/dedup_key/alarm_type ADLARI 'arrival_date' olarak KALIYOR
+  // (closeStaleDateAlarms, syncAlarmTypes, alarm-status.js hep bu adı
+  // bekliyor, UI etiketleri de aynı) — sadece bu alanın DEĞERİ artık bu iki
+  // Zoho alanından türetiliyor.
+  function effectiveArrivalDate(raw) {
+    const consultationDate = raw.Consultation_Date || raw.consultation_date || null;
+    const estTravelDate    = raw.Estimated_Travel_Date || raw.estimated_travel_date || null;
+    return consultationDate || estTravelDate || null;
+  }
+
   const ACTIVE_SET_LOWER = new Set(ACTIVE_STAGES.map(s => s.toLowerCase().trim()));
 
   // Bir deal için üretilmesi gereken alarm listesini hesapla
@@ -99,7 +115,7 @@ window.AlarmEngine = (function () {
     // Tüm tarih/ödeme alanları raw JSONB'den okunuyor (tablo kolonları yok)
     // Zoho alan adları: Visit_Date = 1. vizit, Visit_Date1 = 2. vizit, Visit_Date2 = 3. vizit
     const pft          = raw.Payment_Or_Flight_Ticket || raw.payment_or_flight_ticket || null;
-    const arrivalDate  = raw.Arrival_Date  || raw.arrival_date  || null;
+    const arrivalDate  = effectiveArrivalDate(raw);
     const lastActivity = raw.Last_Activity_Time || raw.last_activity_time || null;
     const v1 = raw.Visit_Date  || raw.Visit_Date_1 || null;
     const v2 = raw.Visit_Date1 || raw.Visit_Date_2 || null;
@@ -273,7 +289,7 @@ window.AlarmEngine = (function () {
     const filledIds = [];
     for (const d of deals) {
       const raw = getRaw(d);
-      const arrivalDate = raw.Arrival_Date || raw.arrival_date || null;
+      const arrivalDate = effectiveArrivalDate(raw);
       const alreadyArrived = [
         raw.Visit_Date  || raw.Visit_Date_1 || null,
         raw.Visit_Date1 || raw.Visit_Date_2 || null,
@@ -625,7 +641,7 @@ window.AlarmEngine = (function () {
     for (const d of deals) {
       const raw = getRaw(d);
       currentByDeal.set(String(d.id), {
-        arrival_date: norm(raw.Arrival_Date || raw.arrival_date || null),
+        arrival_date: norm(effectiveArrivalDate(raw)),
         visit_date_1: norm(raw.Visit_Date  || raw.Visit_Date_1 || null),
         visit_date_2: norm(raw.Visit_Date1 || raw.Visit_Date_2 || null),
         visit_date_3: norm(raw.Visit_Date2 || raw.Visit_Date_3 || null),
