@@ -1088,11 +1088,19 @@
         </div>
         <div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-end;padding-top:8px">
           <div>
-            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon/Seyahat Tarihi</label>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Consultation Date</label>
             <div style="display:flex;align-items:center;gap:6px">
-              <input type="date" id="dealDateFrom" onchange="applyFilters()">
+              <input type="date" id="dealConsultFrom" onchange="applyFilters()">
               <span class="text-slate-500 text-xs">—</span>
-              <input type="date" id="dealDateTo" onchange="applyFilters()">
+              <input type="date" id="dealConsultTo" onchange="applyFilters()">
+            </div>
+          </div>
+          <div style="border-left:1px solid #1e293b;padding-left:16px">
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Estimated Travel Date</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input type="date" id="dealTravelFrom" onchange="applyFilters()">
+              <span class="text-slate-500 text-xs">—</span>
+              <input type="date" id="dealTravelTo" onchange="applyFilters()">
             </div>
           </div>
           <div style="border-left:1px solid #1e293b;padding-left:16px">
@@ -1231,11 +1239,19 @@
             </select>
           </div>
           <div style="border-left:1px solid #1e293b;padding-left:16px">
-            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon/Seyahat Tarihi</label>
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Consultation Date</label>
             <div style="display:flex;align-items:center;gap:6px">
-              <input id="anFilterDateFrom" type="date" onchange="loadAnalyticsSummary()" title="Konsültasyon/Seyahat Tarihi başlangıç">
+              <input id="anConsultFrom" type="date" onchange="loadAnalyticsSummary()" title="Consultation Date başlangıç">
               <span class="text-slate-500 text-xs">—</span>
-              <input id="anFilterDateTo" type="date" onchange="loadAnalyticsSummary()" title="Konsültasyon/Seyahat Tarihi bitiş">
+              <input id="anConsultTo" type="date" onchange="loadAnalyticsSummary()" title="Consultation Date bitiş">
+            </div>
+          </div>
+          <div style="border-left:1px solid #1e293b;padding-left:16px">
+            <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Estimated Travel Date</label>
+            <div style="display:flex;align-items:center;gap:6px">
+              <input id="anTravelFrom" type="date" onchange="loadAnalyticsSummary()" title="Estimated Travel Date başlangıç">
+              <span class="text-slate-500 text-xs">—</span>
+              <input id="anTravelTo" type="date" onchange="loadAnalyticsSummary()" title="Estimated Travel Date bitiş">
             </div>
           </div>
           <div style="border-left:1px solid #1e293b;padding-left:16px">
@@ -2236,8 +2252,10 @@
           </select>
         </div>
         <div class="flex items-end gap-2 col-span-2">
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon (baş.)</label><input type="date" id="caArrFrom" onchange="_caApplyFilters()"></div>
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon (bit.)</label><input type="date" id="caArrTo" onchange="_caApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Consult. (baş.)</label><input type="date" id="caConsultFrom" onchange="_caApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Consult. (bit.)</label><input type="date" id="caConsultTo" onchange="_caApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Travel (baş.)</label><input type="date" id="caTravelFrom" onchange="_caApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Travel (bit.)</label><input type="date" id="caTravelTo" onchange="_caApplyFilters()"></div>
         </div>
         <div class="flex items-end gap-2 col-span-2">
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (baş.)</label><input type="date" id="caCreatedFrom" onchange="_caApplyFilters()"></div>
@@ -2326,8 +2344,10 @@
           </select>
         </div>
         <div class="flex items-end gap-2 col-span-2">
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon (baş.)</label><input type="date" id="waArrFrom" onchange="_waApplyFilters()"></div>
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon (bit.)</label><input type="date" id="waArrTo" onchange="_waApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Consult. (baş.)</label><input type="date" id="waConsultFrom" onchange="_waApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Consult. (bit.)</label><input type="date" id="waConsultTo" onchange="_waApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Travel (baş.)</label><input type="date" id="waTravelFrom" onchange="_waApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Travel (bit.)</label><input type="date" id="waTravelTo" onchange="_waApplyFilters()"></div>
         </div>
         <div class="flex items-end gap-2 col-span-2">
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (baş.)</label><input type="date" id="waCreatedFrom" onchange="_waApplyFilters()"></div>
@@ -5405,7 +5425,7 @@
         // -> Estimated_Travel_Date onceligi, bkz. consultation_reference_date.sql) —
         // takim liderleri/agent'larin Zoho'da Arrival Date guncelleme yetkisi yok.
         // Alias ayni kaldigi icin asagidaki tum d.arrival_date kullanimlari degismedi.
-        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,created_time,result_code,sub_code,agent_note,arrival_date:consultation_ref_date';
+        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,created_time,result_code,sub_code,agent_note,arrival_date:consultation_ref_date,consultation_date,estimated_travel_date';
         const PAGE = 1000;
         const teamQ = window.rmTeams ? `&team=${TeamMap.inFilter(window.rmTeams)}` : '';
         const baseUrl = `${SUPABASE_URL}/rest/v1/deals?or=${orParam}${teamQ}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
@@ -5499,7 +5519,7 @@
       document.getElementById('caFilterRegion').value = window.isRM ? window.rmRegion : '';
       document.getElementById('caFilterTeam').value = '';
       document.getElementById('caFilterOwner').value = '';
-      ['caArrFrom','caArrTo','caCreatedFrom','caCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
+      ['caConsultFrom','caConsultTo','caTravelFrom','caTravelTo','caCreatedFrom','caCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
       _caApplyFilters();
     }
 
@@ -5520,8 +5540,10 @@
       const regionF = document.getElementById('caFilterRegion')?.value || '';
       const teamF   = document.getElementById('caFilterTeam')?.value || '';
       const ownerF  = document.getElementById('caFilterOwner')?.value || '';
-      const arrFrom = document.getElementById('caArrFrom')?.value || '';
-      const arrTo   = document.getElementById('caArrTo')?.value || '';
+      const consultFrom = document.getElementById('caConsultFrom')?.value || '';
+      const consultTo   = document.getElementById('caConsultTo')?.value || '';
+      const travelFrom  = document.getElementById('caTravelFrom')?.value || '';
+      const travelTo    = document.getElementById('caTravelTo')?.value || '';
       const crFrom  = document.getElementById('caCreatedFrom')?.value || '';
       const crTo    = document.getElementById('caCreatedTo')?.value || '';
       const dOnly = v => v ? String(v).split('T')[0] : '';
@@ -5530,7 +5552,8 @@
       if (regionF) data = data.filter(d => d._region === regionF);
       if (teamF) data = data.filter(d => ((window.TeamMap && TeamMap.normalize(d.team)) || d.team) === teamF);
       if (ownerF) data = data.filter(d => d.deal_owner === ownerF);
-      if (arrFrom || arrTo) data = data.filter(d => { const a = dOnly(d.arrival_date); if (!a) return false; if (arrFrom && a < arrFrom) return false; if (arrTo && a > arrTo) return false; return true; });
+      if (consultFrom || consultTo) data = data.filter(d => { const a = dOnly(d.consultation_date); if (!a) return false; if (consultFrom && a < consultFrom) return false; if (consultTo && a > consultTo) return false; return true; });
+      if (travelFrom || travelTo) data = data.filter(d => { const a = dOnly(d.estimated_travel_date); if (!a) return false; if (travelFrom && a < travelFrom) return false; if (travelTo && a > travelTo) return false; return true; });
       if (crFrom || crTo) data = data.filter(d => { const c = dOnly(d.created_time); if (!c) return false; if (crFrom && c < crFrom) return false; if (crTo && c > crTo) return false; return true; });
       if (_caSortCol) {
         const val = (d) => {
@@ -5809,7 +5832,7 @@
         const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, Prefer: 'count=exact' };
         const stageParam = encodeURIComponent('ilike.*won*');
         // arrival_date ARTIK deals.consultation_ref_date'ten geliyor — bkz. yukarıdaki not.
-        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,created_time,result_code,sub_code,agent_note,arrival_date:consultation_ref_date';
+        const selectCols = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,created_time,result_code,sub_code,agent_note,arrival_date:consultation_ref_date,consultation_date,estimated_travel_date';
         const PAGE = 1000;
         const teamQ = window.rmTeams ? `&team=${TeamMap.inFilter(window.rmTeams)}` : '';
         const baseUrl = `${SUPABASE_URL}/rest/v1/deals?stage=${stageParam}${teamQ}&select=${selectCols}&order=deal_name.asc,id.asc&limit=${PAGE}${DEALS_2026_Q}`;
@@ -5918,7 +5941,7 @@
       document.getElementById('waFilterTeam').value = '';
       document.getElementById('waFilterDir').value = '';
       document.getElementById('waFilterOwner').value = '';
-      ['waArrFrom','waArrTo','waCreatedFrom','waCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
+      ['waConsultFrom','waConsultTo','waTravelFrom','waTravelTo','waCreatedFrom','waCreatedTo'].forEach(id => NCDatePicker.setValue(id, ''));
       _waApplyFilters();
     }
 
@@ -5936,13 +5959,16 @@
       if (ownerF) data = data.filter(d => d.deal_owner === ownerF);
       if (dirF === 'under') data = data.filter(d => d._diff < 0);
       else if (dirF === 'over') data = data.filter(d => d._diff > 0);
-      // Arrival / Created tarih aralığı filtreleri (G10)
+      // Consultation / Estimated Travel / Created tarih aralığı filtreleri (G10)
       const dOnly = v => v ? String(v).split('T')[0] : '';
-      const arrFrom = document.getElementById('waArrFrom')?.value || '';
-      const arrTo   = document.getElementById('waArrTo')?.value || '';
+      const consultFrom = document.getElementById('waConsultFrom')?.value || '';
+      const consultTo   = document.getElementById('waConsultTo')?.value || '';
+      const travelFrom  = document.getElementById('waTravelFrom')?.value || '';
+      const travelTo    = document.getElementById('waTravelTo')?.value || '';
       const crFrom  = document.getElementById('waCreatedFrom')?.value || '';
       const crTo    = document.getElementById('waCreatedTo')?.value || '';
-      if (arrFrom || arrTo) data = data.filter(d => { const a = dOnly(d.arrival_date); if (!a) return false; if (arrFrom && a < arrFrom) return false; if (arrTo && a > arrTo) return false; return true; });
+      if (consultFrom || consultTo) data = data.filter(d => { const a = dOnly(d.consultation_date); if (!a) return false; if (consultFrom && a < consultFrom) return false; if (consultTo && a > consultTo) return false; return true; });
+      if (travelFrom || travelTo) data = data.filter(d => { const a = dOnly(d.estimated_travel_date); if (!a) return false; if (travelFrom && a < travelFrom) return false; if (travelTo && a > travelTo) return false; return true; });
       if (crFrom || crTo) data = data.filter(d => { const c = dOnly(d.created_time); if (!c) return false; if (crFrom && c < crFrom) return false; if (crTo && c > crTo) return false; return true; });
       if (_waSortCol) data.sort((a, b) => {
         const av = _waSortVal(a, _waSortCol), bv = _waSortVal(b, _waSortCol);
@@ -9754,7 +9780,8 @@
     })();
 
     function ncClearDealDates() {
-      NCDatePicker.setValue('dealDateFrom', ''); NCDatePicker.setValue('dealDateTo', '');
+      NCDatePicker.setValue('dealConsultFrom', ''); NCDatePicker.setValue('dealConsultTo', '');
+      NCDatePicker.setValue('dealTravelFrom', ''); NCDatePicker.setValue('dealTravelTo', '');
       NCDatePicker.setValue('createdDateFrom', ''); NCDatePicker.setValue('createdDateTo', '');
     }
 
@@ -9928,7 +9955,7 @@
     }
 
     function _hasActiveDealFilter() {
-      const ids = ['fTeam','fAgent','fStage','fPayment','fLang','fResult','fSearch','dealDateFrom','dealDateTo','createdDateFrom','createdDateTo'];
+      const ids = ['fTeam','fAgent','fStage','fPayment','fLang','fResult','fSearch','dealConsultFrom','dealConsultTo','dealTravelFrom','dealTravelTo','createdDateFrom','createdDateTo'];
       return ids.some(id => { const el = document.getElementById(id); return el && el.value; });
     }
 
@@ -10026,8 +10053,38 @@
     function _dealDropdownFiltersActive() {
       const val = id => (document.getElementById(id) || {}).value || '';
       return !!(val('fTeam') || val('fAgent') || val('fStage') || val('fPayment') || val('fLang') ||
-        val('fResult') || val('fSearch') || val('dealDateFrom') || val('dealDateTo') ||
+        val('fResult') || val('fSearch') || val('dealConsultFrom') || val('dealConsultTo') ||
+        val('dealTravelFrom') || val('dealTravelTo') ||
         val('createdDateFrom') || val('createdDateTo'));
+    }
+
+    // Consultation Date / Estimated Travel Date BAĞIMSIZ iki filtre — takım
+    // liderlerinin/agent'ların Zoho'da güncelleyemediği tek bir "Arrival Date"
+    // yerine artık bu iki alanın HANGİSİ doluysa ona göre filtrelenebiliyor.
+    // Değerler DOM'dan ÇAĞIRANDA bir kez okunur (döngü içinde değil — allDeals
+    // binlerce satır olabiliyor, her satırda getElementById performans kaybı olurdu).
+    function _readDealDateFilterValues() {
+      return {
+        cFrom: document.getElementById('dealConsultFrom').value,
+        cTo:   document.getElementById('dealConsultTo').value,
+        tFrom: document.getElementById('dealTravelFrom').value,
+        tTo:   document.getElementById('dealTravelTo').value,
+      };
+    }
+    function _matchesDealDateFilter(d, f) {
+      if (f.cFrom || f.cTo) {
+        const dt = parseDateString(d['Consultation Date']);
+        if (!dt) return false;
+        if (f.cFrom && dt < parseDateString(f.cFrom)) return false;
+        if (f.cTo && dt > parseDateString(f.cTo)) return false;
+      }
+      if (f.tFrom || f.tTo) {
+        const dt = parseDateString(d['Estimated Travel Date']);
+        if (!dt) return false;
+        if (f.tFrom && dt < parseDateString(f.tFrom)) return false;
+        if (f.tTo && dt > parseDateString(f.tTo)) return false;
+      }
+      return true;
     }
 
     // Tab mantığı hariç, geçerli dropdown/arama/tarih filtrelerini allDeals'a
@@ -10041,10 +10098,9 @@
       const lang    = document.getElementById('fLang').value;
       const result  = document.getElementById('fResult').value;
       const search  = document.getElementById('fSearch').value.toLowerCase();
-      const dFrom   = document.getElementById('dealDateFrom').value;
-      const dTo     = document.getElementById('dealDateTo').value;
       const cFrom   = document.getElementById('createdDateFrom').value;
       const cTo     = document.getElementById('createdDateTo').value;
+      const dateF   = _readDealDateFilterValues();
       return allDeals.filter(d => {
         if (team   && d['Team Group']      !== team)   return false;
         if (agent  && d['Deal Owner Name'] !== agent)  return false;
@@ -10055,12 +10111,7 @@
         if (result === 'locked'  && d.status !== 'locked') return false;
         if (result === 'unlock'  && !d.lock_approval_requested) return false;
         if (result.slice(0, 5) === 'code:' && _dealResultCodeOf(d) !== result.slice(5)) return false;
-        if (dFrom || dTo) {
-          const dt = parseDateString(d['Arrival Date']);
-          if (!dt) return false;
-          if (dFrom && dt < parseDateString(dFrom)) return false;
-          if (dTo && dt > parseDateString(dTo)) return false;
-        }
+        if (!_matchesDealDateFilter(d, dateF)) return false;
         if (cFrom || cTo) {
           const ct = parseDateString(d['Created Time']);
           if (!ct) return false;
@@ -10108,10 +10159,9 @@
       const lang    = document.getElementById('fLang').value;
       const result  = document.getElementById('fResult').value;
       const search  = document.getElementById('fSearch').value.toLowerCase();
-      const dFrom   = document.getElementById('dealDateFrom').value;
-      const dTo     = document.getElementById('dealDateTo').value;
       const cFrom   = document.getElementById('createdDateFrom').value;
       const cTo     = document.getElementById('createdDateTo').value;
+      const dateF   = _readDealDateFilterValues();
 
       if (!_dealsLoadInProgress) updateTabBadges();
 
@@ -10149,12 +10199,7 @@
         if (result === 'locked'  && d.status !== 'locked') return false;
         if (result === 'unlock'  && !d.lock_approval_requested) return false;
         if (result.slice(0, 5) === 'code:' && _dealResultCodeOf(d) !== result.slice(5)) return false;
-        if (dFrom || dTo) {
-          const dt = parseDateString(d['Arrival Date']);
-          if (!dt) return false;
-          if (dFrom && dt < parseDateString(dFrom)) return false;
-          if (dTo && dt > parseDateString(dTo)) return false;
-        }
+        if (!_matchesDealDateFilter(d, dateF)) return false;
         if (cFrom || cTo) {
           const ct = parseDateString(d['Created Time']);
           if (!ct) return false;
@@ -10730,22 +10775,26 @@
       // etmek gizli inputu temizler ama görsel kutudaki seçili tarih metnini
       // GÜNCELLEMEZ, kullanıcı tarihlerin hala seçili göründüğünü görür.
       // NCDatePicker.setValue() ikisini de senkron temizler.
-      NCDatePicker.setValue('anFilterDateFrom', '');
-      NCDatePicker.setValue('anFilterDateTo', '');
+      NCDatePicker.setValue('anConsultFrom', '');
+      NCDatePicker.setValue('anConsultTo', '');
+      NCDatePicker.setValue('anTravelFrom', '');
+      NCDatePicker.setValue('anTravelTo', '');
       NCDatePicker.setValue('anFilterCreatedFrom', '');
       NCDatePicker.setValue('anFilterCreatedTo', '');
       _anPopulateTeamOptions();
       loadAnalyticsSummary();
     }
-    // Analytics filtrelerini (Bölge/Takım Lideri/Arrival/Created) istemci
-    // tarafında bir deal listesine uygular — RPC yokken veya Created Time
-    // filtresi aktifken (RPC bunu desteklemiyor) kullanılır.
+    // Analytics filtrelerini (Bölge/Takım Lideri/Consultation/Travel/Created)
+    // istemci tarafında bir deal listesine uygular — RPC yokken veya Created
+    // Time filtresi aktifken (RPC bunu desteklemiyor) kullanılır.
     function _anFilterDealsClientSide(list) {
       const teams  = _anResolveTeams();
-      const dFrom  = document.getElementById('anFilterDateFrom')?.value || '';
-      const dTo    = document.getElementById('anFilterDateTo')?.value || '';
-      const cFrom  = document.getElementById('anFilterCreatedFrom')?.value || '';
-      const cTo    = document.getElementById('anFilterCreatedTo')?.value || '';
+      const cFrom  = document.getElementById('anConsultFrom')?.value || '';
+      const cTo    = document.getElementById('anConsultTo')?.value || '';
+      const tFrom  = document.getElementById('anTravelFrom')?.value || '';
+      const tTo    = document.getElementById('anTravelTo')?.value || '';
+      const crFrom = document.getElementById('anFilterCreatedFrom')?.value || '';
+      const crTo   = document.getElementById('anFilterCreatedTo')?.value || '';
       let data = list;
       // Analitik SADECE Istanbul/Morocco satış takımlarını sayar — Finance/
       // Executive Board/VIP Team/Profclinic/Software Development gibi satış
@@ -10753,21 +10802,30 @@
       // Filtre seçili olmasa BİLE bu ayıklama uygulanır (bkz. TeamMap.isSalesTeam).
       if (window.TeamMap) data = data.filter(d => TeamMap.isSalesTeam(d['Team Group']));
       if (teams) { const set = new Set(teams); data = data.filter(d => set.has(d['Team Group'])); }
-      if (dFrom || dTo) {
-        data = data.filter(d => {
-          const dt = parseDateString(d['Arrival Date']);
-          if (!dt) return false;
-          if (dFrom && dt < parseDateString(dFrom)) return false;
-          if (dTo && dt > parseDateString(dTo)) return false;
-          return true;
-        });
-      }
       if (cFrom || cTo) {
         data = data.filter(d => {
-          const dt = parseDateString(d['Created Time']);
+          const dt = parseDateString(d['Consultation Date']);
           if (!dt) return false;
           if (cFrom && dt < parseDateString(cFrom)) return false;
           if (cTo && dt > parseDateString(cTo)) return false;
+          return true;
+        });
+      }
+      if (tFrom || tTo) {
+        data = data.filter(d => {
+          const dt = parseDateString(d['Estimated Travel Date']);
+          if (!dt) return false;
+          if (tFrom && dt < parseDateString(tFrom)) return false;
+          if (tTo && dt > parseDateString(tTo)) return false;
+          return true;
+        });
+      }
+      if (crFrom || crTo) {
+        data = data.filter(d => {
+          const dt = parseDateString(d['Created Time']);
+          if (!dt) return false;
+          if (crFrom && dt < parseDateString(crFrom)) return false;
+          if (crTo && dt > parseDateString(crTo)) return false;
           return true;
         });
       }
@@ -10784,11 +10842,14 @@
     let analyticsFilterActive = false;
     async function loadAnalyticsSummary() {
       const teams  = _anResolveTeams();
-      const dFrom  = document.getElementById('anFilterDateFrom')?.value || '';
-      const dTo    = document.getElementById('anFilterDateTo')?.value || '';
-      const cFrom  = document.getElementById('anFilterCreatedFrom')?.value || '';
-      const cTo    = document.getElementById('anFilterCreatedTo')?.value || '';
-      analyticsFilterActive = !!(teams || dFrom || dTo || cFrom || cTo);
+      const cFrom  = document.getElementById('anConsultFrom')?.value || '';
+      const cTo    = document.getElementById('anConsultTo')?.value || '';
+      const tFrom  = document.getElementById('anTravelFrom')?.value || '';
+      const tTo    = document.getElementById('anTravelTo')?.value || '';
+      const crFrom = document.getElementById('anFilterCreatedFrom')?.value || '';
+      const crTo   = document.getElementById('anFilterCreatedTo')?.value || '';
+      const dateFilterActive = !!(cFrom || cTo || tFrom || tTo);
+      analyticsFilterActive = !!(teams || dateFilterActive || crFrom || crTo);
       // Created Time filtresi de RPC üzerinden hesaplanıyor (admin_deal_summary
       // v6, p_created_from/p_created_to). Önceden bu filtre RPC'de
       // desteklenmediği için 49K satırın tamamı tarayıcıda (allDeals) 8-9 ayrı
@@ -10797,9 +10858,14 @@
       // (dealSummary hiç dolmadıysa) eski client-side yola düşülür.
       if (!dealSummary) { _renderSummaryClientSide(); return; }
       if (!analyticsFilterActive) { renderSummaryFromRPC(dealSummary); return; }
+      // Consultation Date / Estimated Travel Date RPC'nin (admin_deal_summary)
+      // bilmediği yeni alanlar — bunlardan biri aktifse hızlı RPC yolu
+      // atlanır, doğrudan client-side hesaplanır (_anFilterDealsClientSide
+      // zaten bu iki alanı biliyor).
+      if (dateFilterActive) { _renderSummaryClientSide(); return; }
       const loadingEl = document.getElementById('anFilterLoading');
       if (loadingEl) loadingEl.style.display = '';
-      const s = await _fetchDealSummary({ teams, dateFrom: dFrom, dateTo: dTo, createdFrom: cFrom, createdTo: cTo });
+      const s = await _fetchDealSummary({ teams, createdFrom: crFrom, createdTo: crTo });
       if (loadingEl) loadingEl.style.display = 'none';
       if (s) renderSummaryFromRPC(s); else _renderSummaryClientSide();
     }
@@ -12281,6 +12347,8 @@
         const paidAmount   = parseAmount(row.total_paid_amount);
         const unpaidAmount = row.remaining_amount != null ? parseAmount(row.remaining_amount) : Math.max(0, dealAmount - paidAmount);
         const arrivalDate  = dateOnly(row.arrival_date);
+        const consultDate  = dateOnly(row.consultation_date);
+        const travelDate   = dateOnly(row.estimated_travel_date);
         const paymentStatus = paidAmount <= 0 ? 'Unpaid' : (dealAmount > 0 && paidAmount >= dealAmount) ? 'Paid' : 'Partial';
         const v1 = dateOnly(row.visit_date_1);
         const v2 = dateOnly(row.visit_date_2);
@@ -12293,6 +12361,8 @@
           'Deal Name': row.deal_name || '',
           'Created Time':  dateOnly(row.created_time),
           'Arrival Date':  arrivalDate,
+          'Consultation Date': consultDate,
+          'Estimated Travel Date': travelDate,
           '1. Visit Date': v1,
           '2. Visit Date': v2,
           '3. Visit Date': v3,
@@ -12403,8 +12473,14 @@
     // liderlerinin/agent'ların Zoho'da Arrival Date güncelleme yetkisi yok. Alias adı
     // aynı kaldığı için allDeals'i tüketen HİÇBİR yer (sıralama, filtre, export, KPI,
     // Sistem Etkisi) değişmedi — sadece bu alanın kaynağı değişti.
+    // consultation_date/estimated_travel_date AYRI AYRI da çekiliyor — tarih
+    // filtreleri artık tek birleşik "Arrival" yerine bu iki alanı BAĞIMSIZ
+    // filtreliyor (bkz. Consultation Date / Estimated Travel Date filtre çiftleri).
+    // consultation_date/estimated_travel_date gerçek, indexli kolonlar
+    // (bkz. consultation_travel_date_split.sql) — raw->> ile tekrar çekmeye
+    // gerek yok, doğrudan kolon adıyla geliyor.
     const _DEALS_SELECT = 'id,deal_id,deal_name,deal_owner,team,stage,amount,total_paid_amount,remaining_amount,' +
-      'arrival_date:consultation_ref_date,visit_date_1,visit_date_2,visit_date_3,payment_or_flight_ticket,created_time,' +
+      'arrival_date:consultation_ref_date,consultation_date,estimated_travel_date,visit_date_1,visit_date_2,visit_date_3,payment_or_flight_ticket,created_time,' +
       'result_codes,rawLang:raw->>Language,rawCountry:raw->>Country_Name';
 
     // onBatch(rows) her parça indikçe çağrılır — böylece tablo hepsi
@@ -12706,16 +12782,23 @@
         // sütun başlıkları, modal iskeletleri) çevir — dinamik olarak
         // render edilen içerik zaten kendi translateDOM çağrısını yapıyor.
         I18N.translateDOM(document.body);
-        ['dealDateFrom', 'dealDateTo', 'createdDateFrom', 'createdDateTo', 'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo', 'anFilterDateFrom', 'anFilterDateTo', 'anFilterCreatedFrom', 'anFilterCreatedTo', 'logDateFrom', 'logDateTo', 'caArrFrom', 'caArrTo', 'caCreatedFrom', 'caCreatedTo', 'waArrFrom', 'waArrTo', 'waCreatedFrom', 'waCreatedTo', 'actDateFrom', 'actDateTo', 'adeDate', 'tlDetailFrom', 'tlDetailTo'].forEach(id => NCDatePicker.attach(id));
+        [
+          'dealConsultFrom', 'dealConsultTo', 'dealTravelFrom', 'dealTravelTo', 'createdDateFrom', 'createdDateTo',
+          'amDateFrom', 'amDateTo', 'amCreatedFrom', 'amCreatedTo',
+          'anConsultFrom', 'anConsultTo', 'anTravelFrom', 'anTravelTo', 'anFilterCreatedFrom', 'anFilterCreatedTo',
+          'logDateFrom', 'logDateTo', 'caConsultFrom', 'caConsultTo', 'caTravelFrom', 'caTravelTo', 'caCreatedFrom', 'caCreatedTo',
+          'waConsultFrom', 'waConsultTo', 'waTravelFrom', 'waTravelTo', 'waCreatedFrom', 'waCreatedTo',
+          'actDateFrom', 'actDateTo', 'adeDate', 'tlDetailFrom', 'tlDetailTo',
+        ].forEach(id => NCDatePicker.attach(id));
         // Başlangıç/bitiş tarih çiftlerinde ters sıra (bitiş < başlangıç)
         // seçilemesin -- tüm sistemde (admin + regional manager burada,
         // team leader panelinde ayrıca) aynı kural uygulanıyor.
         [
-          ['dealDateFrom', 'dealDateTo'], ['createdDateFrom', 'createdDateTo'],
+          ['dealConsultFrom', 'dealConsultTo'], ['dealTravelFrom', 'dealTravelTo'], ['createdDateFrom', 'createdDateTo'],
           ['amDateFrom', 'amDateTo'], ['amCreatedFrom', 'amCreatedTo'],
-          ['anFilterDateFrom', 'anFilterDateTo'], ['anFilterCreatedFrom', 'anFilterCreatedTo'],
-          ['logDateFrom', 'logDateTo'], ['caArrFrom', 'caArrTo'], ['caCreatedFrom', 'caCreatedTo'],
-          ['waArrFrom', 'waArrTo'], ['waCreatedFrom', 'waCreatedTo'], ['actDateFrom', 'actDateTo'],
+          ['anConsultFrom', 'anConsultTo'], ['anTravelFrom', 'anTravelTo'], ['anFilterCreatedFrom', 'anFilterCreatedTo'],
+          ['logDateFrom', 'logDateTo'], ['caConsultFrom', 'caConsultTo'], ['caTravelFrom', 'caTravelTo'], ['caCreatedFrom', 'caCreatedTo'],
+          ['waConsultFrom', 'waConsultTo'], ['waTravelFrom', 'waTravelTo'], ['waCreatedFrom', 'waCreatedTo'], ['actDateFrom', 'actDateTo'],
           ['tlDetailFrom', 'tlDetailTo'],
         ].forEach(([a, b]) => NCDatePicker.linkRange(a, b));
         _anPopulateTeamOptions();
