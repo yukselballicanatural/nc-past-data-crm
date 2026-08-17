@@ -8371,9 +8371,20 @@
         Object.assign(a, updates);
         updateAdminAlarmKPIs();
         renderAdminAlarmTable();
-        // Alarm "İptal / Geçersiz" olarak kapatıldıysa İptal Alarmları
-        // listesini/rozetini de tazele — bkz. team-leader.html'deki aynı düzeltme.
-        if (newStatus === 'cancelled') loadAdminCancelledDeals();
+        // Alarm hangi görünümden açılmışsa (Bugün / Kapatılan / İptal / Won)
+        // o görünüm de tazelenmeli — yoksa değişiklik veride var ama ekranda
+        // sayfa yenilenene kadar görünmüyordu (yalnızca "Alarm İzleme" tablosu
+        // yenileniyordu, kullanıcı başka bir sekmedeyken hiçbir şey olmuyordu).
+        const curView = ['today', 'closed-alarms', 'cancelled-alarms', 'won-alarms'].find(v => {
+          const el = document.getElementById('view-' + v);
+          return el && !el.classList.contains('hidden');
+        });
+        if (curView === 'today') renderAdminToday();
+        else if (curView === 'closed-alarms') renderAdminClosedAlarms();
+        else if (curView === 'won-alarms') loadAdminWonAlarms();
+        // İptal listesinin rozeti başka bir görünümdeyken de güncel kalmalı —
+        // bu yüzden curView'dan bağımsız, doğrudan durum değişimine bağlı.
+        if (newStatus === 'cancelled' || curView === 'cancelled-alarms') loadAdminCancelledDeals();
         closeAdminAlarmModal();
       } catch(e) {
         alert(I18N.t('Kayıt hatası: ') + e.message);
