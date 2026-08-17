@@ -142,10 +142,42 @@ export default async function handler(req, res) {
         } catch (e) { /* kadro kararı yazıldı; giriş engeli en iyi çaba */ }
       }
 
+      // ── Bu kişinin MEVCUT deal'lerini de yeni takıma taşı (isteğe bağlı) ──
+      // team_assignments kaydı yalnızca kadro/izin belirler; deals.team
+      // Zoho mirror'ı olduğu için elle atama tek başına deal'lerin
+      // görünümünü DEĞİŞTİRMEZ (Team Group her yerde deals.team'den türetilir).
+      // moveDeals=true ise ve gerçek bir satış takımı seçildiyse (team boş
+      // değilse), o kişinin sahibi olduğu tüm deal'lerin team kolonu burada
+      // doğrudan güncellenir — admin panelden onay alınmış, açık bir istek.
+      // DİKKAT: deals Zoho'dan senkronlanıyor; Zoho'daki Team alanı hâlâ
+      // eskiyse, o deal Zoho tarafından tekrar senkronlandığında bu değer
+      // sessizce eski takıma dönebilir. Bu, bu deponun dışındaki bir sürecin
+      // sınırı — kalıcı çözüm Zoho'da da takımın güncellenmesidir.
+      let movedDeals = null;
+      if (body?.moveDeals === true && team) {
+        try {
+          const dR = await fetch(
+            `${SUPABASE_URL}/rest/v1/deals?deal_owner=ilike.${encodeURIComponent(fullName)}`,
+            {
+              method: 'PATCH',
+              headers: { ...HJ, Prefer: 'return=representation' },
+              body: JSON.stringify({ team }),
+            }
+          );
+          if (dR.ok) {
+            const updated = await dR.json().catch(() => []);
+            movedDeals = Array.isArray(updated) ? updated.length : 0;
+          } else {
+            movedDeals = { error: 'HTTP ' + dR.status };
+          }
+        } catch (e) { movedDeals = { error: e.message }; }
+      }
+
       res.status(200).json({
         ok: true,
         assignment: Array.isArray(saved) ? saved[0] : saved,
         loginBlocked,
+        movedDeals,
       });
       return;
     }

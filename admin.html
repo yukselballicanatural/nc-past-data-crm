@@ -7533,7 +7533,6 @@
 
     async function amTmSaveAssign() {
       if (!_amTmAssignTarget) return;
-      const btn = document.getElementById('tmAssignSaveBtn');
       const team = document.getElementById('tmAssignTeam').value;
       const isLeader = document.getElementById('tmAssignLeader').checked;
       // Lider ataması bir takım seçilmeden anlamsız — sessizce yanlış kayıt
@@ -7542,25 +7541,61 @@
         showSiteNotice(I18N.t('Lider ataması için bir takım seçmelisiniz.'), 'warn');
         return;
       }
+
+      // team_assignments kaydı tek başına deal'lerin görünümünü değiştirmez
+      // (Team Group her yerde deals.team'den türetilir) — bu kişinin devam
+      // eden deal'i varsa, atamayla BİRLİKTE deal'lerini de taşımayı sor.
+      // Yoksa "elle attım ama üstündeki veriler eski takımda kaldı" sorunu
+      // tekrarlanır.
+      const ownerKeyNorm = String(_amTmAssignTarget.fullName || '').trim().toLowerCase();
+      const affectedCount = team ? (allDeals || []).filter(d =>
+        String(d['Deal Owner Name'] || '').trim().toLowerCase() === ownerKeyNorm).length : 0;
+
+      if (affectedCount > 0) {
+        const teamLabel = (window.TeamMap && TeamMap.TEAMS[team] && TeamMap.TEAMS[team].label) || team;
+        showSiteConfirm(
+          I18N.t('Deal\'leri de Taşı'),
+          I18N.t('{n} kişinin devam eden {c} deal\'i var. Atamayla birlikte bu deal\'lerin takımı da "{team}" olarak güncellensin mi? Taşımazsanız deal\'ler eski takımda görünmeye devam eder.')
+            .replace('{n}', _amTmAssignTarget.fullName).replace('{c}', affectedCount).replace('{team}', teamLabel),
+          I18N.t('Evet, deal\'leri de taşı'), '#0d9488',
+          () => _amTmDoSaveAssign(team, isLeader, true));
+      } else {
+        await _amTmDoSaveAssign(team, isLeader, false);
+      }
+    }
+
+    async function _amTmDoSaveAssign(team, isLeader, moveDeals) {
+      const btn = document.getElementById('tmAssignSaveBtn');
       btn.disabled = true;
       const old = btn.textContent;
       btn.textContent = I18N.t('Kaydediliyor...');
       try {
-        await _amTmAssignRequest('PUT', {
+        const result = await _amTmAssignRequest('PUT', {
           fullName: _amTmAssignTarget.fullName,
           zohoUserId: _amTmAssignTarget.zohoUserId || null,
           team: team || null,
           isLeader,
+          moveDeals,
         });
         addLog('USER_TEAM_ASSIGN',
-          `Takım elle atandı: ${_amTmAssignTarget.fullName} → ${team || 'satış dışı'}${isLeader ? ' (lider)' : ''}`);
-        showSiteNotice(I18N.t('Atama kaydedildi.'), 'success');
+          `Takım elle atandı: ${_amTmAssignTarget.fullName} → ${team || 'satış dışı'}${isLeader ? ' (lider)' : ''}` +
+          (typeof result.movedDeals === 'number' ? ` — ${result.movedDeals} deal taşındı` : ''));
+        showSiteNotice(
+          typeof result.movedDeals === 'number'
+            ? I18N.t('Atama kaydedildi, {n} deal taşındı.').replace('{n}', result.movedDeals)
+            : I18N.t('Atama kaydedildi.'),
+          'success');
         amTmCloseAssign();
         // Kadro ve Günlük Ekip Girişi aynı listeden besleniyor — ikisinin de
         // cache'i bayat, birlikte tazelenmeli.
         _adeMembersCache = null;
         _amTmDriftAt = 0;
         loadAdminTeamMembers(true);
+        // Deal'ler taşındıysa allDeals de bayat — Team Group'un tüm tablo/
+        // analitik sayfalarına yansıması için sunucudan yeniden çekilmeli.
+        if (moveDeals && typeof result.movedDeals === 'number' && result.movedDeals > 0) {
+          loadDeals(true);
+        }
       } catch (e) {
         showSiteNotice(I18N.t('Atama kaydedilemedi: ') + e.message, 'error');
       } finally { btn.disabled = false; btn.textContent = old; }
