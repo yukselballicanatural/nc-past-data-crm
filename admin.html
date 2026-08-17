@@ -2236,8 +2236,8 @@
           </select>
         </div>
         <div class="flex items-end gap-2 col-span-2">
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (baş.)</label><input type="date" id="caArrFrom" onchange="_caApplyFilters()"></div>
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (bit.)</label><input type="date" id="caArrTo" onchange="_caApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon (baş.)</label><input type="date" id="caArrFrom" onchange="_caApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon (bit.)</label><input type="date" id="caArrTo" onchange="_caApplyFilters()"></div>
         </div>
         <div class="flex items-end gap-2 col-span-2">
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (baş.)</label><input type="date" id="caCreatedFrom" onchange="_caApplyFilters()"></div>
@@ -2326,8 +2326,8 @@
           </select>
         </div>
         <div class="flex items-end gap-2 col-span-2">
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (baş.)</label><input type="date" id="waArrFrom" onchange="_waApplyFilters()"></div>
-          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Arrival (bit.)</label><input type="date" id="waArrTo" onchange="_waApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon (baş.)</label><input type="date" id="waArrFrom" onchange="_waApplyFilters()"></div>
+          <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Konsültasyon (bit.)</label><input type="date" id="waArrTo" onchange="_waApplyFilters()"></div>
         </div>
         <div class="flex items-end gap-2 col-span-2">
           <div><label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Created (baş.)</label><input type="date" id="waCreatedFrom" onchange="_waApplyFilters()"></div>
@@ -10839,7 +10839,7 @@
       })), empty);
 
       NCCharts.area(gid('trendChart'), m.months || [], {
-        emptyText: I18N.t('Arrival date verisi yok.'),
+        emptyText: I18N.t('Konsültasyon/Seyahat tarihi verisi yok.'),
         singleText: I18N.t('Eğilim çizmek için en az iki ay gerekli.'),
         countLabel: I18N.t('Deal adedi'),
         amountLabel: I18N.t('Ciro'),
