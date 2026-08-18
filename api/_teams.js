@@ -63,6 +63,165 @@ export function isNonSalesRole(role) {
   return NON_SALES_ROLE_PREFIXES.some(p => k.startsWith(p));
 }
 
+// ── Yönetici (takım lideri / sales master / RM / admin) rolü mü? ──────────
+// admin.html'deki _isBoss ile aynı fikir, + \btl\b/\brm\b (Zoho'da bazı roller
+// yalnızca "TL"/"RM" kısaltmasıyla geliyor) + master (dry-run'da yakalandı:
+// "Sales Master - Burak" gibi roller "master" olmadan YÖNETİCİ sayılmıyordu,
+// bu da liderin role'ünün kendi üyelerinden AYRI bir "takım" gibi
+// çözülmesine yol açıyordu — Burak Kalkanoğlu/Danish Munir vakasının
+// birebir aynısı).
+const BOSS_ROLE_RE = /leader|lider|manager|master|müdür|mudur|admin|yönetici|yonetici|\btl\b|\brm\b/i;
+export function isBossRole(role) { return BOSS_ROLE_RE.test(String(role || '')); }
+
+// ══════════════════════════════════════════════════════════════════════════
+// ── Rol → Takım çözümleme: KAPALI LİSTE değil, AÇIK UÇLU ──────────────────
+//
+// KÖK NEDEN (Ağustos 2026): Amin Connor West / Anthony Cross (Burak
+// Kalkanoğlu) / Bradley Grant (Danish Munir) için Zoho'da yeni takım/lider
+// kurulduğunda sistem bunu HİÇ tanımadı ve HİÇBİR uyarı çıkmadı. Sebep: takım
+// tanıma üç ayrı dosyada (team-map.js, sync-user-teams.js, team-members.js)
+// elle yazılmış AYNI kapalı listeye (LEGACY_TEAM_ALIASES) dayanıyordu — bu
+// listeye girmeyen bir takım hiç var olmuyordu.
+//
+// YENİ TASARIM: bir ÇALIŞANIN (yönetici olmayan) role alanı Zoho'da ZATEN o
+// kişinin kanonik takımının kendisi (bkz. team-members.js'teki eski not:
+// "üyelerde kanonik ad"). Dolayısıyla ayrı bir whitelist'e hiç gerek yok —
+// yalnızca "satış dışı" (isNonSalesRole, kapalı liste — YENİ birim eklendikçe
+// büyütülür) ve "yönetici rolü" (isBossRole, açık uçlu regex) rolleri DIŞARIDA
+// bırakılır; GERİ KALAN HER rol otomatik olarak kendi başına bir takımdır.
+// Zoho'da yeni bir çalışan/takım kurulduğu AN, kod değişikliği gerekmeden
+// tanınır.
+//
+// Yalnızca LİDER/SALES MASTER rolleri hâlâ çözümleme ister: onların role alanı
+// üyelerinkinden FARKLI bir serbest metin taşır (ör. "Team Leader - Farah",
+// üyeler "Farah Team - Morocco" yazar). Bunun için: önce eski elle yazılmış
+// liste (hızlı/kesin yol, GERİYE DÖNÜK UYUMLULUK için hâlâ birinci tercih —
+// mevcut 16 takımın kanonik yazımı bundan DEĞİŞMEZ), o da tanımıyorsa o an
+// aktif kadrodan ÇIKARILMIŞ (discoverCanonicalTeams) kanonik takım kümesiyle
+// bulanık (fuzzy) ad eşleştirmesi denenir. İkisi de sonuç vermezse kişi
+// "yeni lider adayı" olarak İŞARETLENİR (sessizce kaybolmaz) — admin panelinde
+// "Takımımdaki Kişiler" ekranında ayrı ve belirgin bir bölümde çıkar, tek
+// tıkla (mevcut "Elle ata" / team_assignments akışıyla) çözülür.
+// ══════════════════════════════════════════════════════════════════════════
+
+// Eski elle yazılmış takım listesi. ARTIK TEK KAYNAK DEĞİL ama geriye dönük
+// uyumluluk için BİRİNCİL tercih: buradaki 16 takımın kanonik yazımı
+// (ör. çift boşluklu "Arij  Team") bu sayede aynen korunur, Users."Takim Adi"
+// ve deals.team'deki mevcut milyonlarca satırla bire bir eşleşmeye devam eder.
+// Yeni bir takım/lider için BURAYA elle eklemek ARTIK ZORUNLU DEĞİL — aşağıdaki
+// açık uçlu çözümleme onu otomatik yakalar. Yine de admin isterse (ör. bir
+// liderin serbest metni bulanık eşleştirmeyle bile çözülemiyorsa, iki takımın
+// adı birbirine çok benziyorsa) buraya elle bir satır eklemek en kesin çözüm
+// olarak kalır.
+export const LEGACY_TEAM_ALIASES = {
+  'Arij  Team': ['Arij  Team', 'Arij Team', 'Team Leader-Arij Mahjoubi'],
+  'Askif Team': ['Askif Team', 'Team Leader - Abdulrahman Ziad Askif'],
+  'Touma Team': ['Touma Team', 'Team Leader- Abdulkader Touma', 'Toumi Team'],
+  'Mihoubi Team': ['Mihoubi Team', 'Team Leader - Mihoubi'],
+  'Ahmed Anwar Team': ['Ahmed Anwar Team', 'Team Leader-Ahmed Anwar'],
+  'Ghazal Team': ['Ghazal Team', 'Team Leader - Ahmad Ghazal'],
+  'Ali Omer Team': ['Ali Omer Team', 'Team Leader - Ali Omer'],
+  'Aamir Ali Team': ['Aamir Ali Team', 'Team Leader - Aamir Ali'],
+  'Joel Team': ['Joel Team', 'Team Leader - Joel'],
+  'SM- Mert Team': ['SM- Mert Team', 'Mert Jospeh - Sales Master'],
+  'Sales Master - Amin Connor West': ['Sales Master - Amin Connor West', 'SM Amin Connor - Team'],
+  'Farah Team - Morocco': ['Farah Team - Morocco', 'Team Leader - Farah'],
+  'Sara Team - Morocco': ['Sara Team - Morocco', 'Team Leader - Sara'],
+  'Selma Team - Morocco': ['Selma Team - Morocco', 'Team Leader - Selma'],
+  'Ramadan Team - Morocco': ['Ramadan Team - Morocco', 'Team Leader - Abdelatif Ramadan'],
+  'Moutaharrik Team - Morocco': ['Moutaharrik Team - Morocco', 'Team Leader - Moutaharrik Marco'],
+};
+
+const LEGACY_ALIAS_INDEX = {};
+for (const [canonical, aliases] of Object.entries(LEGACY_TEAM_ALIASES)) {
+  for (const a of aliases) LEGACY_ALIAS_INDEX[teamNameKey(a)] = canonical;
+}
+export function legacyNormalizeTeam(t) { return LEGACY_ALIAS_INDEX[teamNameKey(t)] || null; }
+
+const LEGACY_ALIAS_KEYS = Object.keys(LEGACY_ALIAS_INDEX).sort((a, b) => b.length - a.length);
+// Serbest metnin İÇİNDE bilinen bir alias geçiyor mu (ör. "Sales Agent - Farah
+// Team - Morocco (Junior)"). Belirsizse (iki farklı kanonikle eşleşirse) null.
+export function legacyLooseTeam(t) {
+  const k = teamNameKey(t);
+  if (k.length < 4) return null;
+  let hit = null;
+  for (const ak of LEGACY_ALIAS_KEYS) {
+    if (ak.length < 4 || !k.includes(ak)) continue;
+    const c = LEGACY_ALIAS_INDEX[ak];
+    if (!hit) hit = c;
+    else if (hit !== c) return null;
+  }
+  return hit;
+}
+
+// Bir ÜYE (yönetici olmayan) rolünün kanonik takımı. Eski listede varsa onu
+// kullanır (yazım aynen korunur); yoksa rolün KENDİSİ (boşluk normalize
+// edilmiş) kanonik takım olur — bu satır YENİ takımların üyelerini kod
+// değişikliği gerekmeden tanır.
+export function resolveMemberTeam(role) {
+  if (!role) return null;
+  if (isNonSalesRole(role)) return null;
+  if (isBossRole(role)) return null;
+  return legacyNormalizeTeam(role) || legacyLooseTeam(role) || String(role).replace(/\s+/g, ' ').trim();
+}
+
+// Bölge tahmini: isimde "morocco" geçiyorsa Morocco, yoksa Istanbul —
+// team-map.js / team-members.js'deki mevcut fallback ile AYNI kural.
+export function guessRegion(teamName) {
+  return String(teamName || '').toLowerCase().includes('morocco') ? 'Morocco' : 'Istanbul';
+}
+
+// Aktif (ayrılmamış, satış dışı olmayan, yönetici olmayan) kadrodan o anki
+// GEÇERLİ kanonik takım kümesini çıkarır. Statik DEĞİL — her çağrıda Zoho'nun
+// o anki hâlinden yeniden hesaplanır. Lider adı çözümlemesi (aşağıda) ve
+// admin panelindeki "Takıma Ata" dropdown'unu YENİ takımlarla beslemek için
+// kullanılır (bkz. team-members.js `teamCatalog` alanı).
+export function discoverCanonicalTeams(activeZohoRows) {
+  const byCanonical = new Map();   // canonical → { canonical, region, memberCount }
+  for (const z of (activeZohoRows || [])) {
+    const canonical = resolveMemberTeam(z.role);
+    if (!canonical) continue;
+    let e = byCanonical.get(canonical);
+    if (!e) { e = { canonical, region: guessRegion(canonical), memberCount: 0 }; byCanonical.set(canonical, e); }
+    e.memberCount++;
+  }
+  return [...byCanonical.values()];
+}
+
+// Genel/kısa kelimeleri (rol unvanı, "team", "-" gibi doldurma sözcükleri)
+// eleyip anlamlı isim token'larını çıkarır. Karşılaştırma bunların üzerinden
+// yapılır ("Team Leader - Farah" → ['farah']).
+const STOP_TOKENS = new Set([
+  'team', 'leader', 'lider', 'sales', 'master', 'manager', 'sm', 'tl', 'rm',
+  'morocco', 'istanbul', 'region', 'the', 'of', 'a', 've', 'and',
+]);
+function nameTokens(s) {
+  return String(s || '')
+    .toLowerCase()
+    .split(/[^a-zçğıöşü0-9]+/i)
+    .map(t => t.trim())
+    .filter(t => t.length >= 3 && !STOP_TOKENS.has(t));
+}
+
+// Bir LİDER/SALES MASTER rolünü (ör. "Sales Master - Anthony Cross"), o an
+// aktif kadrodan çıkarılmış kanonik takım kümesiyle (discoverCanonicalTeams)
+// bulanık ad eşleştirmesiyle bağlar. Tam olarak TEK bir kanonik takımla ortak
+// anlamlı token'ı varsa eşleşir; hiç ya da birden fazla takımla eşleşiyorsa
+// (belirsiz) null döner — yanlış takıma bağlamak, bağlamamaktan daha kötü.
+export function matchLeaderToCanonicalTeam(leaderRole, canonicalTeams) {
+  const leaderTokens = nameTokens(leaderRole);
+  if (!leaderTokens.length) return null;
+  let hit = null;
+  for (const entry of (canonicalTeams || [])) {
+    const teamTokens = nameTokens(entry.canonical);
+    if (leaderTokens.some(t => teamTokens.includes(t))) {
+      if (hit && hit !== entry.canonical) return null;   // belirsiz: 2 farklı takımla eşleşti
+      hit = entry.canonical;
+    }
+  }
+  return hit;
+}
+
 // ── Kalıcı takım atamaları (team_assignments) ──────────────────────────
 // Tablo henüz kurulmadıysa (SQL çalıştırılmadıysa) 404 döner — bu durumda
 // SESSİZCE boş liste ile devam ediyoruz ki panel çalışmaya devam etsin.

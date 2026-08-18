@@ -686,6 +686,16 @@
     ' kişinin takımı Zoho’da yazılı değil, son deal’inden tahmin edildi (★ işaretli)':
       ' people have no team recorded in Zoho; it was inferred from their latest deal (marked ★)',
     'Takıma bağlanamadı': 'Could not be matched to a team',
+    '{n} yeni takım lideri/sales master adayı — hiçbir takıma bağlı değil!':
+      '{n} new team leader/sales master candidate — not linked to any team!',
+    'Yeni Takım / Lider Adayı': 'New Team / Leader Candidate',
+    '{n} yeni lider adayı': '{n} new leader candidate(s)',
+    'Bu kişinin Zoho rolü bir takım lideri/sales master gibi görünüyor ("leader"/"master" vb. içeriyor) ama hangi takımı yönettiği hiçbir sinyalden çözülemedi — muhtemelen Zoho\'da YENİ kurulmuş bir takım/rol. "Takıma Ata" ile (mevcut bir takımı seçerek ya da yeni bir takım adı yazarak) kalıcı olarak bağlayın.':
+      'This person\'s Zoho role looks like a team leader/sales master (contains "leader"/"master" etc.) but which team they lead couldn\'t be resolved from any signal — likely a team/role newly set up in Zoho. Link them permanently with "Assign to Team" (pick an existing team or type a new team name).',
+    'Yeni takım adını yazmalısınız.': 'You must type the new team name.',
+    'Yeni takım adı gir...': 'Enter a new team name...',
+    "Yeni takım adı (Zoho'daki role/team alanıyla BİREBİR aynı yazılmalı)":
+      "New team name (must be written EXACTLY the same as Zoho's role/team field)",
     'Zoho rolü': 'Zoho role',
     'Zoho takımı': 'Zoho team',
     "Zoho'daki takım/rol adı tanınan takımlardan biriyle eşleşmiyor — Zoho tarafında düzeltilmeli.":

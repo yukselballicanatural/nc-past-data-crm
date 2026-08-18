@@ -134,6 +134,30 @@ window.TeamMap = (function () {
     return encodeURIComponent('in.(' + values.map(v => '"' + v + '"').join(',') + ')');
   }
 
+  // ── Çalışma anında yeni takım öğrenme ───────────────────────────────────
+  // KÖK NEDEN (Ağustos 2026): TEAMS kapalı bir listeydi — Zoho'da yeni bir
+  // takım/lider kurulduğunda buraya elle eklenmeden (kod değişikliği +
+  // deploy) hiç tanınmıyordu, hiçbir dropdown'da/filtrede görünmüyordu.
+  // Artık sunucu tarafı (api/team-members.js `teamCatalog`) o an aktif
+  // kadrodan kanonik takımları CANLI çıkarıyor; admin.html/team-leader.html
+  // bu listeyi her "Takımımdaki Kişiler" yüklemesinde TeamMap.learn() ile
+  // besliyor. TEAMS objesi burada YERİNDE (in place) güncellendiği için
+  // Object.keys(TeamMap.TEAMS) kullanan ~10 mevcut dropdown/etiket kodu HİÇ
+  // değişmeden yeni takımı otomatik görür.
+  function learn(canonical, meta) {
+    const c = String(canonical || '').trim();
+    if (!c) return;
+    const k = key(c);
+    if (TEAMS[c]) return;   // zaten biliniyor (elle yazılmış ya da önceden öğrenilmiş)
+    TEAMS[c] = {
+      label: (meta && meta.label) || c,
+      leader: (meta && meta.leader) || '',
+      region: (meta && meta.region) || regionForTeam(c),
+      aliases: [c],
+    };
+    if (!ALIAS_INDEX[k]) ALIAS_INDEX[k] = c;
+  }
+
   // mapDeals'te 'Team Group' alanı TANINAN takımlarda kanonik ada eşitlenir,
   // tanınmayan (satış dışı: Finance/Executive Board/VIP Team/Profclinic/
   // Software Development gibi) birimlerde ise HAM deals.team değerine düşer.
@@ -143,5 +167,5 @@ window.TeamMap = (function () {
     return Object.prototype.hasOwnProperty.call(TEAMS, teamGroup);
   }
 
-  return { TEAMS, normalize, aliasesFor, teamsForRegion, regionForTeam, aliasesForRegion, inFilter, isSalesTeam };
+  return { TEAMS, normalize, aliasesFor, teamsForRegion, regionForTeam, aliasesForRegion, inFilter, isSalesTeam, learn };
 })();

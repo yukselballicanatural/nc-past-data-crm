@@ -23,67 +23,33 @@
 // yazılabilir — Profclinic, Finance, VIP Team, Executive Board, Aftercare gibi
 // birimler ya da hiç tanınmayan bir ad asla Users'a yazılmaz.
 import { verifyToken, bearerToken } from './_auth.js';
-import { fetchTeamAssignments } from './_teams.js';
+import {
+  fetchTeamAssignments, isBossRole, teamNameKey,
+  legacyNormalizeTeam, legacyLooseTeam, resolveMemberTeam,
+  discoverCanonicalTeams, matchLeaderToCanonicalTeam,
+} from './_teams.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
 
-// team-map.js'deki kanonik takım → alias eşlemesinin sunucu tarafı kopyası.
-// deals.team bu aliasların herhangi biri olabilir; hepsi kanonik ada indirilir.
-const TEAM_ALIASES = {
-  'Arij  Team': ['Arij  Team', 'Arij Team', 'Team Leader-Arij Mahjoubi'],
-  'Askif Team': ['Askif Team', 'Team Leader - Abdulrahman Ziad Askif'],
-  'Touma Team': ['Touma Team', 'Team Leader- Abdulkader Touma', 'Toumi Team'],
-  'Mihoubi Team': ['Mihoubi Team', 'Team Leader - Mihoubi'],
-  'Ahmed Anwar Team': ['Ahmed Anwar Team', 'Team Leader-Ahmed Anwar'],
-  'Ghazal Team': ['Ghazal Team', 'Team Leader - Ahmad Ghazal'],
-  'Ali Omer Team': ['Ali Omer Team', 'Team Leader - Ali Omer'],
-  'Aamir Ali Team': ['Aamir Ali Team', 'Team Leader - Aamir Ali'],
-  'Joel Team': ['Joel Team', 'Team Leader - Joel'],
-  'SM- Mert Team': ['SM- Mert Team', 'Mert Jospeh - Sales Master'],
-  'Sales Master - Amin Connor West': ['Sales Master - Amin Connor West', 'SM Amin Connor - Team'],
-  'Farah Team - Morocco': ['Farah Team - Morocco', 'Team Leader - Farah'],
-  'Sara Team - Morocco': ['Sara Team - Morocco', 'Team Leader - Sara'],
-  'Selma Team - Morocco': ['Selma Team - Morocco', 'Team Leader - Selma'],
-  'Ramadan Team - Morocco': ['Ramadan Team - Morocco', 'Team Leader - Abdelatif Ramadan'],
-  'Moutaharrik Team - Morocco': ['Moutaharrik Team - Morocco', 'Team Leader - Moutaharrik Marco'],
-};
-
-// Karşılaştırma anahtarı — team-map.js'deki key() ile AYNI olmalı
-// ("Arij  Team" gibi çift boşluklu varyantlar eşleşsin).
-function tkey(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
-
-const ALIAS_INDEX = {};
-for (const [canonical, aliases] of Object.entries(TEAM_ALIASES)) {
-  for (const a of aliases) ALIAS_INDEX[tkey(a)] = canonical;
-}
-
-// deals.team → kanonik satış takımı; tanınmıyorsa null (yazılmaz).
-function normalizeTeam(t) { return ALIAS_INDEX[tkey(t)] || null; }
-
-// Serbest metnin içinde takım adı geçiyor mu — belirsizse null.
-// (api/team-members.js'deki looseTeam ile aynı mantık; Users."Takim Adi"
-//  yetkilendirme alanı olduğu için belirsiz eşleşme asla yazılmaz.)
-const ALIAS_KEYS = Object.keys(ALIAS_INDEX).sort((a, b) => b.length - a.length);
-function looseTeam(t) {
-  const k = tkey(t);
-  if (k.length < 4) return null;
-  let hit = null;
-  for (const ak of ALIAS_KEYS) {
-    if (ak.length < 4 || !k.includes(ak)) continue;
-    const c = ALIAS_INDEX[ak];
-    if (!hit) hit = c;
-    else if (hit !== c) return null;
-  }
-  return hit;
-}
+// Takım tanıma mantığı ARTIK _teams.js'te MERKEZİ ve AÇIK UÇLU (bkz. o
+// dosyadaki uzun not — kök neden: Ağustos 2026, Zoho'da kurulan yeni
+// takımlar/liderler bu dosyanın kendi kopyasındaki kapalı listeye
+// girmediği için hiç tanınmıyor, hiçbir uyarı çıkmıyordu). Burada ayrı bir
+// liste TUTULMUYOR.
+function tkey(s) { return teamNameKey(s); }
 
 // zoho_users satırının söylediği takım. Canlı tabloda `team` kolonu YOK
 // (bkz. handler içindeki select notu) — takım bilgisi `role` alanında:
 // üyelerde kanonik ad ("Farah Team - Morocco"), liderlerde alias
-// ("Team Leader - Farah"); ikisi de normalizeTeam ile aynı kanonik ada iner.
-function zohoTeamOf(z) {
+// ("Team Leader - Farah"). Üye rolü eski listede yoksa KENDİSİ kanonik takım
+// sayılır (resolveMemberTeam); lider rolü eski listede yoksa canlı kadrodan
+// çıkarılan kanonik kümeyle bulanık eşleştirilir (canonicalTeams parametresi).
+function zohoTeamOf(z, canonicalTeams) {
   if (!z) return null;
-  return normalizeTeam(z.role) || looseTeam(z.role) || null;
+  const legacy = legacyNormalizeTeam(z.role) || legacyLooseTeam(z.role);
+  if (legacy) return legacy;
+  if (!isBossRole(z.role)) return resolveMemberTeam(z.role);
+  return matchLeaderToCanonicalTeam(z.role, canonicalTeams) || null;
 }
 
 function nameKey(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
@@ -95,10 +61,8 @@ function nameKey(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').
 // lideri oldu. En son deal'i (May 2026) hâlâ "Farah Team - Morocco" diyor;
 // "en son deal kazanır" kuralı onu Moutaharrik liderliğinden alıp Farah'a
 // geri atardı ve kendi takımının verisini göremez, Farah'ın verisini görürdü.
-// Bu yüzden yönetici rolleri senkronun DIŞINDA.
-// (Regex, admin.html / team-leader.html'deki _isBoss ile aynı.)
-const BOSS_ROLE_RE = /leader|lider|manager|müdür|mudur|admin|yönetici|yonetici|\btl\b|\brm\b/i;
-function isBossRole(role) { return BOSS_ROLE_RE.test(String(role || '')); }
+// Bu yüzden yönetici rolleri senkronun DIŞINDA. (isBossRole artık _teams.js'te
+// merkezi — bkz. üstteki import.)
 
 // Kesin olarak "artık burada değil" diyen status değerleri.
 // api/team-members.js'teki liste ile AYNI olmalı — biri kadroyu gösteriyor,
@@ -244,7 +208,7 @@ export default async function handler(req, res) {
         for (const row of batch) {
           const k = nameKey(row.deal_owner);
           if (!k) continue;
-          const canonical = normalizeTeam(row.team);
+          const canonical = legacyNormalizeTeam(row.team);
           if (!canonical) continue;        // satış dışı birim / tanınmayan ad → yok say
           const prev = latest.get(k);
           if (prev) { prev.count++; continue; }   // ilk görülen (= en son) kalır
@@ -272,6 +236,10 @@ export default async function handler(req, res) {
         if (k) manualKeys.add(k);
       }
     }
+
+    // o an aktif kadrodan çıkarılan kanonik takım kümesi — yönetici (lider/
+    // sales master) rollerini bulanık eşleştirmek için (bkz. zohoTeamOf).
+    const canonicalTeams = discoverCanonicalTeams([...zoho.values()].filter(z => !isLeaver(z)));
 
     const changes = [];     // takım değişiklikleri
     const leavers = [];     // Zoho'da artık aktif olmayanlar
@@ -313,7 +281,7 @@ export default async function handler(req, res) {
 
       // Kaynak tercihi: zoho_users.role (doğrudan bilgi) > en son deal (vekil).
       let target = null, source = null, dealCount = null, lastDealDate = null;
-      const zTeam = zohoTeamOf(z);
+      const zTeam = zohoTeamOf(z, canonicalTeams);
       if (zTeam) {
         // Zoho doğrudan söylüyor — yönetici rolü istisnasına GEREK YOK, çünkü
         // liderin role'ü de ("Team Leader - X") kendi takımına iniyor.
@@ -336,7 +304,7 @@ export default async function handler(req, res) {
       const current = String(u['Takim Adi'] || '').trim();
       // Users'taki mevcut değeri de kanonize et — yalnızca yazım varyantı
       // farkıysa (ör. "Arij Team" ↔ "Arij  Team") gereksiz yazma yapmayalım.
-      if ((normalizeTeam(current) || current) === target) continue;
+      if ((legacyNormalizeTeam(current) || current) === target) continue;
       changes.push({
         username: u['Username'] || '',
         fullName: ownerName,

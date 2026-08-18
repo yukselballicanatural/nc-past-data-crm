@@ -5002,6 +5002,12 @@
         fetchedAt: data.fetchedAt || '',
         guessed: _teamMembers.filter(m => m.teamSource === 'deals').length,
       };
+      // Canlı kadrodan çıkarılan kanonik takım kümesini TeamMap'e "öğret" —
+      // RM'nin bölge görünümü (TeamMap.teamsForRegion) Zoho'da yeni kurulan
+      // bir takımı kod değişikliği beklemeden görsün (bkz. team-map.js learn).
+      (data.teamCatalog || []).forEach(t => {
+        if (window.TeamMap && typeof TeamMap.learn === 'function') TeamMap.learn(t.canonical, { region: t.region });
+      });
       loading.style.display = 'none';
       renderTeamMembers();
       _tmRenderFreshNote();

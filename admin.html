@@ -2844,7 +2844,12 @@
            yapışıyordu. Sarmalayıcıya vermek o katmandan bağımsız çalışır. -->
       <div style="margin-bottom:16px">
         <label class="tm-field-label" for="tmAssignTeam">Takım</label>
-        <select id="tmAssignTeam" class="filter-select" style="width:100%"></select>
+        <select id="tmAssignTeam" class="filter-select" style="width:100%" onchange="_amTmOnTeamSelectChange()"></select>
+        <!-- Henüz hiçbir üyesi Zoho'da görünmeyen (ilk andaki) YENİ bir takım
+             için — dropdown yalnızca canlı kadrodan çıkarılan takımları
+             listeler, bu yüzden serbest metin girişi gerekiyor. -->
+        <input type="text" id="tmAssignNewTeam" class="filter-input" style="width:100%;margin-top:8px;display:none"
+               placeholder="Yeni takım adı (Zoho'daki role/team alanıyla BİREBİR aynı yazılmalı)">
       </div>
 
       <label class="tm-check" style="margin-bottom:10px">
@@ -6867,6 +6872,14 @@
         if (!r.ok) throw new Error(data.error || ('HTTP ' + r.status));
         _amTeamMembers = data.members || [];
         _amTmUnplaced = data.unplaced || [];
+        _amTmNewLeaders = data.newLeaderCandidates || [];
+        // Canlı kadrodan çıkarılan kanonik takım kümesi — TeamMap'e "öğret"
+        // ki "Takıma Ata" dropdown'u ve diğer takım filtreleri yeni kurulan
+        // bir takımı kod değişikliği/deploy beklemeden hemen tanısın (bkz.
+        // team-map.js TeamMap.learn — kök neden notu için _teams.js'e bakınız).
+        (data.teamCatalog || []).forEach(t => {
+          if (window.TeamMap && typeof TeamMap.learn === 'function') TeamMap.learn(t.canonical, { region: t.region });
+        });
         _amTmManualEmptyTeam = data.manualEmptyTeam || [];
         _amTmHandoverCandidates = data.handoverCandidates || [];
         _amTmDeparted = data.departedEmployees || [];
@@ -6918,6 +6931,12 @@
     // Zoho'da aktif ama hiçbir sinyalle takıma bağlanamayanlar — kaynağı
     // /api/team-members yanıtındaki `unplaced` (yalnızca admin'e gelir).
     let _amTmUnplaced = [];
+    // Yönetici (takım lideri / sales master) rolünde olup hiçbir takıma
+    // bağlanamayanlar — "unplaced"tan AYRI ve ÖNCELİKLİ gösterilir. Bu, Ağustos
+    // 2026'da Zoho'da yeni bir sales master kurulduğunda sistemin hiçbir uyarı
+    // vermemesinin tam karşılığı: kaynağı /api/team-members yanıtındaki
+    // `newLeaderCandidates` (bkz. api/_teams.js'teki kök neden notu).
+    let _amTmNewLeaders = [];
     // Elle "Satış Dışı" (takımı boş) işaretlenmiş ama Zoho rolü/takımı gerçek
     // bir satış takımına karşılık gelen kayıtlar — bkz. api/team-members.js
     // manualEmptyTeam notu (Nicholas Parker vakasının 3. sorunu: bu ARTIK
@@ -6967,9 +6986,14 @@
       const bar = document.getElementById('tmSyncBar');
       if (!bar) return;
       const n = _amTmDrift.size, L = _amTmLeavers.length, P = _amTmUnplaced.length, H = _amTmHandoverCandidates.length, M = _amTmManualEmptyTeam.length;
-      if (!n && !L && !P && !H && !M && _amTmHandoverReady) { bar.style.display = 'none'; return; }
+      const NL = _amTmNewLeaders.length;
+      if (!n && !L && !P && !H && !M && !NL && _amTmHandoverReady) { bar.style.display = 'none'; return; }
       bar.style.display = 'flex';
       const parts = [];
+      // EN ÖNCE ve EN VURGULU: Zoho'da yeni kurulan bir takım lideri/sales
+      // master hiç fark edilmeden kaybolabiliyordu (Ağustos 2026 vakası) —
+      // bu yüzden diğer tüm uyarılardan önce gösterilir.
+      if (NL) parts.push('🆕 ' + I18N.t('{n} yeni takım lideri/sales master adayı — hiçbir takıma bağlı değil!').replace('{n}', NL));
       if (!_amTmHandoverReady) parts.push(I18N.t('Hesap devri onay tablosuna erişilemiyor.'));
       if (H) parts.push(I18N.t('{n} hesap devri onayı bekliyor.').replace('{n}', H));
       if (M) parts.push(I18N.t('{n} kişi elle "Satış Dışı" işaretlenmiş ama Zoho takımı var.').replace('{n}', M));
@@ -7053,6 +7077,22 @@
 
       const out = [];
       const sub = [];
+
+      // ── YENİ TAKIM / LİDER ADAYI — EN ÜSTTE, EN VURGULU ────────────────
+      // Ağustos 2026 kök sorunu: Zoho'da yeni bir sales master/takım lideri
+      // kurulduğunda ("Sales Master - Bradley Grant" gibi) sistem bunu hiç
+      // tanımıyor, hiçbir uyarı vermiyordu. Artık bu kişiler "unplaced"
+      // gürültüsüne karışmadan, kendi başına ve en tepede gösterilir.
+      if (_amTmNewLeaders.length) {
+        sub.push('🆕 ' + I18N.t('{n} yeni lider adayı').replace('{n}', _amTmNewLeaders.length));
+        out.push(SEC('🆕 ' + I18N.t('Yeni Takım / Lider Adayı'), 'danger', _amTmNewLeaders.length,
+          _amTmNewLeaders.map(p => `<div class="tm-row">
+             <span class="tm-row-name">${_escHtml(p.fullName || '—')}${p.realName ? ` <span class="tm-row-dim">(${_escHtml(p.realName)})</span>` : ''}</span>
+             <span class="tm-row-meta">${I18N.t('Zoho rolü')}: ${_escHtml(p.zohoRole || '—')}</span>
+             <button onclick="amTmOpenAssign('${_jsStrAttr(p.fullName || '')}')" class="tm-mini-btn" data-tone="accent" style="margin-left:auto">${_escHtml(I18N.t('Takıma Ata'))}</button>
+           </div>`).join(''),
+          _escHtml(I18N.t('Bu kişinin Zoho rolü bir takım lideri/sales master gibi görünüyor ("leader"/"master" vb. içeriyor) ama hangi takımı yönettiği hiçbir sinyalden çözülemedi — muhtemelen Zoho\'da YENİ kurulmuş bir takım/rol. "Takıma Ata" ile (mevcut bir takımı seçerek ya da yeni bir takım adı yazarak) kalıcı olarak bağlayın.'))));
+      }
 
       if (_amTmLeavers.length) {
         sub.push(I18N.t('{n} ayrılan').replace('{n}', _amTmLeavers.length));
@@ -7474,7 +7514,19 @@
         const label = (t.label || k) + (t.region ? ' · ' + t.region : '');
         opts.push(`<option value="${_escHtml(k)}"${k === selected ? ' selected' : ''}>${_escHtml(label)}</option>`);
       });
+      // Henüz hiçbir üyesi Zoho'da görünmeyen (dolayısıyla dropdown'da
+      // listelenemeyen) TAMAMEN yeni bir takım için serbest metin seçeneği —
+      // bkz. tmAssignNewTeam input'u ve _amTmOnTeamSelectChange.
+      opts.push(`<option value="__new__">${_escHtml('➕ ' + I18N.t('Yeni takım adı gir...'))}</option>`);
       return opts.join('');
+    }
+
+    // Select'te "Yeni takım adı gir..." seçilince serbest metin kutusunu göster.
+    function _amTmOnTeamSelectChange() {
+      const sel = document.getElementById('tmAssignTeam');
+      const box = document.getElementById('tmAssignNewTeam');
+      if (!sel || !box) return;
+      box.style.display = sel.value === '__new__' ? '' : 'none';
     }
 
     // Madalyondaki baş harfler. Türkçe'ye duyarlı: 'i' → 'İ' (toUpperCase()
@@ -7527,6 +7579,8 @@
 
       document.getElementById('tmAssignTeam').innerHTML =
         _amTmTeamOptions(_amTmAssignTarget.currentTeam);
+      document.getElementById('tmAssignNewTeam').value = '';
+      document.getElementById('tmAssignNewTeam').style.display = 'none';
       document.getElementById('tmAssignLeader').checked = false;
       _amTmSyncLeaderHint();
       // "Atamayı Kaldır" yalnızca gerçekten bir atama varsa anlamlı.
@@ -7579,7 +7633,18 @@
 
     async function amTmSaveAssign() {
       if (!_amTmAssignTarget) return;
-      const team = document.getElementById('tmAssignTeam').value;
+      let team = document.getElementById('tmAssignTeam').value;
+      // "Yeni takım adı gir..." seçiliyse serbest metin kutusundan oku —
+      // dropdown yalnızca canlı kadrodan çıkarılmış (en az bir üyesi olan)
+      // takımları listeler, TAMAMEN yeni bir takımın ilk kişisi (genelde
+      // lideri) için bu kutu gerekiyor.
+      if (team === '__new__') {
+        team = String(document.getElementById('tmAssignNewTeam').value || '').trim();
+        if (!team) {
+          showSiteNotice(I18N.t('Yeni takım adını yazmalısınız.'), 'warn');
+          return;
+        }
+      }
       const isLeader = document.getElementById('tmAssignLeader').checked;
       // Lider ataması bir takım seçilmeden anlamsız — sessizce yanlış kayıt
       // yazmak yerine erken uyar.

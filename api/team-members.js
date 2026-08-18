@@ -15,8 +15,10 @@
 import { verifyToken, bearerToken } from './_auth.js';
 import { isBlocked } from './_blocked-users.js';
 import {
-  isNonSalesRole, fetchTeamAssignments,
+  isNonSalesRole, fetchTeamAssignments, isBossRole,
   buildAssignmentIndex, effectiveTeam, isDeactivated, insertUserRow,
+  legacyNormalizeTeam, legacyLooseTeam, resolveMemberTeam,
+  discoverCanonicalTeams, matchLeaderToCanonicalTeam,
 } from './_teams.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
@@ -53,59 +55,15 @@ function regionForTeam(team) {
 // Kadro artık Zoho'nun Users modülünden geliyor. Orada takım bilgisi `role`
 // alanında duruyor ve deals.team ile AYNI yazım uzayında: üyelerde kanonik ad
 // ("Farah Team - Morocco"), takım liderlerinde alias ("Team Leader - Farah").
-// İkisi de aşağıdaki harita ile aynı kanonik ada indiriliyor.
-const TEAM_ALIASES = {
-  'Arij  Team': ['Arij  Team', 'Arij Team', 'Team Leader-Arij Mahjoubi'],
-  'Askif Team': ['Askif Team', 'Team Leader - Abdulrahman Ziad Askif'],
-  'Touma Team': ['Touma Team', 'Team Leader- Abdulkader Touma', 'Toumi Team'],
-  'Mihoubi Team': ['Mihoubi Team', 'Team Leader - Mihoubi'],
-  'Ahmed Anwar Team': ['Ahmed Anwar Team', 'Team Leader-Ahmed Anwar'],
-  'Ghazal Team': ['Ghazal Team', 'Team Leader - Ahmad Ghazal'],
-  'Ali Omer Team': ['Ali Omer Team', 'Team Leader - Ali Omer'],
-  'Aamir Ali Team': ['Aamir Ali Team', 'Team Leader - Aamir Ali'],
-  'Joel Team': ['Joel Team', 'Team Leader - Joel'],
-  'SM- Mert Team': ['SM- Mert Team', 'Mert Jospeh - Sales Master'],
-  'Sales Master - Amin Connor West': ['Sales Master - Amin Connor West', 'SM Amin Connor - Team'],
-  'Farah Team - Morocco': ['Farah Team - Morocco', 'Team Leader - Farah'],
-  'Sara Team - Morocco': ['Sara Team - Morocco', 'Team Leader - Sara'],
-  'Selma Team - Morocco': ['Selma Team - Morocco', 'Team Leader - Selma'],
-  'Ramadan Team - Morocco': ['Ramadan Team - Morocco', 'Team Leader - Abdelatif Ramadan'],
-  'Moutaharrik Team - Morocco': ['Moutaharrik Team - Morocco', 'Team Leader - Moutaharrik Marco'],
-};
+//
+// Takım tanıma mantığı ARTIK _teams.js'te MERKEZİ ve AÇIK UÇLU (bkz. o
+// dosyadaki uzun not — kök neden: Ağustos 2026, yeni takımlar hiç
+// tanınmıyordu). Burada yalnızca legacy tablo + yeni açık-uçlu çözümleyiciler
+// import ediliyor, ayrı bir kopya TUTULMUYOR.
 
 // Karşılaştırma anahtarı — team-map.js'deki key() ile AYNI olmalı
 // ("Arij  Team" gibi çift boşluklu varyantlar eşleşsin).
 function nameKey(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim(); }
-
-const ALIAS_INDEX = {};
-for (const [canonical, aliases] of Object.entries(TEAM_ALIASES)) {
-  for (const a of aliases) ALIAS_INDEX[nameKey(a)] = canonical;
-}
-
-// Tanınan satış takımına indir; satış dışı birim / bilinmeyen ad → null.
-function normalizeTeam(t) { return ALIAS_INDEX[nameKey(t)] || null; }
-
-// Serbest metnin İÇİNDE takım adı geçiyor mu ("Sales Agent - Farah Team - Morocco",
-// "Farah Team - Morocco (Junior)" gibi). Zoho'daki role adları elle yazıldığı için
-// birebir eşleşme tek başına kırılgan: tanınmayan tek bir yazım, kişiyi takım
-// liderinin listesinden SESSİZCE düşürüyordu.
-//
-// Belirsizliğe izin YOK: metinde iki ayrı kanonik takım geçiyorsa null döner
-// (yanlış takıma yerleştirmek, yerleştirmemekten daha kötü — bu alan telefon/
-// e-posta gibi kişisel veriyi hangi liderin göreceğini belirliyor).
-const ALIAS_KEYS = Object.keys(ALIAS_INDEX).sort((a, b) => b.length - a.length);
-function looseTeam(t) {
-  const k = nameKey(t);
-  if (k.length < 4) return null;
-  let hit = null;
-  for (const ak of ALIAS_KEYS) {
-    if (ak.length < 4 || !k.includes(ak)) continue;
-    const canonical = ALIAS_INDEX[ak];
-    if (!hit) hit = canonical;
-    else if (hit !== canonical) return null;   // belirsiz
-  }
-  return hit;
-}
 
 // Bir zoho_users satırının takımı — sırayla, ilk kesin sinyal kazanır.
 //
@@ -118,33 +76,52 @@ function looseTeam(t) {
 // assignByKey: nameKey → team_assignments satırı (yönetici kararı). Bkz.
 // team_assignments.sql — bu, tahmin zincirinin TAMAMINI yener ve bir sonraki
 // senkronda geri alınmaz.
-function resolveZohoTeam(z, usersRow, dealTeamByName, assignByKey) {
+//
+// canonicalTeams: discoverCanonicalTeams() ile o an aktif kadrodan çıkarılmış
+// kanonik takım kümesi — yalnızca YÖNETİCİ rollerini bulanık eşleştirmek için
+// kullanılır (bkz. _teams.js matchLeaderToCanonicalTeam).
+function resolveZohoTeam(z, usersRow, dealTeamByName, assignByKey, canonicalTeams) {
   // 0) YÖNETİCİ ATAMASI — her şeyin üstünde. `team === null` kaydı da geçerli
   //    bir karardır ("satış dışı"): kişi kadroda görünmez ve uyarıya girmez.
   const ov = assignByKey && assignByKey.get(nameKey(z.full_name));
   if (ov) return { team: ov.team || null, source: 'manual', manual: true };
-  // 1-2) Zoho'nun kendi alanları, birebir eşleşme
+  // 1-2) Zoho'nun kendi alanları, eski (elle yazılmış) listeyle birebir eşleşme.
   //    NOT: zoho_users tablosunda `team` kolonu YOK (canlı şema dış Zoho
   //    senkronundan geliyor); bu satır bilerek duruyor — kolon sonradan
   //    eklenirse otomatik devreye girer, yokken zararsızca null döner.
-  if (normalizeTeam(z.team)) return { team: normalizeTeam(z.team), source: 'zoho.team' };
-  if (normalizeTeam(z.role)) return { team: normalizeTeam(z.role), source: 'zoho.role' };
+  if (legacyNormalizeTeam(z.team)) return { team: legacyNormalizeTeam(z.team), source: 'zoho.team' };
+  if (legacyNormalizeTeam(z.role)) return { team: legacyNormalizeTeam(z.role), source: 'zoho.role' };
   // 3-4) Zoho'nun serbest metni ("Sales Agent - Farah Team - Morocco (Junior)")
-  const looseT = looseTeam(z.team);
+  const looseT = legacyLooseTeam(z.team);
   if (looseT) return { team: looseT, source: 'zoho.team~' };
-  const looseR = looseTeam(z.role);
+  const looseR = legacyLooseTeam(z.role);
   if (looseR) return { team: looseR, source: 'zoho.role~' };
+  // 4.5) YENİ — eski liste bu rolü tanımıyor. Yönetici rolü DEĞİLSE, rolün
+  //    kendisi otomatik olarak bir takımdır (kod değişikliği gerekmez — yeni
+  //    kurulan bir takımın üyeleri ilk andan itibaren tanınır).
+  //    Yönetici rolüyse (Team Leader / Sales Master), o an aktif kadrodan
+  //    çıkarılan kanonik takım kümesiyle bulanık ad eşleştirmesi denenir.
+  if (!isBossRole(z.role)) {
+    const literal = resolveMemberTeam(z.role);
+    if (literal) return { team: literal, source: 'zoho.role.literal' };
+  } else {
+    const fuzzy = matchLeaderToCanonicalTeam(z.role, canonicalTeams);
+    if (fuzzy) return { team: fuzzy, source: 'leader.fuzzy' };
+  }
   // 5) Kendi aynamız: Users."Takim Adi" (api/sync-user-teams.js yazıyor).
   //    Yetkilendirme buna dayandığı için hâlâ değerli, ama Zoho konuştuysa
   //    Zoho kazanır.
-  const fromUsers = usersRow && normalizeTeam(usersRow['Takim Adi']);
+  const fromUsers = usersRow && legacyNormalizeTeam(usersRow['Takim Adi']);
   if (fromUsers) return { team: fromUsers, source: 'Users' };
   // 6) En son çare: bu kişinin en son deal'indeki takım. EN BAYAT sinyal —
   //    yanıt içinde teamSource='deals' olarak işaretlenir ve panelde
   //    "tahmin" rozetiyle gösterilir.
   const fromDeals = dealTeamByName && dealTeamByName.get(nameKey(z.full_name));
   if (fromDeals) return { team: fromDeals, source: 'deals' };
-  return { team: null, source: null };
+  // Hiçbir sinyal yok. isBoss: çağıran bunu "yeni lider/sales master adayı"
+  // (newLeaderCandidates) ile genel "yerleşemedi" (unplaced) arasında ayırmak
+  // için kullanır — ikisi FARKLI aciliyette, admin panelinde ayrı gösterilir.
+  return { team: null, source: null, isBoss: isBossRole(z.role) };
 }
 
 // Kesin olarak "artık burada değil" diyen status değerleri. Liste AÇIK uçlu
@@ -294,11 +271,11 @@ export default async function handler(req, res) {
       if (claims.r === 'team-leader') {
         // Yazım varyantı ("Arij Team" ↔ "Arij  Team") kişiyi listeden
         // düşürmesin — iki tarafı da kanonikleştirip karşılaştır.
-        const mine = normalizeTeam(myTeam) || nameKey(myTeam);
+        const mine = legacyNormalizeTeam(myTeam) || nameKey(myTeam);
         return {
           rows: rows.filter(u => {
             const t = String(u['Takim Adi'] || '').trim();
-            return (normalizeTeam(t) || nameKey(t)) === mine;
+            return (legacyNormalizeTeam(t) || nameKey(t)) === mine;
           }),
           scopeLabel: myTeam,
         };
@@ -321,9 +298,9 @@ export default async function handler(req, res) {
         // eşitlik vardı — "Arij Team" ↔ "Arij  Team" gibi tek bir yazım farkı
         // liderin kadrosunu TAMAMEN boşaltıyordu (aynı sayfada scopeRows
         // fallback'i vardı, burada yoktu: iki farklı sonuç).
-        const mine = normalizeTeam(myTeam) || nameKey(myTeam);
+        const mine = legacyNormalizeTeam(myTeam) || nameKey(myTeam);
         return {
-          rows: items.filter(p => p.team && (normalizeTeam(p.team) || nameKey(p.team)) === mine),
+          rows: items.filter(p => p.team && (legacyNormalizeTeam(p.team) || nameKey(p.team)) === mine),
           scopeLabel: myTeam,
         };
       }
@@ -415,10 +392,18 @@ export default async function handler(req, res) {
       let members;
       let scopeLabel;
       let unplaced = [];
+      // Yönetici (takım lideri / sales master) rolünde olup hiçbir takıma
+      // bağlanamayanlar — "unplaced"tan AYRI: bkz. _teams.js'teki büyük not
+      // (Ağustos 2026 kök nedeni). Admin panelinde ayrı ve belirgin gösterilir.
+      let newLeaderCandidates = [];
       let conflicts = [];
       let manualEmptyTeam = [];
       let handoverCandidates = [];
       let departedEmployees = [];
+      // O an aktif kadrodan çıkarılan kanonik takım kümesi — admin panelindeki
+      // "Takıma Ata" dropdown'unu yeni (henüz koda hiç eklenmemiş) takımlarla
+      // beslemek için kullanılır (bkz. _teams.js discoverCanonicalTeams).
+      let teamCatalog = [];
       // Dizin, kapsamlanmış listeyle AYNI çözümlemeyi kullansın diye dışarıda
       // tutuluyor — ikinci kez resolveZohoTeam çağırmak (deal yedeği olmadan)
       // iki yerde farklı takım üretebilirdi.
@@ -426,7 +411,7 @@ export default async function handler(req, res) {
       if (zohoRows.length) {
         // ── Takım çözümlemesi ───────────────────────────────────────────
         // Kadroda kalan (ayrılmamış) herkes için takımı ÖNCE belirle, kapsamı
-        // sonra uygula. Eskiden kapsam doğrudan normalizeTeam(z.role) ile
+        // sonra uygula. Eskiden kapsam doğrudan legacyNormalizeTeam(z.role) ile
         // yapılıyordu; role tanınmayan bir yazımdaysa kişi takım liderinin
         // listesinden sessizce düşüyordu (somut vaka: Farah Team'deki
         // Salvatore De Luca — Zoho'da ve zoho_users'ta aktif, panelde yok).
@@ -447,21 +432,32 @@ export default async function handler(req, res) {
             approvedHandovers.has(handoverKey(z.id, z.exit_date, z.start_date));
         });
 
+        // o an aktif kadrodan çıkarılan kanonik takım kümesi — yönetici
+        // rollerini bulanık eşleştirmek (matchLeaderToCanonicalTeam) VE
+        // admin panelindeki dinamik "Takıma Ata" dropdown'unu (teamCatalog)
+        // beslemek için kullanılır. Statik DEĞİL, her istekte yeniden çıkarılır.
+        const canonicalTeams = discoverCanonicalTeams(active);
+        teamCatalog = canonicalTeams;
+
         // Katı sinyallerle (team / role / Users) yerleşemeyenler için son çare
         // deal taraması — YALNIZCA gerekliyse ve yalnızca o isimler için.
-        // DİKKAT: bu koşul resolveZohoTeam'in 1-5. adımlarının AYNISI olmalı,
+        // DİKKAT: bu koşul resolveZohoTeam'in adımlarının AYNISI olmalı,
         // yoksa deals taraması gereksiz çalışır ya da (daha kötüsü) gerekliyken
-        // çalışmaz. Users tarafında normalizeTeam kullanılıyor: tanınmayan bir
-        // yazım "takım var" sayılıp kişiyi yerleştirmesiz bırakmasın.
+        // çalışmaz. Users tarafında legacyNormalizeTeam kullanılıyor: tanınmayan
+        // bir yazım "takım var" sayılıp kişiyi yerleştirmesiz bırakmasın.
         const needDeals = active.filter(z => {
           // Yönetici ataması olan ya da satış dışı birimde olan kişi için deal
           // taramasına gerek yok — takımı zaten belli (ya da hiç olmamalı).
           if (assignByKey.has(nameKey(z.full_name))) return false;
           if (isNonSalesRole(z.role)) return false;
-          if (normalizeTeam(z.team) || normalizeTeam(z.role)) return false;
-          if (looseTeam(z.team) || looseTeam(z.role)) return false;
+          if (legacyNormalizeTeam(z.team) || legacyNormalizeTeam(z.role)) return false;
+          if (legacyLooseTeam(z.team) || legacyLooseTeam(z.role)) return false;
+          // YENİ açık uçlu yollar: üye rolü kendi başına takımdır, yönetici
+          // rolü canlı kümeyle bulanık eşleşiyor olabilir.
+          if (!isBossRole(z.role)) { if (resolveMemberTeam(z.role)) return false; }
+          else if (matchLeaderToCanonicalTeam(z.role, canonicalTeams)) return false;
           const u = usersByName.get(nameKey(z.full_name));
-          if (u && normalizeTeam(u['Takim Adi'])) return false;
+          if (u && legacyNormalizeTeam(u['Takim Adi'])) return false;
           return true;
         });
         const dealTeamByName = new Map();
@@ -486,14 +482,14 @@ export default async function handler(req, res) {
           for (const row of (Array.isArray(rows) ? rows : [])) {
             const k = nameKey(row.deal_owner);
             if (!k || dealTeamByName.has(k)) continue;
-            const c = normalizeTeam(row.team);
+            const c = legacyNormalizeTeam(row.team);
             if (c) dealTeamByName.set(k, c);
           }
         }
 
         const resolved = active.map(z => {
           const u = usersByName.get(nameKey(z.full_name)) || null;
-          const rt = resolveZohoTeam(z, u, dealTeamByName, assignByKey);
+          const rt = resolveZohoTeam(z, u, dealTeamByName, assignByKey, canonicalTeams);
           return {
             z, u, team: rt.team, teamSource: rt.source, manual: rt.manual === true,
             // Satış dışı birim: Finance, Executive Board, IT, Quality... Bu
@@ -510,8 +506,22 @@ export default async function handler(req, res) {
         // takımı olmaması gereken kişilerdi — gerçek sorunlar bu gürültünün
         // içinde görünmez hâle geliyordu. Artık uyarı yalnızca GERÇEKTEN
         // yerleştirilmesi gereken ama yerleştirilemeyen kişileri gösterir.
-        unplaced = resolved.filter(p => !p.team && !p.nonSales).map(p => ({
+        //
+        // YÖNETİCİ (lider/sales master) rolündeki yerleşemeyenler AYRI bir
+        // döküm: bunlar "Yeni Takım/Lider Adayı" — Ağustos 2026'daki kök
+        // sorunun ta kendisi (yeni bir sales master Zoho'da kurulup hiçbir
+        // uyarı çıkmaması). Admin panelinde belirgin ve ayrı gösterilir,
+        // genel "yerleşemedi" gürültüsüne karışmaz.
+        unplaced = resolved.filter(p => !p.team && !p.nonSales && !isBossRole(p.z.role)).map(p => ({
           fullName: p.z.full_name || '',
+          zohoRole: p.z.role || '',
+          zohoTeam: p.z.team || '',
+          email:    p.z.email || '',
+          status:   p.z.status || '',
+        }));
+        newLeaderCandidates = resolved.filter(p => !p.team && !p.nonSales && isBossRole(p.z.role)).map(p => ({
+          fullName: p.z.full_name || '',
+          realName: p.z.original_agent_name || '',
           zohoRole: p.z.role || '',
           zohoTeam: p.z.team || '',
           email:    p.z.email || '',
@@ -527,7 +537,7 @@ export default async function handler(req, res) {
           .map(p => {
             // Yönetici ataması bir "çelişki" değil, KARAR — uyarıya girmez.
             if (p.manual) return null;
-            const uTeam = p.u && normalizeTeam(p.u['Takim Adi']);
+            const uTeam = p.u && legacyNormalizeTeam(p.u['Takim Adi']);
             if (!p.team || !uTeam || uTeam === p.team) return null;
             return {
               fullName:  p.z.full_name || '',
@@ -555,12 +565,12 @@ export default async function handler(req, res) {
         // — aksi hâlde her gerçek Finance/IT kaydı da burada görünür ve
         // gürültü asıl sorunu gizlerdi (bkz. unplaced'teki aynı ders).
         manualEmptyTeam = resolved
-          .filter(p => p.manual && !p.team && (normalizeTeam(p.z.team) || normalizeTeam(p.z.role)))
+          .filter(p => p.manual && !p.team && (legacyNormalizeTeam(p.z.team) || legacyNormalizeTeam(p.z.role)))
           .map(p => ({
             fullName: p.z.full_name || '',
             zohoRole: p.z.role || '',
             zohoTeam: p.z.team || '',
-            suggestedTeam: normalizeTeam(p.z.team) || normalizeTeam(p.z.role) || '',
+            suggestedTeam: legacyNormalizeTeam(p.z.team) || legacyNormalizeTeam(p.z.role) || '',
           }));
 
         // ── Hesap devri onayı bekleyenler + ayrılan kişiler arşivi ─────────
@@ -753,7 +763,7 @@ export default async function handler(req, res) {
           // hangi takıma ait olduğunu belirliyor. Testte yakalandı — kadro
           // listesini süzmek yetmiyordu, burası ayrı bir yol.
           if (isBlocked(u['Deal Owner Name'], u['Username'])) continue;
-          const t = normalizeTeam(String(u['Takim Adi'] || '').trim());
+          const t = legacyNormalizeTeam(String(u['Takim Adi'] || '').trim());
           if (t) push(u['Deal Owner Name'] || u['Username'], t);
         }
       }
@@ -771,7 +781,13 @@ export default async function handler(req, res) {
       const debugQ = String(req.query?.debugPerson || '').trim();
       if (isAdmin && debugQ) {
         const qKey = nameKey(debugQ);
-        const z = zohoRows.find(x => nameKey(x.full_name).includes(qKey) || qKey.includes(nameKey(x.full_name)));
+        // GERÇEK ADLA (original_agent_name) da ara — yalnızca Zoho sistem
+        // adına (full_name, ör. "Anthony Cross") bakmak, admin gerçek adı
+        // (ör. "Burak Kalkanoğlu") yazdığında kişiyi hiç bulamıyordu; bu
+        // yüzden Ağustos 2026'daki vakada tanı aracı da işe yaramamıştı.
+        const z = zohoRows.find(x =>
+          nameKey(x.full_name).includes(qKey) || qKey.includes(nameKey(x.full_name)) ||
+          (x.original_agent_name && (nameKey(x.original_agent_name).includes(qKey) || qKey.includes(nameKey(x.original_agent_name)))));
         if (!z) {
           debug = { found: false, query: debugQ, zohoRowCount: zohoRows.length };
         } else {
@@ -787,7 +803,7 @@ export default async function handler(req, res) {
           debug = {
             found: true,
             zoho: {
-              id: z.id, full_name: z.full_name, status: z.status,
+              id: z.id, full_name: z.full_name, realName: z.original_agent_name || '', status: z.status,
               exit_date: z.exit_date, start_date: z.start_date,
               team: z.team, role: z.role, region: z.region,
             },
@@ -825,6 +841,15 @@ export default async function handler(req, res) {
         // bunlar veri bakımı uyarısı, takım liderinin ekranında karşılığı yok
         // (ayrıca başka takımların kişilerini içerir).
         unplaced:  isAdmin ? unplaced  : [],
+        // Yönetici (takım lideri / sales master) rolünde olup hiçbir takıma
+        // bağlanamayanlar — Ağustos 2026 kök sorununun karşılığı, admin
+        // panelinde ayrı ve belirgin bir bölümde gösterilmesi için "unplaced"
+        // içine KARIŞTIRILMIYOR.
+        newLeaderCandidates: isAdmin ? newLeaderCandidates : [],
+        // O an aktif kadrodan çıkarılan kanonik takım kümesi — admin panelinin
+        // "Takıma Ata" dropdown'unu ve TeamMap'i (window.TeamMap.learn) yeni
+        // takımlarla besler, kod değişikliği/deploy gerekmeden.
+        teamCatalog,
         conflicts: isAdmin ? conflicts : [],
         // Elle "Satış Dışı" (takımı boş) işaretlenmiş ama Zoho rolü/takımı
         // gerçek bir satış takımına karşılık gelen kayıtlar — bkz. yukarıdaki
@@ -936,7 +961,7 @@ export default async function handler(req, res) {
         // GET'teki resolveZohoTeam ile aynı öncelik: önce yönetici ataması.
         const ovZ = assignByKey.get(nameKey(z.full_name));
         targetTeam = (ovZ && ovZ.team)
-          || normalizeTeam(z.role) || String(z.role || '').trim();
+          || legacyNormalizeTeam(z.role) || String(z.role || '').trim();
         // Kapsam kontrolü aşağıda targetTeam ile yapılıyor; oluşturma ancak
         // izin verildikten sonra (allowed) gerçekleşiyor.
         pendingCreate = { username: targetUsername, fullName: z.full_name || '', team: targetTeam, email: z.email || '' };
