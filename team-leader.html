@@ -5341,10 +5341,13 @@
     }
   }
 
-  // TL yalnızca BUGÜN ve DÜN'ü düzenleyebilir; daha eski günler salt-okunur.
-  // (Kaydedilmiş satırlar dahil bugün/dün serbestçe düzeltilebilir.)
+  // TL yalnızca SON 3 GÜNÜ (bugün, dün, önceki gün) düzenleyebilir; daha eski
+  // günler salt-okunur. (Kaydedilmiş satırlar dahil bu 3 gün serbestçe
+  // düzeltilebilir.)
   function _depDateEditable() {
-    return depDate === _depToday() || depDate === _depAddDays(_depToday(), -1);
+    return depDate === _depToday()
+      || depDate === _depAddDays(_depToday(), -1)
+      || depDate === _depAddDays(_depToday(), -2);
   }
   function _depRowLocked(row) {
     return !_depDateEditable();
@@ -5438,7 +5441,7 @@
     if (banner) {
       if (!editable) {
         banner.style.display = 'flex';
-        banner.querySelector('span').textContent = I18N.t('Bu tarih salt okunur — yalnızca bugün ve dün düzenlenebilir. Daha eski günlerin düzeltme yetkisi admin panelindedir.');
+        banner.querySelector('span').textContent = I18N.t('Bu tarih salt okunur — yalnızca son 3 gün düzenlenebilir. Daha eski günlerin düzeltme yetkisi admin panelindedir.');
       } else {
         banner.style.display = 'none';
       }
@@ -5493,7 +5496,7 @@
 
   async function depSaveAll() {
     if (!depRows.length) return;
-    if (!_depDateEditable()) { showNotice('Bu tarih düzenlenemez — yalnızca bugün ve dün. Daha eski günler için düzeltme yetkisi admindedir.', 'error'); return; }
+    if (!_depDateEditable()) { showNotice('Bu tarih düzenlenemez — yalnızca son 3 gün. Daha eski günler için düzeltme yetkisi admindedir.', 'error'); return; }
     const toSave = depRows;
     const btn = document.getElementById('depSaveBtn');
     const btnLabel = btn ? btn.textContent : '';
