@@ -1304,6 +1304,8 @@
     // ── Sistem Etkisi (para) sayfası ──
     'deal ödemesi eksikken işaretlendi, sonra ödemesi %100 tamamlandı.': 'deals were flagged while underpaid, then paid in full.',
     'deal ödemesi GECİKMİŞKEN işaretlendi, sonra ödemesi %100 tamamlandı.': 'deals were flagged while OVERDUE, then paid in full.',
+    'deal en az 1 hafta GECİKMİŞKEN işaretlendi, arkasında gerçek bir aksiyon (durum/not/kapatma/WhatsApp) var, sonra ödemesi %100 tamamlandı.':
+      'deals were flagged while OVERDUE for at least a week, have a real logged action (status/note/close/WhatsApp) behind them, then were paid in full.',
     'Medyan': 'Median',
     'Defter': 'Ledger',
     'tarihinde devreye girdi': 'went live',

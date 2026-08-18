@@ -1,31 +1,37 @@
 -- ============================================================
--- "Sistem Etkisi" ölçümünü SIKILAŞTIR: yalnızca GERÇEKTEN GECİKMİŞ
--- (vadesi geçmiş) alarmlar "sistemin kazandırdığı para" sayılsın.
--- Supabase SQL Editor'de BİR KEZ çalıştır (deal_payment_history.sql'in
--- ÜZERİNE, o dosya zaten çalıştırılmış olmalı):
+-- "Sistem Etkisi" ölçümünü SIKILAŞTIR (2. tur): yalnızca GERÇEKTEN
+-- GECİKMİŞ + en az 1 hafta geçmiş + ARKASINDA GERÇEK BİR AKSİYON (log) olan
+-- ödemeler "sistemin kazandırdığı para" sayılsın.
+-- Supabase SQL Editor'de çalıştır (deal_payment_history.sql +
+-- alarm_logs_and_settings.sql ÖNCEDEN çalıştırılmış olmalı):
 --   https://supabase.com/dashboard/project/aztxfncqanrodbttywrb/sql
 -- ============================================================
 --
--- NEDEN
--- Kullanıcı talebi: "önceki alarmı overdue olanları hesapla, onlar bizim
--- sistemin kazandırdığı; overdue olup değişenleri biz kazandırdık."
+-- NEDEN (2. tur sıkılaştırma — kullanıcı talebi, aynen)
+-- "overdue olan ve 1 hafta sonra ödeme gelen hatta bizde logu olan yani
+--  tıklamış takım lideri zohoya gitmiş veya o alarmı kapatmış kendisi veya
+--  sistem veya agenta mesaj atmış whatsaptan yani cidden bizde hareket
+--  dönmüş olanlar olsun ama minimum 1 hafta süre geçmiş olan."
 --
--- ESKİ kural: bir ödeme girişi (delta > 0), o deal için girişten ÖNCE
--- AÇILMIŞ herhangi bir alarm varsa "sistem sayesinde" sayılıyordu — alarm
--- hiç gecikmeden (vadesi geçmeden) aynı gün kapansa BİLE.
--- Bu gevşek: bir alarm açılıp saatler içinde normal seyrinde ödenen bir
--- deal de "kurtarıldı" gibi sayılıyordu, oysa bu zaten olağan bir tahsilattı.
+-- 1. tur (aynı dosyanın önceki hâli): yalnızca "vadesi geçmişken kapandı" —
+-- kabul, ama bir alarm vadesi geçer geçmez (ör. 1 gün sonra) ödense de
+-- sayılıyordu; bu da "sistem gerçekten arayı kapattı mı yoksa tesadüf mü"
+-- sorusunu tam cevaplamıyordu.
 --
--- YENİ kural: yalnızca alarmın reference_date'i (vadesi) ödeme ANINDAN
--- ÖNCE geçmişse sayılır — yani sistem bu ödemeyi GERÇEKTEN gecikmişken
--- yakalayıp kapatmış olmalı. Zamanında (vadesi geçmeden) kapanan bir alarm
--- artık "sistemin kazandırdığı" sayılmıyor.
+-- 2. tur (bu dosya) ÜÇ koşulun HEPSİNİ birden ister:
+--   a) GECİKMİŞ  : alarmın reference_date'i (vadesi) ödeme ANINDAN önce geçmiş.
+--   b) EN AZ 1 HAFTA: ödeme, vade geçtikten EN AZ 7 gün SONRA gelmiş — kısa
+--      süreli/tesadüfi gecikmeleri eler, gerçekten "uzun süre bekleyip
+--      sonra tahsil edilen" parayı ölçer.
+--   c) GERÇEK AKSİYON: o alarm için alarm_logs'ta 'created' DIŞINDA en az
+--      bir kayıt var — durum değiştirilmiş, not düşülmüş, kapatılmış,
+--      yeniden açılmış, otomatik kapanmış YA DA agent'a WhatsApp gönderilmiş.
+--      'created' sayılmaz çünkü o her alarmda otomatik oluşuyor, bir kanıt
+--      değil. Aksiyonun ödemeden ÖNCE/aynı anda olması şart — sonradan
+--      düşülen bir not, o ödemeye neden olmuş sayılamaz.
 --
--- admin.html'deki üstteki "hero" rakamı (İşaretlediğimiz deal'lerden kasaya
--- giren) client-side ayrı bir hesap; O TARAFA da aynı kural JS'te eklendi
--- (bkz. renderImpact() — reference_date < closed_at kontrolü). Bu dosya
--- yalnızca "Günlük tahsilat akışı" katmanının (deal_payment_history +
--- admin_payment_recovery RPC) SQL tarafını günceller.
+-- Bu üçü birden = "sistem gerçekten bu parayı ARADI, TAKİP ETTİ ve
+-- KAZANDIRDI" iddiasının en savunulabilir hâli.
 
 create or replace function public.admin_payment_recovery(
   p_from         date    default null,
@@ -47,21 +53,37 @@ as $$
       and (p_to   is null or h.changed_at <  (p_to + 1)::timestamptz)
   ),
   flagged as (
-    -- Her ödeme girişi için, o girişten ÖNCE açılmış VE o giriş anında
-    -- vadesi (reference_date) ZATEN GEÇMİŞ (gerçekten gecikmiş) bir alarm
-    -- var mı? Zamanında kapanan alarmlar artık sayılmaz.
-    select ev.*,
-           (select min(a.created_at) from public.alarms a
-             where a.deal_id = ev.deal_id
-               and a.created_at <= ev.changed_at
-               and a.reference_date is not null
-               and a.reference_date < ev.changed_at::date
-               and (not p_payment_only or a.alarm_type = 'payment_tracking')
-           ) as first_flag_at
+    -- Her ödeme girişi için: (a) girişten ÖNCE açılmış, (b) o giriş anında
+    -- vadesi EN AZ 7 GÜNDÜR geçmiş (gerçekten gecikmiş) bir alarm var mı?
+    -- Birden fazla uyan varsa EN ERKEN açılanı alınır (overdue_alarm_id ile
+    -- birlikte — aşağıda alarm_logs'a bunun üzerinden bakılıyor).
+    select ev.*, ov.id as overdue_alarm_id, ov.created_at as first_flag_at
     from ev
+    left join lateral (
+      select a.id, a.created_at
+      from public.alarms a
+      where a.deal_id = ev.deal_id
+        and a.created_at <= ev.changed_at
+        and a.reference_date is not null
+        and a.reference_date < ev.changed_at::date
+        and (ev.changed_at::date - a.reference_date) >= 7
+        and (not p_payment_only or a.alarm_type = 'payment_tracking')
+      order by a.created_at asc
+      limit 1
+    ) ov on true
   ),
   attributed as (
-    select * from flagged where first_flag_at is not null
+    -- + GERÇEK AKSİYON şartı: 'created' dışında, ödemeden ÖNCE/aynı anda
+    -- düşülmüş en az bir alarm_logs kaydı (durum değişikliği, not, kapatma,
+    -- yeniden açma, otomatik kapatma ya da WhatsApp gönderimi).
+    select f.* from flagged f
+    where f.overdue_alarm_id is not null
+      and exists (
+        select 1 from public.alarm_logs l
+        where l.alarm_id = f.overdue_alarm_id
+          and l.action_type <> 'created'
+          and l.created_at <= f.changed_at
+      )
   )
   select jsonb_build_object(
     'ledger_started_at', (select min(changed_at) from public.deal_payment_history),
@@ -71,7 +93,7 @@ as $$
     'inflow_total',      (select coalesce(sum(delta),0) from ev),
     'inflow_deals',      (select count(distinct deal_id) from ev),
 
-    -- Gecikmişken işaretlenip SONRA gelen tahsilat (asıl rakam)
+    -- Gecikmişken + en az 1 hafta sonra + gerçek aksiyonla gelen tahsilat
     'recovered_total',   (select coalesce(sum(delta),0) from attributed),
     'recovered_deals',   (select count(distinct deal_id) from attributed),
     'recovered_events',  (select count(*) from attributed),
@@ -118,5 +140,10 @@ grant execute on function public.admin_payment_recovery(date, date, boolean) to 
 -- Doğrulama
 -- ============================================================
 -- select public.admin_payment_recovery();
--- Eski sonuçla (recovered_total) karşılaştır — yeni rakam EŞİT YA DA DAHA
--- KÜÇÜK olmalı (kural sıkılaştı, hiçbir zaman gevşemedi).
+-- Bir önceki sürüme göre recovered_total EŞİT YA DA DAHA KÜÇÜK olmalı
+-- (kural yalnızca sıkılaştı).
+--
+-- Belirli bir deal'in neden sayılıp/sayılmadığını görmek için:
+--   select a.id, a.deal_id, a.reference_date, a.created_at, a.status
+--   from public.alarms a where a.deal_id = '<deal_id>';
+--   select * from public.alarm_logs where alarm_id = '<yukarıdaki id>';

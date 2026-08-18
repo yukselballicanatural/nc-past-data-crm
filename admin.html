@@ -8751,6 +8751,7 @@
     const IM_PAY_CLOSE_Q =
       'or=(close_reason.eq.payment_settled,close_reason.ilike.*deme%20%25100*)';
     let _imAlarms = null;        // ödeme ile kapanmış alarmlar (kanıt zinciri)
+    let _imAlarmLogs = new Map();// alarm_id → alarm_logs kayıtları ('created' hariç) — "gerçek aksiyon" şartı
     let _imLedger = null;        // admin_payment_recovery RPC sonucu
     let _imLedgerOff = false;    // true = defter kurulmamış (RPC yok)
     let _imRows = [];            // bekleyen kalemler, render/export için
@@ -8855,16 +8856,27 @@
         const byId = new Map(sales.map(d => [String(d['Deal Id']), d]));
         // Her deal için en ERKEN işaretlenme ve en SON ödeme-tamamlandı damgası
         //
-        // KULLANICI TALEBİ: yalnızca GERÇEKTEN GECİKMİŞ (vadesi — reference_date —
-        // geçtikten SONRA kapanan) alarmlar sayılır. Zamanında (vadesi geçmeden)
-        // kapanan bir alarm normal bir tahsilattır, sistemin "kurtardığı" para
-        // değil — "sistemin kazandırdığı" iddiası yalnızca vadesi geçmiş bir
-        // ödemenin sonradan tahsil edilmesiyle savunulabilir.
+        // KULLANICI TALEBİ (2. tur sıkılaştırma) — ÜÇ şart birden:
+        //   1) GECİKMİŞ   : vadesi (reference_date) kapanıştan ÖNCE geçmiş.
+        //   2) EN AZ 1 HAFTA: kapanış, vade geçtikten EN AZ 7 GÜN sonra olmuş
+        //      — kısa/tesadüfi gecikmeleri eler.
+        //   3) GERÇEK AKSİYON: bu alarm için alarm_logs'ta 'created' DIŞINDA
+        //      (durum değişikliği/not/kapatma/yeniden açma/otomatik kapatma/
+        //      WhatsApp) VE kapanıştan ÖNCE/aynı anda düşülmüş en az bir kayıt
+        //      var — "sistem/takım lideri gerçekten bir şey yaptı" kanıtı.
+        // Zamanında kapanan ya da arkasında hiçbir iz olmayan bir alarm artık
+        // "sistemin kazandırdığı" sayılmıyor.
         const flagInfo = new Map();
         _imAlarms.forEach(a => {
           if (!a.reference_date || !a.closed_at) return;
-          const wasOverdue = new Date(a.reference_date + 'T00:00:00') < new Date(a.closed_at);
-          if (!wasOverdue) return;
+          const refDate = new Date(a.reference_date + 'T00:00:00');
+          const closedDate = new Date(a.closed_at);
+          if (!(refDate < closedDate)) return;                          // 1) gecikmiş mi
+          const daysPastDue = (closedDate - refDate) / 86400000;
+          if (daysPastDue < 7) return;                                  // 2) en az 1 hafta
+          const logs = _imAlarmLogs.get(a.id) || [];
+          const hasRealAction = logs.some(l => l.created_at <= a.closed_at);
+          if (!hasRealAction) return;                                   // 3) gerçek aksiyon
           const k = String(a.deal_id);
           const cur = flagInfo.get(k) || { flag: null, done: null };
           if (a.created_at && (!cur.flag || a.created_at < cur.flag)) cur.flag = a.created_at;
@@ -8892,7 +8904,7 @@
 
         heroIn.textContent = fmtMoney(collected);
         heroInSub.innerHTML = '<b class="text-slate-200">' + _imDealRows.length.toLocaleString('tr-TR') + '</b> ' +
-          I18N.t('deal ödemesi GECİKMİŞKEN işaretlendi, sonra ödemesi %100 tamamlandı.') +
+          I18N.t('deal en az 1 hafta GECİKMİŞKEN işaretlendi, arkasında gerçek bir aksiyon (durum/not/kapatma/WhatsApp) var, sonra ödemesi %100 tamamlandı.') +
           (med === null ? '' : ' ' + I18N.t('Medyan') + ' <b class="text-slate-200">' +
             med.toFixed(1) + ' ' + I18N.t('gün') + '</b>.');
         document.getElementById('imKpiDeals').textContent = _imDealRows.length.toLocaleString('tr-TR');
@@ -9289,8 +9301,9 @@
 
         // (a) Kanıt: ödeme ile kapanmış alarmlar. 28K alarmın tamamı DEĞİL —
         // sunucu tarafında filtrelenip yalnızca ilgili ~300 satır iniyor.
+        // id: alarm_logs'a bağlamak için (bkz. aşağıdaki "gerçek aksiyon" şartı).
         const alarmUrl = `${SUPABASE_URL}/rest/v1/alarms` +
-          `?select=deal_id,created_at,closed_at,close_reason,reference_date&${IM_PAY_CLOSE_Q}&limit=2000`;
+          `?select=id,deal_id,created_at,closed_at,close_reason,reference_date&${IM_PAY_CLOSE_Q}&limit=2000`;
         // (b) Sistemin yaşı = ilk alarmın tarihi (tek satır iniyor)
         const firstUrl = `${SUPABASE_URL}/rest/v1/alarms?select=created_at&order=created_at.asc&limit=1`;
         // (c) Ölçüm: ödeme defteri RPC'si. Kurulmadıysa 404/PGRST202 döner —
@@ -9308,6 +9321,34 @@
 
         if (aRes && aRes.ok) _imAlarms = await aRes.json().catch(() => []);
         else if (_imAlarms === null) _imAlarms = [];
+
+        // "Gerçek aksiyon" şartı: kullanıcı talebi — yalnızca gecikmiş +
+        // en az 1 hafta geçmiş DEĞİL, arkasında GERÇEKTEN bir hareket
+        // (durum değişikliği, not, kapatma, yeniden açma, otomatik kapatma
+        // ya da WhatsApp gönderimi) olan alarmlar sayılsın. 'created' hariç
+        // (o zaten her alarmda otomatik oluşuyor, kanıt değil).
+        _imAlarmLogs = new Map();
+        {
+          const ids = [...new Set(_imAlarms.map(a => a.id).filter(Boolean))];
+          for (let i = 0; i < ids.length; i += 40) {
+            const chunk = ids.slice(i, i + 40);
+            const inList = chunk.map(x => '"' + x + '"').join(',');
+            try {
+              const lr = await fetch(
+                `${SUPABASE_URL}/rest/v1/alarm_logs?select=alarm_id,action_type,created_at` +
+                `&alarm_id=in.(${encodeURIComponent(inList)})&action_type=neq.created&limit=2000`,
+                { headers: H });
+              if (lr.ok) {
+                const rows = await lr.json().catch(() => []);
+                for (const l of (Array.isArray(rows) ? rows : [])) {
+                  const arr = _imAlarmLogs.get(l.alarm_id) || [];
+                  arr.push(l);
+                  _imAlarmLogs.set(l.alarm_id, arr);
+                }
+              }
+            } catch (e) {}
+          }
+        }
 
         if (fRes && fRes.ok) {
           const rows = await fRes.json().catch(() => []);
