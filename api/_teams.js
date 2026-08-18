@@ -222,6 +222,59 @@ export function matchLeaderToCanonicalTeam(leaderRole, canonicalTeams) {
   return hit;
 }
 
+// ── "Ayrılmış" tespiti — MERKEZİ (önceden team-members.js VE
+// sync-user-teams.js'te AYNI mantığın 2 kopyası vardı; ikisi ayrışırsa biri
+// kadroyu gösterir diğeri is_active=false YAZAR gibi tutarsızlıklar çıkardı).
+//
+// DİKKAT: `status` tek başına YETMİYOR — canlı veride exit_date'i geçmişte
+// olan bazı kişiler hâlâ status='active' görünüyor. Bu yüzden exit_date asıl
+// ölçüt, status ikincil. Liste AÇIK uçlu: bilinmeyen/boş bir status kişiyi
+// kadrodan DÜŞÜRMEMELİ (kanıt yokluğu, yokluk kanıtı değil).
+const INACTIVE_STATUS = new Set([
+  'inactive', 'disabled', 'deleted', 'left', 'leaver', 'passive', 'suspended',
+  'terminated', 'closed', 'false', 'no', '0',
+  'ayrildi', 'ayrıldı', 'pasif', 'silindi', 'iptal',
+]);
+export function isLeaver(z) {
+  const st = String(z.status == null ? '' : z.status).trim().toLowerCase();
+  if (INACTIVE_STATUS.has(st)) return true;
+  if (z.exit_date) {
+    const d = new Date(z.exit_date);
+    if (!isNaN(d) && d <= new Date()) return true;
+  }
+  return false;
+}
+
+// ── Kendi ETKİN takımını Zoho'dan çöz — effectiveTeam()'in SON ÇARE yolu ──
+//
+// KÖK NEDEN (Ağustos 2026, Bradley Grant/Anthony Cross vakası): resolveZohoTeam
+// (yukarıda) yeni bir lideri kadro/uyarı EKRANLARI için doğru çözüyordu, ama
+// effectiveTeam() — giriş yapan kişinin KENDİ oturum kapsamını belirleyen
+// fonksiyon (api/login.js ve api/team-members.js'in kendi `myTeam`
+// hesaplaması) — yalnızca team_assignments (elle atama) ve Users."Takim Adi"
+// okuyordu. Sonuç: yeni bir sales master/takım lideri "Kullanıcılar"dan doğru
+// Zoho sistem adıyla (ör. "Bradley Grant") hesap açılıp Rol="Takım Lideri"
+// yapılsa BİLE, henüz elle bir takım ataması yoksa VE Users."Takim Adi" boşsa,
+// giriş yapıyor ama HİÇBİR VERİ GÖREMİYORDU (yalnızca kendi adına kayıtlı
+// deal'i, "Takımımdaki Kişiler" de "kayıtlı kişi yok" diyordu) — team_assignments
+// tablosundaki manuel atama, YALNIZCA ADMİN EKRANINDA "kimin takımı ne" diye
+// GÖRÜNMESİNİ değil, kişinin KENDİ GİRİŞ KAPSAMINI da belirlemesi gerekiyordu.
+//
+// Bu fonksiyon, effectiveTeam() tüm sinyalleriyle (elle atama, Users) hâlâ boş
+// dönerse SON ÇARE olarak çağrılır: kişinin kendi Zoho satırını, resolveZohoTeam
+// ile AYNI öncelik sırasıyla (eski liste > üye rolü kendisi > lider bulanık
+// eşleştirme) çözer.
+export function resolveOwnTeamFromZoho(zohoRow, allZohoRows) {
+  if (!zohoRow) return null;
+  const legacy = legacyNormalizeTeam(zohoRow.team) || legacyNormalizeTeam(zohoRow.role) ||
+    legacyLooseTeam(zohoRow.team) || legacyLooseTeam(zohoRow.role);
+  if (legacy) return legacy;
+  if (isNonSalesRole(zohoRow.role)) return null;
+  if (!isBossRole(zohoRow.role)) return resolveMemberTeam(zohoRow.role);
+  const active = (allZohoRows || []).filter(z => !isLeaver(z));
+  return matchLeaderToCanonicalTeam(zohoRow.role, discoverCanonicalTeams(active));
+}
+
 // ── Kalıcı takım atamaları (team_assignments) ──────────────────────────
 // Tablo henüz kurulmadıysa (SQL çalıştırılmadıysa) 404 döner — bu durumda
 // SESSİZCE boş liste ile devam ediyoruz ki panel çalışmaya devam etsin.

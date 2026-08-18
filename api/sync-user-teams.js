@@ -24,7 +24,7 @@
 // birimler ya da hiç tanınmayan bir ad asla Users'a yazılmaz.
 import { verifyToken, bearerToken } from './_auth.js';
 import {
-  fetchTeamAssignments, isBossRole, teamNameKey,
+  fetchTeamAssignments, isBossRole, teamNameKey, isLeaver,
   legacyNormalizeTeam, legacyLooseTeam, resolveMemberTeam,
   discoverCanonicalTeams, matchLeaderToCanonicalTeam,
 } from './_teams.js';
@@ -64,35 +64,9 @@ function nameKey(s) { return String(s || '').toLowerCase().replace(/\s+/g, ' ').
 // Bu yüzden yönetici rolleri senkronun DIŞINDA. (isBossRole artık _teams.js'te
 // merkezi — bkz. üstteki import.)
 
-// Kesin olarak "artık burada değil" diyen status değerleri.
-// api/team-members.js'teki liste ile AYNI olmalı — biri kadroyu gösteriyor,
-// diğeri is_active=false YAZIYOR; ikisi ayrışırsa panel bir kişiyi listeler
-// ama senkron onu pasife çeker.
-const INACTIVE_STATUS = new Set([
-  'inactive', 'disabled', 'deleted', 'left', 'leaver', 'passive', 'suspended',
-  'terminated', 'closed', 'false', 'no', '0',
-  'ayrildi', 'ayrıldı', 'pasif', 'silindi', 'iptal',
-]);
-
-// Zoho'ya göre işten ayrılmış mı?
-// DİKKAT: `status` tek başına YETMİYOR — canlı veride exit_date'i geçmişte olan
-// 5 kişi hâlâ status='active' görünüyor (Max Halit 30.07, Tyler Karim 24.07,
-// Amury Blanchet 30.07, Zoe Lane 01.06, Nicholas Parker 06.05). Bu yüzden
-// exit_date asıl ölçüt, status ikincil.
-//
-// Eskiden `status !== 'active'` ise ayrılmış sayılıyordu. Burada bu YAZMA
-// yoluna dokunuyor: status'u boş ya da beklenmeyen yazımda ('Aktif', 'ACTIVE ',
-// null) olan çalışan kişilerin Users satırı is_active=false yapılıyordu.
-// Artık yalnızca AÇIKÇA pasif diyen değerler ayrılma sayılır.
-function isLeaver(z) {
-  const st = String(z.status == null ? '' : z.status).trim().toLowerCase();
-  if (INACTIVE_STATUS.has(st)) return true;
-  if (z.exit_date) {
-    const d = new Date(z.exit_date);
-    if (!isNaN(d) && d <= new Date()) return true;
-  }
-  return false;
-}
+// isLeaver artık _teams.js'te merkezi (bkz. üstteki import) — burada ayrı
+// bir kopya TUTULMUYOR (bu dosya ve team-members.js'teki iki kopya
+// ayrışabiliyordu: biri kadroyu gösteriyor, diğeri is_active=false YAZIYOR).
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');

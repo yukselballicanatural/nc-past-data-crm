@@ -19,6 +19,7 @@ import {
   buildAssignmentIndex, effectiveTeam, isDeactivated, insertUserRow,
   legacyNormalizeTeam, legacyLooseTeam, resolveMemberTeam,
   discoverCanonicalTeams, matchLeaderToCanonicalTeam,
+  isLeaver, resolveOwnTeamFromZoho,
 } from './_teams.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
@@ -124,33 +125,9 @@ function resolveZohoTeam(z, usersRow, dealTeamByName, assignByKey, canonicalTeam
   return { team: null, source: null, isBoss: isBossRole(z.role) };
 }
 
-// Kesin olarak "artık burada değil" diyen status değerleri. Liste AÇIK uçlu
-// tutuluyor (kapalı bir "active" kontrolü değil), çünkü bilinmeyen/boş bir
-// status kişiyi kadrodan DÜŞÜRMEMELİ: kanıt yokluğu, yokluk kanıtı değil.
-const INACTIVE_STATUS = new Set([
-  'inactive', 'disabled', 'deleted', 'left', 'leaver', 'passive', 'suspended',
-  'terminated', 'closed', 'false', 'no', '0',
-  'ayrildi', 'ayrıldı', 'pasif', 'silindi', 'iptal',
-]);
-
-// İşten ayrılmış mı?
-// DİKKAT: `status` tek başına yetmiyor — canlı veride exit_date'i geçmişte olan
-// 5 kişi hâlâ status='active' görünüyor (Max Halit 30.07, Tyler Karim 24.07,
-// Amury Blanchet 30.07, Zoe Lane 01.06, Nicholas Parker 06.05). Bu yüzden
-// exit_date asıl ölçüt, status ikincil.
-//
-// Eskiden `status !== 'active'` ise ayrılmış sayılıyordu; status'u BOŞ ya da
-// beklenmeyen bir yazımda ('Aktif', 'ACTIVE ', 'enabled', null) olan herkes
-// kadrodan sessizce düşüyordu — "eksik kişi" şikâyetinin ikinci sebebi bu.
-function isLeaver(z) {
-  const st = String(z.status == null ? '' : z.status).trim().toLowerCase();
-  if (INACTIVE_STATUS.has(st)) return true;
-  if (z.exit_date) {
-    const d = new Date(z.exit_date);
-    if (!isNaN(d) && d <= new Date()) return true;
-  }
-  return false;
-}
+// isLeaver artık _teams.js'te merkezi (bkz. üstteki import) — burada ayrı
+// bir kopya TUTULMUYOR (team-members.js ve sync-user-teams.js'teki iki kopya
+// ayrışabiliyordu).
 
 // ── Zoho hesap devri (bkz. zoho_account_handover.sql) ──────────────────
 // Ajanslar Zoho'da GERÇEK adlarıyla değil, hesabın takma adıyla (persona)
@@ -264,8 +241,29 @@ export default async function handler(req, res) {
     // Çağıranın ETKİN takımı — api/login.js ile AYNI kural (bkz. _teams.js
     // effectiveTeam). Eskiden yalnızca Users."Takim Adi" okunuyordu; o alan
     // bayat kaldığında takım lideri BAŞKA bir takımın kadrosunu görüyordu.
-    const myTeam = effectiveTeam(
+    let myTeam = effectiveTeam(
       assignIdx, me['Deal Owner Name'] || me['Username'] || '', me['Username'], myTeamRaw);
+
+    // SON ÇARE — Zoho'da YENİ kurulmuş bir takım/lider için ne elle atama ne
+    // Users."Takim Adi" henüz doğru olabilir: bu durumda kişi giriş yapar ama
+    // hiçbir veri göremez (somut vaka: Bradley Grant/Anthony Cross, Ağustos
+    // 2026 — "Kullanıcılar"dan doğru Zoho adıyla hesap açılıp Rol="Takım
+    // Lideri" yapılmıştı ama myTeam hâlâ boş çıkıyordu). Yalnızca myTeam boşsa
+    // VE gerçekten bir takım kapsamı gerektiren rol ise (team-leader) devreye
+    // girer — normal isteklerde ek bir sorgu maliyeti YOK.
+    if (!myTeam && claims.r === 'team-leader') {
+      try {
+        const who = me['Deal Owner Name'] || me['Username'] || '';
+        const zr = await fetch(
+          `${SUPABASE_URL}/rest/v1/zoho_users?select=full_name,role,status,exit_date&limit=2000`, { headers: H });
+        if (zr.ok) {
+          const zRows = await zr.json().catch(() => []);
+          const meZoho = Array.isArray(zRows) ? zRows.find(z => nameKey(z.full_name) === nameKey(who)) : null;
+          const zTeam = resolveOwnTeamFromZoho(meZoho, zRows);
+          if (zTeam) myTeam = zTeam;
+        }
+      } catch (e) {}
+    }
 
     function scopeRows(rows) {
       if (claims.r === 'team-leader') {

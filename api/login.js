@@ -10,7 +10,10 @@
 import bcrypt from 'bcryptjs';
 import { signToken, normalizeRole } from './_auth.js';
 import { isBlocked } from './_blocked-users.js';
-import { fetchTeamAssignments, buildAssignmentIndex, effectiveTeam, isDeactivated } from './_teams.js';
+import {
+  fetchTeamAssignments, buildAssignmentIndex, effectiveTeam, isDeactivated,
+  resolveOwnTeamFromZoho, teamNameKey,
+} from './_teams.js';
 
 const FALLBACK_URL = 'https://aztxfncqanrodbttywrb.supabase.co';
 // Oturumun kendisi sessionStorage'da yaşıyor ve sekme kapanınca zaten siliniyor
@@ -139,6 +142,28 @@ export default async function handler(req, res) {
     } catch (e) {
       // Atama tablosu okunamazsa girişi ENGELLEMİYORUZ: kişi kendi
       // Users."Takim Adi" kapsamıyla çalışmaya devam eder (eski davranış).
+    }
+
+    // SON ÇARE — Zoho'da YENİ kurulmuş bir takım/lider için ne elle atama
+    // (team_assignments) ne Users."Takim Adi" henüz doğru olabilir: bu
+    // durumda kişi giriş yapar ama hiçbir veri göremez (somut vaka: Bradley
+    // Grant/Anthony Cross, Ağustos 2026 — "Kullanıcılar"dan doğru Zoho
+    // sistem adıyla hesap açılıp Rol="Takım Lideri" yapılmıştı ama panelinde
+    // yalnızca kendi deal'i görünüyordu). Yalnızca gerçekten takım kapsamı
+    // gerektiren rol için VE hâlâ boşsa devreye girer — normal girişlerde ek
+    // sorgu maliyeti YOK.
+    if (!String(user['Takim Adi'] || '').trim() && normalizeRole(user['Role']) === 'team-leader') {
+      try {
+        const who = user['Deal Owner Name'] || user['Username'] || '';
+        const zr = await fetch(
+          `${SUPABASE_URL}/rest/v1/zoho_users?select=full_name,role,status,exit_date&limit=2000`, { headers: H });
+        if (zr.ok) {
+          const zRows = await zr.json().catch(() => []);
+          const meZoho = Array.isArray(zRows) ? zRows.find(z => teamNameKey(z.full_name) === teamNameKey(who)) : null;
+          const zTeam = resolveOwnTeamFromZoho(meZoho, zRows);
+          if (zTeam) user['Takim Adi'] = zTeam;
+        }
+      } catch (e2) {}
     }
 
     delete user.Password; // Client'a asla şifre/hash dönmez
