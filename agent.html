@@ -288,7 +288,7 @@
 
     const RESULT_CODES = [
       { code:'1', label:'Not Reached',               subcodes:['No Response 1','No Response 2','No Response 3'] },
-      { code:'2', label:'Arrival Postponed',          subcodes:['New Arrival Date Added','Waiting Arrival Date'] },
+      { code:'2', label:'Consultation Postponed',     subcodes:['New Consultation Date Added','Waiting Consultation Date'] },
       { code:'3', label:'Visit Postponed',            subcodes:['New Visit Date Added','Waiting Visit Date'] },
       { code:'4', label:'Still Interested / Follow-up', subcodes:['Follow-up Date Added','Waiting Decision'] },
       { code:'5', label:'Payment / Financial Issue',  subcodes:['Payment Completed','Partial Payment Received','Waiting Payment','Cancelled Due to Payment'] },
@@ -312,9 +312,14 @@
       'Cancelled'
     ];
 
-    // These subcodes mean the process is still ongoing — agent can request unlock
+    // These subcodes mean the process is still ongoing — agent can request unlock.
+    // sub_code is stored as the LITERAL label text (not a code), so renaming a
+    // label here does NOT retroactively update historical rows — both the old
+    // ("Arrival") and new ("Consultation") wording are kept so already-saved
+    // deals still resolve correctly.
     const CONTINUING_SUBCODES = new Set([
       'No Response 1','No Response 2','No Response 3',
+      'New Consultation Date Added','Waiting Consultation Date',
       'New Arrival Date Added','Waiting Arrival Date',
       'New Visit Date Added','Waiting Visit Date',
       'Follow-up Date Added','Waiting Decision',
