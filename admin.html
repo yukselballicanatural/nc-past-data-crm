@@ -2652,6 +2652,20 @@
       </div>
       <div class="nc-toolbar">
         <div>
+          <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Bölge</label>
+          <select id="tlUsageRegion" onchange="_tlUsagePopulateTeamOptions(); renderTlUsage()" class="filter-select" style="width:140px">
+            <option value="">Tüm Bölgeler</option>
+            <option value="Istanbul">Istanbul</option>
+            <option value="Morocco">Morocco</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Takım</label>
+          <select id="tlUsageTeam" onchange="renderTlUsage()" class="filter-select" style="width:170px">
+            <option value="">Tüm Takımlar</option>
+          </select>
+        </div>
+        <div>
           <label class="text-[10px] text-slate-500 uppercase font-semibold block mb-1">Dönem</label>
           <select id="tlPeriod" onchange="renderTlUsage()" class="filter-select" style="width:130px">
             <option value="7">Son 7 gün</option>
@@ -4937,14 +4951,47 @@
       renderTlUsage();
     }
 
+    // Bölge seçilince Takım dropdown'unu o bölgenin takımlarıyla sınırla —
+    // admin.html'deki Analytics filtresindeki _anPopulateTeamOptions ile
+    // AYNI desen (bkz. o fonksiyon). Her renderTlUsage() çağrısında yeniden
+    // kurulur ki TeamMap.learn ile sonradan öğrenilen yeni takımlar da
+    // (bkz. "Takımımdaki Kişiler" login-time öğrenme) buraya hemen yansısın.
+    function _tlUsagePopulateTeamOptions() {
+      const sel = document.getElementById('tlUsageTeam');
+      if (!sel || !window.TeamMap) return;
+      const region = document.getElementById('tlUsageRegion')?.value || '';
+      const cur = sel.value;
+      const teams = Object.entries(TeamMap.TEAMS)
+        .filter(([, d]) => !region || d.region === region)
+        .map(([canonical, d]) => ({ canonical, label: d.label }))
+        .sort((a, b) => a.label.localeCompare(b.label, 'tr'));
+      sel.innerHTML = `<option value="">${I18N.t('Tüm Takımlar')}</option>` +
+        teams.map(t => `<option value="${_escHtml(t.canonical)}">${_escHtml(t.label)}</option>`).join('');
+      if (teams.some(t => t.canonical === cur)) sel.value = cur;
+    }
+
     function renderTlUsage() {
       const tbody = document.getElementById('tlUsageBody');
       const empty = document.getElementById('tlUsageEmpty');
       if (!tbody) return;
       if (!_tlRows) return;
       _tlComputeMetrics();
+      _tlUsagePopulateTeamOptions();
 
-      const rows = _tlRows.slice();
+      // Bölge/Takım filtresi — Analytics'teki aynı iki filtreyle TUTARLI:
+      // takım seçiliyse o takımın kanonik adına göre, yoksa (yalnızca bölge
+      // seçiliyse) bölgeye göre süzülür. KPI'lar ve uyarı şeridi de bu
+      // süzülmüş kümeden hesaplanır — sol menüdeki genel rozet HARİÇ (o
+      // bu sayfanın filtresinden bağımsız, sistem geneli bir uyarı).
+      const fRegion = document.getElementById('tlUsageRegion')?.value || '';
+      const fTeam = document.getElementById('tlUsageTeam')?.value || '';
+      const filteredAll = _tlRows.filter(r => {
+        if (fTeam) return r.canonTeam === fTeam;
+        if (fRegion) return r.region === fRegion;
+        return true;
+      });
+
+      const rows = filteredAll.slice();
       const dir = _tlSortDir === 'asc' ? 1 : -1;
       rows.sort((a, b) => {
         switch (_tlSortKey) {
@@ -4958,8 +5005,8 @@
         }
       });
 
-      // KPI'lar
-      const cnt = s => _tlRows.filter(r => r.status === s).length;
+      // KPI'lar — sayfanın Bölge/Takım filtresine göre süzülmüş kümeden.
+      const cnt = s => filteredAll.filter(r => r.status === s).length;
       const active = cnt('active') + cnt('ok');
       const low = cnt('low'), loginOnly = cnt('login_only'), dead = cnt('never') + cnt('dormant');
       document.getElementById('tlKpiActive').textContent = active;
@@ -4967,18 +5014,22 @@
       document.getElementById('tlKpiLoginOnly').textContent = loginOnly;
       document.getElementById('tlKpiDead').textContent = dead;
 
-      // Sol menü rozeti: müdahale gerektiren lider sayısı
-      const risk = dead + loginOnly + low;
+      // Sol menü rozeti: müdahale gerektiren lider sayısı — SİSTEM GENELİ,
+      // bu sayfadaki Bölge/Takım filtresinden BAĞIMSIZ (_tlRows, filteredAll
+      // değil) — filtre uygulansa bile menüdeki uyarı gerçek toplamı göstersin.
+      const cntAll = s => _tlRows.filter(r => r.status === s).length;
+      const riskAll = cntAll('never') + cntAll('dormant') + cntAll('login_only') + cntAll('low');
       const badge = document.getElementById('tlUsageBadge');
       if (badge) {
-        if (risk > 0) { badge.textContent = risk; badge.style.display = 'inline-block'; }
+        if (riskAll > 0) { badge.textContent = riskAll; badge.style.display = 'inline-block'; }
         else badge.style.display = 'none';
       }
 
-      // Uyarı şeridi — en kritik isimleri doğrudan söyle
+      // Uyarı şeridi — en kritik isimleri doğrudan söyle (filtrelenmiş kümeden:
+      // Bölge/Takım seçiliyse şerit de yalnızca o kapsamı göstersin).
       const banner = document.getElementById('tlRiskBanner');
       // En kötü en başta: son aksiyonundan bu yana en çok gün geçen.
-      const worst = _tlRows.filter(r => ['never', 'dormant', 'login_only'].includes(r.status))
+      const worst = filteredAll.filter(r => ['never', 'dormant', 'login_only'].includes(r.status))
         .sort((a, b) => (_tlDaysAgo(b.lastAction) ?? 9999) - (_tlDaysAgo(a.lastAction) ?? 9999));
       let bannerHtml = '';
       if (!_tlRosterOk) {
