@@ -35,8 +35,10 @@ CREATE TABLE IF NOT EXISTS public.app_settings (
 ALTER TABLE public.app_settings ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Public Access" ON public.app_settings FOR ALL USING (true) WITH CHECK (true);
 
--- Varsayılan parametreler
+-- Varsayılan parametreler (ON CONFLICT DO NOTHING: bu dosya tekrar
+-- çalıştırılsa bile canlıdaki güncel değeri EZMEZ — admin panelinden
+-- sonradan değiştirilmiş eşikler kalıcı kalır).
 INSERT INTO public.app_settings (key, value) VALUES
-  ('alarm_thresholds', '45,30,15,7,3'),
+  ('alarm_thresholds', '90,45,30,15,7,3'),
   ('missing_repeat_days', '3')
 ON CONFLICT (key) DO NOTHING;

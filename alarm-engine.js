@@ -4,7 +4,10 @@ window.AlarmEngine = (function () {
   'use strict';
 
   // Eşik gün pencereleri — her aralık bir öncekinin hemen üstünden başlar
-  // Eşik listesi app_settings.alarm_thresholds parametresinden gelir (varsayılan 45,30,15,7,3)
+  // Eşik listesi app_settings.alarm_thresholds parametresinden gelir (varsayılan
+  // 90,45,30,15,7,3 — 90 kullanıcı talebiyle eklendi, app_settings'te canlı
+  // değer zaten güncellendi; buradaki liste yalnızca o tablo hiç okunamazsa
+  // devreye giren yedek).
   function buildThresholds(list) {
     const sorted = [...new Set(list)].filter(n => n > 0).sort((a, b) => b - a);
     return sorted.map((t, i) => ({
@@ -14,7 +17,7 @@ window.AlarmEngine = (function () {
     }));
   }
 
-  let THRESHOLDS = buildThresholds([45, 30, 15, 7, 3]);
+  let THRESHOLDS = buildThresholds([90, 45, 30, 15, 7, 3]);
   let MISSING_REPEAT_DAYS = 3;
 
   // Sistem geneli kesim: yalnızca created_time 2026 ve sonrası olan deallerden
