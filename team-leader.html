@@ -6460,6 +6460,11 @@
           // loadDailyEntry'nin ürettiğinden farklı sayıda kişi içeriyordu.
           _depMembersCache = _depEligible(data.members || []);
           _depMembersAt = Date.now();
+          // Canlı kadrodan çıkarılan kanonik takım kümesini TeamMap'e İLK
+          // GİRİŞTE öğret — bkz. admin.html'deki aynı hook (team-map.js learn).
+          (data.teamCatalog || []).forEach(t => {
+            if (window.TeamMap && typeof TeamMap.learn === 'function') TeamMap.learn(t.canonical, { region: t.region });
+          });
         } catch(_e) {}
       })();
 

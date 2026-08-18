@@ -12913,6 +12913,21 @@
             const _isBoss = role => /leader|lider|manager|müdür|mudur|admin|yönetici|yonetici/i.test(String(role || ''));
             // bkz. adeLoad()'daki aynı filtre notu (Users rolü + Zoho rolü).
             _adeMembersCache = (data.members || []).filter(m => !_isBoss(m.role) && !_isBoss(m.zohoRole));
+            // Takım tanıma + "Yeni Takım/Lider Adayı" verisi İLK GİRİŞTE hazır
+            // olsun — admin "Takımımdaki Kişiler" ekranını hiç açmasa bile
+            // TeamMap yeni takımları tanır (tüm dropdown/filtreler otomatik
+            // günceller) ve o ekrana girildiğinde uyarı zaten hazırdır.
+            (data.teamCatalog || []).forEach(t => {
+              if (window.TeamMap && typeof TeamMap.learn === 'function') TeamMap.learn(t.canonical, { region: t.region });
+            });
+            _amTmUnplaced = data.unplaced || [];
+            _amTmNewLeaders = data.newLeaderCandidates || [];
+            _amTmManualEmptyTeam = data.manualEmptyTeam || [];
+            _amTmHandoverCandidates = data.handoverCandidates || [];
+            _amTmDeparted = data.departedEmployees || [];
+            if (typeof data.handoverTableReady === 'boolean') _amTmHandoverReady = data.handoverTableReady;
+            if (typeof data.assignmentsInstalled === 'boolean') _amTmAssignInstalled = data.assignmentsInstalled;
+            _amTmRenderSyncBar();
           } catch(_e) {}
         })();
         // Sahip → güncel takım dizini. Motor alarmların TAKIMINI buna göre
