@@ -296,6 +296,7 @@
     'toplam': 'total',
     'yalnızca en büyük 50 kalem gösteriliyor': 'only the top 50 items are shown',
     'Bu gün için kayıt yok.': 'No records for this day.',
+    'Bağlayan Aksiyon': 'Linking Action',
 
     // ── team-leader.html ───────────────────────────────────────────
     '(isteğe bağlı)': '(optional)',

@@ -2509,6 +2509,7 @@
               <th class="sortable-th text-right" onclick="_imLedgerSort('amount')">Tutar<span class="sort-arrow"> ↕</span></th>
               <th class="sortable-th text-right" onclick="_imLedgerSort('days')">Gün<span class="sort-arrow"> ↕</span></th>
               <th class="sortable-th" onclick="_imLedgerSort('date')">Para Giriş Tarihi<span class="sort-arrow"> ↕</span></th>
+              <th class="sortable-th" onclick="_imLedgerSort('action')">Bağlayan Aksiyon<span class="sort-arrow"> ↕</span></th>
             </tr></thead>
             <tbody id="imLedgerTbody"></tbody>
           </table>
@@ -3323,6 +3324,7 @@
             <th class="text-right">Gelen Tutar</th>
             <th class="text-right">Tutar</th>
             <th>Para Giriş Anı</th>
+            <th>Bağlayan Aksiyon</th>
           </tr></thead>
           <tbody id="imDayModalTbody"></tbody>
         </table>
@@ -9125,12 +9127,19 @@
           amount: Number(e.amount) || 0,
           days: e.days == null ? null : Number(e.days),
           date: e.changed_at,
+          // Bu ödemeyi "sistemin kazandırdığı" saymamıza neden olan somut
+          // kanıt — kullanıcı talebi: "hangi aksiyonu almışlar onu da
+          // gösterelim." payment_recovery_overdue_only.sql henüz bu alanları
+          // döndürmeyen eski bir sürümdeyse (kullanıcı SQL'i yeniden
+          // çalıştırmadıysa) e.action_taken undefined gelir, '—' gösterilir.
+          action: e.action_taken || null, actionBy: e.action_by || '', actionAt: e.action_at || null,
         };
       });
       const dir = _imLedgerSortDir, col = _imLedgerSortCol;
       rows.sort((a, b) => {
         let va = a[col], vb = b[col];
         if (col === 'deal') { va = a.name || a.zohoId; vb = b.name || b.zohoId; }
+        if (col === 'action') { va = _actLabel(a.action) || ''; vb = _actLabel(b.action) || ''; }
         if (typeof va === 'string' || typeof vb === 'string') {
           return dir * String(va || '').localeCompare(String(vb || ''), 'tr');
         }
@@ -9147,12 +9156,21 @@
           '<td class="py-1.5 text-right text-slate-300">' + fmtMoney(r.amount) + '</td>' +
           '<td class="py-1.5 text-right text-slate-500">' + (r.days == null ? '—' : r.days) + '</td>' +
           '<td class="py-1.5 text-slate-400">' + _imDateTime(r.date) + '</td>' +
+          '<td class="py-1.5 text-slate-400">' + _imActionCell(r.action, r.actionBy) + '</td>' +
         '</tr>').join('') ||
-        '<tr><td colspan="7" class="py-4 text-center text-slate-600 text-xs">' + I18N.t('Veri yok.') + '</td></tr>';
+        '<tr><td colspan="8" class="py-4 text-center text-slate-600 text-xs">' + I18N.t('Veri yok.') + '</td></tr>';
+    }
+
+    // "Bağlayan Aksiyon" hücresi — hem _imRenderLedgerTable hem
+    // _imRenderDayModal aynı görünümü kullanır.
+    function _imActionCell(action, actionBy) {
+      if (!action) return '—';
+      const label = (typeof _actLabel === 'function' ? _actLabel(action) : action) || action;
+      return _escHtml(label) + (actionBy ? ' <span class="text-slate-600">· ' + _escHtml(actionBy) + '</span>' : '');
     }
     function _imLedgerSort(col) {
       if (_imLedgerSortCol === col) _imLedgerSortDir = -_imLedgerSortDir;
-      else { _imLedgerSortCol = col; _imLedgerSortDir = (col === 'deal' || col === 'team' || col === 'owner') ? 1 : -1; }
+      else { _imLedgerSortCol = col; _imLedgerSortDir = (col === 'deal' || col === 'team' || col === 'owner' || col === 'action') ? 1 : -1; }
       _imRenderLedgerTable();
     }
 
@@ -9183,7 +9201,7 @@
         _imRenderDayModal(data, dateStr);
       } catch (e) {
         sum.textContent = '';
-        tb.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-slate-600 text-xs">' +
+        tb.innerHTML = '<tr><td colspan="7" class="py-4 text-center text-slate-600 text-xs">' +
           I18N.t('Yüklenemedi: ') + _escHtml(e.message) + '</td></tr>';
       }
     }
@@ -9206,6 +9224,7 @@
           delta: Number(e.delta) || 0,
           amount: Number(e.amount) || 0,
           date: e.changed_at,
+          action: e.action_taken || null, actionBy: e.action_by || '',
         };
       }).sort((a, b) => b.delta - a.delta);
       const total = rows.reduce((s, r) => s + r.delta, 0);
@@ -9225,8 +9244,9 @@
           '<td class="py-1.5 text-right text-emerald-400 font-bold">' + fmtMoney(r.delta) + '</td>' +
           '<td class="py-1.5 text-right text-slate-300">' + fmtMoney(r.amount) + '</td>' +
           '<td class="py-1.5 text-slate-400">' + _imDateTime(r.date) + '</td>' +
+          '<td class="py-1.5 text-slate-400">' + _imActionCell(r.action, r.actionBy) + '</td>' +
         '</tr>').join('') ||
-        '<tr><td colspan="6" class="py-4 text-center text-slate-600 text-xs">' + I18N.t('Bu gün için kayıt yok.') + '</td></tr>';
+        '<tr><td colspan="7" class="py-4 text-center text-slate-600 text-xs">' + I18N.t('Bu gün için kayıt yok.') + '</td></tr>';
     }
 
     // ── "Kasaya giren deal'leri gör" listesi ──────────────────────────

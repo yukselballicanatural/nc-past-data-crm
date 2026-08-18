@@ -75,15 +75,26 @@ as $$
   attributed as (
     -- + GERÇEK AKSİYON şartı: 'created' dışında, ödemeden ÖNCE/aynı anda
     -- düşülmüş en az bir alarm_logs kaydı (durum değişikliği, not, kapatma,
-    -- yeniden açma, otomatik kapatma ya da WhatsApp gönderimi).
-    select f.* from flagged f
+    -- yeniden açma, otomatik kapatma ya da WhatsApp gönderimi). INNER JOIN
+    -- LATERAL hem şartı sağlıyor (eşleşmeyen satır hiç gelmiyor) hem de
+    -- HANGİ aksiyonun sayıldığını (action_taken/action_by/action_at)
+    -- kanıt olarak arayüze taşıyor — kullanıcı talebi: "o deal'ı bağlamak
+    -- için hangi aksiyonu almışlar onu da gösterelim."
+    select f.*, al.action_type as action_taken, al.action_by, al.created_at as action_at
+    from flagged f
+    join lateral (
+      select l.action_type, l.action_by, l.created_at
+      from public.alarm_logs l
+      where l.alarm_id = f.overdue_alarm_id
+        and l.action_type <> 'created'
+        and l.created_at <= f.changed_at
+      -- Kapatma/otomatik kapatma en açıklayıcı kanıt (ödemenin nedeni
+      -- muhtemelen budur); yoksa ödemeye en YAKIN (son) aksiyon gösterilir.
+      order by (case when l.action_type in ('closed','auto_closed') then 0 else 1 end),
+               l.created_at desc
+      limit 1
+    ) al on true
     where f.overdue_alarm_id is not null
-      and exists (
-        select 1 from public.alarm_logs l
-        where l.alarm_id = f.overdue_alarm_id
-          and l.action_type <> 'created'
-          and l.created_at <= f.changed_at
-      )
   )
   select jsonb_build_object(
     'ledger_started_at', (select min(changed_at) from public.deal_payment_history),
@@ -124,11 +135,14 @@ as $$
                         from attributed group by 1) t),
 
     -- En büyük 50 kalem — denetim/drill-down için (rakamın arkasındaki deal'ler)
+    -- action_taken/action_by/action_at: bu ödemeyi "sistemin kazandırdığı"
+    -- saymamıza neden olan somut kanıt (bkz. yukarıdaki attributed CTE'si).
     'top_events', (select coalesce(jsonb_agg(jsonb_build_object(
                      'deal_id', deal_id, 'delta', delta, 'amount', amount,
                      'new_paid', new_paid, 'team', team, 'owner', deal_owner,
                      'changed_at', changed_at, 'flagged_at', first_flag_at,
-                     'days', round((extract(epoch from (changed_at - first_flag_at))/86400)::numeric, 1)
+                     'days', round((extract(epoch from (changed_at - first_flag_at))/86400)::numeric, 1),
+                     'action_taken', action_taken, 'action_by', action_by, 'action_at', action_at
                    ) order by delta desc), '[]'::jsonb)
                    from (select * from attributed order by delta desc limit 50) t)
   );
