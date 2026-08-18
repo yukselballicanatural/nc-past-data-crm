@@ -699,20 +699,20 @@
           <input id="dealOwnerFilter" class="filter-inp" placeholder="Danışman filtrele..." oninput="debounceDealSearch()">
         </div>
         <div class="filter-group">
-          <label class="filter-label">Consultation Date Aralığı</label>
+          <label class="filter-label">Konsültasyon Tarihi Aralığı</label>
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-            <input type="date" id="dealConsultFrom" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Consultation Date — başlangıç">
+            <input type="date" id="dealConsultFrom" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Konsültasyon Tarihi — başlangıç">
             <span style="color:#475569;font-size:11px">–</span>
-            <input type="date" id="dealConsultTo" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Consultation Date — bitiş">
+            <input type="date" id="dealConsultTo" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Konsültasyon Tarihi — bitiş">
             <button onclick="ncClearDealDates()" style="padding:7px 10px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#64748b;font-size:10px;font-weight:700;cursor:pointer;flex-shrink:0" title="Tarih filtrelerini temizle">✕</button>
           </div>
         </div>
         <div class="filter-group">
-          <label class="filter-label">Estimated Travel Date Aralığı</label>
+          <label class="filter-label">Tahmini Seyahat Tarihi Aralığı</label>
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-            <input type="date" id="dealTravelFrom" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Estimated Travel Date — başlangıç">
+            <input type="date" id="dealTravelFrom" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Tahmini Seyahat Tarihi — başlangıç">
             <span style="color:#475569;font-size:11px">–</span>
-            <input type="date" id="dealTravelTo" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Estimated Travel Date — bitiş">
+            <input type="date" id="dealTravelTo" class="filter-inp" onchange="loadDeals(true)" style="width:135px" title="Tahmini Seyahat Tarihi — bitiş">
           </div>
         </div>
         <div class="filter-group">
@@ -935,13 +935,13 @@
           </select>
         </div>
         <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-          <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Consult.</span>
+          <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Konsültasyon</span>
           <input type="date" id="tlcaConsultFrom" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
           <span style="color:#475569">–</span>
           <input type="date" id="tlcaConsultTo" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
         </div>
         <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
-          <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Travel</span>
+          <span style="color:#64748b;font-size:9px;font-weight:700;text-transform:uppercase">Seyahat</span>
           <input type="date" id="tlcaTravelFrom" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
           <span style="color:#475569">–</span>
           <input type="date" id="tlcaTravelTo" class="filter-inp" onchange="renderCancelledReport()" style="width:135px">
@@ -1013,7 +1013,7 @@
           </select>
         </div>
         <div class="filter-group">
-          <label class="filter-label">Consultation Date Aralığı</label>
+          <label class="filter-label">Konsültasyon Tarihi Aralığı</label>
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
             <input type="date" id="tlwaConsultFrom" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
             <span style="color:#475569;font-size:11px">–</span>
@@ -1021,7 +1021,7 @@
           </div>
         </div>
         <div class="filter-group">
-          <label class="filter-label">Estimated Travel Date Aralığı</label>
+          <label class="filter-label">Tahmini Seyahat Tarihi Aralığı</label>
           <div style="display:flex;align-items:center;gap:5px;flex-wrap:wrap">
             <input type="date" id="tlwaTravelFrom" class="filter-inp" onchange="_waApplyFilters()" style="width:130px">
             <span style="color:#475569;font-size:11px">–</span>
