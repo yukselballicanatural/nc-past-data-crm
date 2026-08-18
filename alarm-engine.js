@@ -237,6 +237,13 @@ window.AlarmEngine = (function () {
   }
 
   // Supabase'den TÜM aktif dealleri çek — takım filtresi YOK, motor global çalışır
+  //
+  // is_deleted=eq.false: deals tablosundaki senkron süreci Zoho'dan silinen
+  // deal'leri is_deleted/deleted_at ile işaretliyor ama motor bunu hiç
+  // kontrol etmiyordu — Zoho'da silinmiş, stage'i hâlâ "aktif" görünen bir
+  // deal için yeni alarm üretilmeye devam ediyordu. Canlı ölçüm (2026-08-18):
+  // 14 is_deleted=true deal'in 13'ü aktif stage'deydi, bunlara bağlı 11 açık
+  // alarm vardı (takım liderine var olmayan hasta için alarm gösteriyordu).
   async function fetchActiveDeals(BASE, KEY) {
     const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
     // encodeURIComponent ile tüm filtre değerini encode et — Supabase JS client da böyle yapar
@@ -245,6 +252,7 @@ window.AlarmEngine = (function () {
     while (true) {
       const url = `${BASE}/rest/v1/deals?stage=${stageParam}` +
         `&select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,raw` +
+        `&is_deleted=eq.false` +
         CREATED_2026_Q +
         `&order=id.asc&limit=500&offset=${offset}`;
       const r = await fetch(url, { headers: H });
@@ -581,6 +589,50 @@ window.AlarmEngine = (function () {
     return cancelled;
   }
 
+  // Zoho'dan doğrudan silinen (harici senkronun is_deleted=true işaretlediği)
+  // deallerin hâlâ açık kalmış alarmlarını kapat — deal artık yok, alarm da
+  // anlamsız. fetchActiveDeals is_deleted=false filtresiyle YENİ alarm
+  // üretimini zaten engelliyor; bu fonksiyon GEÇMİŞTE üretilmiş olanları temizler.
+  async function closeAlarmsForDeletedDeals(BASE, KEY) {
+    const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+    let dealIds = [], offset = 0;
+    while (true) {
+      const url = `${BASE}/rest/v1/deals?is_deleted=eq.true&select=id&limit=1000&offset=${offset}`;
+      const r = await fetch(url, { headers: H });
+      if (!r.ok) break;
+      const batch = await r.json();
+      if (!Array.isArray(batch) || !batch.length) break;
+      dealIds.push(...batch.map(d => String(d.id)));
+      if (batch.length < 1000) break;
+      offset += 1000;
+    }
+    if (!dealIds.length) return 0;
+
+    const now = new Date().toISOString();
+    const PH  = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+    let closed = 0;
+
+    for (let i = 0; i < dealIds.length; i += 200) {
+      const idList = dealIds.slice(i, i + 200).join(',');
+      const r = await fetch(
+        `${BASE}/rest/v1/alarms?status=in.(open,seen,in_progress,escalated,arrived,examined,processing)&deal_id=in.(${idList})&select=id`,
+        { headers: H }
+      );
+      if (!r.ok) continue;
+      const toClose = await r.json();
+      if (!toClose.length) continue;
+
+      const idListAlarms = toClose.map(a => a.id).join(',');
+      const pr = await fetch(
+        `${BASE}/rest/v1/alarms?id=in.(${idListAlarms})`,
+        { method: 'PATCH', headers: PH,
+          body: JSON.stringify({ status: 'closed', close_reason: 'deal_deleted_in_zoho', closed_at: now, closed_by: 'system' }) }
+      );
+      if (pr.ok) closed += toClose.length;
+    }
+    return closed;
+  }
+
   // Stage'i Won VE bakiyesi tamamen ödenmiş (ödenen >= tutar) deallerin hâlâ
   // açık kalan TÜM alarmlarını kapat — iş tamamlandı, hatırlatmaya gerek yok.
   // fetchActiveDeals() Won'u zaten dışarıda bıraktığı için (ACTIVE_STAGES'e
@@ -915,6 +967,9 @@ window.AlarmEngine = (function () {
     // Stage'i Cancelled olan deallerin açık kalan alarmlarını iptal et
     if (onProgress) onProgress(_t('İptal olan dealler için alarmlar kapatılıyor...'));
     const cancelledCount = await closeAlarmsForCancelledDeals(BASE, KEY);
+    // Zoho'dan doğrudan silinen deallerin açık kalan alarmlarını kapat
+    if (onProgress) onProgress(_t('Zohodan silinen dealler için alarmlar kapatılıyor...'));
+    const deletedCount = await closeAlarmsForDeletedDeals(BASE, KEY);
     // Won + ödemesi %100 tamamlanmış deallerin açık kalan alarmlarını kapat
     if (onProgress) onProgress(_t('Won ve ödemesi tamamlanan dealler için alarmlar kapatılıyor...'));
     const wonPaidCount = await closeAlarmsForWonPaidDeals(BASE, KEY);
@@ -922,8 +977,8 @@ window.AlarmEngine = (function () {
     // stage / silinmiş) açık alarmlarını kapat — bkz. closeOutOfScopeAlarms.
     if (onProgress) onProgress(_t('Kapsam dışı dealler için alarmlar kapatılıyor...'));
     const outOfScopeCount = await closeOutOfScopeAlarms(BASE, KEY, deals);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, retyped: retypedCount, ...result };
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deleted: deletedCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, retyped: retypedCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, syncAlarmDealFields, syncAlarmTypes };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeAlarmsForDeletedDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, syncAlarmDealFields, syncAlarmTypes };
 })();
