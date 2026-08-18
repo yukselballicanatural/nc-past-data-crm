@@ -276,8 +276,8 @@
        AYNI iskelet (.modal-backdrop + .modal-panel) — o ikisi liquid-glass.css
        ve liquid-glass-dark.css'te zaten iki temada da eşlendiği için burada
        tema kuralı yazmaya gerek yok. */
-    #imDealsModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
-    #imDealsModal.open { display:flex; }
+    #imDealsModal, #imDayModal { display:none; position:fixed; inset:0; z-index:9999; align-items:center; justify-content:center; padding:16px; }
+    #imDealsModal.open, #imDayModal.open { display:flex; }
     /* Modal açıkken arka sayfanın kaymasını engelle. overscroll-behavior
        ise panelin sonuna gelindiğinde kaydırmanın arkadaki sayfaya
        "zincirlenmesini" (scroll chaining) durdurur — ikisi birlikte gerekli. */
@@ -3287,6 +3287,44 @@
             <th class="sortable-th text-right" onclick="_imDealsSort('days')">Gün<span class="sort-arrow"> ↕</span></th>
           </tr></thead>
           <tbody id="imDealsTbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sistem Etkisi: "Günlük tahsilat akışı" grafiğinde bir güne tıklayınca —
+       o günün gerçek para hareketlerini gösterir. Kullanıcı talebi: "güne
+       tıklayınca popup çıksın o günkü tahsilatları göstersin, o zaman ancak
+       öyle inanırım" — rakamın uydurma olmadığını gün gün kanıtlıyor. -->
+  <div id="imDayModal" onclick="if(event.target===this)closeImDayModal()">
+    <div class="modal-backdrop" onclick="closeImDayModal()"></div>
+    <div class="modal-panel" style="max-width:920px;width:100%">
+      <div class="flex items-start justify-between gap-3 mb-4">
+        <div>
+          <h3 class="text-base font-bold text-white" id="imDayModalTitle">—</h3>
+          <p class="text-[11px] text-slate-400 mt-1" style="max-width:680px;line-height:1.65">
+            Bu gün için ödeme defterine (deal_payment_history) gerçekten kaydedilmiş,
+            gecikmişken işaretlenip sonra tahsil edilen kalemler — Supabase'e canlı sorgulanır.
+          </p>
+        </div>
+        <button onclick="closeImDayModal()" class="text-slate-500 hover:text-white transition-colors shrink-0">
+          <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="flex items-center gap-3 flex-wrap mb-3">
+        <span class="text-[11px] text-slate-500" id="imDayModalSummary">—</span>
+      </div>
+      <div class="overflow-auto" style="max-height:60vh">
+        <table class="tbl w-full">
+          <thead><tr class="text-slate-400">
+            <th>Hasta / Deal</th>
+            <th>Takım</th>
+            <th>Danışman</th>
+            <th class="text-right">Gelen Tutar</th>
+            <th class="text-right">Tutar</th>
+            <th>Para Giriş Anı</th>
+          </tr></thead>
+          <tbody id="imDayModalTbody"></tbody>
         </table>
       </div>
     </div>
@@ -8816,8 +8854,17 @@
       } else {
         const byId = new Map(sales.map(d => [String(d['Deal Id']), d]));
         // Her deal için en ERKEN işaretlenme ve en SON ödeme-tamamlandı damgası
+        //
+        // KULLANICI TALEBİ: yalnızca GERÇEKTEN GECİKMİŞ (vadesi — reference_date —
+        // geçtikten SONRA kapanan) alarmlar sayılır. Zamanında (vadesi geçmeden)
+        // kapanan bir alarm normal bir tahsilattır, sistemin "kurtardığı" para
+        // değil — "sistemin kazandırdığı" iddiası yalnızca vadesi geçmiş bir
+        // ödemenin sonradan tahsil edilmesiyle savunulabilir.
         const flagInfo = new Map();
         _imAlarms.forEach(a => {
+          if (!a.reference_date || !a.closed_at) return;
+          const wasOverdue = new Date(a.reference_date + 'T00:00:00') < new Date(a.closed_at);
+          if (!wasOverdue) return;
           const k = String(a.deal_id);
           const cur = flagInfo.get(k) || { flag: null, done: null };
           if (a.created_at && (!cur.flag || a.created_at < cur.flag)) cur.flag = a.created_at;
@@ -8845,7 +8892,7 @@
 
         heroIn.textContent = fmtMoney(collected);
         heroInSub.innerHTML = '<b class="text-slate-200">' + _imDealRows.length.toLocaleString('tr-TR') + '</b> ' +
-          I18N.t('deal ödemesi eksikken işaretlendi, sonra ödemesi %100 tamamlandı.') +
+          I18N.t('deal ödemesi GECİKMİŞKEN işaretlendi, sonra ödemesi %100 tamamlandı.') +
           (med === null ? '' : ' ' + I18N.t('Medyan') + ' <b class="text-slate-200">' +
             med.toFixed(1) + ' ' + I18N.t('gün') + '</b>.');
         document.getElementById('imKpiDeals').textContent = _imDealRows.length.toLocaleString('tr-TR');
@@ -9029,8 +9076,11 @@
         // kurulduğunda tek gün oluyor — o durumda grafik hiç çizilmiyordu
         // ("grafik görünmüyor"). Çubuk tek günde de çiziliyor.
         NCCharts.bars(document.getElementById('imLedgerChart'),
-          (L.by_day || []).map(p => ({ label: formatDate(p.d), value: Number(p.recovered) || 0 })),
-          { fmt: _imMoney, unit: '', emptyText: I18N.t('Veri yok.') });
+          (L.by_day || []).map(p => ({ label: formatDate(p.d), value: Number(p.recovered) || 0, date: p.d })),
+          // onClick: o güne tıklayınca gerçek kalemleri gösteren popup —
+          // kullanıcı talebi: "güne tıklayınca popup çıksın o günkü
+          // tahsilatları göstersin, o zaman ancak öyle inanırım."
+          { fmt: _imMoney, unit: '', emptyText: I18N.t('Veri yok.'), onClick: it => _imOpenDayDetail(it.date) });
         NCCharts.bars(document.getElementById('imLedgerTeams'),
           (L.by_team || []).map(t => ({ label: t.team, value: Number(t.recovered) || 0 })),
           { fmt: _imMoney, unit: '', emptyText: I18N.t('Veri yok.') });
@@ -9088,6 +9138,79 @@
       if (_imLedgerSortCol === col) _imLedgerSortDir = -_imLedgerSortDir;
       else { _imLedgerSortCol = col; _imLedgerSortDir = (col === 'deal' || col === 'team' || col === 'owner') ? 1 : -1; }
       _imRenderLedgerTable();
+    }
+
+    // ── Güne tıklayınca: o günün gerçek kalemleri ─────────────────────
+    // "Günlük tahsilat akışı" grafiğindeki genel top_events (tüm defter
+    // genelinde en büyük 50 kalem) BU GÜNE ait olmayan kalemleri dışarıda
+    // bırakmış olabilir — bu yüzden RPC'yi o güne (p_from=p_to=gün) SINIRLI
+    // yeniden çağırıyoruz; günlük hacim zaten 50'nin altında olduğu için
+    // dönen top_events o günün TAMAMINI kapsar.
+    async function _imOpenDayDetail(dateStr) {
+      if (!dateStr) return;
+      const modal = document.getElementById('imDayModal');
+      const tb = document.getElementById('imDayModalTbody');
+      const sum = document.getElementById('imDayModalSummary');
+      document.getElementById('imDayModalTitle').textContent = formatDate(dateStr);
+      sum.textContent = I18N.t('Yükleniyor...');
+      tb.innerHTML = '';
+      modal.classList.add('open');
+      try {
+        await _cfg;
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/admin_payment_recovery`, {
+          method: 'POST',
+          headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ p_from: dateStr, p_to: dateStr, p_payment_only: false }),
+        });
+        const data = await r.json().catch(() => null);
+        if (!r.ok || !data) throw new Error((data && data.message) || ('HTTP ' + r.status));
+        _imRenderDayModal(data, dateStr);
+      } catch (e) {
+        sum.textContent = '';
+        tb.innerHTML = '<tr><td colspan="6" class="py-4 text-center text-slate-600 text-xs">' +
+          I18N.t('Yüklenemedi: ') + _escHtml(e.message) + '</td></tr>';
+      }
+    }
+    function closeImDayModal() {
+      document.getElementById('imDayModal').classList.remove('open');
+    }
+    function _imRenderDayModal(data, dateStr) {
+      const tb = document.getElementById('imDayModalTbody');
+      const sum = document.getElementById('imDayModalSummary');
+      const byId = new Map((allDeals || []).map(d => [String(d['Deal Id']), d]));
+      const rows = (data.top_events || []).map(e => {
+        const key = String(e.deal_id);
+        const ext = _imLedgerNames.get(key);
+        const d = byId.get(key);
+        return {
+          zohoId: e.deal_id,
+          name: (ext && ext.name) || (d ? d['Deal Name'] : null),
+          dealId: (ext && ext.dealId) || (d ? d['DealID'] : null),
+          team: e.team, owner: e.owner,
+          delta: Number(e.delta) || 0,
+          amount: Number(e.amount) || 0,
+          date: e.changed_at,
+        };
+      }).sort((a, b) => b.delta - a.delta);
+      const total = rows.reduce((s, r) => s + r.delta, 0);
+      sum.innerHTML = '<b class="text-slate-300">' + rows.length.toLocaleString('tr-TR') + '</b> ' +
+        I18N.t('hareket') + ' · ' + I18N.t('toplam') +
+        ': <b class="text-emerald-400">' + fmtMoney(total) + '</b>' +
+        // top_events en fazla 50 kalem döner — 50'ye ulaştıysa (nadiren, çok
+        // yoğun bir gün) bu bir eksiklik gibi durmasın diye açıkça söylenir.
+        (rows.length >= 50 ? ' · ' + I18N.t('yalnızca en büyük 50 kalem gösteriliyor') : '');
+      tb.innerHTML = rows.map(r =>
+        '<tr class="border-b border-gray-800/50 hover:bg-gray-800/30">' +
+          '<td class="py-1.5 text-slate-200">' + fmt(r.name) +
+            (r.dealId ? ' <span style="opacity:.85">' + _imZohoLink(r.zohoId, r.dealId) + '</span>'
+                      : ' ' + _imZohoLink(r.zohoId, r.zohoId)) + '</td>' +
+          '<td class="py-1.5 text-slate-400">' + fmt(r.team) + '</td>' +
+          '<td class="py-1.5 text-slate-400">' + fmt(r.owner) + '</td>' +
+          '<td class="py-1.5 text-right text-emerald-400 font-bold">' + fmtMoney(r.delta) + '</td>' +
+          '<td class="py-1.5 text-right text-slate-300">' + fmtMoney(r.amount) + '</td>' +
+          '<td class="py-1.5 text-slate-400">' + _imDateTime(r.date) + '</td>' +
+        '</tr>').join('') ||
+        '<tr><td colspan="6" class="py-4 text-center text-slate-600 text-xs">' + I18N.t('Bu gün için kayıt yok.') + '</td></tr>';
     }
 
     // ── "Kasaya giren deal'leri gör" listesi ──────────────────────────
@@ -9163,7 +9286,7 @@
         // (a) Kanıt: ödeme ile kapanmış alarmlar. 28K alarmın tamamı DEĞİL —
         // sunucu tarafında filtrelenip yalnızca ilgili ~300 satır iniyor.
         const alarmUrl = `${SUPABASE_URL}/rest/v1/alarms` +
-          `?select=deal_id,created_at,closed_at,close_reason&${IM_PAY_CLOSE_Q}&limit=2000`;
+          `?select=deal_id,created_at,closed_at,close_reason,reference_date&${IM_PAY_CLOSE_Q}&limit=2000`;
         // (b) Sistemin yaşı = ilk alarmın tarihi (tek satır iniyor)
         const firstUrl = `${SUPABASE_URL}/rest/v1/alarms?select=created_at&order=created_at.asc&limit=1`;
         // (c) Ölçüm: ödeme defteri RPC'si. Kurulmadıysa 404/PGRST202 döner —

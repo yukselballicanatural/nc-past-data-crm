@@ -129,6 +129,16 @@
         return '<b>' + esc(it.label) + '</b><br>' + vf(it.value) + unit + ' · ' +
                pct(it.value, total) + '%';
       });
+      // opts.onClick: isteğe bağlı drill-down (ör. Sistem Etkisi'nde bir güne
+      // tıklayınca o günün kalemlerini gösteren popup). Verilmezse davranış
+      // eskisiyle birebir aynı — diğer tüm bars() çağıranları etkilenmez.
+      if (typeof opts.onClick === 'function') {
+        row.style.cursor = 'pointer';
+        row.addEventListener('click', function () { opts.onClick(it); });
+        row.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); opts.onClick(it); }
+        });
+      }
       wrap.appendChild(row);
     });
     host.appendChild(wrap);

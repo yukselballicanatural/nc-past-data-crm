@@ -291,6 +291,11 @@
     'Stage': 'Stage',
     'Team Leader': 'Team Leader',
     'Yükleniyor...': 'Loading...',
+    'Yüklenemedi: ': 'Failed to load: ',
+    'hareket': 'transactions',
+    'toplam': 'total',
+    'yalnızca en büyük 50 kalem gösteriliyor': 'only the top 50 items are shown',
+    'Bu gün için kayıt yok.': 'No records for this day.',
 
     // ── team-leader.html ───────────────────────────────────────────
     '(isteğe bağlı)': '(optional)',
@@ -1298,6 +1303,7 @@
     'hiç yok': 'nothing',
     // ── Sistem Etkisi (para) sayfası ──
     'deal ödemesi eksikken işaretlendi, sonra ödemesi %100 tamamlandı.': 'deals were flagged while underpaid, then paid in full.',
+    'deal ödemesi GECİKMİŞKEN işaretlendi, sonra ödemesi %100 tamamlandı.': 'deals were flagged while OVERDUE, then paid in full.',
     'Medyan': 'Median',
     'Defter': 'Ledger',
     'tarihinde devreye girdi': 'went live',
