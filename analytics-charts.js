@@ -98,8 +98,13 @@
     // Verilmezse eski davranış birebir aynı kalır.
     var vf = opts.fmt || nfmt, unit = opts.unit == null ? ' deal' : (opts.unit ? ' ' + opts.unit : '');
     host.innerHTML = '';
-    items = (items || []).filter(function (i) { return i && (Number(i.value) || 0) > 0; })
-      .sort(function (a, b) { return b.value - a.value; });
+    items = (items || []).filter(function (i) { return i && (Number(i.value) || 0) > 0; });
+    // opts.keepOrder: bazı çağıranlar (ör. Sistem Etkisi'nin "Günlük tahsilat
+    // akışı") en büyükten küçüğe değil, GİRİŞ SIRASINA (kronolojik) göre
+    // göstermek istiyor — çağıran zaten doğru sırada veriyor, burada tekrar
+    // para büyüklüğüne göre karıştırılmasın. Verilmezse eski davranış (en
+    // büyükten küçüğe) birebir aynı kalır.
+    if (!opts.keepOrder) items = items.sort(function (a, b) { return b.value - a.value; });
     if (!items.length) { host.appendChild(emptyNote(opts.emptyText)); return; }
 
     var total = items.reduce(function (s, i) { return s + i.value; }, 0);

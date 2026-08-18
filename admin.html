@@ -9076,11 +9076,15 @@
         // kurulduğunda tek gün oluyor — o durumda grafik hiç çizilmiyordu
         // ("grafik görünmüyor"). Çubuk tek günde de çiziliyor.
         NCCharts.bars(document.getElementById('imLedgerChart'),
+          // by_day zaten SQL'de "order by d" ile kronolojik geliyor —
+          // kullanıcı talebi: tabloyu para büyüklüğüne göre değil TARİHE
+          // göre sırala. keepOrder: bars() bunu tekrar en büyükten küçüğe
+          // karıştırmasın diye.
           (L.by_day || []).map(p => ({ label: formatDate(p.d), value: Number(p.recovered) || 0, date: p.d })),
           // onClick: o güne tıklayınca gerçek kalemleri gösteren popup —
           // kullanıcı talebi: "güne tıklayınca popup çıksın o günkü
           // tahsilatları göstersin, o zaman ancak öyle inanırım."
-          { fmt: _imMoney, unit: '', emptyText: I18N.t('Veri yok.'), onClick: it => _imOpenDayDetail(it.date) });
+          { fmt: _imMoney, unit: '', emptyText: I18N.t('Veri yok.'), keepOrder: true, onClick: it => _imOpenDayDetail(it.date) });
         NCCharts.bars(document.getElementById('imLedgerTeams'),
           (L.by_team || []).map(t => ({ label: t.team, value: Number(t.recovered) || 0 })),
           { fmt: _imMoney, unit: '', emptyText: I18N.t('Veri yok.') });
