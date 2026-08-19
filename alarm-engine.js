@@ -194,6 +194,76 @@ window.AlarmEngine = (function () {
       if (!mostUrgent || days < mostUrgent.days) mostUrgent = { field, date, days };
     }
 
+    // ── Clinic Planning — Faz 1 (CLINIC_PLANNING_ROADMAP.md Bölüm 5) ──
+    // Yeni 7 kontrol: eksik alan tipinde, deal başına TEK aktif kart
+    // (dedup_key sabit `${deal.id}_<tip>`), alan doldurulunca
+    // closeResolvedClinicPlanningAlarms tarafından otomatik kapatılır.
+    const stageLower = (deal.stage || '').toLowerCase().trim();
+    const hotelReq       = raw.Hotel || raw.hotel || null;
+    const hotelStatus    = raw.Hotel_Status || raw.hotel_status || null;
+    const hotelName      = raw.Hotel_Name || raw.hotel_name || null;
+    const waStatus       = raw.WA_Status || raw.wa_status || null;
+    const translator     = raw.Translator || raw.translator || null;
+    const consultDate    = raw.Consultation_Date || raw.consultation_date || null;
+    const profclinicUser = raw.Profclinic_User || raw.profclinic_user || null;
+    const serviceCat     = raw.Service_Category2 || raw.service_category2 || null;
+    const arrivalDays    = daysUntil(arrivalDate);
+
+    if (stageLower === 'waiting hotel confirmation' && String(hotelReq).toLowerCase() === 'yes' &&
+        (String(hotelStatus || '').toLowerCase() !== 'confirmed' || !hotelName)) {
+      alarms.push({
+        ...base, alarm_type: 'hotel_missing', reference_field: 'hotel_status',
+        reference_date: null, threshold_days: null, days_remaining: null,
+        dedup_key: `${deal.id}_hotel_missing`,
+      });
+    }
+
+    const nearArrival = arrivalDays !== null && arrivalDays >= 0 && arrivalDays <= 15;
+    if (nearArrival && String(waStatus || '') !== 'Group opened') {
+      alarms.push({
+        ...base, alarm_type: 'whatsapp_missing', reference_field: 'wa_status',
+        reference_date: null, threshold_days: 15, days_remaining: arrivalDays,
+        dedup_key: `${deal.id}_whatsapp_missing`,
+      });
+    }
+    if (nearArrival && !translator) {
+      alarms.push({
+        ...base, alarm_type: 'interpreter_missing', reference_field: 'translator',
+        reference_date: null, threshold_days: 15, days_remaining: arrivalDays,
+        dedup_key: `${deal.id}_interpreter_missing`,
+      });
+    }
+    if (nearArrival && !consultDate) {
+      alarms.push({
+        ...base, alarm_type: 'exam_date_missing', reference_field: 'consultation_date',
+        reference_date: null, threshold_days: 15, days_remaining: arrivalDays,
+        dedup_key: `${deal.id}_exam_date_missing`,
+      });
+    }
+
+    if (stageLower === 'check in completed' && !profclinicUser) {
+      alarms.push({
+        ...base, alarm_type: 'consultant_missing_after_arrival', reference_field: 'profclinic_user',
+        reference_date: null, threshold_days: null, days_remaining: null,
+        dedup_key: `${deal.id}_consultant_missing_after_arrival`,
+      });
+    }
+    if (stageLower === 'check in completed' && String(serviceCat || '').toLowerCase() !== 'dental' &&
+        (Number(deal.total_paid_amount) || 0) >= (Number(deal.amount) || 0) && (Number(deal.amount) || 0) > 0) {
+      alarms.push({
+        ...base, alarm_type: 'must_be_won', reference_field: 'stage',
+        reference_date: null, threshold_days: null, days_remaining: null,
+        dedup_key: `${deal.id}_must_be_won`,
+      });
+    }
+    if (stageLower === 'waiting next visit' && !v1 && !v2 && !v3) {
+      alarms.push({
+        ...base, alarm_type: 'next_visit_date_missing', reference_field: 'visit_date',
+        reference_date: null, threshold_days: null, days_remaining: null,
+        dedup_key: `${deal.id}_next_visit_date_missing`,
+      });
+    }
+
     if (mostUrgent) {
       const { field, date, days } = mostUrgent;
       const dateStr = String(date).split('T')[0];
@@ -670,6 +740,60 @@ window.AlarmEngine = (function () {
     return closed;
   }
 
+  // Clinic Planning (Faz 1) alarmlarını, ilgili alan doldurulunca/koşul
+  // artık geçerli olmayınca kapat — insertAlarms ignore-duplicates ile
+  // yazdığı için sabit dedup_key'li satır bir kez açılınca kendiliğinden
+  // kapanmıyor (bkz. closeStaleArrivalMissing'teki aynı mantık).
+  const CLINIC_PLANNING_TYPES = [
+    'hotel_missing', 'whatsapp_missing', 'interpreter_missing', 'exam_date_missing',
+    'consultant_missing_after_arrival', 'must_be_won', 'next_visit_date_missing',
+  ];
+  async function closeResolvedClinicPlanningAlarms(BASE, KEY, deals) {
+    const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+    const r = await fetch(
+      `${BASE}/rest/v1/alarms?alarm_type=in.(${CLINIC_PLANNING_TYPES.join(',')})` +
+      `&status=in.(open,seen,in_progress,escalated)&select=id,deal_id,alarm_type`,
+      { headers: H }
+    );
+    if (!r.ok) return 0;
+    const openAlarms = await r.json();
+    if (!Array.isArray(openAlarms) || !openAlarms.length) return 0;
+
+    const byDeal = new Map();
+    for (const a of openAlarms) {
+      const k = String(a.deal_id);
+      if (!byDeal.has(k)) byDeal.set(k, []);
+      byDeal.get(k).push(a);
+    }
+    const dealsById = new Map(deals.map(d => [String(d.id), d]));
+
+    const toClose = [];
+    for (const [dealId, list] of byDeal) {
+      const d = dealsById.get(dealId);
+      // deal artık aktif kapsamda değil (kapsam dışı/silinmiş) — o kısmı
+      // closeOutOfScopeAlarms/closeAlarmsForDeletedDeals zaten hallediyor.
+      if (!d) continue;
+      const stillOpenTypes = new Set(computeAlarms(d).map(a => a.alarm_type));
+      for (const a of list) {
+        if (!stillOpenTypes.has(a.alarm_type)) toClose.push(a.id);
+      }
+    }
+    if (!toClose.length) return 0;
+
+    const now = new Date().toISOString();
+    const PH = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+    let closed = 0;
+    for (let i = 0; i < toClose.length; i += 100) {
+      const idList = toClose.slice(i, i + 100).join(',');
+      const pr = await fetch(`${BASE}/rest/v1/alarms?id=in.(${idList})`, {
+        method: 'PATCH', headers: PH,
+        body: JSON.stringify({ status: 'closed', close_reason: 'clinic_planning_resolved', closed_at: now, closed_by: 'system' }),
+      });
+      if (pr.ok) closed += Math.min(100, toClose.length - i);
+    }
+    return closed;
+  }
+
   // Stage'i Won VE bakiyesi tamamen ödenmiş (ödenen >= tutar) deallerin hâlâ
   // açık kalan TÜM alarmlarını kapat — iş tamamlandı, hatırlatmaya gerek yok.
   // fetchActiveDeals() Won'u zaten dışarıda bıraktığı için (ACTIVE_STAGES'e
@@ -1078,8 +1202,12 @@ window.AlarmEngine = (function () {
     // stage / silinmiş) açık alarmlarını kapat — bkz. closeOutOfScopeAlarms.
     if (onProgress) onProgress(_t('Kapsam dışı dealler için alarmlar kapatılıyor...'));
     const outOfScopeCount = await closeOutOfScopeAlarms(BASE, KEY, deals);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deleted: deletedCount, profclinicClosed: profclinicClosedCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, dealTeamSynced: dealTeamSyncedCount, retyped: retypedCount, ...result };
+    // Clinic Planning (Faz 1) alarmları: ilgili alan doldurulmuş/koşul artık
+    // geçerli değilse kapat (hotel_missing, whatsapp_missing, vb.)
+    if (onProgress) onProgress(_t('Clinic Planning alarmları güncelleniyor...'));
+    const clinicPlanningClosedCount = await closeResolvedClinicPlanningAlarms(BASE, KEY, deals);
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deleted: deletedCount, profclinicClosed: profclinicClosedCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, dealTeamSynced: dealTeamSyncedCount, retyped: retypedCount, clinicPlanningClosed: clinicPlanningClosedCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeAlarmsForDeletedDeals, closeAlarmsForProfclinic, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, syncAlarmDealFields, syncDealTeamFields, syncAlarmTypes };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeAlarmsForDeletedDeals, closeAlarmsForProfclinic, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, closeResolvedClinicPlanningAlarms, syncAlarmDealFields, syncDealTeamFields, syncAlarmTypes };
 })();
