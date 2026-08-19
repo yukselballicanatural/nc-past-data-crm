@@ -244,6 +244,13 @@ window.AlarmEngine = (function () {
   // deal için yeni alarm üretilmeye devam ediyordu. Canlı ölçüm (2026-08-18):
   // 14 is_deleted=true deal'in 13'ü aktif stage'deydi, bunlara bağlı 11 açık
   // alarm vardı (takım liderine var olmayan hasta için alarm gösteriyordu).
+  //
+  // team=neq.Profclinic: Profclinic satış dışı bir birim (kullanıcı talebi:
+  // "Profclinic hiçbir yerde görünmesin"). Deal listesi ekranları bunu zaten
+  // DEALS_2026_Q ile (admin.html) dışlıyordu ama motor kendi deal sorgusunda
+  // HİÇ dışlamıyordu — Profclinic'e ait deal'ler için de normal şekilde
+  // alarm üretmeye devam ediyordu. Canlı ölçüm (2026-08-19): 646 açık
+  // Profclinic alarmı vardı (256'sı bu yolla, yeni üretilen tiplerden).
   async function fetchActiveDeals(BASE, KEY) {
     const H = { apikey: KEY, Authorization: 'Bearer ' + KEY };
     // encodeURIComponent ile tüm filtre değerini encode et — Supabase JS client da böyle yapar
@@ -253,6 +260,7 @@ window.AlarmEngine = (function () {
       const url = `${BASE}/rest/v1/deals?stage=${stageParam}` +
         `&select=id,deal_name,deal_owner,stage,team,amount,total_paid_amount,raw` +
         `&is_deleted=eq.false` +
+        `&team=neq.Profclinic` +
         CREATED_2026_Q +
         `&order=id.asc&limit=500&offset=${offset}`;
       const r = await fetch(url, { headers: H });
@@ -629,6 +637,35 @@ window.AlarmEngine = (function () {
           body: JSON.stringify({ status: 'closed', close_reason: 'deal_deleted_in_zoho', closed_at: now, closed_by: 'system' }) }
       );
       if (pr.ok) closed += toClose.length;
+    }
+    return closed;
+  }
+
+  // Profclinic'e ait açık alarmları kapat — Profclinic satış dışı bir birim,
+  // hiçbir yerde alarm üretilmemeli (kullanıcı talebi). fetchActiveDeals
+  // artık team=neq.Profclinic ile YENİ alarm üretimini engelliyor; bu
+  // fonksiyon GEÇMİŞTE üretilmiş olanları (payment_tracking dahil, tip fark
+  // etmez) temizler.
+  async function closeAlarmsForProfclinic(BASE, KEY) {
+    const H  = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+    const PH = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+    const r = await fetch(
+      `${BASE}/rest/v1/alarms?team=eq.Profclinic&status=in.(open,seen,in_progress,escalated,arrived,examined,processing,no_show)&select=id`,
+      { headers: H }
+    );
+    if (!r.ok) return 0;
+    const toClose = await r.json();
+    if (!Array.isArray(toClose) || !toClose.length) return 0;
+
+    const now = new Date().toISOString();
+    let closed = 0;
+    for (let i = 0; i < toClose.length; i += 100) {
+      const idList = toClose.slice(i, i + 100).map(a => a.id).join(',');
+      const pr = await fetch(`${BASE}/rest/v1/alarms?id=in.(${idList})`, {
+        method: 'PATCH', headers: PH,
+        body: JSON.stringify({ status: 'closed', close_reason: 'profclinic_excluded', closed_at: now, closed_by: 'system' }),
+      });
+      if (pr.ok) closed += Math.min(100, toClose.length - i);
     }
     return closed;
   }
@@ -1031,6 +1068,9 @@ window.AlarmEngine = (function () {
     // Zoho'dan doğrudan silinen deallerin açık kalan alarmlarını kapat
     if (onProgress) onProgress(_t('Zohodan silinen dealler için alarmlar kapatılıyor...'));
     const deletedCount = await closeAlarmsForDeletedDeals(BASE, KEY);
+    // Profclinic'e ait açık alarmları kapat — satış dışı birim, hiçbir yerde görünmemeli
+    if (onProgress) onProgress(_t('Profclinic alarmları kapatılıyor...'));
+    const profclinicClosedCount = await closeAlarmsForProfclinic(BASE, KEY);
     // Won + ödemesi %100 tamamlanmış deallerin açık kalan alarmlarını kapat
     if (onProgress) onProgress(_t('Won ve ödemesi tamamlanan dealler için alarmlar kapatılıyor...'));
     const wonPaidCount = await closeAlarmsForWonPaidDeals(BASE, KEY);
@@ -1038,8 +1078,8 @@ window.AlarmEngine = (function () {
     // stage / silinmiş) açık alarmlarını kapat — bkz. closeOutOfScopeAlarms.
     if (onProgress) onProgress(_t('Kapsam dışı dealler için alarmlar kapatılıyor...'));
     const outOfScopeCount = await closeOutOfScopeAlarms(BASE, KEY, deals);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deleted: deletedCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, dealTeamSynced: dealTeamSyncedCount, retyped: retypedCount, ...result };
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deleted: deletedCount, profclinicClosed: profclinicClosedCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, dealTeamSynced: dealTeamSyncedCount, retyped: retypedCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeAlarmsForDeletedDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, syncAlarmDealFields, syncDealTeamFields, syncAlarmTypes };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeAlarmsForDeletedDeals, closeAlarmsForProfclinic, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, syncAlarmDealFields, syncDealTeamFields, syncAlarmTypes };
 })();

@@ -3723,9 +3723,14 @@
         //     bazında eliyor (bkz. renderAdminAlarmTable) — 2.384 satır boşuna.
         // "Kapatılan Alarmlar" sayfası kapalı satırlara ihtiyaç duyuyor; onlar
         // o sayfa AÇILDIĞINDA _amEnsureClosedAlarms() ile bir kez yükleniyor.
+        // team=neq.Profclinic: Profclinic satış dışı bir birim, hiçbir yerde
+        // görünmemeli (kullanıcı talebi). Deal listesi ekranları bunu zaten
+        // DEALS_2026_Q ile dışlıyordu, alarm sorgusu dışlamıyordu — alarm-
+        // engine.js artık bu takım için yeni alarm üretmiyor/açık olanları
+        // kapatıyor ama bu satır ek güvenlik (defense-in-depth) olarak duruyor.
         const ACTIVE_Q = '&status=' + encodeURIComponent(
           'in.(open,seen,in_progress,escalated,arrived,examined,processing,no_show)') +
-          '&alarm_type=neq.payment_tracking';
+          '&alarm_type=neq.payment_tracking&team=neq.Profclinic';
         const baseUrl = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc,id.asc${regionQ}${ACTIVE_Q}&limit=${PAGE}`;
         const first = await fetch(`${baseUrl}&offset=0`, { headers: { ...H, Prefer: 'count=exact' } });
         if (!first.ok) throw new Error('HTTP ' + first.status);
@@ -4173,8 +4178,10 @@
         const PAGE = 1000;
         // payment_tracking DAHİL: bu sayfa o tipteki eski kapalı satırları da
         // listeliyor (yalnızca "Alarm Tipi" hücresini boş bırakıyor).
+        // team=neq.Profclinic: Profclinic hiçbir alarm ekranında görünmemeli
+        // (kullanıcı talebi) — bu geçmiş/audit sayfası da istisna değil.
         const base = `${SUPABASE_URL}/rest/v1/alarms?select=${_AM_CLOSED_FIELDS}` +
-          `&order=closed_at.desc.nullslast,id.asc${regionQ}&status=eq.closed`;
+          `&order=closed_at.desc.nullslast,id.asc${regionQ}&status=eq.closed&team=neq.Profclinic`;
         const cacheKey = _amClosedCacheKey();
 
         // Sunucudaki toplam kapalı alarm sayısı — tek satır indirir.
