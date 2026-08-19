@@ -47,9 +47,17 @@ window.TeamMap = (function () {
       label: 'SM - Mert Team', leader: 'Joseph Stone', region: 'Istanbul',
       aliases: ['SM- Mert Team', 'Mert Jospeh - Sales Master'],
     },
-    'Sales Master - Amin Connor West': { // eski deallarda "SM Amin Connor - Team" olarak geçiyor
-      label: 'Connor West Team', leader: 'Connor West', region: 'Istanbul',
-      aliases: ['Sales Master - Amin Connor West', 'SM Amin Connor - Team'],
+    // "Connor West Team" ve "Amin Team" AYNI takım/AYNI lider — Zoho'da lider
+    // "Amin Connor West" adıyla kurulmuş, sonradan "Amin West" / rol
+    // "Team Leader - Amin Zaki" olarak yeniden adlandırıldı ama deals.team
+    // (deal oluşturulduğu andaki donmuş kopya) hâlâ eski adla yazılıyor
+    // (2026-08-17 gibi YAKIN tarihli deal'lerde bile). Önceden bu iki isim
+    // AYRI canonical'lardı (biri elle yazılmış "Connor West Team", diğeri
+    // dinamik keşfedilen "Amin Team") — aynı takımın üyeleri iki farklı
+    // kovaya bölünüyordu. Artık TEK canonical: 'Amin Team'.
+    'Amin Team': {
+      label: 'Amin Team', leader: 'Amin West (Zaki)', region: 'Istanbul',
+      aliases: ['Amin Team', 'Sales Master - Amin Connor West', 'SM Amin Connor - Team', 'Team Leader - Amin Zaki'],
     },
     'Farah Team - Morocco': {
       label: 'Farah Team', leader: 'Farah El Moujahed', region: 'Morocco',

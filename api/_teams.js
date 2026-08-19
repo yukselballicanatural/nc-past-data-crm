@@ -124,7 +124,9 @@ export const LEGACY_TEAM_ALIASES = {
   'Aamir Ali Team': ['Aamir Ali Team', 'Team Leader - Aamir Ali'],
   'Joel Team': ['Joel Team', 'Team Leader - Joel'],
   'SM- Mert Team': ['SM- Mert Team', 'Mert Jospeh - Sales Master'],
-  'Sales Master - Amin Connor West': ['Sales Master - Amin Connor West', 'SM Amin Connor - Team'],
+  // "Connor West Team" / "Amin Team" AYNI takım/AYNI lider — bkz. team-map.js
+  // aynı satırdaki açıklama. Tek canonical: 'Amin Team'.
+  'Amin Team': ['Amin Team', 'Sales Master - Amin Connor West', 'SM Amin Connor - Team', 'Team Leader - Amin Zaki'],
   'Farah Team - Morocco': ['Farah Team - Morocco', 'Team Leader - Farah'],
   'Sara Team - Morocco': ['Sara Team - Morocco', 'Team Leader - Sara'],
   'Selma Team - Morocco': ['Selma Team - Morocco', 'Team Leader - Selma'],

@@ -68,7 +68,14 @@ as $$
     'Aamir Ali Team','Team Leader - Aamir Ali',
     'Joel Team','Team Leader - Joel',
     'SM- Mert Team','Mert Jospeh - Sales Master',
-    'Sales Master - Amin Connor West','SM Amin Connor - Team',
+    -- "Connor West Team" / "Amin Team" AYNI takım/AYNI lider (bkz. team-map.js
+    -- ve api/_teams.js aynı satır) — deals.team hâlâ eski adla yazılıyor,
+    -- yeni ad da (nadiren) görülüyor; ikisi de dahil.
+    'Sales Master - Amin Connor West','SM Amin Connor - Team','Amin Team','Team Leader - Amin Zaki',
+    -- 2026-08: yeni sales master takımları (Burak Kalkanoğlu / Danish Munir) —
+    -- önceden bu listede HİÇ yoktu, deal'leri Analytics'ten sessizce dışlanıyordu.
+    'SM - Burak Team','Sales Master - Burak',
+    'SM- Danish Team','Sales Master - Danish',
     'Farah Team - Morocco','Team Leader - Farah',
     'Sara Team - Morocco','Team Leader - Sara',
     'Selma Team - Morocco','Team Leader - Selma',

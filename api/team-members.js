@@ -38,7 +38,7 @@ const REGION_BY_TEAM = {
   'Aamir Ali Team': 'Istanbul',
   'Joel Team': 'Istanbul',
   'SM- Mert Team': 'Istanbul',
-  'Sales Master - Amin Connor West': 'Istanbul',
+  'Amin Team': 'Istanbul',
   'Farah Team - Morocco': 'Morocco',
   'Sara Team - Morocco': 'Morocco',
   'Selma Team - Morocco': 'Morocco',
