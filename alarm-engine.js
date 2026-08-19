@@ -866,6 +866,63 @@ window.AlarmEngine = (function () {
     return updated;
   }
 
+  // deals.team'i de SAHİBİNİN GÜNCEL TAKIMINA göre düzelt — syncAlarmDealFields
+  // yalnızca alarms.team'i düzeltiyordu, deals tablosunun kendisi hâlâ bayat
+  // kalıyordu. Bu, deals.team'i doğrudan okuyan her yeri (Analytics/admin_
+  // summary_rpc SQL fonksiyonları dahil — onlar NCOwnerTeam'i hiç bilmiyor,
+  // yalnızca deals.team'e bakıyor) otomatik düzeltir.
+  //
+  // KÖK NEDEN (2026-08-19): bir kişi Sales Master/Team Leader olduğunda
+  // Zoho'daki Deal.Team alanı (raw.Team) YENİDEN HESAPLANMIYOR — kişinin
+  // YENİ role'e geçmeden ÖNCEKİ takımıyla donmuş kalıyor. Canlı vaka: Anthony
+  // Cross (Burak Kalkanoğlu) Sales Master olmadan önce Ghazal'ın takımındaydı;
+  // 63 deal'i hâlâ "Ghazal Team" diyordu. Bradley Grant (Danish Munir) için
+  // aynısı "Touma Team" ile — 33 deal. Bu deal'ler kendi panellerinde hiç
+  // görünmüyor, eski liderlerin rakamlarını şişiriyordu.
+  //
+  // Zoho bu alanı KENDİSİ hiç düzeltmediği için (raw.Team de aynı bayat
+  // değeri taşıyor — Zoho'nun kendi veri kalitesi sorunu) tek seferlik bir
+  // düzeltme kalıcı olmaz: senkron bu deal'e tekrar dokunduğunda eski değeri
+  // geri yazar. Bu fonksiyon HER motor çalışmasında (15 dakikada bir) yeniden
+  // kontrol ettiği için kendi kendini onarır.
+  async function syncDealTeamFields(BASE, KEY, deals) {
+    const ownerTeamOf = (owner) => {
+      try {
+        if (typeof NCOwnerTeam === 'undefined' || !NCOwnerTeam.ready()) return null;
+        return NCOwnerTeam.teamOf(owner);
+      } catch (e) { return null; }
+    };
+
+    const stale = [];   // { id, team }
+    for (const d of deals) {
+      const want = ownerTeamOf(d.deal_owner);
+      if (!want) continue;                 // dizin bu sahibi tanımıyor — dokunma
+      if ((d.team || '') === want) continue;
+      stale.push({ id: d.id, team: want });
+    }
+    if (!stale.length) return 0;
+
+    const H  = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+    const PH = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+    // Aynı hedef takıma giden deal'leri grupla — tip başına tek PATCH grubu
+    const byTeam = new Map();
+    for (const s of stale) {
+      if (!byTeam.has(s.team)) byTeam.set(s.team, []);
+      byTeam.get(s.team).push(s.id);
+    }
+    let updated = 0;
+    for (const [team, ids] of byTeam) {
+      for (let i = 0; i < ids.length; i += 100) {
+        const idList = ids.slice(i, i + 100).join(',');
+        const r = await fetch(`${BASE}/rest/v1/deals?id=in.(${idList})`, {
+          method: 'PATCH', headers: PH, body: JSON.stringify({ team }),
+        });
+        if (r.ok) updated += Math.min(100, ids.length - i);
+      }
+    }
+    return updated;
+  }
+
   // alarm_type'ı reference_date'e göre tazele.
   //
   // NEDEN: computeAlarms tarih bazlı alarmlarda dedup_key'e tipi/eşiği DAHİL
@@ -950,6 +1007,10 @@ window.AlarmEngine = (function () {
     // çalışır: sonraki adımlar team/region'a göre sorgu atıyor.
     if (onProgress) onProgress(_t('Deal bilgileri alarmlara işleniyor...'));
     const syncedCount = await syncAlarmDealFields(BASE, KEY, deals);
+    // deals.team'in kendisini de sahibin güncel takımına göre düzelt — bkz.
+    // syncDealTeamFields üstündeki not (Anthony Cross/Bradley Grant vakası).
+    if (onProgress) onProgress(_t('Deal takımları güncelleniyor...'));
+    const dealTeamSyncedCount = await syncDealTeamFields(BASE, KEY, deals);
     // alarm_type de doniyordu: bugun gelecek hasta hala 'yaklasiyor' etiketi
     // tasiyordu (bkz. syncAlarmTypes). Tarihe gore yeniden etiketle.
     if (onProgress) onProgress(_t('Alarm tipleri tazeleniyor...'));
@@ -977,8 +1038,8 @@ window.AlarmEngine = (function () {
     // stage / silinmiş) açık alarmlarını kapat — bkz. closeOutOfScopeAlarms.
     if (onProgress) onProgress(_t('Kapsam dışı dealler için alarmlar kapatılıyor...'));
     const outOfScopeCount = await closeOutOfScopeAlarms(BASE, KEY, deals);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deleted: deletedCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, retyped: retypedCount, ...result };
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deleted: deletedCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, dealTeamSynced: dealTeamSyncedCount, retyped: retypedCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeAlarmsForDeletedDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, syncAlarmDealFields, syncAlarmTypes };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeAlarmsForDeletedDeals, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, syncAlarmDealFields, syncDealTeamFields, syncAlarmTypes };
 })();
