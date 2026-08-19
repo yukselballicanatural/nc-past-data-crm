@@ -32,6 +32,10 @@
 --
 -- Bu üçü birden = "sistem gerçekten bu parayı ARADI, TAKİP ETTİ ve
 -- KAZANDIRDI" iddiasının en savunulabilir hâli.
+--
+-- 3. tur: Sarah Shahin (Ahmed Anwar takımı) SADECE bu ölçümden hariç
+-- tutuldu — kullanıcı talebi: "onun paralarını da hesaplamıyacaz". Başka
+-- hiçbir yeri (alarm, Analytics, kendi paneli) etkilemiyor.
 
 create or replace function public.admin_payment_recovery(
   p_from         date    default null,
@@ -46,9 +50,15 @@ set search_path = public
 set statement_timeout to '15000'
 as $$
   with ev as (
+    -- Sarah Shahin (Ahmed Anwar takımı, gerçek adı Ayhan Şahin) SADECE bu
+    -- sayfada/RPC'de hariç tutuluyor — kullanıcı talebi: "onun paralarını da
+    -- hesaplamıyacaz". Başka hiçbir ekranı (alarmlar, Analytics, kendi
+    -- panelindeki dealleri) etkilemez, yalnızca "Sistem Etkisi" ölçümünden
+    -- çıkarılıyor.
     select h.deal_id, h.delta, h.changed_at, h.team, h.deal_owner, h.amount, h.new_paid
     from public.deal_payment_history h
     where h.delta > 0
+      and h.deal_owner is distinct from 'Sarah Shahin'
       and (p_from is null or h.changed_at >= p_from::timestamptz)
       and (p_to   is null or h.changed_at <  (p_to + 1)::timestamptz)
   ),
