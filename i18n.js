@@ -523,6 +523,13 @@
     'Vizit Yaklaşıyor': 'Visit Approaching',
     'Tarih Yaklaşıyor': 'Date Approaching',
     'Tarih Eksik': 'Missing Date',
+    'Otel Eksik': 'Hotel Missing',
+    'WhatsApp Grubu Eksik': 'WhatsApp Group Missing',
+    'Tercüman Eksik': 'Interpreter Missing',
+    'Muayene Tarihi Eksik': 'Exam Date Missing',
+    'Danışman Eksik': 'Consultant Missing',
+    'Kazanılmalı': 'Should Be Won',
+    'Sonraki Vizit Tarihi Eksik': 'Next Visit Date Missing',
     'Konsültasyon/Seyahat Tarihi': 'Consultation/Travel Date',
     // Tarih filtreleri Consultation Date / Estimated Travel Date olarak
     // ikiye ayrıldı (bkz. consultation_travel_date_split.sql) — her iki
