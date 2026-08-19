@@ -31,7 +31,6 @@ export function blockKey(s) {
 export const BLOCKED_NAMES = [
   'Jamari West',
   'Juan Garcia',
-  'Rim El Amrani',
 ];
 
 const BLOCKED = new Set(BLOCKED_NAMES.map(blockKey));

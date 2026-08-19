@@ -2482,6 +2482,35 @@ html[data-theme="light"] #userModal {
   backdrop-filter: blur(14px) saturate(140%);
 }
 
+/* ── "Kullanıcı Ekle/Düzenle" penceresindeki Takım seçici — sabit koyu
+   renklerle (#0f172a/#1e293b) yazılmıştı, açık camda etrafındaki inputlarla
+   uyumsuz koyu bir kutu olarak kalıyordu. #umTeamDropdown artık JS tarafında
+   document.body'e taşınıp position:fixed ile açılıyor (modal-panel'in
+   overflow-y:auto'su onu kırpıp diğer alanların "arkasında" bırakıyordu). */
+html[data-theme="light"] #umTeamBox {
+  background: var(--g-3) !important;
+  border: 1px solid var(--edge-soft) !important;
+  color: var(--ink) !important;
+}
+html[data-theme="light"] #umTeamDisplay { color: var(--ink-2) !important; }
+html[data-theme="light"] #umTeamChevron { color: var(--ink-3) !important; }
+html[data-theme="light"] #umTeamDropdown {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid var(--edge-soft) !important;
+  box-shadow: var(--sh-2), var(--sheen) !important;
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  backdrop-filter: blur(30px) saturate(190%);
+}
+html[data-theme="light"] #umTeamSearch {
+  background: var(--g-3) !important;
+  border: 1px solid var(--edge-soft) !important;
+  color: var(--ink) !important;
+}
+html[data-theme="light"] #umTeamSearch::placeholder { color: var(--ink-3) !important; }
+/* Liste satırlarının rengi renderTeamList() içinde JS'te temaya göre
+   üretiliyor (satır başına seçili/hover durumu inline style ile kontrol
+   ediliyor — burada !important ile ezmek o durumları da bozardı). */
+
 /* ── Parlak Tailwind vurgu renkleri açık camda okunmuyordu ─────────── */
 html[data-theme="light"] .text-blue-300,   html[data-theme="light"] .text-blue-400   { color: #1d4ed8 !important; }
 html[data-theme="light"] .text-cyan-300,   html[data-theme="light"] .text-cyan-400   { color: #0e7490 !important; }

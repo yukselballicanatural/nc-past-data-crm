@@ -12222,6 +12222,9 @@
     function closeUserModal() {
       document.getElementById('userModal').classList.remove('open');
       document.body.style.overflow = '';
+      // #umTeamDropdown artık document.body'e taşınmış, fixed konumlu bir
+      // portal — modal kapanırken açık kalırsa ekranda öylece asılı durur.
+      closeTeamDropdown();
     }
 
     // Panele girişi OLAN roller. _amTmHasLogin ile aynı ayrımı yapar ama bu
@@ -12534,10 +12537,18 @@
       const q = (filter||'').toLowerCase();
       const filtered = q ? teams.filter(t => t.toLowerCase().includes(q)) : teams;
       const current = document.getElementById('umTeam').value;
+      // Satır renkleri koyu temaya sabitlenmişti (#1e1b4b/#cbd5e1) — açık camda
+      // (data-theme="light") CSS !important ile ezmek seçili/hover durumunu
+      // da bozardı (inline style), o yüzden burada temaya göre üretiliyor.
+      const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+      const selBg   = isLight ? 'rgba(13,148,136,0.14)' : '#1e1b4b';
+      const selFg   = isLight ? '#0f766e' : '#818cf8';
+      const idleFg  = isLight ? '#4b5364' : '#cbd5e1';
+      const hoverBg = isLight ? 'rgba(15,23,42,0.06)' : '#0f172a';
       document.getElementById('umTeamList').innerHTML = filtered.length
-        ? filtered.map(t => `<div onclick="setTeamValue('${_jsStrAttr(t)}');closeTeamDropdown()" style="padding:9px 14px;cursor:pointer;font-size:0.82rem;color:${t===current?'#818cf8':'#cbd5e1'};background:${t===current?'#1e1b4b':'transparent'};border-left:3px solid ${t===current?'#6366f1':'transparent'};transition:all 0.1s" onmouseover="this.style.background='#0f172a'" onmouseout="this.style.background='${t===current?'#1e1b4b':'transparent'}'">
-            ${t===current?'<span style="color:#6366f1;margin-right:6px">✓</span>':''}<span>${fmt(t)}</span></div>`).join('')
-        : `<div style="padding:12px 14px;color:#475569;font-size:0.78rem;text-align:center">${I18N.t('Takım bulunamadı')}</div>`;
+        ? filtered.map(t => `<div onclick="setTeamValue('${_jsStrAttr(t)}');closeTeamDropdown()" style="padding:9px 14px;cursor:pointer;font-size:0.82rem;color:${t===current?selFg:idleFg};background:${t===current?selBg:'transparent'};border-left:3px solid ${t===current?'#6366f1':'transparent'};transition:all 0.1s" onmouseover="this.style.background='${hoverBg}'" onmouseout="this.style.background='${t===current?selBg:'transparent'}'">
+            ${t===current?`<span style="color:#6366f1;margin-right:6px">✓</span>`:''}<span>${fmt(t)}</span></div>`).join('')
+        : `<div style="padding:12px 14px;color:${isLight?'#7c8496':'#475569'};font-size:0.78rem;text-align:center">${I18N.t('Takım bulunamadı')}</div>`;
     }
     function setTeamValue(val) {
       document.getElementById('umTeam').value = val;
@@ -12546,19 +12557,51 @@
       else { display.textContent = I18N.t('Takım seçin veya yazın...'); display.style.color = '#64748b'; }
       renderTeamList(window._umTeams || []);
     }
-    function toggleTeamDropdown() {
+    // #umTeamDropdown eskiden #umTeamBox'ın hemen altında position:absolute
+    // ile açılıyordu — ama .modal-panel overflow-y:auto taşıyor (uzun
+    // formlar için scroll gerekiyor) ve bu, panelin dışına taşan absolute
+    // içeriği KIRPIYOR: liste ya kesik görünüyor ya da altındaki Telefon/
+    // E-posta/Durum kutularının "arkasında" kalmış gibi duruyordu (z-index
+    // bunu çözmez — overflow kırpması stacking'den önce devreye girer).
+    // Çözüm: dropdown'ı bir kereliğine document.body'e taşı, açılırken
+    // #umTeamBox'ın gerçek ekran konumuna göre position:fixed ile konumla —
+    // artık hiçbir ata elementin overflow'undan etkilenmiyor.
+    function _umEnsureTeamDropdownPortal() {
       const dd = document.getElementById('umTeamDropdown');
+      if (dd && dd.parentElement !== document.body) document.body.appendChild(dd);
+      return dd;
+    }
+    function _umPositionTeamDropdown() {
+      const box = document.getElementById('umTeamBox');
+      const dd  = document.getElementById('umTeamDropdown');
+      if (!box || !dd) return;
+      const r = box.getBoundingClientRect();
+      dd.style.position = 'fixed';
+      dd.style.top   = (r.bottom + 4) + 'px';
+      dd.style.left  = r.left + 'px';
+      dd.style.width = r.width + 'px';
+    }
+    function toggleTeamDropdown() {
+      const dd = _umEnsureTeamDropdownPortal();
       const open = dd.style.display !== 'none';
       if (open) { closeTeamDropdown(); return; }
+      _umPositionTeamDropdown();
       dd.style.display = 'block';
       document.getElementById('umTeamChevron').style.transform = 'rotate(180deg)';
       document.getElementById('umTeamSearch').value = '';
       renderTeamList(window._umTeams || []);
       setTimeout(() => document.getElementById('umTeamSearch').focus(), 50);
+      window.addEventListener('resize', _umPositionTeamDropdown);
+      // Modal içeriği kaydırılırsa (uzun form) sabit-konumlu dropdown geride
+      // kalmasın diye kapatılır — tekrar açmak yeni konumla hizalar.
+      document.querySelector('#userModal .modal-panel')?.addEventListener('scroll', closeTeamDropdown, { once: true });
     }
     function closeTeamDropdown() {
-      document.getElementById('umTeamDropdown').style.display = 'none';
-      document.getElementById('umTeamChevron').style.transform = 'rotate(0deg)';
+      const dd = document.getElementById('umTeamDropdown');
+      if (dd) dd.style.display = 'none';
+      const chevron = document.getElementById('umTeamChevron');
+      if (chevron) chevron.style.transform = 'rotate(0deg)';
+      window.removeEventListener('resize', _umPositionTeamDropdown);
     }
     function filterTeamList() {
       const q = document.getElementById('umTeamSearch').value;
