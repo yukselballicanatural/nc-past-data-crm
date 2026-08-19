@@ -222,9 +222,39 @@ export default async function handler(req, res) {
       const ownerName = u['Deal Owner Name'] || u['Username'] || '';
       const z = zoho.get(nameKey(ownerName));
 
+      // ── KAYIP KULLANICILAR — Zoho aynasında ARTIK HİÇ YOK ──────────────
+      // Kök neden (2026-08-19, Farah/Yasser Raji + Ali Nkairi vakası): dış
+      // Zoho senkronu, işten ayrılan birini status=inactive yaparak
+      // BIRAKMIYOR — satırı zoho_users'tan TAMAMEN SİLİYOR. isLeaver()
+      // yalnızca `z` (satır) VARSA çalışabiliyor; satır yoksa aşağıdaki
+      // "z && isLeaver(z)" kontrolü hiç tetiklenmiyor VE bu kişi zTeam=null
+      // olduğu için (zohoAvailable=true olduğundan "en son deal" yedek
+      // taraması da atlanıyor) "hiç sinyal yok" sayılıp SESSİZCE continue
+      // ediliyordu — ne ayrılan listesine giriyordu ne de Users."Takim Adi"
+      // güncelleniyordu. Sonuç: kişi hem hiçbir uyarı üretmiyor hem de eski
+      // takım kaydı SONSUZA KADAR donuk kalıyordu. Zoho'dan tamamen kaybolmuş
+      // olmak, status=inactive'den daha güçlü bir "ayrıldı" sinyali — kadroda
+      // daha önce yer almış (bir takımı olan) biri artık ayna listesinde HİÇ
+      // yoksa doğrudan ayrılan sayılır.
+      if (!z && zohoAvailable && ownerName && String(u['Takim Adi'] || '').trim() && u['is_active'] !== false) {
+        leavers.push({
+          username: u['Username'] || '',
+          fullName: ownerName,
+          role: u['Role'] || '',
+          team: String(u['Takim Adi'] || '').trim(),
+          zohoStatus: 'Zoho kullanıcı aynasında bulunamadı (muhtemelen ayrıldı/silindi)',
+          exitDate: null,
+          zohoStatusRaw: null,
+          zohoRole: '',
+          email: '',
+          vanished: true,
+        });
+        continue;
+      }
+
       // ── Ayrılanlar ──
       // Kayıt silinmiyor, yalnızca is_active=false (geçmiş veriye bağlı).
-      // Yönetici rolleri de dahil: ayrılan bir takım lideri de girmemeli.
+      // Yönetici rolleri de dahil: ayrılan bir takım lideri de girmemiş.
       if (z && isLeaver(z) && u['is_active'] !== false) {
         leavers.push({
           username: u['Username'] || '',
