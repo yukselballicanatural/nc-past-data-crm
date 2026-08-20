@@ -2943,9 +2943,17 @@
         ? `&region=eq.${encodeURIComponent(getRegion(currentUser))}`
         : _tlScopeParam(TeamMap.aliasesFor(teamVal));
 
+      // Faz 1 (Clinic Planning) alarm tipleri henüz TEST aşamasında — bkz.
+      // admin.html'deki aynı notun aynısı: clinic-planning branch'inin
+      // preview'ı bunları gerçek veritabanına yazdı, kayıtlar siliniyor/
+      // kapatılmıyor ama canlı sitenin sorgusundan hariç tutuluyor.
+      const CLINIC_PLANNING_TEST_TYPES =
+        'hotel_missing,whatsapp_missing,interpreter_missing,exam_date_missing,' +
+        'consultant_missing_after_arrival,must_be_won,next_visit_date_missing';
       const PAGE = 500;
       const buildAlarmsUrl = (off) =>
-        `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc,id.asc&limit=${PAGE}&offset=${off}` + scopeParam;
+        `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc,id.asc&limit=${PAGE}&offset=${off}` +
+        `&alarm_type=not.in.(${CLINIC_PLANNING_TEST_TYPES})` + scopeParam;
 
       // İlk sayfayı toplam kayıt sayısıyla (Content-Range) birlikte çek,
       // geri kalan sayfaları sırayla değil paralel iste — büyük (RM) veri

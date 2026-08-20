@@ -3728,9 +3728,19 @@
         // DEALS_2026_Q ile dışlıyordu, alarm sorgusu dışlamıyordu — alarm-
         // engine.js artık bu takım için yeni alarm üretmiyor/açık olanları
         // kapatıyor ama bu satır ek güvenlik (defense-in-depth) olarak duruyor.
+        // Faz 1 (Clinic Planning) alarm tipleri henüz TEST aşamasında —
+        // clinic-planning branch'inin preview ortamı bunları GERÇEK
+        // veritabanına yazdı (branch yalnızca kodu izole ediyor, veritabanını
+        // değil). Kayıtları silmiyoruz/kapatmıyoruz (test tarafında hâlâ
+        // görünsün isteniyor), yalnızca CANLI sitenin sorgusundan hariç
+        // tutuyoruz. Faz 1 resmen main'e alınınca bu satır kaldırılacak.
+        const CLINIC_PLANNING_TEST_TYPES =
+          'hotel_missing,whatsapp_missing,interpreter_missing,exam_date_missing,' +
+          'consultant_missing_after_arrival,must_be_won,next_visit_date_missing';
         const ACTIVE_Q = '&status=' + encodeURIComponent(
           'in.(open,seen,in_progress,escalated,arrived,examined,processing,no_show)') +
-          '&alarm_type=neq.payment_tracking&team=neq.Profclinic';
+          '&alarm_type=neq.payment_tracking&team=neq.Profclinic' +
+          `&alarm_type=not.in.(${CLINIC_PLANNING_TEST_TYPES})`;
         const baseUrl = `${SUPABASE_URL}/rest/v1/alarms?order=created_at.desc,id.asc${regionQ}${ACTIVE_Q}&limit=${PAGE}`;
         const first = await fetch(`${baseUrl}&offset=0`, { headers: { ...H, Prefer: 'count=exact' } });
         if (!first.ok) throw new Error('HTTP ' + first.status);
