@@ -226,6 +226,10 @@ window.NCClinicChat = (function () {
       draftId:  uuid(),
       open:     false,
     };
+    // Geçmiş ikonunun davranışı DIŞARIDAN veriliyor: barındıran pencere
+    // bunu ayrı bir pencere açmak için DEĞİL, kendi içinde sohbet sayfasını
+    // yükseltmek için kullanıyor (kullanıcı talebi: yeni popup açılmasın).
+    const onHistory = ctx.onHistory || 'NCClinicChat.openThreadFromDock()';
     mount.innerHTML = `
       <div class="ncc-dock" id="nccDock">
         <span class="ncc-dock-aurora" aria-hidden="true"></span>
@@ -253,7 +257,7 @@ window.NCClinicChat = (function () {
             <p class="ncc-dock-status" id="nccDockStatus" data-empty="true">&nbsp;</p>
           </div>
           <div class="ncc-dock-actions">
-            <button type="button" class="ncc-ghost-btn" onclick="NCClinicChat.openThreadFromDock()"
+            <button type="button" class="ncc-ghost-btn" onclick="${esc(onHistory)}"
               title="${esc(_t('Sohbet geçmişi'))}" aria-label="${esc(_t('Sohbet geçmişi'))}">
               <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m8-2c0 4.418-4.03 8-9 8a9.8 9.8 0 01-4.15-.9L3 20l1.05-3.16A7.7 7.7 0 013 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>
             </button>

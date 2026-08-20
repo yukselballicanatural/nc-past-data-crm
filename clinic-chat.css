@@ -250,7 +250,7 @@
 
 /* ═══════════════ 2. SOHBET ═══════════════
    Aynı iskelet İKİ yerde kullanılıyor (bkz. clinic-chat.js renderChat):
-     a) deal penceresinin içinde, panel olarak  (.dm-pane[data-pane="chat"])
+     a) bir pencerenin içinde, yükselen sayfa olarak (.nc-chat-sheet)
      b) kendi başına açılan pencerede           (.ncc-thread-modal)
    .ncc-chat her iki durumda da kabını TAMAMEN doldurur; yükseklik kabı
    belirler — böylece tek stil iki bağlamda çalışıyor.                     */
@@ -437,79 +437,71 @@
   .ncc-chat-back, .ncc-send-btn, .ncc-chat-back svg { transition: none; }
 }
 
-/* ═══════════════ 2b. DEAL PENCERESİ: DETAY → SOHBET (YÜKSELEN KATMAN) ═══════════════
-   Kullanıcı talebi (aynen): "deal popup'ı var ya, sohbet geçmişini gör
-   diyince YUKARI DOĞRU efektli uzansın, deal popup'ını KAPLASIN chat, sonra
-   geri butonu koyalım chat'e sol yukarı, geri butonuna basınca deal popup'ına
-   dönsün".
+/* ═══════════════ 2b. PENCERE İÇİ SOHBET SAYFASI (.nc-chat-sheet) ═══════════════
+   Kullanıcı talebi (aynen): "mesaj ikonuna tıklayınca yukarı doğru chat
+   açılacak ve TÜM popup'ı kaplayacak, YENİ BİR POPUP AÇILMAYACAK — sanki
+   popup içinde bir sayfaymış gibi düşün."
 
-   Yani sohbet yana kayan bir kardeş panel DEĞİL: aynı pencerenin içinde
-   AŞAĞIDAN YUKARI yükselip deal detaylarının ÜZERİNİ kaplayan bir katman
-   (iOS "sheet" davranışı). Detaylar altta kalıyor — geride hafifçe küçülüp
-   soluyor, böylece sohbetin ÜSTTE olduğu ve geri dönüşün nereye olduğu belli.
+   Bu yüzden sohbet ayrı bir pencere değil, bulunduğu pencerenin İÇİNDE
+   aşağıdan yükselip tamamını kaplayan bir sayfa. AYNI mekanizma iki yerde
+   kullanılıyor (tek CSS, tek JS — bkz. team-leader.html ncSheetOpen):
+     • alarm penceresi → dock'taki geçmiş ikonu
+     • deal penceresi  → başlıktaki mesaj ikonu
 
-   İKİ TUZAK ve çözümleri:
+   TAM KAPLAMA: kabın 24px iç boşluğunu da örtmesi gerekiyor, yoksa
+   kenarlarda eski içerik şeridi görünüyor. Dört yanı 0'a sabitlenmiş
+   mutlak konumlu bir öğeye negatif kenar boşluğu verilince kutu o kadar
+   BÜYÜR (yükseklik = kap − 0 − 0 + 24 + 24) ve iç boşluğun üstüne taşar;
+   kabın overflow:hidden + border-radius'u da köşeleri temiz kesiyor.
 
-   1) YÜKSEKLİK: CSS `height:auto` değerini animasyonlayamaz, o yüzden yığının
-      yüksekliği JS'te ölçülüp yazılıyor (bkz. team-leader.html dmSetView).
-      Sohbet katmanına CSS'te KESİN yükseklik veriliyor (inset:0 DEĞİL): aksi
-      halde yüksekliğini kabından alır, kap da yüksekliğini ondan → döngü.
-
-   2) HAYALET KAYDIRMA: katman kapalıyken translateY(100%) ile yığının ALTINDA
-      duruyor. Yığın `overflow:hidden` olmasa bu taşma, pencerenin kendi
-      dikey kaydırmasına eklenip detay görünümünde sahte bir kaydırma
-      yaratırdı. overflow:hidden hem bunu keser hem de katmanın "aşağıdan
-      yükselip görünür olması" efektinin maskesi olur — ikisi aynı çözüm.  */
-.dm-box[data-view="chat"] { overflow: hidden; }   /* sohbette dış kaydırma yok, dizi kendi içinde kayar */
-
-.dm-stack {
-  position: relative;
-  overflow: hidden;                                  /* bkz. yukarıdaki (2) */
-  transition: height .46s cubic-bezier(.22, 1, .36, 1);
+   Sayfa açıkken kabın kendi dikey kaydırması KAPATILIYOR: açıkken kaydırma
+   kalırsa mutlak konumlu sayfa içerikle birlikte kayar ve kaplama bozulur.
+   Açmadan önce kap ayrıca en üste alınıyor (scrollTop = 0).               */
+.modal-box[data-sheet="open"] {
+  overflow: hidden;
+  /* "Yukarı doğru uzansın" — kısa bir pencerede sohbet sıkışmasın. */
+  min-height: min(70vh, 600px);
+  transition: min-height .46s cubic-bezier(.22, 1, .36, 1);
 }
 
-/* Detay paneli akışta kalır — yüksekliğini kendi içeriği belirler. */
-.dm-pane[data-pane="details"] {
-  position: relative;
-  transform-origin: 50% 0;
-  transition: opacity .28s ease, transform .46s cubic-bezier(.22, 1, .36, 1), filter .28s ease;
-}
-/* Sohbet açıkken detaylar ARKADA kalır. */
-.dm-box[data-view="chat"] .dm-pane[data-pane="details"] {
-  transform: scale(.975); opacity: .28; filter: blur(1.5px); pointer-events: none;
-}
-
-/* ── Yükselen sohbet katmanı ──────────────────────────────────────────── */
-.dm-pane[data-pane="chat"] {
-  position: absolute; left: 0; right: 0; top: 0;
-  height: min(66vh, 560px);          /* KESİN yükseklik — bkz. yukarıdaki (1) */
+.nc-chat-sheet {
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  margin: -24px;                       /* kabın iç boşluğunu da kapla */
+  padding: 18px;
   box-sizing: border-box;
-  padding: 15px;
-  border-radius: 15px;
+  z-index: 3;
+  border-radius: 16px;
   background: linear-gradient(180deg, #101829 0%, #0b1120 100%);
-  border: 1px solid #1f2b47;
-  box-shadow: 0 -8px 34px -12px rgba(0, 0, 0, .85);
-  transform: translateY(100%);       /* kapalı: yığının hemen altında */
+  box-shadow: 0 -10px 40px -14px rgba(0, 0, 0, .85);
+  transform: translateY(100%);         /* kapalı: pencerenin altında */
   opacity: 0; pointer-events: none;
   transition: transform .46s cubic-bezier(.22, 1, .36, 1), opacity .26s ease;
 }
-.dm-box[data-view="chat"] .dm-pane[data-pane="chat"] {
+.modal-box[data-sheet="open"] .nc-chat-sheet {
   transform: translateY(0); opacity: 1; pointer-events: auto;
 }
-.dm-pane[data-pane="chat"] .ncc-chat { height: 100%; }
+.nc-chat-sheet .ncc-chat { height: 100%; }
 
-/* Katmanın üst kenarında ince ışık — "bu ayrı bir yüzey" ipucu. */
-.dm-pane[data-pane="chat"]::after {
-  content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 1px;
+/* Sayfanın üst kenarında ince accent ışık — ayrı bir yüzey olduğu okunsun. */
+.nc-chat-sheet::after {
+  content: ''; position: absolute; top: 0; left: 18px; right: 18px; height: 1px;
   border-radius: 1px; pointer-events: none;
   background: linear-gradient(90deg, transparent, rgba(99, 102, 241, .55) 28%,
               rgba(45, 212, 191, .45) 72%, transparent);
 }
 
+/* Sayfa açıkken altta kalan içerik: hafifçe geriye çekilir. Sayfa zaten
+   opak olduğu için bu yalnızca geçiş sırasında (yükselirken) görünür ve
+   "üste bir katman geldi" hissini verir. */
+.modal-box[data-sheet="open"] > *:not(.nc-chat-sheet) {
+  transition: transform .46s cubic-bezier(.22, 1, .36, 1), opacity .28s ease;
+  transform: scale(.985); opacity: .5;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .dm-stack,
-  .dm-pane[data-pane="details"],
-  .dm-pane[data-pane="chat"] { transition: none; }
+  .nc-chat-sheet,
+  .modal-box[data-sheet="open"],
+  .modal-box[data-sheet="open"] > *:not(.nc-chat-sheet) { transition: none; }
 }
 
 /* ═══════════════ 3. "MESAJLAR" İKON DÜĞMESİ (deal penceresi) ═══════════════ */
@@ -716,15 +708,15 @@ html[data-theme="light"] .ncc-msg-row[data-mine="true"] .ncc-bubble {
 /* Yükselen sohbet katmanı — açık temada cam yüzey. Detaylar arkada
    bulanıklaştığı için katmanın ARKASI KAPALI olmalı (yarı saydam bırakılırsa
    altındaki metin sızıyor ve sohbet okunmuyor): blur yerine opak cam. */
-html[data-theme="light"] .dm-pane[data-pane="chat"] {
+html[data-theme="light"] .nc-chat-sheet {
   background: var(--g-3);
   -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
   backdrop-filter: blur(var(--blur)) saturate(var(--sat));
   border-color: var(--edge-soft);
   box-shadow: 0 -8px 30px -14px rgba(23, 43, 99, .35), var(--sheen);
 }
-html[data-theme="light"] .dm-box[data-view="chat"] .dm-pane[data-pane="details"] {
-  opacity: .22;
+html[data-theme="light"] .modal-box[data-sheet="open"] > *:not(.nc-chat-sheet) {
+  opacity: .4;
 }
 html[data-theme="light"] .ncc-empty-ico {
   background: color-mix(in srgb, var(--accent-2) 12%, transparent);
