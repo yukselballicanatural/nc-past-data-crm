@@ -19,6 +19,9 @@ window.AlarmEngine = (function () {
 
   let THRESHOLDS = buildThresholds([90, 45, 30, 15, 7, 3]);
   let MISSING_REPEAT_DAYS = 3;
+  // Faz 2 (Clinic Planning Reminder/Escalation) — saat cinsinden eşikler.
+  // [24,48,72] → 1=Hatırlatma, 2=TL Eskalasyonu, 3=Yönetim Eskalasyonu.
+  let CLINIC_ESCALATION_HOURS = [24, 48, 72];
 
   // Sistem geneli kesim: yalnızca created_time 2026 ve sonrası olan deallerden
   // alarm üret. (Önceki yıllar sistemden tamamen gizleniyor.)
@@ -40,6 +43,10 @@ window.AlarmEngine = (function () {
         if (row.key === 'missing_repeat_days') {
           const n = parseInt(row.value);
           if (!isNaN(n) && n > 0) MISSING_REPEAT_DAYS = n;
+        }
+        if (row.key === 'clinic_planning_escalation_hours') {
+          const nums = String(row.value).split(',').map(s => parseInt(s.trim())).filter(n => !isNaN(n) && n > 0);
+          if (nums.length === 3) CLINIC_ESCALATION_HOURS = nums.sort((a, b) => a - b);
         }
       }
     } catch (e) { /* tablo henüz oluşturulmamış olabilir — varsayılanlarla devam */ }
@@ -794,6 +801,60 @@ window.AlarmEngine = (function () {
     return closed;
   }
 
+  // Faz 2 (Clinic Planning Reminder/Escalation) — CLINIC_PLANNING_ROADMAP.md
+  // Bölüm 5. Açık kalan Clinic Planning alarmlarını, ne kadar süredir açık
+  // olduklarına göre kademeli olarak eskale eder:
+  //   >24s → 1 Hatırlatma, >48s → 2 TL Eskalasyonu, >72s → 3 Yönetim Eskalasyonu.
+  // Seviye yalnızca YÜKSELİR (alarm tekrar "taze" görünse bile geri düşmez) —
+  // escalation_level kolonu yoksa (SQL migration çalıştırılmamışsa) PATCH
+  // sessizce başarısız olur, motor bunu bir hata saymaz (kolon opsiyonel).
+  async function escalateClinicPlanningAlarms(BASE, KEY) {
+    const H  = { apikey: KEY, Authorization: 'Bearer ' + KEY };
+    const PH = { ...H, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
+    const [H24, H48, H72] = CLINIC_ESCALATION_HOURS;
+
+    const r = await fetch(
+      `${BASE}/rest/v1/alarms?alarm_type=in.(${CLINIC_PLANNING_TYPES.join(',')})` +
+      `&status=in.(open,seen,in_progress,escalated)` +
+      `&select=id,created_at,escalation_level,status`,
+      { headers: H }
+    );
+    if (!r.ok) return 0;   // escalation_level kolonu yoksa PostgREST 400 döner — sessizce atla
+    const rows = await r.json();
+    if (!Array.isArray(rows) || !rows.length) return 0;
+
+    const now = Date.now();
+    const byLevel = new Map();   // hedef seviye → id listesi
+    for (const a of rows) {
+      const opened = new Date(a.created_at).getTime();
+      if (isNaN(opened)) continue;
+      const hours = (now - opened) / 3600000;
+      const target = hours >= H72 ? 3 : hours >= H48 ? 2 : hours >= H24 ? 1 : 0;
+      const current = Number(a.escalation_level) || 0;
+      if (target <= current) continue;   // seviye yalnızca yükselir
+      if (!byLevel.has(target)) byLevel.set(target, []);
+      byLevel.get(target).push(a.id);
+    }
+    if (!byLevel.size) return 0;
+
+    let updated = 0;
+    for (const [level, ids] of byLevel) {
+      // Seviye 2 ve 3: mevcut manuel "Eskale Et" ile AYNI status kullanılır
+      // (status='escalated') — panel zaten bu rengi/etiketi biliyor. Seviye 1
+      // (Hatırlatma) status'e dokunmaz, yalnızca escalation_level'ı işaretler.
+      const payload = { escalation_level: level };
+      if (level >= 2) payload.status = 'escalated';
+      for (let i = 0; i < ids.length; i += 100) {
+        const idList = ids.slice(i, i + 100).join(',');
+        const pr = await fetch(`${BASE}/rest/v1/alarms?id=in.(${idList})`, {
+          method: 'PATCH', headers: PH, body: JSON.stringify(payload),
+        });
+        if (pr.ok) updated += Math.min(100, ids.length - i);
+      }
+    }
+    return updated;
+  }
+
   // Stage'i Won VE bakiyesi tamamen ödenmiş (ödenen >= tutar) deallerin hâlâ
   // açık kalan TÜM alarmlarını kapat — iş tamamlandı, hatırlatmaya gerek yok.
   // fetchActiveDeals() Won'u zaten dışarıda bıraktığı için (ACTIVE_STAGES'e
@@ -1206,8 +1267,11 @@ window.AlarmEngine = (function () {
     // geçerli değilse kapat (hotel_missing, whatsapp_missing, vb.)
     if (onProgress) onProgress(_t('Clinic Planning alarmları güncelleniyor...'));
     const clinicPlanningClosedCount = await closeResolvedClinicPlanningAlarms(BASE, KEY, deals);
-    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deleted: deletedCount, profclinicClosed: profclinicClosedCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, dealTeamSynced: dealTeamSyncedCount, retyped: retypedCount, clinicPlanningClosed: clinicPlanningClosedCount, ...result };
+    // Faz 2: açık kalan Clinic Planning alarmlarını süresine göre eskale et.
+    if (onProgress) onProgress(_t('Clinic Planning alarmları eskale ediliyor...'));
+    const clinicPlanningEscalatedCount = await escalateClinicPlanningAlarms(BASE, KEY);
+    return { deals: deals.length, generated: newAlarms.length, closed: closedCount, cancelled: cancelledCount, deleted: deletedCount, profclinicClosed: profclinicClosedCount, deduped: dedupCount, wonPaid: wonPaidCount, staleDateClosed: staleDateCount, outOfScope: outOfScopeCount, synced: syncedCount, dealTeamSynced: dealTeamSyncedCount, retyped: retypedCount, clinicPlanningClosed: clinicPlanningClosedCount, clinicPlanningEscalated: clinicPlanningEscalatedCount, ...result };
   }
 
-  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeAlarmsForDeletedDeals, closeAlarmsForProfclinic, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, closeResolvedClinicPlanningAlarms, syncAlarmDealFields, syncDealTeamFields, syncAlarmTypes };
+  return { run, computeAlarms, daysUntil, getRegion, ACTIVE_STAGES, closeStaleArrivalMissing, closeAlarmsForCancelledDeals, closeAlarmsForDeletedDeals, closeAlarmsForProfclinic, closeDuplicateAlarms, closeAlarmsForWonPaidDeals, closeStaleDateAlarms, closeOutOfScopeAlarms, closeResolvedClinicPlanningAlarms, escalateClinicPlanningAlarms, syncAlarmDealFields, syncDealTeamFields, syncAlarmTypes };
 })();
