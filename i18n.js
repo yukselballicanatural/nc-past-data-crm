@@ -545,6 +545,7 @@
     'Geri': 'Back',
     'Deal detayına dön': 'Back to deal details',
     'Mesaj yaz... (görsel için Ctrl+V)': 'Write a message... (Ctrl+V for an image)',
+    'Görsel ekle (JPG/PNG/GIF/WebP, en fazla 3 MB)': 'Attach an image (JPG/PNG/GIF/WebP, max 3 MB)',
     'İlk mesajı yazarak sohbeti başlatın.': 'Write the first message to start the conversation.',
     // 'Bugün' / 'Dün' (gün ayırıcı etiketleri) sözlükte AŞAĞIDA zaten var —
     // burada tekrar tanımlamıyoruz.

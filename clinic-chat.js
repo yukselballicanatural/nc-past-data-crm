@@ -380,11 +380,35 @@ window.NCClinicChat = (function () {
     if (icon) { icon.innerHTML = _ICO_CHAT; icon.dataset.morph = 'chat'; }
   }
 
+  // NCAttach.renderWidget yerine KOMPAKT ek düğmesi.
+  //
+  // NEDEN: attach-util.js'in kendi widget'ı üç parça basıyor — etiketli
+  // düğme + "JPG/PNG/GIF/WebP, en fazla 3 MB" açıklaması + önizleme kabı.
+  // Bu, alarm/deal penceresindeki dar araç çubuğuna sığmayıp klavye
+  // ipucunun üzerine taşıyordu (kullanıcı ekran görüntüsü, 2026-08-20).
+  // Yükleme/silme/önizlemenin KENDİSİ yine NCAttach'in API'siyle yapılıyor
+  // (handleFiles/load/bindPaste); yalnızca tetikleyicinin görünümü bizim.
+  //
+  // accept listesi attach-util.js'teki ACCEPT ile AYNI olmalı — o sabit
+  // dışa aktarılmadığı için burada tekrarlanıyor.
+  const _ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
+
+  function _attachWidget(draftId, inputId, mountId) {
+    return `
+      <label class="ncc-attach-btn" for="${inputId}"
+        title="${esc(_t('Görsel ekle (JPG/PNG/GIF/WebP, en fazla 3 MB)'))}">
+        <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+      </label>
+      <input type="file" id="${inputId}" accept="${_ACCEPT}" multiple style="display:none"
+        onchange="NCAttach.handleFiles('${attr(draftId)}', '${mountId}', this.files); this.value='';">
+      <span class="ncc-attach-mount" id="${mountId}"></span>`;
+  }
+
   function _mountDockAttach() {
     if (!_dock || !window.NCAttach) return;
     const slot = document.getElementById('nccDockAttachSlot');
     if (!slot) return;
-    slot.innerHTML = NCAttach.renderWidget(`'${attr(_dock.draftId)}'`, 'nccDockFile', 'nccDockAttachMount');
+    slot.innerHTML = _attachWidget(_dock.draftId, 'nccDockFile', 'nccDockAttachMount');
     NCAttach.load(_dock.draftId, 'nccDockAttachMount');
     NCAttach.bindPaste('nccDockInput', _dock.draftId, 'nccDockAttachMount');
   }
@@ -540,7 +564,7 @@ window.NCClinicChat = (function () {
     const id = _ids(_thread.pfx);
     const slot = document.getElementById(id.attach);
     if (!slot) return;
-    slot.innerHTML = NCAttach.renderWidget(`'${attr(_thread.draftId)}'`, id.file, id.mount);
+    slot.innerHTML = _attachWidget(_thread.draftId, id.file, id.mount);
     NCAttach.load(_thread.draftId, id.mount);
     NCAttach.bindPaste(id.input, _thread.draftId, id.mount);
   }
@@ -608,9 +632,11 @@ window.NCClinicChat = (function () {
     if (!rows.length) {
       body.innerHTML = `
         <div class="ncc-chat-empty">
-          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m8-2c0 4.418-4.03 8-9 8a9.8 9.8 0 01-4.15-.9L3 20l1.05-3.16A7.7 7.7 0 013 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>
-          <div>${esc(_t('Bu deal için henüz mesaj yok.'))}</div>
-          <span>${esc(_t('İlk mesajı yazarak sohbeti başlatın.'))}</span>
+          <span class="ncc-empty-ico">
+            <svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m8-2c0 4.418-4.03 8-9 8a9.8 9.8 0 01-4.15-.9L3 20l1.05-3.16A7.7 7.7 0 013 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>
+          </span>
+          <div class="ncc-empty-title">${esc(_t('Bu deal için henüz mesaj yok.'))}</div>
+          <span class="ncc-empty-sub">${esc(_t('İlk mesajı yazarak sohbeti başlatın.'))}</span>
         </div>`;
       return;
     }

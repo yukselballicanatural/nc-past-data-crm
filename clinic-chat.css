@@ -115,7 +115,23 @@
   display: flex; align-items: center; gap: 10px; padding: 8px 2px 0;
   min-height: 26px; flex-wrap: wrap;
 }
-.ncc-attach-slot { display: inline-flex; align-items: center; min-width: 0; }
+/* Ek yuvası: kompakt ikon düğmesi + küçük resim şeridi. Şerit taşarsa
+   YATAY kayar — dikey büyüyüp composer'ı itmesin. */
+.ncc-attach-slot { display: inline-flex; align-items: center; gap: 7px; min-width: 0; }
+.ncc-attach-btn {
+  width: 28px; height: 28px; flex-shrink: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 9px; border: 1px solid #1f2a44;
+  background: #131c30; color: #7b879d;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.ncc-attach-btn svg { width: 14px; height: 14px; }
+.ncc-attach-btn:hover { background: #1c2740; color: #e6ebf5; border-color: #2a3550; }
+.ncc-attach-mount {
+  display: flex; align-items: center; gap: 5px;
+  min-width: 0; overflow-x: auto; overflow-y: hidden;
+}
+.ncc-attach-mount:empty { display: none; }
 .ncc-kbd-hint {
   margin-left: auto; display: inline-flex; align-items: center; gap: 4px;
   font-size: 9.5px; color: #3d4759; white-space: nowrap;
@@ -328,13 +344,25 @@
 .ncc-msg-dot { opacity: .55; }
 .ncc-msg-attach { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; }
 
+/* Boş durum — önceden dev bir gri boşlukta soluk bir ikon vardı ve açık
+   temada tamamen kayboluyordu. Artık ikon çerçeveli bir daire içinde,
+   metinler net kontrastta. */
 .ncc-chat-empty {
-  min-height: 180px; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 8px;
-  color: #46536b; font-size: 12.5px; text-align: center; padding: 20px 24px;
+  height: 100%; min-height: 160px;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 4px;
+  text-align: center; padding: 20px 24px;
 }
-.ncc-chat-empty svg { width: 36px; height: 36px; opacity: .35; margin-bottom: 2px; }
-.ncc-chat-empty span { font-size: 10.5px; color: #3d4759; }
+.ncc-empty-ico {
+  width: 54px; height: 54px; border-radius: 17px; margin-bottom: 12px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(99, 102, 241, .12);
+  border: 1px solid rgba(99, 102, 241, .26);
+  color: #818cf8;
+}
+.ncc-empty-ico svg { width: 25px; height: 25px; }
+.ncc-empty-title { font-size: 12.5px; font-weight: 650; color: #94a3b8; }
+.ncc-empty-sub { font-size: 11px; color: #5b6780; }
 
 /* ── Alt composer ────────────────────────────────────────────────────── */
 .ncc-chat-foot { flex-shrink: 0; padding-top: 12px; margin-top: 4px; border-top: 1px solid #1c2740; }
@@ -698,6 +726,17 @@ html[data-theme="light"] .dm-pane[data-pane="chat"] {
 html[data-theme="light"] .dm-box[data-view="chat"] .dm-pane[data-pane="details"] {
   opacity: .22;
 }
+html[data-theme="light"] .ncc-empty-ico {
+  background: color-mix(in srgb, var(--accent-2) 12%, transparent);
+  border-color: color-mix(in srgb, var(--accent-2) 28%, transparent);
+  color: var(--accent-2);
+}
+html[data-theme="light"] .ncc-empty-title { color: var(--ink-2); }
+html[data-theme="light"] .ncc-empty-sub { color: var(--ink-3); }
+html[data-theme="light"] .ncc-attach-btn {
+  background: var(--g-2); border-color: var(--edge-soft); color: var(--ink-2);
+}
+html[data-theme="light"] .ncc-attach-btn:hover { background: var(--g-3); color: var(--ink); }
 
 /* ── Mobil ─────────────────────────────────────────────────────────────── */
 @media (max-width: 560px) {
