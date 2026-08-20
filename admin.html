@@ -3504,13 +3504,16 @@
         'arrival_missing':    { label:I18N.t('Tarih Eksik'),         color:'#f87171' },
         'today_patient':      { label:I18N.t('Bugün Gelecek'),       color:'#4ade80' },
         'no_show':            { label:I18N.t('Gelemedi'),            color:'#f87171' },
-        'hotel_missing':                    { label:I18N.t('Otel Eksik'),                 color:'#f87171' },
-        'whatsapp_missing':                 { label:I18N.t('WhatsApp Grubu Eksik'),       color:'#f87171' },
-        'interpreter_missing':              { label:I18N.t('Tercüman Eksik'),             color:'#f87171' },
-        'exam_date_missing':                { label:I18N.t('Muayene Tarihi Eksik'),       color:'#f87171' },
-        'consultant_missing_after_arrival': { label:I18N.t('Danışman Eksik'),             color:'#f87171' },
+        // Renkler team-leader.html'deki aynı tipin rozetiyle BİREBİR aynı
+        // (iki panel arasında tutarlılık) — altısı da aynı kırmızıyken
+        // birbirinden ayırt edilemiyorlardı.
+        'hotel_missing':                    { label:I18N.t('Otel Eksik'),                 color:'#fb923c' },
+        'whatsapp_missing':                 { label:I18N.t('WhatsApp Grubu Eksik'),       color:'#4ade80' },
+        'interpreter_missing':              { label:I18N.t('Tercüman Eksik'),             color:'#60a5fa' },
+        'exam_date_missing':                { label:I18N.t('Muayene Tarihi Eksik'),       color:'#a78bfa' },
+        'consultant_missing_after_arrival': { label:I18N.t('Danışman Eksik'),             color:'#f472b6' },
         'must_be_won':                      { label:I18N.t('Kazanılmalı'),                color:'#fbbf24' },
-        'next_visit_date_missing':          { label:I18N.t('Sonraki Vizit Tarihi Eksik'), color:'#f87171' },
+        'next_visit_date_missing':          { label:I18N.t('Sonraki Vizit Tarihi Eksik'), color:'#22d3ee' },
       };
       if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(type)) {
         return { label: I18N.t('Gecikmiş'), color:'#f87171' };

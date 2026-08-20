@@ -573,20 +573,16 @@
       <button class="tab-pill" id="atab-approaching" onclick="switchAlarmTab('approaching')">Yaklaşan <span id="cnt-approaching" class="badge-cnt" style="background:rgba(251,146,60,0.2);color:#fb923c">0</span></button>
       <button class="tab-pill" id="atab-missing" onclick="switchAlarmTab('missing')">Eksik Tarih <span id="cnt-missing" class="badge-cnt" style="background:rgba(248,113,113,0.2);color:#f87171">0</span></button>
       <button class="tab-pill" id="atab-overdue" onclick="switchAlarmTab('overdue')">Gecikmiş <span id="cnt-overdue" class="badge-cnt" style="background:rgba(248,113,113,0.2);color:#f87171">0</span></button>
-      <!-- Faz 1 (Clinic Planning): yedi yeni alarm tipi TEK sekmede — ayrı
-           yedi pill sekme satırını kullanılamaz hale getirirdi. Belirli bir
-           tipe inmek için hemen yanındaki "Clinic Tipi" dropdown'ı var. -->
-      <button class="tab-pill" id="atab-clinic" onclick="switchAlarmTab('clinic')">Clinic <span id="cnt-clinic" class="badge-cnt" style="background:rgba(129,140,248,0.2);color:#818cf8">0</span></button>
-      <select id="alarmClinicTypeFilter" class="filter-sel" onchange="updateTabCounts();renderAlarms()" style="width:190px;display:none" title="Clinic alarm tipi">
-        <option value="">Clinic Tipi: Tümü</option>
-        <option value="hotel_missing">Otel Eksik</option>
-        <option value="whatsapp_missing">WhatsApp Grubu Eksik</option>
-        <option value="interpreter_missing">Tercüman Eksik</option>
-        <option value="exam_date_missing">Muayene Tarihi Eksik</option>
-        <option value="consultant_missing_after_arrival">Danışman Eksik</option>
-        <option value="must_be_won">Kazanılmalı</option>
-        <option value="next_visit_date_missing">Sonraki Vizit Tarihi Eksik</option>
-      </select>
+      <!-- Faz 1 (Clinic Planning) — diğer sekmelerle aynı desende, her tip
+           kendi pill'i. Renkler alarmTypeMeta'daki rozet renkleriyle BİREBİR
+           aynı: kullanıcı tabloda gördüğü rozetin rengini filtrede de görüyor. -->
+      <button class="tab-pill" id="atab-hotel" onclick="switchAlarmTab('hotel')">Otel Eksik <span id="cnt-hotel" class="badge-cnt" style="background:rgba(251,146,60,0.2);color:#fb923c">0</span></button>
+      <button class="tab-pill" id="atab-whatsapp" onclick="switchAlarmTab('whatsapp')">WhatsApp Eksik <span id="cnt-whatsapp" class="badge-cnt" style="background:rgba(74,222,128,0.2);color:#4ade80">0</span></button>
+      <button class="tab-pill" id="atab-interpreter" onclick="switchAlarmTab('interpreter')">Tercüman Eksik <span id="cnt-interpreter" class="badge-cnt" style="background:rgba(96,165,250,0.2);color:#60a5fa">0</span></button>
+      <button class="tab-pill" id="atab-examdate" onclick="switchAlarmTab('examdate')">Muayene Tarihi Eksik <span id="cnt-examdate" class="badge-cnt" style="background:rgba(167,139,250,0.2);color:#a78bfa">0</span></button>
+      <button class="tab-pill" id="atab-consultant" onclick="switchAlarmTab('consultant')">Danışman Eksik <span id="cnt-consultant" class="badge-cnt" style="background:rgba(244,114,182,0.2);color:#f472b6">0</span></button>
+      <button class="tab-pill" id="atab-mustwin" onclick="switchAlarmTab('mustwin')">Kazanılmalı <span id="cnt-mustwin" class="badge-cnt" style="background:rgba(251,191,36,0.2);color:#fbbf24">0</span></button>
+      <button class="tab-pill" id="atab-nextvisit" onclick="switchAlarmTab('nextvisit')">Sonraki Vizit Eksik <span id="cnt-nextvisit" class="badge-cnt" style="background:rgba(34,211,238,0.2);color:#22d3ee">0</span></button>
     </div>
 
     <!-- Loading -->
@@ -2335,13 +2331,16 @@
       'arrival_missing':     { label:I18N.t('Tarih Eksik'),         bg:'#450a0a', color:'#f87171' },
       'today_patient':       { label:I18N.t('Bugün Gelecek'),       bg:'#052e16', color:'#4ade80' },
       'no_show':             { label:I18N.t('Gelemedi'),            bg:'#450a0a', color:'#f87171' },
-      'hotel_missing':                    { label:I18N.t('Otel Eksik'),                 bg:'#450a0a', color:'#f87171' },
-      'whatsapp_missing':                 { label:I18N.t('WhatsApp Grubu Eksik'),       bg:'#450a0a', color:'#f87171' },
-      'interpreter_missing':              { label:I18N.t('Tercüman Eksik'),             bg:'#450a0a', color:'#f87171' },
-      'exam_date_missing':                { label:I18N.t('Muayene Tarihi Eksik'),       bg:'#450a0a', color:'#f87171' },
-      'consultant_missing_after_arrival': { label:I18N.t('Danışman Eksik'),             bg:'#450a0a', color:'#f87171' },
+      // Renkler sekme pill'lerindeki rozet renkleriyle BİREBİR aynı — altı
+      // tipin hepsi aynı kırmızı olunca ne tabloda ne filtre satırında
+      // birbirinden ayırt edilemiyordu.
+      'hotel_missing':                    { label:I18N.t('Otel Eksik'),                 bg:'#431407', color:'#fb923c' },
+      'whatsapp_missing':                 { label:I18N.t('WhatsApp Grubu Eksik'),       bg:'#052e16', color:'#4ade80' },
+      'interpreter_missing':              { label:I18N.t('Tercüman Eksik'),             bg:'#1e3a5f', color:'#60a5fa' },
+      'exam_date_missing':                { label:I18N.t('Muayene Tarihi Eksik'),       bg:'#2e1065', color:'#a78bfa' },
+      'consultant_missing_after_arrival': { label:I18N.t('Danışman Eksik'),             bg:'#500724', color:'#f472b6' },
       'must_be_won':                      { label:I18N.t('Kazanılmalı'),                bg:'#451a03', color:'#fbbf24' },
-      'next_visit_date_missing':          { label:I18N.t('Sonraki Vizit Tarihi Eksik'), bg:'#450a0a', color:'#f87171' },
+      'next_visit_date_missing':          { label:I18N.t('Sonraki Vizit Tarihi Eksik'), bg:'#083344', color:'#22d3ee' },
     };
     if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(type)) {
       return { label: I18N.t('Gecikmiş'), bg:'#450a0a', color:'#f87171' };
@@ -2398,16 +2397,20 @@
     return `<span style="${base};color:#60a5fa">${days} ${gun}</span>`;
   }
 
-  // Faz 1 (Clinic Planning) alarm tipleri — hızlı geçiş sekmesi ve tip
-  // dropdown'ı bu listeden besleniyor. TEK sekme altında toplandılar:
-  // yedi ayrı pill eklemek sekme satırını kullanılamaz hale getirirdi
-  // (mevcut "Yaklaşan" sekmesi de iki tipi birlikte gösteriyor). Belirli
-  // bir tipe inmek için yanındaki "Clinic Tipi" dropdown'ı var.
-  const CLINIC_TAB_TYPES = [
-    'hotel_missing', 'whatsapp_missing', 'interpreter_missing', 'exam_date_missing',
-    'consultant_missing_after_arrival', 'must_be_won', 'next_visit_date_missing',
-  ];
-  const CLINIC_TAB_SET = new Set(CLINIC_TAB_TYPES);
+  // Faz 1 (Clinic Planning) — sekme anahtarı → alarm_type eşlemesi.
+  // Her tip diğer sekmelerle aynı desende KENDİ pill'ine sahip; sekme
+  // anahtarları kısa tutuldu (id'ler atab-*/cnt-* olarak türetiliyor).
+  // filterAlarms ve updateTabCounts bu tek listeden besleniyor — sekme
+  // eklemek/çıkarmak için yalnızca burası ve HTML'deki pill değişir.
+  const CLINIC_TAB_TYPE = {
+    hotel:      'hotel_missing',
+    whatsapp:   'whatsapp_missing',
+    interpreter:'interpreter_missing',
+    examdate:   'exam_date_missing',
+    consultant: 'consultant_missing_after_arrival',
+    mustwin:    'must_be_won',
+    nextvisit:  'next_visit_date_missing',
+  };
 
   // ── Alarm tablosunu filtrele ─────────────────────────────────────
   function filterAlarms(tab) {
@@ -2417,13 +2420,16 @@
       // Payment Takip artık geçerli bir alarm tipi sayılmıyor — geçmiş
       // kayıtları da dahil hiçbir yerde (Kapatılan Alarmlar raporu dahil) gösterilmesin.
       if (a.alarm_type === 'payment_tracking') return false;
+      // Clinic Planning sekmeleri — her biri tek bir alarm tipini süzer.
+      if (CLINIC_TAB_TYPE[tab]) {
+        return a.alarm_type === CLINIC_TAB_TYPE[tab] && activeStatuses.has(a.status);
+      }
       switch(tab) {
         case 'all':         return activeStatuses.has(a.status);
         case 'open':        return AlarmStatus.isOpen(a.status);
         case 'today':       return isToday(a) && (activeStatuses.has(a.status) || a.status === 'no_show');
         case 'approaching': return ['arrival_approaching','visit_approaching'].includes(a.alarm_type) && activeStatuses.has(a.status) && (liveDaysRemaining(a) || 0) > 0;
         case 'missing':     return a.alarm_type === 'arrival_missing' && activeStatuses.has(a.status);
-        case 'clinic':      return CLINIC_TAB_SET.has(a.alarm_type) && activeStatuses.has(a.status);
         case 'overdue':     return isOverdue(a);
         case 'noshow':      return a.status === 'no_show';
         case 'cancelled':   return a.status === 'cancelled';
@@ -2543,12 +2549,6 @@
     const thF = document.getElementById('alarmThreshFilter')?.value || '';
     if (thF) data = data.filter(a => String(liveThreshBucket(a)) === thF);
 
-    // Clinic alarm tipi (Faz 1) — yalnızca Clinic sekmesinde görünür, ama
-    // filtre burada koşulsuz uygulanıyor: sekme değişince dropdown gizlenmekle
-    // birlikte SIFIRLANDIĞI için (bkz. switchAlarmTab) diğer sekmelerde etkisi
-    // olmuyor. Böylece "gizli ama hâlâ süzen" bir filtre tuzağı oluşmuyor.
-    const clinicTypeF = document.getElementById('alarmClinicTypeFilter')?.value || '';
-    if (clinicTypeF) data = data.filter(a => a.alarm_type === clinicTypeF);
 
     // Konsültasyon/Seyahat Tarihi aralığı (G2) — deal'in gerçek arrival_date'i dealFinanceMap'ten
     const arrFrom = document.getElementById('alarmArrFrom')?.value || '';
@@ -2800,12 +2800,16 @@
       today:      applyExtraAlarmFilters(filterAlarms('today')).length,
       approaching:applyExtraAlarmFilters(filterAlarms('approaching')).length,
       missing:    applyExtraAlarmFilters(filterAlarms('missing')).length,
-      clinic:     applyExtraAlarmFilters(filterAlarms('clinic')).length,
       payment:    applyExtraAlarmFilters(filterAlarms('payment')).length,
       overdue:    applyExtraAlarmFilters(filterAlarms('overdue')).length,
       noshow:     applyExtraAlarmFilters(filterAlarms('noshow')).length,
       cancelled:  applyExtraAlarmFilters(filterAlarms('cancelled')).length,
     };
+    // Clinic Planning sekmeleri — tek listeden türetiliyor (bkz. CLINIC_TAB_TYPE),
+    // her yeni tip için burayı elle güncellemek gerekmiyor.
+    Object.keys(CLINIC_TAB_TYPE).forEach(k => {
+      counts[k] = applyExtraAlarmFilters(filterAlarms(k)).length;
+    });
     Object.entries(counts).forEach(([k,v]) => {
       const el = document.getElementById('cnt-' + k);
       if (el) el.textContent = v;
@@ -2867,14 +2871,6 @@
       const t = b.id.replace('atab-','');
       b.classList.toggle('active', t === tab);
     });
-    // Clinic tipi dropdown'ı yalnızca Clinic sekmesinde görünür. Sekmeden
-    // çıkarken SIFIRLANIYOR: gizli kalıp diğer sekmeleri sessizce süzmesi
-    // teşhis edilemez bir "hiç sonuç yok" durumuna yol açardı.
-    const ctf = document.getElementById('alarmClinicTypeFilter');
-    if (ctf) {
-      if (tab === 'clinic') ctf.style.display = '';
-      else { ctf.style.display = 'none'; ctf.value = ''; }
-    }
     const wrap   = document.getElementById('alarmTableWrap');
     const noAct  = document.getElementById('noActivityTableWrap');
     const kanban = document.getElementById('alarmsKanbanView');
