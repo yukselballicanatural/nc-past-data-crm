@@ -23,6 +23,7 @@
 // yazılabilir — Profclinic, Finance, VIP Team, Executive Board, Aftercare gibi
 // birimler ya da hiç tanınmayan bir ad asla Users'a yazılmaz.
 import { verifyToken, bearerToken } from './_auth.js';
+import { isBlocked } from './_blocked-users.js';
 import {
   fetchTeamAssignments, isBossRole, teamNameKey, isLeaver,
   legacyNormalizeTeam, legacyLooseTeam, resolveMemberTeam,
@@ -220,6 +221,17 @@ export default async function handler(req, res) {
     let skippedBoss = 0, skippedManual = 0;
     for (const u of users) {
       const ownerName = u['Deal Owner Name'] || u['Username'] || '';
+
+      // Sistemden ÇIKARILMIŞ kişiler (bkz. _blocked-users.js) bu taramaya HİÇ
+      // GİRMEMELİ. Somut vaka (2026-08-20, Jamari West): Users satırı silinmez,
+      // yalnızca gizlenir (admin-users.js isBlocked filtresi) — bu yüzden bu
+      // dosyanın kendi Users taramasında hâlâ görünüyordu. Kişi zaten Zoho'da
+      // da yok olduğu için üstteki "kayıp kullanıcı" kontrolü onu yanlışlıkla
+      // "ayrılan" sayıp uyarıya soktu; "Pasife Al" da satırdaki Username alanı
+      // artık kullanılabilir olmadığı için hata verdi. Engellenmiş kişiler
+      // zaten kalıcı olarak çıkarılmış sayılır — bu taramanın konusu değil.
+      if (isBlocked(ownerName, u['Username'])) continue;
+
       const z = zoho.get(nameKey(ownerName));
 
       // ── KAYIP KULLANICILAR — Zoho aynasında ARTIK HİÇ YOK ──────────────
