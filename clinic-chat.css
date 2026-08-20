@@ -1,0 +1,387 @@
+/* ═══════════════════════════════════════════════════════════════════════
+   clinic-chat.css — Faz 3: deal bazlı Clinic sohbeti (clinic-chat.js)
+   ───────────────────────────────────────────────────────────────────────
+   ÜÇ bileşen:
+     1. .ncc-dock        — alarm penceresindeki "Clinic'e Bildir" dock'u.
+                           Composer YUKARI doğru açılır (dock çubuğu DOM'da
+                           sonra geldiği için normal column akışında composer
+                           üstte kalır — ayrı popup DEĞİL, aynı kartın içinde
+                           yükseklik animasyonuyla).
+     2. .ncc-thread-*    — "Mesajlar" ikonuyla açılan sohbet penceresi
+                           (baloncuklu, avatarlı).
+     3. .ncc-bell-*      — menüdeki bildirim çanı; paneli YUKARI açılır.
+
+   TEMA: koyu tema varsayılan (bu dosyada doğrudan tanımlı). Açık tema
+   html[data-theme="light"] altında liquid-glass token'larıyla (--g-*,
+   --edge-soft, --ink*, --sh-*, --sheen) yeniden boyanıyor — o token'lar
+   liquid-glass.css'te tanımlı, bu dosya onları YALNIZCA kullanıyor.
+   Hiçbir kural tek başına bir media/theme bloğunun içinde tanımlı değil:
+   önce koyu (bare) değer, sonra light override.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Ortak: avatar ve baz renkler ──────────────────────────────────────── */
+.ncc-avatar {
+  width: 34px; height: 34px; border-radius: 11px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; letter-spacing: .02em;
+  background: linear-gradient(140deg, #4f46e5, #0d9488);
+  color: #fff; text-transform: uppercase;
+  box-shadow: 0 2px 8px -2px rgba(79, 70, 229, .5);
+}
+.ncc-avatar[data-empty="true"] {
+  background: linear-gradient(140deg, #475569, #334155);
+  box-shadow: none;
+}
+.ncc-avatar.sm { width: 27px; height: 27px; border-radius: 9px; font-size: 10px; }
+
+/* ═══════════════ 1. DOCK (alarm penceresi) ═══════════════ */
+.ncc-dock {
+  border-radius: 15px; overflow: hidden; margin-bottom: 18px;
+  background: #0b1120; border: 1px solid #1e293b;
+  box-shadow: 0 6px 22px -10px rgba(0, 0, 0, .7);
+  display: flex; flex-direction: column;
+}
+
+/* Composer — DOM'da dock çubuğundan ÖNCE, yani görsel olarak ÜSTTE.
+   Kapalıyken max-height:0; açılırken yumuşak yay eğrisiyle iner. */
+.ncc-dock-composer {
+  max-height: 0; opacity: 0; overflow: hidden;
+  transition: max-height .34s cubic-bezier(.22, 1, .36, 1),
+              opacity .22s ease, padding .34s cubic-bezier(.22, 1, .36, 1);
+  padding: 0 10px;
+}
+.ncc-dock-composer[data-open="true"] { max-height: 260px; opacity: 1; padding: 10px 10px 0; }
+
+.ncc-dock-composer-inner { position: relative; }
+.ncc-dock-composer textarea {
+  width: 100%; box-sizing: border-box; min-height: 78px; max-height: 150px;
+  resize: vertical; border-radius: 11px; padding: 10px 32px 10px 12px;
+  font-family: inherit; font-size: 12.5px; line-height: 1.55;
+  background: #060b14; border: 1px solid #1e293b; color: #e2e8f0;
+}
+.ncc-dock-composer textarea:focus { outline: none; border-color: #4f46e5; }
+.ncc-dock-composer textarea::placeholder { color: #475569; }
+
+.ncc-composer-x {
+  position: absolute; top: 6px; right: 6px; width: 22px; height: 22px;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 7px; cursor: pointer;
+  background: transparent; color: #64748b; font-size: 15px; line-height: 1;
+  transition: background .15s, color .15s;
+}
+.ncc-composer-x:hover { background: #1e293b; color: #e2e8f0; }
+
+.ncc-composer-foot {
+  display: flex; align-items: center; gap: 8px; padding: 7px 0 0;
+  font-size: 10px; color: #475569;
+}
+.ncc-composer-count { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+/* Dock çubuğu — kimlik + aksiyonlar */
+.ncc-dock-bar { display: flex; align-items: center; gap: 10px; padding: 10px; }
+.ncc-dock-id { min-width: 0; flex: 1; }
+.ncc-dock-name {
+  margin: 0; font-size: 12.5px; font-weight: 700; color: #f1f5f9;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ncc-dock-status {
+  margin: 2px 0 0; font-size: 10.5px; color: #64748b;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  display: flex; align-items: center; gap: 5px;
+}
+.ncc-dock-status::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: #22c55e; flex-shrink: 0;
+}
+.ncc-dock-status[data-empty="true"]::before { background: #64748b; }
+
+.ncc-dock-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.ncc-dock-btn {
+  height: 34px; display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 11px; border-radius: 10px; cursor: pointer;
+  font-family: inherit; font-size: 11.5px; font-weight: 700;
+  background: transparent; border: 1px solid transparent; color: #94a3b8;
+  transition: background .15s, color .15s, transform .12s, box-shadow .15s;
+}
+.ncc-dock-btn:hover { background: #1e293b; color: #e2e8f0; }
+.ncc-dock-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
+.ncc-dock-btn kbd {
+  min-width: 19px; height: 19px; padding: 0 4px; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: #1e293b; color: #94a3b8;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px;
+}
+.ncc-dock-btn.primary {
+  background: linear-gradient(135deg, #4f46e5, #4338ca); color: #fff;
+  box-shadow: 0 4px 14px -5px rgba(79, 70, 229, .7);
+}
+.ncc-dock-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 7px 18px -5px rgba(79, 70, 229, .85); }
+.ncc-dock-btn.primary kbd { background: rgba(255, 255, 255, .18); color: #fff; }
+.ncc-dock-btn:disabled { opacity: .5; cursor: default; transform: none; }
+
+/* ═══════════════ 2. SOHBET PENCERESİ ═══════════════ */
+.ncc-thread-modal {
+  display: none; position: fixed; inset: 0; z-index: 10002;
+  align-items: center; justify-content: center; padding: 16px;
+}
+.ncc-thread-modal.open { display: flex; }
+.ncc-thread-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, .78); }
+.ncc-thread-box {
+  position: relative; z-index: 1; width: 100%; max-width: 560px;
+  height: min(78vh, 660px); display: flex; flex-direction: column;
+  border-radius: 17px; overflow: hidden;
+  background: #0b1120; border: 1px solid #1e293b;
+  box-shadow: 0 28px 70px rgba(0, 0, 0, .7);
+}
+
+.ncc-thread-head {
+  display: flex; align-items: center; gap: 10px; padding: 13px 15px;
+  border-bottom: 1px solid #1e293b; flex-shrink: 0;
+}
+.ncc-thread-head-id { min-width: 0; flex: 1; }
+.ncc-thread-title {
+  margin: 0; font-size: 13px; font-weight: 750; color: #f1f5f9;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ncc-thread-sub {
+  margin: 2px 0 0; font-size: 10.5px; color: #64748b;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ncc-thread-x {
+  width: 30px; height: 30px; flex-shrink: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 9px; background: transparent; color: #64748b;
+  transition: background .15s, color .15s;
+}
+.ncc-thread-x:hover { background: #1e293b; color: #e2e8f0; }
+.ncc-thread-x svg { width: 16px; height: 16px; }
+
+/* Baloncuk listesi */
+.ncc-thread-body { flex: 1; min-height: 0; overflow-y: auto; padding: 15px; }
+.ncc-msg-row { display: flex; gap: 8px; margin-bottom: 14px; align-items: flex-start; }
+.ncc-msg-row[data-mine="true"] { flex-direction: row-reverse; }
+.ncc-msg-col { max-width: 76%; min-width: 0; }
+.ncc-bubble {
+  border-radius: 13px; padding: 9px 12px; font-size: 12.5px; line-height: 1.55;
+  word-break: break-word; overflow-wrap: anywhere; white-space: pre-wrap;
+  background: #1e293b; color: #e2e8f0;
+  border-bottom-left-radius: 4px;
+}
+.ncc-msg-row[data-mine="true"] .ncc-bubble {
+  background: linear-gradient(135deg, #4f46e5, #4338ca); color: #fff;
+  border-bottom-left-radius: 13px; border-bottom-right-radius: 4px;
+}
+.ncc-msg-meta {
+  margin-top: 4px; font-size: 9.5px; color: #475569;
+  display: flex; gap: 6px; align-items: center;
+}
+.ncc-msg-row[data-mine="true"] .ncc-msg-meta { justify-content: flex-end; }
+.ncc-msg-attach { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; }
+
+.ncc-thread-empty {
+  height: 100%; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 9px;
+  color: #475569; font-size: 12px; text-align: center; padding: 0 24px;
+}
+.ncc-thread-empty svg { width: 34px; height: 34px; opacity: .5; }
+
+/* Alt composer */
+.ncc-thread-foot { border-top: 1px solid #1e293b; padding: 11px; flex-shrink: 0; }
+.ncc-thread-foot-row { display: flex; gap: 8px; align-items: flex-end; }
+.ncc-thread-foot textarea {
+  flex: 1; min-width: 0; box-sizing: border-box; min-height: 40px; max-height: 110px;
+  resize: none; border-radius: 11px; padding: 10px 12px;
+  font-family: inherit; font-size: 12.5px; line-height: 1.5;
+  background: #060b14; border: 1px solid #1e293b; color: #e2e8f0;
+}
+.ncc-thread-foot textarea:focus { outline: none; border-color: #4f46e5; }
+.ncc-thread-foot textarea::placeholder { color: #475569; }
+.ncc-send-btn {
+  width: 40px; height: 40px; flex-shrink: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 11px; color: #fff;
+  background: linear-gradient(135deg, #4f46e5, #4338ca);
+  box-shadow: 0 4px 14px -5px rgba(79, 70, 229, .7);
+  transition: transform .12s, box-shadow .15s, opacity .15s;
+}
+.ncc-send-btn:hover { transform: translateY(-1px); box-shadow: 0 7px 18px -5px rgba(79, 70, 229, .85); }
+.ncc-send-btn:disabled { opacity: .5; cursor: default; transform: none; }
+.ncc-send-btn svg { width: 16px; height: 16px; }
+.ncc-thread-warn {
+  margin: 0 0 9px; padding: 7px 10px; border-radius: 9px;
+  font-size: 10.5px; line-height: 1.5;
+  background: #422006; border: 1px solid #78350f; color: #fbbf24;
+}
+
+/* ═══════════════ 3. "MESAJLAR" İKON DÜĞMESİ (deal penceresi) ═══════════════ */
+.ncc-icon-btn {
+  position: relative; width: 32px; height: 32px; flex-shrink: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid #1e293b; border-radius: 10px;
+  background: #111827; color: #94a3b8;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.ncc-icon-btn:hover { background: #1e293b; color: #e2e8f0; border-color: #334155; }
+.ncc-icon-btn svg { width: 16px; height: 16px; }
+.ncc-icon-badge {
+  position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px;
+  padding: 0 4px; border-radius: 9999px;
+  display: flex; align-items: center; justify-content: center;
+  background: #4f46e5; color: #fff; font-size: 9px; font-weight: 800;
+  border: 2px solid #0d1526; box-sizing: content-box;
+}
+
+/* ═══════════════ 4. BİLDİRİM ÇANI ═══════════════ */
+.ncc-bell {
+  position: relative; width: 100%; cursor: pointer;
+  display: flex; align-items: center; gap: 9px; padding: 9px 11px;
+  border: 1px solid #1e293b; border-radius: 11px;
+  background: #111827; color: #94a3b8;
+  font-family: inherit; font-size: 11.5px; font-weight: 650; text-align: left;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.ncc-bell:hover { background: #1e293b; color: #e2e8f0; }
+.ncc-bell svg { width: 16px; height: 16px; flex-shrink: 0; }
+.ncc-bell-count {
+  margin-left: auto; min-width: 19px; height: 19px; padding: 0 5px;
+  border-radius: 9999px; display: none;
+  align-items: center; justify-content: center;
+  background: #4f46e5; color: #fff; font-size: 10px; font-weight: 800;
+}
+.ncc-bell-count[data-has="true"] { display: flex; }
+/* Canlı nokta — yeni mesaj varken nabız atar */
+.ncc-bell-dot {
+  position: absolute; top: 7px; left: 22px; width: 7px; height: 7px;
+  border-radius: 50%; background: #22c55e; display: none;
+  box-shadow: 0 0 0 2px #111827;
+}
+.ncc-bell-dot[data-has="true"] { display: block; animation: ncc-pulse 1.9s ease-out infinite; }
+@keyframes ncc-pulse {
+  0%   { box-shadow: 0 0 0 2px #111827, 0 0 0 0 rgba(34, 197, 94, .6); }
+  70%  { box-shadow: 0 0 0 2px #111827, 0 0 0 7px rgba(34, 197, 94, 0); }
+  100% { box-shadow: 0 0 0 2px #111827, 0 0 0 0 rgba(34, 197, 94, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ncc-bell-dot[data-has="true"] { animation: none; }
+}
+
+/* Panel — YUKARI açılır (position:fixed, JS ile konumlanır) */
+.ncc-bell-pop {
+  display: none; position: fixed; z-index: 10003;
+  width: 320px; max-height: 380px; overflow: hidden;
+  border-radius: 15px; background: #0b1120; border: 1px solid #1e293b;
+  box-shadow: 0 22px 60px rgba(0, 0, 0, .72);
+  transform-origin: bottom left;
+}
+.ncc-bell-pop.open { display: flex; flex-direction: column; animation: ncc-rise .2s cubic-bezier(.22, 1, .36, 1); }
+@keyframes ncc-rise {
+  from { opacity: 0; transform: translateY(7px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.ncc-bell-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 11px 13px; border-bottom: 1px solid #1e293b; flex-shrink: 0;
+}
+.ncc-bell-head h4 { margin: 0; font-size: 12px; font-weight: 750; color: #f1f5f9; }
+.ncc-bell-clear {
+  border: none; background: transparent; cursor: pointer;
+  color: #64748b; font-family: inherit; font-size: 10.5px; font-weight: 650;
+  padding: 3px 7px; border-radius: 7px; transition: background .15s, color .15s;
+}
+.ncc-bell-clear:hover { background: #1e293b; color: #e2e8f0; }
+.ncc-bell-list { overflow-y: auto; flex: 1; min-height: 0; }
+.ncc-bell-item {
+  display: flex; gap: 9px; align-items: flex-start; width: 100%;
+  padding: 11px 13px; cursor: pointer; text-align: left;
+  border: none; border-bottom: 1px solid #0f172a; background: transparent;
+  font-family: inherit; transition: background .15s;
+}
+.ncc-bell-item:hover { background: #111827; }
+.ncc-bell-item:last-child { border-bottom: none; }
+.ncc-bell-item-body { min-width: 0; flex: 1; }
+.ncc-bell-item-top { display: flex; justify-content: space-between; gap: 7px; align-items: baseline; }
+.ncc-bell-item-name { font-size: 11.5px; font-weight: 700; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ncc-bell-item-time { font-size: 9px; color: #475569; white-space: nowrap; flex-shrink: 0; }
+.ncc-bell-item-msg {
+  margin-top: 3px; font-size: 10.5px; color: #94a3b8; line-height: 1.45;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.ncc-bell-item-deal { margin-top: 3px; font-size: 9.5px; color: #4f46e5; font-weight: 650; }
+.ncc-bell-empty { padding: 26px 18px; text-align: center; color: #475569; font-size: 11.5px; }
+
+/* ═══════════════════════════════════════════════════════════════════════
+   AÇIK TEMA (liquid glass) — yalnızca renk/yüzey override'ları.
+   Yapı, ölçü ve animasyonlar yukarıdaki koyu tema tanımlarından geliyor.
+   ═══════════════════════════════════════════════════════════════════════ */
+html[data-theme="light"] .ncc-dock,
+html[data-theme="light"] .ncc-thread-box,
+html[data-theme="light"] .ncc-bell-pop {
+  background: var(--g-1); border: 1px solid var(--edge-soft);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  box-shadow: var(--sh-2), var(--sheen);
+}
+html[data-theme="light"] .ncc-thread-box { box-shadow: var(--sh-3), var(--sheen); }
+
+html[data-theme="light"] .ncc-dock-composer textarea,
+html[data-theme="light"] .ncc-thread-foot textarea {
+  background: var(--g-3); border: 1px solid var(--edge-soft); color: var(--ink);
+}
+html[data-theme="light"] .ncc-dock-composer textarea::placeholder,
+html[data-theme="light"] .ncc-thread-foot textarea::placeholder { color: var(--ink-3); }
+
+html[data-theme="light"] .ncc-dock-name,
+html[data-theme="light"] .ncc-thread-title,
+html[data-theme="light"] .ncc-bell-head h4,
+html[data-theme="light"] .ncc-bell-item-name { color: var(--ink); }
+html[data-theme="light"] .ncc-dock-status,
+html[data-theme="light"] .ncc-thread-sub,
+html[data-theme="light"] .ncc-composer-foot,
+html[data-theme="light"] .ncc-bell-item-msg { color: var(--ink-2); }
+html[data-theme="light"] .ncc-msg-meta,
+html[data-theme="light"] .ncc-bell-item-time,
+html[data-theme="light"] .ncc-bell-empty,
+html[data-theme="light"] .ncc-thread-empty { color: var(--ink-3); }
+
+html[data-theme="light"] .ncc-dock-head,
+html[data-theme="light"] .ncc-thread-head,
+html[data-theme="light"] .ncc-thread-foot,
+html[data-theme="light"] .ncc-bell-head { border-color: var(--edge-soft); }
+
+html[data-theme="light"] .ncc-dock-btn { color: var(--ink-2); }
+html[data-theme="light"] .ncc-dock-btn:hover,
+html[data-theme="light"] .ncc-composer-x:hover,
+html[data-theme="light"] .ncc-thread-x:hover,
+html[data-theme="light"] .ncc-bell-clear:hover { background: var(--g-3); color: var(--ink); }
+html[data-theme="light"] .ncc-dock-btn kbd { background: var(--g-2); color: var(--ink-2); }
+html[data-theme="light"] .ncc-composer-x,
+html[data-theme="light"] .ncc-thread-x,
+html[data-theme="light"] .ncc-bell-clear { color: var(--ink-3); }
+
+/* Karşı tarafın baloncuğu — camda okunur bir yüzey */
+html[data-theme="light"] .ncc-bubble { background: var(--g-3); color: var(--ink); }
+
+html[data-theme="light"] .ncc-icon-btn,
+html[data-theme="light"] .ncc-bell {
+  background: var(--g-2); border: 1px solid var(--edge-soft); color: var(--ink-2);
+}
+html[data-theme="light"] .ncc-icon-btn:hover,
+html[data-theme="light"] .ncc-bell:hover { background: var(--g-3); color: var(--ink); }
+html[data-theme="light"] .ncc-bell-item:hover { background: var(--g-2); }
+html[data-theme="light"] .ncc-bell-item { border-color: var(--edge-soft); }
+html[data-theme="light"] .ncc-icon-badge { border-color: transparent; }
+html[data-theme="light"] .ncc-bell-dot { box-shadow: 0 0 0 2px rgba(255, 255, 255, .8); }
+html[data-theme="light"] .ncc-bell-dot[data-has="true"] {
+  animation: none;   /* camın üzerinde halka gölgesi kirli görünüyor */
+}
+html[data-theme="light"] .ncc-thread-warn {
+  background: rgba(251, 191, 36, .16); border-color: rgba(180, 83, 9, .35); color: #92400e;
+}
+
+/* ── Mobil ─────────────────────────────────────────────────────────────── */
+@media (max-width: 560px) {
+  .ncc-thread-box { max-width: 100%; height: 88vh; }
+  .ncc-bell-pop { width: calc(100vw - 24px); }
+  .ncc-dock-btn span.ncc-btn-label { display: none; }
+  .ncc-dock-btn kbd { display: none; }
+}

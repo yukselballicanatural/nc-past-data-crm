@@ -523,6 +523,39 @@
     'Vizit Yaklaşıyor': 'Visit Approaching',
     'Tarih Yaklaşıyor': 'Date Approaching',
     'Tarih Eksik': 'Missing Date',
+
+    // ── Faz 3: Clinic sohbeti (clinic-chat.js) ────────────────────────
+    'Aftercare sorumlusu': 'Aftercare owner',
+    'Aftercare sorumlusu atanmamış': 'No aftercare owner assigned',
+    'Zoho\'da Aftercare Owner boş': 'Aftercare Owner is empty in Zoho',
+    'Aftercare sorumlusuna iletilecek mesaj... (görsel için Ctrl+V ile yapıştırabilirsiniz)':
+      'Message for the aftercare owner... (paste an image with Ctrl+V)',
+    'Bu deal\'de Zoho\'daki Aftercare Owner alanı boş. Mesajınız kaydedilir ve sorumlu atandığında dizide görünür.':
+      'The Aftercare Owner field is empty in Zoho for this deal. Your message is saved and will appear in the thread once an owner is assigned.',
+    'Sohbet geçmişi': 'Conversation history',
+    'Geçmiş': 'History',
+    'Clinic mesajları': 'Clinic messages',
+    'Mesaj yaz...': 'Write a message...',
+    'Mesaj boş olamaz.': 'Message cannot be empty.',
+    'Clinic\'e iletildi.': 'Sent to Clinic.',
+    'Gönderilemedi: ': 'Could not send: ',
+    'Mesajlar yüklenemedi.': 'Messages could not be loaded.',
+    'Bu deal için henüz mesaj yok.': 'No messages for this deal yet.',
+    'clinic_messages tablosu henüz kurulmamış — clinic_messages.sql dosyasını çalıştırın.':
+      'The clinic_messages table is not installed yet — run clinic_messages.sql.',
+    'Bildirimler': 'Notifications',
+    'Tümünü okundu yap': 'Mark all read',
+    'Yeni mesaj yok': 'No new messages',
+    '(görsel)': '(image)',
+    'Gönder': 'Send',
+    'Ben': 'Me',
+    'Clinic': 'Clinic',
+    'Deal': 'Deal',
+    // Göreli zaman kısaltmaları — sayının HEMEN ardına ekleniyor ("5dk").
+    'şimdi': 'now',
+    'dk': 'm',
+    'sa': 'h',
+
     'Otel Eksik': 'Hotel Missing',
     'WhatsApp Grubu Eksik': 'WhatsApp Group Missing',
     'Tercüman Eksik': 'Interpreter Missing',

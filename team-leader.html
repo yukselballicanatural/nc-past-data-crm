@@ -167,58 +167,6 @@
     textarea.modal-note { background:#111827; border:1px solid #374151; color:#e2e8f0; border-radius:10px; padding:10px 12px; font-size:12px; width:100%; resize:vertical; min-height:120px; }
     textarea.modal-note:focus { outline:none; border-color:#0d9488; }
 
-    /* ── Faz 3: "Clinic'e Bildir" kartı ────────────────────────────────
-       Dark tema: özgün gradient/glow kart (mevcut çizgide düz renk yerine
-       hafif derinlik). Light tema karşılığı liquid-glass.css'te —
-       arkaplan/blur/edge tokenları oradan geliyor (bkz. o dosyadaki
-       html[data-theme="light"] .clinic-card bloğu). */
-    .clinic-card {
-      border-radius:14px; border:1px solid #312e81;
-      background:linear-gradient(160deg,#1e1b4b 0%,#141233 100%);
-      padding:14px; position:relative; overflow:hidden; margin-bottom:18px;
-    }
-    .clinic-card::before {
-      content:''; position:absolute; top:-46%; right:-18%; width:170px; height:170px;
-      background:radial-gradient(circle,rgba(129,140,248,0.25),transparent 70%); pointer-events:none;
-    }
-    .clinic-card-head { display:flex; align-items:center; gap:7px; margin-bottom:11px; position:relative; }
-    .clinic-card-head svg { width:15px; height:15px; color:#a5b4fc; flex-shrink:0; }
-    .clinic-card-head span { font-size:12px; font-weight:800; color:#e0e7ff; letter-spacing:.01em; }
-    .clinic-role-row { display:flex; gap:6px; margin-bottom:9px; flex-wrap:wrap; position:relative; }
-    .clinic-role-chip {
-      padding:6px 12px; border-radius:9999px; border:1px solid #3730a3; background:#211d55dd;
-      color:#a5b4fc; font-size:10.5px; font-weight:700; cursor:pointer; transition:all .15s; white-space:nowrap;
-    }
-    .clinic-role-chip:hover { border-color:#6366f1; }
-    .clinic-role-chip.active {
-      background:#4f46e5; border-color:#818cf8; color:#fff;
-      box-shadow:0 2px 12px -2px rgba(99,102,241,.65);
-    }
-    .clinic-card textarea {
-      background:#0f0d2999; border:1px solid #312e81; color:#e0e7ff; border-radius:10px;
-      padding:10px 12px; font-size:12px; width:100%; min-height:58px; resize:vertical;
-      box-sizing:border-box; position:relative;
-    }
-    .clinic-card textarea:focus { outline:none; border-color:#818cf8; }
-    .clinic-send-btn {
-      width:100%; margin-top:10px; padding:10px; border:none; border-radius:10px; cursor:pointer;
-      background:linear-gradient(135deg,#4f46e5,#4338ca); color:#fff; font-size:12px; font-weight:800;
-      display:flex; align-items:center; justify-content:center; gap:7px;
-      transition:transform .12s, box-shadow .12s; box-shadow:0 4px 14px -4px rgba(79,70,229,.6);
-      position:relative;
-    }
-    .clinic-send-btn:hover { transform:translateY(-1px); box-shadow:0 6px 18px -4px rgba(79,70,229,.75); }
-    .clinic-send-btn:disabled { opacity:.55; cursor:default; transform:none; }
-    .clinic-msg-thread { max-height:150px; overflow-y:auto; margin-bottom:10px; display:none; position:relative; }
-    .clinic-msg-item {
-      padding:8px 10px; border-radius:10px; background:#1e1b4b66; border:1px solid #312e8155; margin-bottom:6px;
-    }
-    .clinic-msg-item:last-child { margin-bottom:0; }
-    .clinic-msg-role { font-size:9.5px; font-weight:800; color:#a5b4fc; text-transform:uppercase; letter-spacing:.03em; }
-    .clinic-msg-time { font-size:9px; color:#6366a3; }
-    .clinic-msg-text { font-size:11px; color:#e0e7ff; margin-top:3px; word-break:break-word; overflow-wrap:anywhere; }
-    .clinic-msg-meta { font-size:9px; color:#7c81b8; margin-top:4px; }
-
     /* Urgency left-border on alarm rows */
     .alarm-row-overdue td:first-child { border-left:3px solid #ef4444; }
     .alarm-row-today td:first-child { border-left:3px solid #22c55e; }
@@ -262,6 +210,10 @@
        ══════════════════════════════════════════════════════════════════ -->
   <link rel="stylesheet" href="liquid-glass.css">
   <link rel="stylesheet" href="liquid-glass-dark.css">
+  <!-- Faz 3: deal bazlı Clinic sohbeti (dock + sohbet penceresi + bildirim
+       çanı). liquid-glass.css'ten SONRA yükleniyor: açık tema override'ları
+       oradaki --g-*/--ink-* token'larını kullanıyor. -->
+  <link rel="stylesheet" href="clinic-chat.css">
 </head>
 <body class="flex flex-row min-h-screen text-slate-100" style="background:#020617">
 <script>
@@ -446,6 +398,9 @@
       </div>
     </div>
   </div>
+  <!-- Faz 3: Clinic bildirimleri — paneli YUKARI açılır (clinic-chat.js).
+       Menünün altında olduğu için aşağı açılan bir panel ekrandan taşardı. -->
+  <div id="clinicBellMount" style="padding:0 10px 10px"></div>
   <!-- Dil seçimi -->
   <div id="langToggleMount" style="padding:0 10px 10px"></div>
   <!-- Uygulamalar + Logout -->
@@ -1415,26 +1370,11 @@
       <div id="alarmHistoryList" style="max-height:160px;overflow-y:auto;background:#0d1526;border:1px solid #1e293b;border-radius:10px;padding:8px 12px"></div>
     </div>
 
-    <!-- Faz 3 (Clinic Planning) — deal bazlı Clinic'e Bildir mesajlaşması.
-         clinic_messages tablosu deal_id ile tutuluyor (alarm_id ile değil):
-         bir deal'in birden fazla alarmı olabilir, geçmiş tek yerde biriksin. -->
-    <div class="clinic-card" id="clinicMsgWrap">
-      <div class="clinic-card-head">
-        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8-1.5 0-2.91-.32-4.15-.9L3 20l1.05-3.16C3.38 15.6 3 14.34 3 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>
-        <span>Clinic'e Bildir</span>
-      </div>
-      <div id="clinicMsgList" class="clinic-msg-thread"></div>
-      <div class="clinic-role-row" id="clinicMsgRoleRow">
-        <div class="clinic-role-chip active" data-role="Translators Manager" onclick="selectClinicRole(this)">Tercüman Sorumlusu</div>
-        <div class="clinic-role-chip" data-role="Profclinic" onclick="selectClinicRole(this)">Profclinic (Danışman)</div>
-        <div class="clinic-role-chip" data-role="Planning" onclick="selectClinicRole(this)">Planlama</div>
-      </div>
-      <textarea id="clinicMsgInput" maxlength="500" placeholder="Clinic tarafına iletilecek mesaj (en fazla 500 karakter)"></textarea>
-      <button onclick="sendClinicMessage()" id="btnClinicMsg" class="clinic-send-btn">
-        <svg style="width:14px;height:14px" fill="currentColor" viewBox="0 0 24 24"><path d="M3.4 20.6l17.45-8.4a.6.6 0 0 0 0-1.08L3.4 2.72a.6.6 0 0 0-.85.66l1.7 6.8L14 12l-9.75 1.82-1.7 6.8a.6.6 0 0 0 .85.66z"/></svg>
-        <span>Clinic'e Bildir</span>
-      </button>
-    </div>
+    <!-- Faz 3 (Clinic Planning) — deal bazlı Clinic sohbeti.
+         Bileşenin TAMAMI clinic-chat.js'te (NCClinicChat.renderDock); burada
+         yalnızca bağlanma noktası var. Muhatap Zoho'daki Aftercare_Owner'dan
+         otomatik geliyor — rol seçimi YOK. -->
+    <div id="clinicDockMount"></div>
 
     <button onclick="sendResultCodeWhatsAppClick()" style="width:100%;padding:11px;margin-bottom:10px;background:#052e16;border:1px solid #166534;border-radius:10px;color:#4ade80;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
       <svg style="width:15px;height:15px" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.8 14.14c-.24.68-1.42 1.3-1.96 1.34-.5.04-1.02.06-1.65-.1-.38-.1-.87-.28-1.5-.55-2.63-1.14-4.35-3.8-4.48-3.98-.13-.18-1.07-1.42-1.07-2.7 0-1.29.68-1.92.92-2.18.24-.26.53-.33.71-.33.18 0 .35 0 .5.01.16.01.38-.06.6.45.24.55.8 1.9.87 2.04.07.14.11.3.02.48-.09.18-.13.29-.26.45-.13.16-.27.35-.39.47-.13.13-.26.27-.11.53.15.26.68 1.12 1.46 1.82 1 .89 1.85 1.17 2.11 1.3.26.13.41.11.56-.06.16-.18.65-.76.83-1.02.18-.26.35-.21.6-.13.24.09 1.54.73 1.8.86.26.13.44.2.5.31.06.13.06.7-.18 1.38z"/></svg>
@@ -1456,9 +1396,15 @@
         <h3 style="font-size:16px;font-weight:700;color:#f1f5f9;margin:0" id="dmDealName">—</h3>
         <div style="font-size:10px;color:#0d9488;margin-top:3px;font-weight:600" id="dmDealOwner">—</div>
       </div>
-      <button onclick="closeDealModal()" style="background:none;border:none;color:#475569;cursor:pointer;padding:4px">
-        <svg style="width:18px;height:18px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-      </button>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+        <!-- Faz 3: Clinic mesajları — metinsiz ikon + toplam mesaj rozeti.
+             İçeriği openDealModal içinde NCClinicChat.renderIconButton ile
+             basılıyor (deal bağlamı data-* ile taşınır). -->
+        <span id="dmClinicMsgSlot"></span>
+        <button onclick="closeDealModal()" style="background:none;border:none;color:#475569;cursor:pointer;padding:4px">
+          <svg style="width:18px;height:18px" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+        </button>
+      </div>
     </div>
     <div class="info-grid" id="dmGrid" style="margin-bottom:20px"></div>
     <!-- Active alarms -->
@@ -1748,6 +1694,9 @@
 <script src="alarm-engine.js"></script>
 <script src="export-util.js"></script>
 <script src="attach-util.js?v=5"></script>
+<!-- Faz 3: Clinic sohbeti. attach-util.js'ten SONRA — görsel ekleri için
+     NCAttach'i kullanıyor (bkz. clinic-chat.js başındaki not). -->
+<script src="clinic-chat.js"></script>
 <script src="deals-live.js"></script>
 <!-- Liquid Glass etkileşim katmanı: cam açılır listeler + kayan segment
      göstergesi. Yalnızca açık temada devreye girer, mantığa dokunmaz. -->
@@ -3200,7 +3149,7 @@
     document.getElementById('alarmModal').classList.add('open');
     document.body.style.overflow = 'hidden';
     loadAlarmHistory(a.id);
-    loadClinicMessages(a.deal_id);
+    mountClinicDock(a);
     // Not alanına görsel eki widget'ı — bkz. attach-util.js / api/alarm-files.js.
     document.getElementById('alarmAttachWidget').innerHTML =
       NCAttach.renderWidget(`'${_jsStrAttr(String(a.id))}'`, 'alarmAttachInput', 'alarmAttachMount');
@@ -3232,77 +3181,18 @@
     } catch(e) { /* sessiz */ }
   }
 
-  // ── Faz 3 (Clinic Planning) — Clinic'e Bildir mesajlaşması ────────────
-  // clinic_messages tablosu (Public Access RLS, alarms/deals ile aynı desen)
-  // deal_id bazlı — bir deal'in birden fazla alarmı olsa bile geçmiş tek
-  // yerde birikir, hangi alarmdan gönderildiği related_alarm_id'de durur.
-  async function loadClinicMessages(dealId) {
-    const list = document.getElementById('clinicMsgList');
-    // Her açılışta rol seçimi ve mesaj kutusu sıfırlanır — önceki alarmda
-    // seçilen rol/yazılan yarım mesaj bu deal'e sızmasın.
-    const chips = document.querySelectorAll('#clinicMsgRoleRow .clinic-role-chip');
-    chips.forEach((c, i) => c.classList.toggle('active', i === 0));
-    const input = document.getElementById('clinicMsgInput');
-    if (input) input.value = '';
-    if (!dealId) { list.style.display = 'none'; return; }
-    try {
-      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/clinic_messages?deal_id=eq.${encodeURIComponent(dealId)}&order=created_at.desc&limit=20`, { headers: H });
-      if (!r.ok) { list.style.display = 'none'; return; }
-      const rows = await r.json();
-      if (!Array.isArray(rows) || !rows.length) { list.style.display = 'none'; return; }
-      list.innerHTML = rows.map(m => `
-        <div class="clinic-msg-item">
-          <div style="display:flex;justify-content:space-between;gap:8px">
-            <span class="clinic-msg-role">${fmt(m.sent_to_role)}</span>
-            <span class="clinic-msg-time">${formatDateTime(m.created_at)}</span>
-          </div>
-          <div class="clinic-msg-text">${fmt(m.message)}</div>
-          <div class="clinic-msg-meta">${fmt(m.sent_by_name)}${m.read_at ? ' · ' + I18N.t('Okundu') : ' · ' + I18N.t('Okunmadı')}</div>
-        </div>`).join('');
-      list.style.display = 'block';
-    } catch (e) { list.style.display = 'none'; }
-  }
-
-  // Rol seçimi artık segmented "chip" — <select> yerine tıklanan chip'i
-  // aktif işaretler, seçili rol data-role attribute'undan okunur.
-  function selectClinicRole(el) {
-    document.querySelectorAll('#clinicMsgRoleRow .clinic-role-chip').forEach(c => c.classList.remove('active'));
-    el.classList.add('active');
-  }
-
-  async function sendClinicMessage() {
-    if (!currentAlarm || !currentAlarm.deal_id) { showNotice(I18N.t('Bu alarm bir deal\'e bağlı değil.'), 'error'); return; }
-    const activeChip = document.querySelector('#clinicMsgRoleRow .clinic-role-chip.active');
-    const role = activeChip ? activeChip.dataset.role : 'Translators Manager';
-    const text = document.getElementById('clinicMsgInput').value.trim();
-    if (!text) { showNotice(I18N.t('Mesaj boş olamaz.'), 'error'); return; }
-    const btn = document.getElementById('btnClinicMsg');
-    btn.disabled = true; btn.style.opacity = '0.6';
-    try {
-      const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY, 'Content-Type': 'application/json', Prefer: 'return=minimal' };
-      const payload = {
-        deal_id:        String(currentAlarm.deal_id),
-        deal_name:      currentAlarm.deal_name || '',
-        sent_by_username: (currentUser && currentUser.username) || '',
-        sent_by_name:   (currentUser && currentUser.fullName) || '',
-        sent_to_role:   role,
-        message:        text,
-        related_alarm_id: currentAlarm.id || null,
-      };
-      const r = await fetch(`${SUPABASE_URL}/rest/v1/clinic_messages`, { method: 'POST', headers: H, body: JSON.stringify(payload) });
-      if (!r.ok) {
-        const t = await r.text().catch(() => '');
-        throw new Error(t.includes('does not exist') || t.includes('PGRST') ? I18N.t('clinic_messages tablosu henüz kurulmamış.') : ('HTTP ' + r.status));
-      }
-      document.getElementById('clinicMsgInput').value = '';
-      showNotice(I18N.t('Clinic\'e iletildi.'), 'success');
-      loadClinicMessages(currentAlarm.deal_id);
-    } catch (e) {
-      showNotice(I18N.t('Gönderilemedi: ') + e.message, 'error');
-    } finally {
-      btn.disabled = false; btn.style.opacity = '1';
-    }
+  // ── Faz 3 (Clinic Planning) — deal bazlı Clinic sohbeti ───────────────
+  // Bileşenin TAMAMI clinic-chat.js'te (NCClinicChat). Burada yalnızca alarm
+  // penceresi açılırken dock'un bağlanması var: muhatap Zoho'daki
+  // Aftercare_Owner'dan otomatik geliyor, rol seçimi YOK.
+  function mountClinicDock(a) {
+    if (typeof NCClinicChat === 'undefined') return;
+    NCClinicChat.renderDock('clinicDockMount', {
+      dealId:   a.deal_id || '',
+      dealName: a.deal_name || '',
+      team:     a.team || '',
+      alarmId:  a.id || null,
+    });
   }
 
   function closeAlarmModal() {
@@ -4255,6 +4145,15 @@
     document.getElementById('dmDealOwner').innerHTML = `${fmt(d.deal_owner)} · ${fmt(d.team)} · <a href="https://crm.zoho.eu/crm/org20093728832/tab/Potentials/${d.id}" target="_blank" rel="noopener" style="color:#0d9488;text-decoration:underline;text-decoration-style:dotted" onmouseover="this.style.color='#2dd4bf'" onmouseout="this.style.color='#0d9488'">${fmt(raw.DealID) || d.id} ↗</a>`;
 
     document.getElementById('dmGrid').innerHTML = renderFieldsHtml(buildDealFields(d, raw));
+
+    // Faz 3: Clinic mesajları ikonu — her deal'in kendi sohbet dizisi.
+    const cmSlot = document.getElementById('dmClinicMsgSlot');
+    if (cmSlot && typeof NCClinicChat !== 'undefined') {
+      cmSlot.innerHTML = NCClinicChat.renderIconButton({
+        dealId: d.id, dealName: d.deal_name || '', team: d.team || '',
+      });
+      NCClinicChat.refreshDealBadge(d.id);
+    }
 
     // Aktif alarmlar
     const dealAlarms = allAlarms.filter(a => a.deal_id === String(d.id) && !['closed','cancelled'].includes(a.status));
@@ -6559,6 +6458,31 @@
       const miniLangLabel = document.getElementById('miniLangLabel');
       if (miniLangLabel) miniLangLabel.textContent = I18N.getLang().toUpperCase();
       mountExportButtons();
+
+      // ── Faz 3: Clinic sohbeti (clinic-chat.js) ──────────────────────
+      // NCAttach gibi parse anında değil BURADA başlatılıyor: modül
+      // currentUser'ı (kim gönderiyor) ve takım aliaslarını (bildirim
+      // kapsamı) bilmek zorunda, ikisi de girişten sonra belli oluyor.
+      // Bölge müdürü/admin için alias listesi verilmez → bildirim filtresi
+      // uygulanmaz, bölgesindeki tüm sohbetleri görür.
+      if (typeof NCClinicChat !== 'undefined') {
+        NCClinicChat.init({
+          baseUrl: SUPABASE_URL,
+          anonKey: SUPABASE_KEY,
+          user: {
+            username: session.username || '',
+            fullName: session.fullName || '',
+            role:     session.role || '',
+            team:     session.team || '',
+            token:    session.token || '',
+          },
+          teamAliases: isRM ? null : (TeamMap.aliasesFor(session.team || '') || []),
+          notify: (m, type) => showNotice(m, type || 'error'),
+          t: s => I18N.t(s),
+        });
+        NCClinicChat.renderBell('clinicBellMount');
+      }
+
       // Sayfa yüklendiğindeki STATİK metni (sidebar, başlıklar, tablo
       // sütun başlıkları, modal iskeletleri) çevir — dinamik olarak
       // render edilen içerik zaten kendi translateDOM çağrısını yapıyor.
