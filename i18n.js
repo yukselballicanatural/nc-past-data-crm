@@ -540,6 +540,14 @@
     'satır': 'line',
     'Clinic\'e Bildir': 'Notify Clinic',
     'Sohbet geçmişi': 'Conversation history',
+    // Deal penceresi içindeki sohbet paneli (ayrı popup yok — bkz.
+    // team-leader.html dmSetView).
+    'Geri': 'Back',
+    'Deal detayına dön': 'Back to deal details',
+    'Mesaj yaz... (görsel için Ctrl+V)': 'Write a message... (Ctrl+V for an image)',
+    'İlk mesajı yazarak sohbeti başlatın.': 'Write the first message to start the conversation.',
+    // 'Bugün' / 'Dün' (gün ayırıcı etiketleri) sözlükte AŞAĞIDA zaten var —
+    // burada tekrar tanımlamıyoruz.
     'Geçmiş': 'History',
     'Clinic mesajları': 'Clinic messages',
     'Mesaj yaz...': 'Write a message...',

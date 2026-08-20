@@ -427,182 +427,250 @@ window.NCClinicChat = (function () {
     openThread({ dealId: _dock.dealId, dealName: _dock.dealName, team: _dock.team, alarmId: _dock.alarmId });
   }
 
-  /* ═══════════════════════ 2. SOHBET PENCERESİ ═══════════════════════ */
-  let _thread = null;   // { dealId, dealName, team, alarmId, draftId }
+  /* ═══════════════════════ 2. SOHBET (tek render yolu) ═══════════════════════ */
+  // Sohbet arayüzü TEK yerde üretiliyor (renderChat) ve İKİ yere basılabiliyor:
+  //   a) deal penceresinin içindeki sohbet paneli  → mountInline()
+  //   b) kendi başına açılan pencere (çan/dock)    → openThread()
+  // Böylece iki ayrı kopya olmuyor; düzeltme bir yerde yapılıyor.
+  //
+  // Element id'leri host başına ÖNEKLENİYOR: iki host aynı anda DOM'da
+  // olabilir (deal penceresi açıkken çandan pencere açılabilir) ve id
+  // çakışması sessizce yanlış kutuya yazmaya yol açardı.
+  let _thread = null;   // { dealId, dealName, team, alarmId, draftId, pfx, hostId }
 
-  function _ensureThreadModal() {
-    if (document.getElementById('nccThreadModal')) return;
-    const el = document.createElement('div');
-    el.id = 'nccThreadModal';
-    el.className = 'ncc-thread-modal';
-    el.innerHTML = `
-      <div class="ncc-thread-bg" onclick="NCClinicChat.closeThread()"></div>
-      <div class="ncc-thread-box">
-        <div class="ncc-thread-head">
-          <div class="ncc-avatar" id="nccThreadAvatar" data-empty="true">?</div>
-          <div class="ncc-thread-head-id">
-            <p class="ncc-thread-title" id="nccThreadTitle">—</p>
-            <p class="ncc-thread-sub" id="nccThreadSub">—</p>
-          </div>
-          <button type="button" class="ncc-thread-x" onclick="NCClinicChat.closeThread()" aria-label="Kapat">
-            <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
-          </button>
-        </div>
-        <div class="ncc-thread-body" id="nccThreadBody"></div>
-        <div class="ncc-thread-foot">
-          <div id="nccThreadWarnSlot"></div>
-          <div class="ncc-thread-foot-row">
-            <textarea id="nccThreadInput" maxlength="${MAX_LEN}" rows="1"
-              placeholder="${esc(_t('Mesaj yaz...'))}"></textarea>
-            <button type="button" class="ncc-send-btn" id="nccThreadSend" onclick="NCClinicChat.sendFromThread()"
-              title="${esc(_t('Gönder'))}">
-              <svg fill="currentColor" viewBox="0 0 24 24"><path d="M3.4 20.6l17.45-8.4a.6.6 0 000-1.08L3.4 2.72a.6.6 0 00-.85.66l1.7 6.8L14 12l-9.75 1.82-1.7 6.8a.6.6 0 00.85.66z"/></svg>
-            </button>
-          </div>
-          <div id="nccThreadAttachSlot"></div>
-        </div>
-      </div>`;
-    document.body.appendChild(el);
-
-    const input = document.getElementById('nccThreadInput');
-    if (input) {
-      input.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFromThread(); }
-      });
-      // Otomatik yükseklik — tek satırdan başlar, uzadıkça büyür.
-      input.addEventListener('input', () => {
-        input.style.height = 'auto';
-        input.style.height = Math.min(input.scrollHeight, 110) + 'px';
-      });
-    }
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && _thread) closeThread();
-    });
+  function _ids(pfx) {
+    return {
+      body:   pfx + 'Body',
+      input:  pfx + 'Input',
+      send:   pfx + 'Send',
+      attach: pfx + 'AttachSlot',
+      mount:  pfx + 'AttachMount',
+      file:   pfx + 'File',
+      warn:   pfx + 'WarnSlot',
+      avatar: pfx + 'Avatar',
+      title:  pfx + 'Title',
+      sub:    pfx + 'Sub',
+      wrap:   pfx + 'AvatarWrap',
+    };
   }
 
-  function openThread(ctx) {
-    _ensureThreadModal();
+  // Sohbet iskeletini verilen konteynere basar. `opts.header`:
+  //   'back'  → sol üstte geri oku (deal penceresi içi)
+  //   'close' → sağ üstte kapat (kendi penceresi)
+  function renderChat(hostEl, ctx, opts) {
+    if (!hostEl) return;
+    opts = opts || {};
+    const pfx = opts.prefix || 'nccChat';
+    const id = _ids(pfx);
+    const isBack = opts.header === 'back';
+
     _thread = {
       dealId:   String(ctx.dealId || ''),
       dealName: ctx.dealName || '',
       team:     ctx.team || '',
       alarmId:  ctx.alarmId || null,
       draftId:  uuid(),
+      pfx,
+      hostId:   hostEl.id || '',
     };
-    document.getElementById('nccThreadTitle').textContent = _thread.dealName || _t('Deal');
-    document.getElementById('nccThreadSub').textContent = _t('Yükleniyor...');
-    document.getElementById('nccThreadBody').innerHTML = '';
-    document.getElementById('nccThreadModal').classList.add('open');
-    // Alarm penceresi de açıksa onun overflow kilidini BOZMA — kapanışta
-    // geri verilecek değer zaten '' (bkz. closeThread).
-    document.body.style.overflow = 'hidden';
-    const slot = document.getElementById('nccThreadAttachSlot');
-    if (slot && window.NCAttach) {
-      slot.innerHTML = NCAttach.renderWidget(`'${attr(_thread.draftId)}'`, 'nccThreadFile', 'nccThreadAttachMount');
-      NCAttach.load(_thread.draftId, 'nccThreadAttachMount');
-      NCAttach.bindPaste('nccThreadInput', _thread.draftId, 'nccThreadAttachMount');
+
+    const leadBtn = isBack
+      ? `<button type="button" class="ncc-chat-back" onclick="${esc(opts.onBack || '')}"
+           title="${esc(_t('Deal detayına dön'))}" aria-label="${esc(_t('Deal detayına dön'))}">
+           <svg fill="none" stroke="currentColor" stroke-width="2.1" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+           <span>${esc(_t('Geri'))}</span>
+         </button>`
+      : '';
+    const tailBtn = isBack
+      ? ''
+      : `<button type="button" class="ncc-chat-x" onclick="NCClinicChat.closeThread()" aria-label="${esc(_t('Kapat'))}">
+           <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+         </button>`;
+
+    hostEl.innerHTML = `
+      <div class="ncc-chat">
+        <div class="ncc-chat-head">
+          ${leadBtn}
+          <span class="ncc-avatar-wrap" id="${id.wrap}" data-empty="true">
+            <span class="ncc-avatar" id="${id.avatar}" data-empty="true">?</span>
+          </span>
+          <div class="ncc-chat-head-id">
+            <p class="ncc-chat-title" id="${id.title}">${esc(ctx.dealName || _t('Deal'))}</p>
+            <p class="ncc-chat-sub" id="${id.sub}">${esc(_t('Yükleniyor...'))}</p>
+          </div>
+          ${tailBtn}
+        </div>
+        <div class="ncc-chat-body" id="${id.body}"></div>
+        <div class="ncc-chat-foot">
+          <div id="${id.warn}"></div>
+          <div class="ncc-chat-foot-row">
+            <div class="ncc-chat-field">
+              <textarea id="${id.input}" maxlength="${MAX_LEN}" rows="1"
+                placeholder="${esc(_t('Mesaj yaz... (görsel için Ctrl+V)'))}"></textarea>
+            </div>
+            <button type="button" class="ncc-send-btn" id="${id.send}" onclick="NCClinicChat.sendFromThread()"
+              title="${esc(_t('Gönder'))}" aria-label="${esc(_t('Gönder'))}">
+              <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-7.5-15-7.5v6l9 1.5-9 1.5v6z"/></svg>
+            </button>
+          </div>
+          <div class="ncc-chat-tools">
+            <span class="ncc-attach-slot" id="${id.attach}"></span>
+            <span class="ncc-kbd-hint"><kbd>⏎</kbd> ${esc(_t('gönder'))} · <kbd>⇧⏎</kbd> ${esc(_t('satır'))}</span>
+          </div>
+        </div>
+      </div>`;
+
+    const input = document.getElementById(id.input);
+    if (input) {
+      input.addEventListener('input', () => {
+        input.style.height = 'auto';
+        input.style.height = Math.min(input.scrollHeight, 116) + 'px';
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendFromThread(); }
+      });
     }
+    _mountThreadAttach();
     _paintThreadIdentity();
     _loadThread();
   }
 
+  function _mountThreadAttach() {
+    if (!_thread || !window.NCAttach) return;
+    const id = _ids(_thread.pfx);
+    const slot = document.getElementById(id.attach);
+    if (!slot) return;
+    slot.innerHTML = NCAttach.renderWidget(`'${attr(_thread.draftId)}'`, id.file, id.mount);
+    NCAttach.load(_thread.draftId, id.mount);
+    NCAttach.bindPaste(id.input, _thread.draftId, id.mount);
+  }
+
   async function _paintThreadIdentity() {
     if (!_thread) return;
-    const c = await clinicContact(_thread.dealId);
-    if (!_thread) return;
-    const av = document.getElementById('nccThreadAvatar');
-    const sub = document.getElementById('nccThreadSub');
-    const warn = document.getElementById('nccThreadWarnSlot');
+    const want = _thread.dealId;
+    const c = await clinicContact(want);
+    // Arada başka bir sohbete geçilmiş olabilir — geç gelen yanıt yeni
+    // sohbetin başlığını EZMEMELİ.
+    if (!_thread || _thread.dealId !== want) return;
+    const id = _ids(_thread.pfx);
+    const av = document.getElementById(id.avatar);
+    const wrap = document.getElementById(id.wrap);
+    const sub = document.getElementById(id.sub);
+    const warn = document.getElementById(id.warn);
     if (c && c.name) {
-      if (av) { av.textContent = initials(c.name); av.dataset.empty = 'false'; av.dataset.source = c.source || ''; }
+      if (av) { av.textContent = initials(c.name); av.dataset.empty = 'false'; }
+      if (wrap) { wrap.dataset.empty = 'false'; wrap.dataset.source = c.source || ''; }
       if (sub) sub.textContent = c.name + ' · ' + _contactSub(c);
       if (warn) warn.innerHTML = '';
     } else {
-      if (av) { av.textContent = '?'; av.dataset.empty = 'true'; av.dataset.source = ''; }
+      if (av) { av.textContent = '?'; av.dataset.empty = 'true'; }
+      if (wrap) { wrap.dataset.empty = 'true'; wrap.dataset.source = ''; }
       if (sub) sub.textContent = _t('Muhatap atanmamış');
       if (warn) {
-        warn.innerHTML = `<div class="ncc-thread-warn">${esc(_t('Bu deal\'de Zoho\'daki Aftercare Owner ve WhatsApp grubu alanları boş. Mesajınız kaydedilir ve muhatap atandığında dizide görünür.'))}</div>`;
+        warn.innerHTML = `<div class="ncc-chat-warn">${esc(_t('Bu deal\'de Zoho\'daki Aftercare Owner ve WhatsApp grubu alanları boş. Mesajınız kaydedilir ve muhatap atandığında dizide görünür.'))}</div>`;
       }
     }
   }
 
-  function closeThread() {
-    const el = document.getElementById('nccThreadModal');
-    if (el) el.classList.remove('open');
-    _thread = null;
-    // Alarm penceresi hâlâ açıksa kilidi koru — yoksa arka plan kayardı.
-    const alarmOpen = document.getElementById('alarmModal');
-    const dealOpen = document.getElementById('dealModal');
-    const stillOpen = (alarmOpen && alarmOpen.classList.contains('open')) ||
-                      (dealOpen && dealOpen.classList.contains('open'));
-    document.body.style.overflow = stillOpen ? 'hidden' : '';
-  }
-
   async function _loadThread() {
     if (!_thread) return;
-    const body = document.getElementById('nccThreadBody');
+    const want = _thread.dealId;
+    const id = _ids(_thread.pfx);
+    const body = document.getElementById(id.body);
+    if (!body) return;
     try {
       const r = await fetch(
-        `${BASE}/rest/v1/clinic_messages?deal_id=eq.${encodeURIComponent(_thread.dealId)}` +
+        `${BASE}/rest/v1/clinic_messages?deal_id=eq.${encodeURIComponent(want)}` +
         `&order=created_at.asc&limit=200`, { headers: _h() });
+      if (!_thread || _thread.dealId !== want) return;
       if (!r.ok) {
         const txt = await r.text().catch(() => '');
-        body.innerHTML = `<div class="ncc-thread-empty">${esc(
+        body.innerHTML = `<div class="ncc-chat-empty">${esc(
           /does not exist|PGRST205|schema cache/i.test(txt)
             ? _t('clinic_messages tablosu henüz kurulmamış — clinic_messages.sql dosyasını çalıştırın.')
             : _t('Mesajlar yüklenemedi.'))}</div>`;
         return;
       }
       const rows = await r.json();
+      if (!_thread || _thread.dealId !== want) return;
       _renderThread(Array.isArray(rows) ? rows : []);
-      _markRead(_thread.dealId);
+      _markRead(want);
     } catch (e) {
-      body.innerHTML = `<div class="ncc-thread-empty">${esc(_t('Mesajlar yüklenemedi.'))}</div>`;
+      body.innerHTML = `<div class="ncc-chat-empty">${esc(_t('Mesajlar yüklenemedi.'))}</div>`;
     }
   }
 
   function _renderThread(rows) {
-    const body = document.getElementById('nccThreadBody');
+    if (!_thread) return;
+    const id = _ids(_thread.pfx);
+    const body = document.getElementById(id.body);
     if (!body) return;
     if (!rows.length) {
       body.innerHTML = `
-        <div class="ncc-thread-empty">
-          <svg fill="none" stroke="currentColor" stroke-width="1.6" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h8M8 8h8m-8 8h5m7-4c0 4.418-4.03 8-9 8a9.8 9.8 0 01-4.15-.9L3 20l1.05-3.16A7.7 7.7 0 013 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>
+        <div class="ncc-chat-empty">
+          <svg fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m8-2c0 4.418-4.03 8-9 8a9.8 9.8 0 01-4.15-.9L3 20l1.05-3.16A7.7 7.7 0 013 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>
           <div>${esc(_t('Bu deal için henüz mesaj yok.'))}</div>
+          <span>${esc(_t('İlk mesajı yazarak sohbeti başlatın.'))}</span>
         </div>`;
       return;
     }
-    body.innerHTML = rows.map(m => {
+    // Gün ayırıcı: aynı güne ait mesajlar tek başlık altında toplanır.
+    let lastDay = '';
+    const parts = [];
+    for (const m of rows) {
+      const day = String(m.created_at || '').slice(0, 10);
+      if (day && day !== lastDay) {
+        lastDay = day;
+        parts.push(`<div class="ncc-chat-day"><span>${esc(_dayLabel(day))}</span></div>`);
+      }
       const mine = isMine(m);
       const who = mine ? (m.sent_by_name || _t('Ben')) : (m.sent_by_name || m.sent_to_name || _t('Clinic'));
-      const mountId = 'nccMsgAtt_' + String(m.id).replace(/[^A-Za-z0-9_-]/g, '');
-      return `
+      const mountId = _thread.pfx + 'Msg' + String(m.id).replace(/[^A-Za-z0-9_-]/g, '');
+      parts.push(`
         <div class="ncc-msg-row" data-mine="${mine}">
-          <div class="ncc-avatar sm" data-empty="${mine ? 'true' : 'false'}">${esc(initials(who))}</div>
+          <span class="ncc-avatar sm" data-empty="${mine ? 'true' : 'false'}">${esc(initials(who))}</span>
           <div class="ncc-msg-col">
             ${m.message ? `<div class="ncc-bubble">${esc(m.message)}</div>` : ''}
             ${Number(m.attachment_count) > 0 ? `<div class="ncc-msg-attach" id="${esc(mountId)}"></div>` : ''}
             <div class="ncc-msg-meta">
-              <span>${esc(who)}</span><span>·</span><span>${esc(timeFull(m.created_at))}</span>
+              <span>${esc(who)}</span><span class="ncc-msg-dot">·</span><span>${esc(timeHM(m.created_at))}</span>
             </div>
           </div>
-        </div>`;
-    }).join('');
+        </div>`);
+    }
+    body.innerHTML = parts.join('');
     body.scrollTop = body.scrollHeight;
     // Ekler: her baloncuk KENDİ klasöründen yüklenir (mesaj id'si = klasör).
     // İmzalı URL'ler 1 saatte geçersiz olduğu için her çizimde yeniden alınır.
     if (window.NCAttach) {
       rows.filter(m => Number(m.attachment_count) > 0).forEach(m => {
-        const mountId = 'nccMsgAtt_' + String(m.id).replace(/[^A-Za-z0-9_-]/g, '');
+        const mountId = _thread.pfx + 'Msg' + String(m.id).replace(/[^A-Za-z0-9_-]/g, '');
         if (document.getElementById(mountId)) NCAttach.load(m.id, mountId);
       });
     }
   }
 
+  function _dayLabel(day) {
+    const d = new Date(day + 'T00:00:00');
+    if (isNaN(d.getTime())) return day;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const diff = Math.round((today.getTime() - d.getTime()) / 86400000);
+    if (diff === 0) return _t('Bugün');
+    if (diff === 1) return _t('Dün');
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
+  }
+
+  function timeHM(iso) {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return d.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' });
+  }
+
   async function sendFromThread() {
     if (!_thread) return;
-    const input = document.getElementById('nccThreadInput');
-    const btn = document.getElementById('nccThreadSend');
+    const id = _ids(_thread.pfx);
+    const input = document.getElementById(id.input);
+    const btn = document.getElementById(id.send);
     const text = input ? input.value.trim() : '';
     const msgId = _thread.draftId;
     const nAttach = await _attachCount(msgId);
@@ -611,20 +679,63 @@ window.NCClinicChat = (function () {
     try {
       await _insert(_thread, text, msgId, nAttach);
       if (input) { input.value = ''; input.style.height = 'auto'; }
+      // Sonraki mesaj için YENİ ek klasörü — eski görseller yeni mesaja
+      // bağlı görünmesin (NCAttach klasör başına en fazla 6 dosya).
       _thread.draftId = uuid();
-      const slot = document.getElementById('nccThreadAttachSlot');
-      if (slot && window.NCAttach) {
-        slot.innerHTML = NCAttach.renderWidget(`'${attr(_thread.draftId)}'`, 'nccThreadFile', 'nccThreadAttachMount');
-        NCAttach.load(_thread.draftId, 'nccThreadAttachMount');
-        NCAttach.bindPaste('nccThreadInput', _thread.draftId, 'nccThreadAttachMount');
-      }
+      _mountThreadAttach();
       _loadThread();
       refreshBell();
+      refreshDealBadge(_thread.dealId);
     } catch (e) {
       _notify(_t('Gönderilemedi: ') + e.message);
     } finally {
       if (btn) btn.disabled = false;
     }
+  }
+
+  // ── a) Deal penceresi içine gömülü sohbet ──────────────────────────────
+  // Ayrı popup AÇILMIYOR: deal penceresinin kendisi sohbete dönüşüyor,
+  // sol üstteki geri oku detaylara döndürüyor (kullanıcı talebi).
+  function mountInline(hostId, ctx, onBackExpr) {
+    const host = document.getElementById(hostId);
+    if (!host) return;
+    renderChat(host, ctx, { prefix: 'nccInline', header: 'back', onBack: onBackExpr || '' });
+  }
+
+  // ── b) Kendi başına açılan pencere (çan / dock "Geçmiş") ───────────────
+  function _ensureThreadModal() {
+    if (document.getElementById('nccThreadModal')) return;
+    const el = document.createElement('div');
+    el.id = 'nccThreadModal';
+    el.className = 'ncc-thread-modal';
+    el.innerHTML = `
+      <div class="ncc-thread-bg" onclick="NCClinicChat.closeThread()"></div>
+      <div class="ncc-thread-box" id="nccThreadHost"></div>`;
+    document.body.appendChild(el);
+    document.addEventListener('keydown', (e) => {
+      const m = document.getElementById('nccThreadModal');
+      if (e.key === 'Escape' && m && m.classList.contains('open')) closeThread();
+    });
+  }
+
+  function openThread(ctx) {
+    _ensureThreadModal();
+    const host = document.getElementById('nccThreadHost');
+    renderChat(host, ctx, { prefix: 'nccModal', header: 'close' });
+    document.getElementById('nccThreadModal').classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeThread() {
+    const el = document.getElementById('nccThreadModal');
+    if (el) el.classList.remove('open');
+    _thread = null;
+    // Alarm/deal penceresi hâlâ açıksa kilidi koru — yoksa arka plan kayardı.
+    const alarmOpen = document.getElementById('alarmModal');
+    const dealOpen = document.getElementById('dealModal');
+    const stillOpen = (alarmOpen && alarmOpen.classList.contains('open')) ||
+                      (dealOpen && dealOpen.classList.contains('open'));
+    document.body.style.overflow = stillOpen ? 'hidden' : '';
   }
 
   // Bu deal'de BANA gelen okunmamış mesajları okundu işaretle.
@@ -648,13 +759,19 @@ window.NCClinicChat = (function () {
   // işareti/çift tırnak gerçekten oluyor (hasta adları) ve gömülü JSON o
   // durumda hem HTML attribute'unu hem JS dizesini bozuyor. data-* attribute
   // + dataset okuma bu soruna tamamen bağışık.
+  //
+  // onclick DIŞARIDAN veriliyor (ctx.onClick): deal penceresi bunu ayrı bir
+  // popup açmak için DEĞİL, kendi içinde sohbet paneline geçmek için
+  // kullanıyor (kullanıcı talebi: üst üste popup açılmasın). Verilmezse
+  // eskisi gibi kendi penceresini açar.
   function renderIconButton(ctx) {
+    const onClick = ctx.onClick || 'NCClinicChat.openThreadFromEl(this)';
     return `
       <button type="button" class="ncc-icon-btn" id="nccDealMsgBtn"
         data-deal-id="${esc(ctx.dealId || '')}"
         data-deal-name="${esc(ctx.dealName || '')}"
         data-team="${esc(ctx.team || '')}"
-        onclick="NCClinicChat.openThreadFromEl(this)"
+        onclick="${esc(onClick)}"
         title="${esc(_t('Clinic mesajları'))}" aria-label="${esc(_t('Clinic mesajları'))}">
         <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h8M8 8h8m-8 8h5m7-4c0 4.418-4.03 8-9 8a9.8 9.8 0 01-4.15-.9L3 20l1.05-3.16A7.7 7.7 0 013 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>
         <span class="ncc-icon-badge" id="nccDealMsgBadge" style="display:none"></span>
@@ -836,8 +953,8 @@ window.NCClinicChat = (function () {
     init, clinicContact, aftercareOwner,
     // dock
     renderDock, dockAction, openComposer, closeComposer, openThreadFromDock,
-    // thread
-    openThread, openThreadFromEl, closeThread, sendFromThread,
+    // sohbet — tek render yolu, iki host (gömülü / kendi penceresi)
+    renderChat, mountInline, openThread, openThreadFromEl, closeThread, sendFromThread,
     // deal ikonu
     renderIconButton, refreshDealBadge,
     // çan

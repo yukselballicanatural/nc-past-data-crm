@@ -232,98 +232,226 @@
   .ncc-dock, .ncc-dock-composer, .ncc-cta { transition: none; }
 }
 
-/* ═══════════════ 2. SOHBET PENCERESİ ═══════════════ */
+/* ═══════════════ 2. SOHBET ═══════════════
+   Aynı iskelet İKİ yerde kullanılıyor (bkz. clinic-chat.js renderChat):
+     a) deal penceresinin içinde, panel olarak  (.dm-pane[data-pane="chat"])
+     b) kendi başına açılan pencerede           (.ncc-thread-modal)
+   .ncc-chat her iki durumda da kabını TAMAMEN doldurur; yükseklik kabı
+   belirler — böylece tek stil iki bağlamda çalışıyor.                     */
+.ncc-chat {
+  display: flex; flex-direction: column;
+  height: 100%; min-height: 0;
+}
+
+/* ── Başlık ──────────────────────────────────────────────────────────── */
+.ncc-chat-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 0 0 13px; margin-bottom: 13px;
+  border-bottom: 1px solid #1c2740; flex-shrink: 0;
+}
+.ncc-chat-head-id { min-width: 0; flex: 1; }
+.ncc-chat-title {
+  margin: 0; font-size: 13px; font-weight: 750; color: #f1f5f9;
+  letter-spacing: -.005em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ncc-chat-sub {
+  margin: 2.5px 0 0; font-size: 10.5px; color: #6b7891;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Geri düğmesi — deal detayına dönüş. Sol üstte, ikon + kısa etiket. */
+.ncc-chat-back {
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+  height: 30px; padding: 0 11px 0 8px; cursor: pointer;
+  border-radius: 10px; border: 1px solid #1c2740;
+  background: #101828; color: #94a3b8;
+  font-family: inherit; font-size: 11px; font-weight: 700;
+  transition: background .16s, color .16s, border-color .16s, transform .14s;
+}
+.ncc-chat-back svg { width: 14px; height: 14px; }
+.ncc-chat-back:hover { background: #182135; color: #e6ebf5; border-color: #2a3550; }
+/* Sola doğru küçük bir kayma — "geri gidiyorum" hissi */
+.ncc-chat-back:hover svg { transform: translateX(-1.5px); }
+.ncc-chat-back svg { transition: transform .16s; }
+.ncc-chat-back:active { transform: scale(.96); }
+
+.ncc-chat-x {
+  width: 30px; height: 30px; flex-shrink: 0; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 9px; background: transparent; color: #64748b;
+  transition: background .15s, color .15s;
+}
+.ncc-chat-x:hover { background: #1c2740; color: #e6ebf5; }
+.ncc-chat-x svg { width: 16px; height: 16px; }
+
+/* ── Baloncuk listesi ────────────────────────────────────────────────── */
+.ncc-chat-body {
+  flex: 1; min-height: 0; overflow-y: auto;
+  padding: 2px 2px 4px; margin-right: -4px; padding-right: 6px;
+}
+/* Gün ayırıcı — ortada etiket, iki yanında çizgi */
+.ncc-chat-day {
+  display: flex; align-items: center; gap: 10px;
+  margin: 4px 0 14px; user-select: none;
+}
+.ncc-chat-day::before, .ncc-chat-day::after {
+  content: ''; flex: 1; height: 1px; background: #16203a;
+}
+.ncc-chat-day span {
+  font-size: 9.5px; font-weight: 700; color: #4c5a72;
+  text-transform: uppercase; letter-spacing: .05em; white-space: nowrap;
+}
+
+.ncc-msg-row { display: flex; gap: 8px; margin-bottom: 13px; align-items: flex-end; }
+.ncc-msg-row[data-mine="true"] { flex-direction: row-reverse; }
+.ncc-msg-col { max-width: 78%; min-width: 0; }
+.ncc-bubble {
+  border-radius: 14px; padding: 9px 12px;
+  font-size: 12.5px; line-height: 1.55;
+  word-break: break-word; overflow-wrap: anywhere; white-space: pre-wrap;
+  background: #1a2338; color: #e6ebf5;
+  border-bottom-left-radius: 5px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .3);
+}
+.ncc-msg-row[data-mine="true"] .ncc-bubble {
+  background: linear-gradient(135deg, #5b54ea, #4338ca);
+  color: #fff;
+  border-bottom-left-radius: 14px; border-bottom-right-radius: 5px;
+  box-shadow: 0 2px 8px -3px rgba(79, 70, 229, .6);
+}
+.ncc-msg-meta {
+  margin-top: 4px; font-size: 9.5px; color: #46536b;
+  display: flex; gap: 5px; align-items: center;
+}
+.ncc-msg-row[data-mine="true"] .ncc-msg-meta { justify-content: flex-end; }
+.ncc-msg-dot { opacity: .55; }
+.ncc-msg-attach { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; }
+
+.ncc-chat-empty {
+  min-height: 180px; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 8px;
+  color: #46536b; font-size: 12.5px; text-align: center; padding: 20px 24px;
+}
+.ncc-chat-empty svg { width: 36px; height: 36px; opacity: .35; margin-bottom: 2px; }
+.ncc-chat-empty span { font-size: 10.5px; color: #3d4759; }
+
+/* ── Alt composer ────────────────────────────────────────────────────── */
+.ncc-chat-foot { flex-shrink: 0; padding-top: 12px; margin-top: 4px; border-top: 1px solid #1c2740; }
+.ncc-chat-foot-row { display: flex; gap: 8px; align-items: flex-end; }
+.ncc-chat-field { flex: 1; min-width: 0; position: relative; }
+.ncc-chat-field textarea {
+  width: 100%; box-sizing: border-box; display: block;
+  min-height: 40px; max-height: 116px; resize: none; overflow-y: auto;
+  border-radius: 12px; padding: 10px 13px;
+  font-family: inherit; font-size: 12.5px; line-height: 1.55;
+  background: #060a13; color: #e6ebf5;
+  border: 1px solid #1c2740;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .4);
+  transition: border-color .2s ease, background .2s ease;
+}
+.ncc-chat-field textarea:focus { outline: none; border-color: #4f46e5; background: #050810; }
+.ncc-chat-field textarea::placeholder { color: #46536b; }
+
+.ncc-send-btn {
+  width: 40px; height: 40px; flex-shrink: 0; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  border: none; border-radius: 12px; color: #fff;
+  background: linear-gradient(135deg, #6366f1, #4338ca);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .2),
+              0 4px 14px -5px rgba(79, 70, 229, .8);
+  transition: transform .14s cubic-bezier(.22, 1, .36, 1), box-shadow .2s, filter .2s;
+}
+.ncc-send-btn svg { width: 17px; height: 17px; }
+.ncc-send-btn:hover {
+  transform: translateY(-1.5px); filter: saturate(1.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .26),
+              0 8px 20px -6px rgba(79, 70, 229, .92);
+}
+.ncc-send-btn:active { transform: translateY(0) scale(.96); }
+.ncc-send-btn:disabled { opacity: .5; cursor: default; transform: none; filter: none; }
+
+.ncc-chat-tools {
+  display: flex; align-items: center; gap: 10px; padding-top: 8px;
+  min-height: 24px; flex-wrap: wrap;
+}
+.ncc-chat-warn {
+  margin: 0 0 9px; padding: 8px 11px; border-radius: 10px;
+  font-size: 10.5px; line-height: 1.5;
+  background: #2c1a06; border: 1px solid #6b3f0a; color: #fbbf24;
+}
+
+/* ── b) Kendi başına açılan pencere ──────────────────────────────────── */
 .ncc-thread-modal {
   display: none; position: fixed; inset: 0; z-index: 10002;
   align-items: center; justify-content: center; padding: 16px;
 }
 .ncc-thread-modal.open { display: flex; }
-.ncc-thread-bg { position: absolute; inset: 0; background: rgba(0, 0, 0, .78); }
+.ncc-thread-bg {
+  position: absolute; inset: 0; background: rgba(2, 6, 23, .8);
+  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+}
 .ncc-thread-box {
   position: relative; z-index: 1; width: 100%; max-width: 560px;
-  height: min(78vh, 660px); display: flex; flex-direction: column;
-  border-radius: 17px; overflow: hidden;
-  background: #0b1120; border: 1px solid #1e293b;
+  height: min(78vh, 660px);
+  border-radius: 17px; padding: 16px; box-sizing: border-box;
+  background: linear-gradient(180deg, #0e1526 0%, #0a0f1c 100%);
+  border: 1px solid #1c2740;
   box-shadow: 0 28px 70px rgba(0, 0, 0, .7);
+  animation: ncc-modal-in .28s cubic-bezier(.22, 1, .36, 1);
+}
+@keyframes ncc-modal-in {
+  from { opacity: 0; transform: translateY(10px) scale(.985); }
+  to   { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ncc-thread-box { animation: none; }
+  .ncc-chat-back, .ncc-send-btn, .ncc-chat-back svg { transition: none; }
 }
 
-.ncc-thread-head {
-  display: flex; align-items: center; gap: 10px; padding: 13px 15px;
-  border-bottom: 1px solid #1e293b; flex-shrink: 0;
-}
-.ncc-thread-head-id { min-width: 0; flex: 1; }
-.ncc-thread-title {
-  margin: 0; font-size: 13px; font-weight: 750; color: #f1f5f9;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.ncc-thread-sub {
-  margin: 2px 0 0; font-size: 10.5px; color: #64748b;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.ncc-thread-x {
-  width: 30px; height: 30px; flex-shrink: 0; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  border: none; border-radius: 9px; background: transparent; color: #64748b;
-  transition: background .15s, color .15s;
-}
-.ncc-thread-x:hover { background: #1e293b; color: #e2e8f0; }
-.ncc-thread-x svg { width: 16px; height: 16px; }
+/* ═══════════════ 2b. DEAL PENCERESİ: DETAY ↔ SOHBET PANELİ ═══════════════
+   Kullanıcı talebi: "popup açılmasın, bulunduğu deal popup'ı chat gibi olsun,
+   geri butonu koyalım". Üst üste modal açmak yerine AYNI pencerede panel
+   değiştiriliyor.
 
-/* Baloncuk listesi */
-.ncc-thread-body { flex: 1; min-height: 0; overflow-y: auto; padding: 15px; }
-.ncc-msg-row { display: flex; gap: 8px; margin-bottom: 14px; align-items: flex-start; }
-.ncc-msg-row[data-mine="true"] { flex-direction: row-reverse; }
-.ncc-msg-col { max-width: 76%; min-width: 0; }
-.ncc-bubble {
-  border-radius: 13px; padding: 9px 12px; font-size: 12.5px; line-height: 1.55;
-  word-break: break-word; overflow-wrap: anywhere; white-space: pre-wrap;
-  background: #1e293b; color: #e2e8f0;
-  border-bottom-left-radius: 4px;
-}
-.ncc-msg-row[data-mine="true"] .ncc-bubble {
-  background: linear-gradient(135deg, #4f46e5, #4338ca); color: #fff;
-  border-bottom-left-radius: 13px; border-bottom-right-radius: 4px;
-}
-.ncc-msg-meta {
-  margin-top: 4px; font-size: 9.5px; color: #475569;
-  display: flex; gap: 6px; align-items: center;
-}
-.ncc-msg-row[data-mine="true"] .ncc-msg-meta { justify-content: flex-end; }
-.ncc-msg-attach { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 5px; }
+   Paneller üst üste (absolute) duruyor, aktif olan görünür. Yükseklik JS'te
+   ölçülüp yazılıyor (bkz. team-leader.html dmSetView) çünkü CSS `height:auto`
+   değerini animasyonlayamaz. Geçiş: yatay kayma + çapraz sönme.
 
-.ncc-thread-empty {
-  height: 100%; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; gap: 9px;
-  color: #475569; font-size: 12px; text-align: center; padding: 0 24px;
-}
-.ncc-thread-empty svg { width: 34px; height: 34px; opacity: .5; }
+   visibility (display:none DEĞİL) kullanılıyor: display:none olan panelin
+   yüksekliği ölçülemez, oysa geçiş için hedef panelin yüksekliğini geçişten
+   ÖNCE bilmek gerekiyor.                                                   */
+.dm-box[data-view="chat"] { overflow: hidden; }   /* sohbette dış kaydırma yok, dizi kendi içinde kayar */
 
-/* Alt composer */
-.ncc-thread-foot { border-top: 1px solid #1e293b; padding: 11px; flex-shrink: 0; }
-.ncc-thread-foot-row { display: flex; gap: 8px; align-items: flex-end; }
-.ncc-thread-foot textarea {
-  flex: 1; min-width: 0; box-sizing: border-box; min-height: 40px; max-height: 110px;
-  resize: none; border-radius: 11px; padding: 10px 12px;
-  font-family: inherit; font-size: 12.5px; line-height: 1.5;
-  background: #060b14; border: 1px solid #1e293b; color: #e2e8f0;
+.dm-stack {
+  position: relative;
+  transition: height .42s cubic-bezier(.22, 1, .36, 1);
 }
-.ncc-thread-foot textarea:focus { outline: none; border-color: #4f46e5; }
-.ncc-thread-foot textarea::placeholder { color: #475569; }
-.ncc-send-btn {
-  width: 40px; height: 40px; flex-shrink: 0; cursor: pointer;
-  display: flex; align-items: center; justify-content: center;
-  border: none; border-radius: 11px; color: #fff;
-  background: linear-gradient(135deg, #4f46e5, #4338ca);
-  box-shadow: 0 4px 14px -5px rgba(79, 70, 229, .7);
-  transition: transform .12s, box-shadow .15s, opacity .15s;
+.dm-pane {
+  position: absolute; top: 0; left: 0; right: 0;
+  transition: opacity .3s ease, transform .42s cubic-bezier(.22, 1, .36, 1), visibility .42s;
 }
-.ncc-send-btn:hover { transform: translateY(-1px); box-shadow: 0 7px 18px -5px rgba(79, 70, 229, .85); }
-.ncc-send-btn:disabled { opacity: .5; cursor: default; transform: none; }
-.ncc-send-btn svg { width: 16px; height: 16px; }
-.ncc-thread-warn {
-  margin: 0 0 9px; padding: 7px 10px; border-radius: 9px;
-  font-size: 10.5px; line-height: 1.5;
-  background: #422006; border: 1px solid #78350f; color: #fbbf24;
+/* Etkin olmayan panel: görünmez, tıklanamaz, ama ÖLÇÜLEBİLİR. */
+.dm-box[data-view="details"] .dm-pane[data-pane="chat"],
+.dm-box[data-view="chat"]    .dm-pane[data-pane="details"] {
+  visibility: hidden; opacity: 0; pointer-events: none;
+}
+.dm-box[data-view="details"] .dm-pane[data-pane="details"],
+.dm-box[data-view="chat"]    .dm-pane[data-pane="chat"] {
+  visibility: visible; opacity: 1; position: relative;
+}
+/* Yön: detaydan sohbete geçerken detay SOLA, sohbet SAĞDAN gelir. */
+.dm-box[data-view="chat"]    .dm-pane[data-pane="details"] { transform: translateX(-22px); }
+.dm-box[data-view="details"] .dm-pane[data-pane="chat"]    { transform: translateX(22px); }
+.dm-box[data-view="details"] .dm-pane[data-pane="details"],
+.dm-box[data-view="chat"]    .dm-pane[data-pane="chat"]    { transform: none; }
+
+/* Sohbet paneli pencerenin yüksekliğini belirler — dizi kendi içinde kayar. */
+.dm-pane[data-pane="chat"] { height: min(66vh, 560px); }
+.dm-pane[data-pane="chat"] .ncc-chat { height: 100%; }
+
+@media (prefers-reduced-motion: reduce) {
+  .dm-stack, .dm-pane { transition: none; }
 }
 
 /* ═══════════════ 3. "MESAJLAR" İKON DÜĞMESİ (deal penceresi) ═══════════════ */
@@ -437,38 +565,36 @@ html[data-theme="light"] .ncc-bell-pop {
 html[data-theme="light"] .ncc-thread-box { box-shadow: var(--sh-3), var(--sheen); }
 
 html[data-theme="light"] .ncc-dock-field textarea,
-html[data-theme="light"] .ncc-thread-foot textarea {
+html[data-theme="light"] .ncc-chat-field textarea {
   background: var(--g-3); border: 1px solid var(--edge-soft); color: var(--ink);
 }
 html[data-theme="light"] .ncc-dock-field textarea::placeholder,
-html[data-theme="light"] .ncc-thread-foot textarea::placeholder { color: var(--ink-3); }
+html[data-theme="light"] .ncc-chat-field textarea::placeholder { color: var(--ink-3); }
 
 html[data-theme="light"] .ncc-dock-name,
-html[data-theme="light"] .ncc-thread-title,
+html[data-theme="light"] .ncc-chat-title,
 html[data-theme="light"] .ncc-bell-head h4,
 html[data-theme="light"] .ncc-bell-item-name { color: var(--ink); }
 html[data-theme="light"] .ncc-dock-status,
-html[data-theme="light"] .ncc-thread-sub,
+html[data-theme="light"] .ncc-chat-sub,
 html[data-theme="light"] .ncc-composer-bar,
 html[data-theme="light"] .ncc-bell-item-msg { color: var(--ink-2); }
 html[data-theme="light"] .ncc-msg-meta,
 html[data-theme="light"] .ncc-bell-item-time,
 html[data-theme="light"] .ncc-bell-empty,
-html[data-theme="light"] .ncc-thread-empty { color: var(--ink-3); }
+html[data-theme="light"] .ncc-chat-empty { color: var(--ink-3); }
 
-html[data-theme="light"] .ncc-thread-head,
-html[data-theme="light"] .ncc-thread-foot,
+html[data-theme="light"] .ncc-chat-head,
+html[data-theme="light"] .ncc-chat-foot,
 html[data-theme="light"] .ncc-bell-head { border-color: var(--edge-soft); }
 
 html[data-theme="light"] .ncc-ghost-btn { color: var(--ink-2); }
 html[data-theme="light"] .ncc-ghost-btn:hover,
 html[data-theme="light"] .ncc-composer-x:hover,
-html[data-theme="light"] .ncc-thread-x:hover,
 html[data-theme="light"] .ncc-bell-clear:hover { background: var(--g-3); color: var(--ink); }
 html[data-theme="light"] .ncc-kbd-hint kbd { background: var(--g-2); border-color: var(--edge-soft); color: var(--ink-2); }
 html[data-theme="light"] .ncc-kbd-hint { color: var(--ink-3); }
 html[data-theme="light"] .ncc-composer-x,
-html[data-theme="light"] .ncc-thread-x,
 html[data-theme="light"] .ncc-bell-clear { color: var(--ink-3); }
 
 /* Karşı tarafın baloncuğu — camda okunur bir yüzey */
@@ -487,7 +613,7 @@ html[data-theme="light"] .ncc-bell-dot { box-shadow: 0 0 0 2px rgba(255, 255, 25
 html[data-theme="light"] .ncc-bell-dot[data-has="true"] {
   animation: none;   /* camın üzerinde halka gölgesi kirli görünüyor */
 }
-html[data-theme="light"] .ncc-thread-warn {
+html[data-theme="light"] .ncc-chat-warn {
   background: rgba(251, 191, 36, .16); border-color: rgba(180, 83, 9, .35); color: #92400e;
 }
 
@@ -512,6 +638,22 @@ html[data-theme="light"] .ncc-ghost-btn {
 html[data-theme="light"] .ncc-ghost-btn:hover { border-color: var(--edge); }
 html[data-theme="light"] .ncc-cta {
   background: linear-gradient(135deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 72%, #000));
+}
+html[data-theme="light"] .ncc-chat-x,
+html[data-theme="light"] .ncc-chat-back { color: var(--ink-2); }
+html[data-theme="light"] .ncc-chat-back {
+  background: var(--g-2); border-color: var(--edge-soft);
+}
+html[data-theme="light"] .ncc-chat-x:hover,
+html[data-theme="light"] .ncc-chat-back:hover { background: var(--g-3); color: var(--ink); }
+html[data-theme="light"] .ncc-chat-day::before,
+html[data-theme="light"] .ncc-chat-day::after { background: var(--edge-soft); }
+html[data-theme="light"] .ncc-chat-day span { color: var(--ink-3); }
+html[data-theme="light"] .ncc-send-btn {
+  background: linear-gradient(135deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 72%, #000));
+}
+html[data-theme="light"] .ncc-msg-row[data-mine="true"] .ncc-bubble {
+  background: linear-gradient(135deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 78%, #000));
 }
 
 /* ── Mobil ─────────────────────────────────────────────────────────────── */
