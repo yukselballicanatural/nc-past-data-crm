@@ -581,7 +581,7 @@
       <button class="tab-pill" id="atab-interpreter" onclick="switchAlarmTab('interpreter')">Tercüman Eksik <span id="cnt-interpreter" class="badge-cnt" style="background:rgba(96,165,250,0.2);color:#60a5fa">0</span></button>
       <button class="tab-pill" id="atab-examdate" onclick="switchAlarmTab('examdate')">Muayene Tarihi Eksik <span id="cnt-examdate" class="badge-cnt" style="background:rgba(167,139,250,0.2);color:#a78bfa">0</span></button>
       <button class="tab-pill" id="atab-consultant" onclick="switchAlarmTab('consultant')">Danışman Eksik <span id="cnt-consultant" class="badge-cnt" style="background:rgba(244,114,182,0.2);color:#f472b6">0</span></button>
-      <button class="tab-pill" id="atab-mustwin" onclick="switchAlarmTab('mustwin')">Kazanılmalı <span id="cnt-mustwin" class="badge-cnt" style="background:rgba(251,191,36,0.2);color:#fbbf24">0</span></button>
+      <button class="tab-pill" id="atab-mustwin" onclick="switchAlarmTab('mustwin')">Won Yapılmalı <span id="cnt-mustwin" class="badge-cnt" style="background:rgba(251,191,36,0.2);color:#fbbf24">0</span></button>
       <button class="tab-pill" id="atab-nextvisit" onclick="switchAlarmTab('nextvisit')">Sonraki Vizit Eksik <span id="cnt-nextvisit" class="badge-cnt" style="background:rgba(34,211,238,0.2);color:#22d3ee">0</span></button>
     </div>
 
@@ -2339,7 +2339,7 @@
       'interpreter_missing':              { label:I18N.t('Tercüman Eksik'),             bg:'#1e3a5f', color:'#60a5fa' },
       'exam_date_missing':                { label:I18N.t('Muayene Tarihi Eksik'),       bg:'#2e1065', color:'#a78bfa' },
       'consultant_missing_after_arrival': { label:I18N.t('Danışman Eksik'),             bg:'#500724', color:'#f472b6' },
-      'must_be_won':                      { label:I18N.t('Kazanılmalı'),                bg:'#451a03', color:'#fbbf24' },
+      'must_be_won':                      { label:I18N.t('Won Yapılmalı'),              bg:'#451a03', color:'#fbbf24' },
       'next_visit_date_missing':          { label:I18N.t('Sonraki Vizit Tarihi Eksik'), bg:'#083344', color:'#22d3ee' },
     };
     if (overdue && ['today_patient','arrival_approaching','visit_approaching'].includes(type)) {
@@ -2411,6 +2411,9 @@
     mustwin:    'must_be_won',
     nextvisit:  'next_visit_date_missing',
   };
+  // Ters küme — "bu alarm bir Clinic Planning alarmı mı?" sorusu için
+  // (mountClinicDock hazır mesajı yalnızca bunlarda basıyor).
+  const CLINIC_ALARM_TYPES = new Set(Object.values(CLINIC_TAB_TYPE));
 
   // ── Alarm tablosunu filtrele ─────────────────────────────────────
   function filterAlarms(tab) {
@@ -3225,11 +3228,21 @@
   // Aftercare_Owner'dan otomatik geliyor, rol seçimi YOK.
   function mountClinicDock(a) {
     if (typeof NCClinicChat === 'undefined') return;
+    // Clinic Planning alarmlarında mesajı HAZIR getir. Akış: takım lideri
+    // alarmı görür → "Clinic'e Bildir" ile klinikteki ilgili kişiye (Zoho
+    // Aftercare_Owner) pushlar. Eksik olan şeyi her seferinde elle yazmak
+    // gereksiz; kullanıcı metni silebilir/düzenleyebilir.
+    let suggest = '';
+    if (CLINIC_ALARM_TYPES.has(a.alarm_type)) {
+      const label = alarmTypeMeta(a.alarm_type, false).label;
+      suggest = `${label}${a.deal_name ? ' — ' + a.deal_name : ''}`;
+    }
     NCClinicChat.renderDock('clinicDockMount', {
       dealId:   a.deal_id || '',
       dealName: a.deal_name || '',
       team:     a.team || '',
       alarmId:  a.id || null,
+      suggest,
     });
   }
 

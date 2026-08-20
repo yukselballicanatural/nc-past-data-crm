@@ -183,6 +183,10 @@ window.NCClinicChat = (function () {
       dealName: ctx.dealName || '',
       team:     ctx.team || '',
       alarmId:  ctx.alarmId || null,
+      // Composer ilk açıldığında kutuya hazır gelen metin. Akış "alarmı gör →
+      // clinic'e pushla" olduğu için her seferinde aynı cümleyi elle yazmak
+      // gereksiz; kullanıcı silebilir/düzenleyebilir.
+      suggest:  ctx.suggest || '',
       draftId:  uuid(),
       open:     false,
     };
@@ -266,7 +270,20 @@ window.NCClinicChat = (function () {
     // (draftId) kullanıldığı için gönderimden sonra yenilenir.
     _mountDockAttach();
     const input = document.getElementById('nccDockInput');
-    if (input) requestAnimationFrame(() => input.focus());
+    if (input) {
+      // Hazır metin YALNIZCA kutu boşken basılır — kullanıcı bir şey yazıp
+      // composer'ı kapatıp tekrar açtıysa yazdığını ezmeyiz.
+      if (!input.value && _dock.suggest) {
+        input.value = _dock.suggest;
+        const c = document.getElementById('nccDockCount');
+        if (c) c.textContent = input.value.length + ' / ' + MAX_LEN;
+      }
+      requestAnimationFrame(() => {
+        input.focus();
+        // İmleç sona: hazır metnin ARKASINA yazmaya devam edilsin.
+        try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
+      });
+    }
   }
 
   function closeComposer() {

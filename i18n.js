@@ -561,7 +561,10 @@
     'Tercüman Eksik': 'Interpreter Missing',
     'Muayene Tarihi Eksik': 'Exam Date Missing',
     'Danışman Eksik': 'Consultant Missing',
-    'Kazanılmalı': 'Should Be Won',
+    // "Kazanılmalı" belirsizdi: bu alarm deal'in Zoho'da Won STAGE'ine
+    // alınması gerektiğini söylüyor (spec 14. bölüm: Deal Must Be Moved
+    // to Won). Panel zaten "Won" terimini olduğu gibi kullanıyor.
+    'Won Yapılmalı': 'Move to Won',
     'Sonraki Vizit Tarihi Eksik': 'Next Visit Date Missing',
     'Konsültasyon/Seyahat Tarihi': 'Consultation/Travel Date',
     // Tarih filtreleri Consultation Date / Estimated Travel Date olarak
