@@ -4274,7 +4274,9 @@
     const stack = document.getElementById('dmStack');
     const pane = dmPaneEl(_dmView);
     if (!stack || !pane) return;
-    const h = pane.scrollHeight;
+    // Sohbet katmanının CSS'te KESİN yüksekliği var → offsetHeight birebir
+    // o değer. Detay paneli ise akışta ve içeriği kadar uzuyor → scrollHeight.
+    const h = _dmView === 'chat' ? pane.offsetHeight : pane.scrollHeight;
     if (h > 0) stack.style.height = h + 'px';
   }
 

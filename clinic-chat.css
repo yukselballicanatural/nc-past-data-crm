@@ -409,49 +409,79 @@
   .ncc-chat-back, .ncc-send-btn, .ncc-chat-back svg { transition: none; }
 }
 
-/* ═══════════════ 2b. DEAL PENCERESİ: DETAY ↔ SOHBET PANELİ ═══════════════
-   Kullanıcı talebi: "popup açılmasın, bulunduğu deal popup'ı chat gibi olsun,
-   geri butonu koyalım". Üst üste modal açmak yerine AYNI pencerede panel
-   değiştiriliyor.
+/* ═══════════════ 2b. DEAL PENCERESİ: DETAY → SOHBET (YÜKSELEN KATMAN) ═══════════════
+   Kullanıcı talebi (aynen): "deal popup'ı var ya, sohbet geçmişini gör
+   diyince YUKARI DOĞRU efektli uzansın, deal popup'ını KAPLASIN chat, sonra
+   geri butonu koyalım chat'e sol yukarı, geri butonuna basınca deal popup'ına
+   dönsün".
 
-   Paneller üst üste (absolute) duruyor, aktif olan görünür. Yükseklik JS'te
-   ölçülüp yazılıyor (bkz. team-leader.html dmSetView) çünkü CSS `height:auto`
-   değerini animasyonlayamaz. Geçiş: yatay kayma + çapraz sönme.
+   Yani sohbet yana kayan bir kardeş panel DEĞİL: aynı pencerenin içinde
+   AŞAĞIDAN YUKARI yükselip deal detaylarının ÜZERİNİ kaplayan bir katman
+   (iOS "sheet" davranışı). Detaylar altta kalıyor — geride hafifçe küçülüp
+   soluyor, böylece sohbetin ÜSTTE olduğu ve geri dönüşün nereye olduğu belli.
 
-   visibility (display:none DEĞİL) kullanılıyor: display:none olan panelin
-   yüksekliği ölçülemez, oysa geçiş için hedef panelin yüksekliğini geçişten
-   ÖNCE bilmek gerekiyor.                                                   */
+   İKİ TUZAK ve çözümleri:
+
+   1) YÜKSEKLİK: CSS `height:auto` değerini animasyonlayamaz, o yüzden yığının
+      yüksekliği JS'te ölçülüp yazılıyor (bkz. team-leader.html dmSetView).
+      Sohbet katmanına CSS'te KESİN yükseklik veriliyor (inset:0 DEĞİL): aksi
+      halde yüksekliğini kabından alır, kap da yüksekliğini ondan → döngü.
+
+   2) HAYALET KAYDIRMA: katman kapalıyken translateY(100%) ile yığının ALTINDA
+      duruyor. Yığın `overflow:hidden` olmasa bu taşma, pencerenin kendi
+      dikey kaydırmasına eklenip detay görünümünde sahte bir kaydırma
+      yaratırdı. overflow:hidden hem bunu keser hem de katmanın "aşağıdan
+      yükselip görünür olması" efektinin maskesi olur — ikisi aynı çözüm.  */
 .dm-box[data-view="chat"] { overflow: hidden; }   /* sohbette dış kaydırma yok, dizi kendi içinde kayar */
 
 .dm-stack {
   position: relative;
-  transition: height .42s cubic-bezier(.22, 1, .36, 1);
+  overflow: hidden;                                  /* bkz. yukarıdaki (2) */
+  transition: height .46s cubic-bezier(.22, 1, .36, 1);
 }
-.dm-pane {
-  position: absolute; top: 0; left: 0; right: 0;
-  transition: opacity .3s ease, transform .42s cubic-bezier(.22, 1, .36, 1), visibility .42s;
-}
-/* Etkin olmayan panel: görünmez, tıklanamaz, ama ÖLÇÜLEBİLİR. */
-.dm-box[data-view="details"] .dm-pane[data-pane="chat"],
-.dm-box[data-view="chat"]    .dm-pane[data-pane="details"] {
-  visibility: hidden; opacity: 0; pointer-events: none;
-}
-.dm-box[data-view="details"] .dm-pane[data-pane="details"],
-.dm-box[data-view="chat"]    .dm-pane[data-pane="chat"] {
-  visibility: visible; opacity: 1; position: relative;
-}
-/* Yön: detaydan sohbete geçerken detay SOLA, sohbet SAĞDAN gelir. */
-.dm-box[data-view="chat"]    .dm-pane[data-pane="details"] { transform: translateX(-22px); }
-.dm-box[data-view="details"] .dm-pane[data-pane="chat"]    { transform: translateX(22px); }
-.dm-box[data-view="details"] .dm-pane[data-pane="details"],
-.dm-box[data-view="chat"]    .dm-pane[data-pane="chat"]    { transform: none; }
 
-/* Sohbet paneli pencerenin yüksekliğini belirler — dizi kendi içinde kayar. */
-.dm-pane[data-pane="chat"] { height: min(66vh, 560px); }
+/* Detay paneli akışta kalır — yüksekliğini kendi içeriği belirler. */
+.dm-pane[data-pane="details"] {
+  position: relative;
+  transform-origin: 50% 0;
+  transition: opacity .28s ease, transform .46s cubic-bezier(.22, 1, .36, 1), filter .28s ease;
+}
+/* Sohbet açıkken detaylar ARKADA kalır. */
+.dm-box[data-view="chat"] .dm-pane[data-pane="details"] {
+  transform: scale(.975); opacity: .28; filter: blur(1.5px); pointer-events: none;
+}
+
+/* ── Yükselen sohbet katmanı ──────────────────────────────────────────── */
+.dm-pane[data-pane="chat"] {
+  position: absolute; left: 0; right: 0; top: 0;
+  height: min(66vh, 560px);          /* KESİN yükseklik — bkz. yukarıdaki (1) */
+  box-sizing: border-box;
+  padding: 15px;
+  border-radius: 15px;
+  background: linear-gradient(180deg, #101829 0%, #0b1120 100%);
+  border: 1px solid #1f2b47;
+  box-shadow: 0 -8px 34px -12px rgba(0, 0, 0, .85);
+  transform: translateY(100%);       /* kapalı: yığının hemen altında */
+  opacity: 0; pointer-events: none;
+  transition: transform .46s cubic-bezier(.22, 1, .36, 1), opacity .26s ease;
+}
+.dm-box[data-view="chat"] .dm-pane[data-pane="chat"] {
+  transform: translateY(0); opacity: 1; pointer-events: auto;
+}
 .dm-pane[data-pane="chat"] .ncc-chat { height: 100%; }
 
+/* Katmanın üst kenarında ince ışık — "bu ayrı bir yüzey" ipucu. */
+.dm-pane[data-pane="chat"]::after {
+  content: ''; position: absolute; top: 0; left: 14px; right: 14px; height: 1px;
+  border-radius: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, .55) 28%,
+              rgba(45, 212, 191, .45) 72%, transparent);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .dm-stack, .dm-pane { transition: none; }
+  .dm-stack,
+  .dm-pane[data-pane="details"],
+  .dm-pane[data-pane="chat"] { transition: none; }
 }
 
 /* ═══════════════ 3. "MESAJLAR" İKON DÜĞMESİ (deal penceresi) ═══════════════ */
@@ -654,6 +684,19 @@ html[data-theme="light"] .ncc-send-btn {
 }
 html[data-theme="light"] .ncc-msg-row[data-mine="true"] .ncc-bubble {
   background: linear-gradient(135deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 78%, #000));
+}
+/* Yükselen sohbet katmanı — açık temada cam yüzey. Detaylar arkada
+   bulanıklaştığı için katmanın ARKASI KAPALI olmalı (yarı saydam bırakılırsa
+   altındaki metin sızıyor ve sohbet okunmuyor): blur yerine opak cam. */
+html[data-theme="light"] .dm-pane[data-pane="chat"] {
+  background: var(--g-3);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  border-color: var(--edge-soft);
+  box-shadow: 0 -8px 30px -14px rgba(23, 43, 99, .35), var(--sheen);
+}
+html[data-theme="light"] .dm-box[data-view="chat"] .dm-pane[data-pane="details"] {
+  opacity: .22;
 }
 
 /* ── Mobil ─────────────────────────────────────────────────────────────── */
