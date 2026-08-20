@@ -34,90 +34,203 @@
 }
 .ncc-avatar.sm { width: 27px; height: 27px; border-radius: 9px; font-size: 10px; }
 
-/* ═══════════════ 1. DOCK (alarm penceresi) ═══════════════ */
+/* ═══════════════ 1. DOCK (alarm penceresi) ═══════════════
+   Tek kart: altta kimlik çubuğu, ÜSTÜNDE açılan composer. Ayrı popup yok —
+   composer DOM'da çubuktan önce olduğu için normal column akışında yukarıda
+   kalıyor ve max-height ile yay eğrisinde iniyor.
+
+   Derinlik düz renkle değil KATMANLA kuruluyor: dış kartta yumuşak gölge,
+   üst kenarda ince ışık çizgisi (aurora), iç yüzeyde inset gölge. Odakta
+   kartın TAMAMI vurgulanıyor (tek bir input değil) — composer'ın aktif
+   olduğu tek bakışta anlaşılsın.                                          */
 .ncc-dock {
-  border-radius: 15px; overflow: hidden; margin-bottom: 18px;
-  background: #0b1120; border: 1px solid #1e293b;
-  box-shadow: 0 6px 22px -10px rgba(0, 0, 0, .7);
+  position: relative; margin-bottom: 18px;
+  border-radius: 16px; overflow: hidden;
   display: flex; flex-direction: column;
+  background: linear-gradient(180deg, #0e1526 0%, #0a0f1c 100%);
+  border: 1px solid #1c2740;
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, .04),
+              0 8px 24px -14px rgba(0, 0, 0, .8);
+  transition: border-color .28s ease, box-shadow .28s ease;
+}
+/* Composer açıkken kart hafifçe yükselir — "aktif" hissi. */
+.ncc-dock[data-open="true"] {
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, .05),
+              0 18px 42px -18px rgba(0, 0, 0, .9);
+}
+/* Yazarken accent halka: sınır rengi + dışa doğru yumuşak ışık. */
+.ncc-dock[data-focus="true"] {
+  border-color: #4f46e5;
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, .16),
+              inset 0 1px 0 0 rgba(255, 255, 255, .06),
+              0 18px 42px -18px rgba(0, 0, 0, .9);
 }
 
-/* Composer — DOM'da dock çubuğundan ÖNCE, yani görsel olarak ÜSTTE.
-   Kapalıyken max-height:0; açılırken yumuşak yay eğrisiyle iner. */
+/* Üst kenar ışığı — kartın tepesinde soldan sağa sönen ince accent çizgi.
+   Statik: sürekli hareket eden bir efekt bu yoğunlukta bir panelde yorucu. */
+.ncc-dock-aurora {
+  position: absolute; top: 0; left: 0; right: 0; height: 1px; pointer-events: none;
+  background: linear-gradient(90deg, transparent 0%, rgba(99, 102, 241, .65) 18%,
+              rgba(45, 212, 191, .55) 52%, transparent 92%);
+  opacity: .55; transition: opacity .3s ease;
+}
+.ncc-dock[data-focus="true"] .ncc-dock-aurora { opacity: 1; }
+
+/* ── Composer ────────────────────────────────────────────────────────── */
 .ncc-dock-composer {
   max-height: 0; opacity: 0; overflow: hidden;
-  transition: max-height .34s cubic-bezier(.22, 1, .36, 1),
-              opacity .22s ease, padding .34s cubic-bezier(.22, 1, .36, 1);
-  padding: 0 10px;
+  transition: max-height .36s cubic-bezier(.22, 1, .36, 1),
+              opacity .24s ease .04s,
+              padding .36s cubic-bezier(.22, 1, .36, 1);
+  padding: 0 11px;
 }
-.ncc-dock-composer[data-open="true"] { max-height: 260px; opacity: 1; padding: 10px 10px 0; }
+.ncc-dock-composer[data-open="true"] { max-height: 250px; opacity: 1; padding: 12px 11px 0; }
 
-.ncc-dock-composer-inner { position: relative; }
-.ncc-dock-composer textarea {
-  width: 100%; box-sizing: border-box; min-height: 78px; max-height: 150px;
-  resize: vertical; border-radius: 11px; padding: 10px 32px 10px 12px;
-  font-family: inherit; font-size: 12.5px; line-height: 1.55;
-  background: #060b14; border: 1px solid #1e293b; color: #e2e8f0;
+.ncc-dock-field { position: relative; }
+.ncc-dock-field textarea {
+  width: 100%; box-sizing: border-box; display: block;
+  min-height: 44px; max-height: 148px; resize: none; overflow-y: auto;
+  border-radius: 12px; padding: 11px 38px 11px 13px;
+  font-family: inherit; font-size: 12.5px; line-height: 1.6;
+  background: #060a13; color: #e6ebf5;
+  border: 1px solid #1c2740;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .4);
+  transition: border-color .2s ease, background .2s ease;
 }
-.ncc-dock-composer textarea:focus { outline: none; border-color: #4f46e5; }
-.ncc-dock-composer textarea::placeholder { color: #475569; }
+.ncc-dock-field textarea:focus { outline: none; border-color: #3730a3; background: #050810; }
+.ncc-dock-field textarea::placeholder { color: #46536b; }
 
 .ncc-composer-x {
-  position: absolute; top: 6px; right: 6px; width: 22px; height: 22px;
+  position: absolute; top: 7px; right: 7px; width: 24px; height: 24px;
   display: flex; align-items: center; justify-content: center;
-  border: none; border-radius: 7px; cursor: pointer;
-  background: transparent; color: #64748b; font-size: 15px; line-height: 1;
+  border: none; border-radius: 8px; cursor: pointer; padding: 0;
+  background: transparent; color: #46536b;
   transition: background .15s, color .15s;
 }
-.ncc-composer-x:hover { background: #1e293b; color: #e2e8f0; }
+.ncc-composer-x svg { width: 13px; height: 13px; }
+.ncc-composer-x:hover { background: #1c2740; color: #e6ebf5; }
 
-.ncc-composer-foot {
-  display: flex; align-items: center; gap: 8px; padding: 7px 0 0;
-  font-size: 10px; color: #475569;
+/* Composer alt şeridi: ek düğmesi · klavye ipucu · sayaç */
+.ncc-composer-bar {
+  display: flex; align-items: center; gap: 10px; padding: 8px 2px 0;
+  min-height: 26px; flex-wrap: wrap;
 }
-.ncc-composer-count { margin-left: auto; font-variant-numeric: tabular-nums; }
+.ncc-attach-slot { display: inline-flex; align-items: center; min-width: 0; }
+.ncc-kbd-hint {
+  margin-left: auto; display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9.5px; color: #3d4759; white-space: nowrap;
+}
+.ncc-kbd-hint kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 17px; height: 16px; padding: 0 4px; border-radius: 5px;
+  background: #141d31; border: 1px solid #1f2a44; color: #6b7891;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9px;
+}
+.ncc-composer-count {
+  font-size: 9.5px; color: #46536b; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.ncc-composer-count[data-warn="true"] { color: #fbbf24; font-weight: 700; }
 
-/* Dock çubuğu — kimlik + aksiyonlar */
-.ncc-dock-bar { display: flex; align-items: center; gap: 10px; padding: 10px; }
+/* ── Kimlik çubuğu ───────────────────────────────────────────────────── */
+.ncc-dock-bar { display: flex; align-items: center; gap: 11px; padding: 11px; }
+
+/* Avatarın çevresinde ince gradient halka — düz avatardan daha derin.
+   Halkanın rengi JS'in avatara yazdığı data-empty'ye göre değişiyor;
+   :has() kullanmıyoruz (tarayıcı desteği gereksiz bir bağımlılık olurdu),
+   durum doğrudan wrapper'a da yazılıyor. */
+.ncc-avatar-wrap {
+  position: relative; flex-shrink: 0; padding: 1.5px; border-radius: 13px;
+  background: linear-gradient(140deg, rgba(99, 102, 241, .85), rgba(45, 212, 191, .6));
+  transition: background .25s ease;
+}
+.ncc-avatar-wrap[data-empty="true"] {
+  background: linear-gradient(140deg, rgba(71, 85, 105, .7), rgba(51, 65, 85, .5));
+}
+/* WhatsApp grubundan çözülen muhatap — halka WhatsApp yeşiline döner,
+   kullanıcı kime yazdığını renkten de anlar. */
+.ncc-avatar-wrap[data-source="wa"] {
+  background: linear-gradient(140deg, rgba(74, 222, 128, .8), rgba(13, 148, 136, .6));
+}
+
 .ncc-dock-id { min-width: 0; flex: 1; }
 .ncc-dock-name {
   margin: 0; font-size: 12.5px; font-weight: 700; color: #f1f5f9;
+  letter-spacing: -.005em;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .ncc-dock-status {
-  margin: 2px 0 0; font-size: 10.5px; color: #64748b;
+  margin: 2.5px 0 0; font-size: 10px; color: #6b7891; font-weight: 500;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
   display: flex; align-items: center; gap: 5px;
 }
 .ncc-dock-status::before {
-  content: ''; width: 5px; height: 5px; border-radius: 50%;
-  background: #22c55e; flex-shrink: 0;
+  content: ''; width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+  background: #22c55e; box-shadow: 0 0 0 2px rgba(34, 197, 94, .18);
 }
-.ncc-dock-status[data-empty="true"]::before { background: #64748b; }
+.ncc-dock-status[data-empty="true"]::before { background: #64748b; box-shadow: none; }
 
-.ncc-dock-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.ncc-dock-btn {
-  height: 34px; display: inline-flex; align-items: center; gap: 6px;
-  padding: 0 11px; border-radius: 10px; cursor: pointer;
-  font-family: inherit; font-size: 11.5px; font-weight: 700;
-  background: transparent; border: 1px solid transparent; color: #94a3b8;
-  transition: background .15s, color .15s, transform .12s, box-shadow .15s;
-}
-.ncc-dock-btn:hover { background: #1e293b; color: #e2e8f0; }
-.ncc-dock-btn svg { width: 15px; height: 15px; flex-shrink: 0; }
-.ncc-dock-btn kbd {
-  min-width: 19px; height: 19px; padding: 0 4px; border-radius: 6px;
+.ncc-dock-actions { display: flex; align-items: center; gap: 7px; flex-shrink: 0; }
+
+/* İkon-only hayalet düğme (geçmiş) */
+.ncc-ghost-btn {
+  width: 34px; height: 34px; flex-shrink: 0; cursor: pointer; padding: 0;
   display: inline-flex; align-items: center; justify-content: center;
-  background: #1e293b; color: #94a3b8;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 9.5px;
+  border-radius: 11px; border: 1px solid #1c2740;
+  background: #101828; color: #7b879d;
+  transition: background .16s, color .16s, border-color .16s, transform .12s;
 }
-.ncc-dock-btn.primary {
-  background: linear-gradient(135deg, #4f46e5, #4338ca); color: #fff;
-  box-shadow: 0 4px 14px -5px rgba(79, 70, 229, .7);
+.ncc-ghost-btn svg { width: 16px; height: 16px; }
+.ncc-ghost-btn:hover { background: #182135; color: #e6ebf5; border-color: #2a3550; }
+.ncc-ghost-btn:active { transform: scale(.94); }
+
+/* Ana CTA — gradient + üzerinden geçen ışık (sheen) */
+.ncc-cta {
+  position: relative; overflow: hidden;
+  height: 34px; display: inline-flex; align-items: center; gap: 7px;
+  padding: 0 15px; border: none; border-radius: 11px; cursor: pointer;
+  font-family: inherit; font-size: 11.5px; font-weight: 750; letter-spacing: -.005em;
+  color: #fff;
+  background: linear-gradient(135deg, #6366f1 0%, #4338ca 55%, #3730a3 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .22),
+              0 5px 16px -6px rgba(79, 70, 229, .85);
+  transition: transform .14s cubic-bezier(.22, 1, .36, 1), box-shadow .2s ease, filter .2s ease;
 }
-.ncc-dock-btn.primary:hover { transform: translateY(-1px); box-shadow: 0 7px 18px -5px rgba(79, 70, 229, .85); }
-.ncc-dock-btn.primary kbd { background: rgba(255, 255, 255, .18); color: #fff; }
-.ncc-dock-btn:disabled { opacity: .5; cursor: default; transform: none; }
+.ncc-cta:hover {
+  transform: translateY(-1.5px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .28),
+              0 9px 22px -7px rgba(79, 70, 229, .95);
+  filter: saturate(1.12);
+}
+.ncc-cta:active { transform: translateY(0) scale(.985); }
+.ncc-cta:disabled { opacity: .5; cursor: default; transform: none; filter: none; }
+.ncc-cta:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(129, 140, 248, .5); }
+
+.ncc-cta-sheen {
+  position: absolute; top: 0; left: -60%; width: 45%; height: 100%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .3), transparent);
+  transform: skewX(-18deg); pointer-events: none; opacity: 0;
+}
+.ncc-cta:hover .ncc-cta-sheen { animation: ncc-sheen .62s ease-out; }
+@keyframes ncc-sheen {
+  0%   { left: -60%; opacity: 0; }
+  22%  { opacity: 1; }
+  100% { left: 118%; opacity: 0; }
+}
+
+/* İkon morph: balon → uçak, hafif dönerek */
+.ncc-cta-ico { display: inline-flex; width: 15px; height: 15px; flex-shrink: 0; }
+.ncc-cta-ico svg { width: 15px; height: 15px; animation: ncc-ico-in .3s cubic-bezier(.22, 1, .36, 1); }
+@keyframes ncc-ico-in {
+  from { opacity: 0; transform: rotate(-22deg) scale(.75); }
+  to   { opacity: 1; transform: rotate(0) scale(1); }
+}
+.ncc-cta-label { white-space: nowrap; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ncc-cta:hover .ncc-cta-sheen { animation: none; }
+  .ncc-cta-ico svg { animation: none; }
+  .ncc-dock, .ncc-dock-composer, .ncc-cta { transition: none; }
+}
 
 /* ═══════════════ 2. SOHBET PENCERESİ ═══════════════ */
 .ncc-thread-modal {
@@ -323,11 +436,11 @@ html[data-theme="light"] .ncc-bell-pop {
 }
 html[data-theme="light"] .ncc-thread-box { box-shadow: var(--sh-3), var(--sheen); }
 
-html[data-theme="light"] .ncc-dock-composer textarea,
+html[data-theme="light"] .ncc-dock-field textarea,
 html[data-theme="light"] .ncc-thread-foot textarea {
   background: var(--g-3); border: 1px solid var(--edge-soft); color: var(--ink);
 }
-html[data-theme="light"] .ncc-dock-composer textarea::placeholder,
+html[data-theme="light"] .ncc-dock-field textarea::placeholder,
 html[data-theme="light"] .ncc-thread-foot textarea::placeholder { color: var(--ink-3); }
 
 html[data-theme="light"] .ncc-dock-name,
@@ -336,24 +449,24 @@ html[data-theme="light"] .ncc-bell-head h4,
 html[data-theme="light"] .ncc-bell-item-name { color: var(--ink); }
 html[data-theme="light"] .ncc-dock-status,
 html[data-theme="light"] .ncc-thread-sub,
-html[data-theme="light"] .ncc-composer-foot,
+html[data-theme="light"] .ncc-composer-bar,
 html[data-theme="light"] .ncc-bell-item-msg { color: var(--ink-2); }
 html[data-theme="light"] .ncc-msg-meta,
 html[data-theme="light"] .ncc-bell-item-time,
 html[data-theme="light"] .ncc-bell-empty,
 html[data-theme="light"] .ncc-thread-empty { color: var(--ink-3); }
 
-html[data-theme="light"] .ncc-dock-head,
 html[data-theme="light"] .ncc-thread-head,
 html[data-theme="light"] .ncc-thread-foot,
 html[data-theme="light"] .ncc-bell-head { border-color: var(--edge-soft); }
 
-html[data-theme="light"] .ncc-dock-btn { color: var(--ink-2); }
-html[data-theme="light"] .ncc-dock-btn:hover,
+html[data-theme="light"] .ncc-ghost-btn { color: var(--ink-2); }
+html[data-theme="light"] .ncc-ghost-btn:hover,
 html[data-theme="light"] .ncc-composer-x:hover,
 html[data-theme="light"] .ncc-thread-x:hover,
 html[data-theme="light"] .ncc-bell-clear:hover { background: var(--g-3); color: var(--ink); }
-html[data-theme="light"] .ncc-dock-btn kbd { background: var(--g-2); color: var(--ink-2); }
+html[data-theme="light"] .ncc-kbd-hint kbd { background: var(--g-2); border-color: var(--edge-soft); color: var(--ink-2); }
+html[data-theme="light"] .ncc-kbd-hint { color: var(--ink-3); }
 html[data-theme="light"] .ncc-composer-x,
 html[data-theme="light"] .ncc-thread-x,
 html[data-theme="light"] .ncc-bell-clear { color: var(--ink-3); }
@@ -378,10 +491,34 @@ html[data-theme="light"] .ncc-thread-warn {
   background: rgba(251, 191, 36, .16); border-color: rgba(180, 83, 9, .35); color: #92400e;
 }
 
+/* Dock — açık temada gerçek cam yüzey; koyu temanın gradient'i yerine
+   sayfanın cam paletiyle. Aurora çizgisi camda çok baskın durduğu için
+   soluklaştırıldı. */
+html[data-theme="light"] .ncc-dock {
+  background: var(--g-1); border: 1px solid var(--edge-soft);
+  -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  backdrop-filter: blur(var(--blur)) saturate(var(--sat));
+  box-shadow: var(--sh-2), var(--sheen);
+}
+html[data-theme="light"] .ncc-dock[data-focus="true"] {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-2) 18%, transparent), var(--sh-2), var(--sheen);
+}
+html[data-theme="light"] .ncc-dock-aurora { opacity: .3; }
+html[data-theme="light"] .ncc-dock[data-focus="true"] .ncc-dock-aurora { opacity: .6; }
+html[data-theme="light"] .ncc-ghost-btn {
+  background: var(--g-2); border-color: var(--edge-soft);
+}
+html[data-theme="light"] .ncc-ghost-btn:hover { border-color: var(--edge); }
+html[data-theme="light"] .ncc-cta {
+  background: linear-gradient(135deg, var(--accent-2), color-mix(in srgb, var(--accent-2) 72%, #000));
+}
+
 /* ── Mobil ─────────────────────────────────────────────────────────────── */
 @media (max-width: 560px) {
   .ncc-thread-box { max-width: 100%; height: 88vh; }
   .ncc-bell-pop { width: calc(100vw - 24px); }
-  .ncc-dock-btn span.ncc-btn-label { display: none; }
-  .ncc-dock-btn kbd { display: none; }
+  .ncc-cta-label { display: none; }
+  .ncc-cta { padding: 0 11px; }
+  .ncc-kbd-hint { display: none; }
 }

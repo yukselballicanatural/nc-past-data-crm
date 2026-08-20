@@ -98,16 +98,36 @@ window.NCClinicChat = (function () {
     return String(m.sent_by_username || '') === String((_user && _user.username) || '\u0000');
   }
 
-  // ── Aftercare Owner — deal.raw'dan, deal başına bir kez ────────────────
+  // ── Klinik muhatabı — deal.raw'dan, deal başına bir kez ────────────────
   // Alarm penceresinde elimizde yalnızca alarm satırı var (alarms tablosunda
   // raw YOK), bu yüzden deal'in raw'ı istendiğinde tek satırlık hafif bir
   // sorguyla çekilip önbelleğe alınıyor.
-  const _ownerCache = new Map();    // dealId → { id, name } | null
+  //
+  // İKİ KAYNAK, sırayla (kullanıcı talebi: "aftercare owner yoksa WA Group'a
+  // da bakalım, ikisi de aynı anlama geliyor"):
+  //   1) Aftercare_Owner — {id, name}, Zoho'nun katı alanı.
+  //   2) WA_Group        — "Team 1 (Habiba)" biçiminde serbest metin;
+  //      parantez içindeki kişi muhatap, baştaki kısım grup adı.
+  //
+  // Canlı ölçüm (2026-08-20, 600 deal): yalnız Aftercare 17, yalnız WA_Group
+  // 199, ikisi de dolu 143. Yani WA_Group yedeği kapsamı 160'tan 359'a
+  // çıkarıyor (%27 → %60) — bu yüzden yedek şart, süs değil.
+  const _contactCache = new Map();   // dealId → { id, name, group, source } | null
 
-  async function aftercareOwner(dealId) {
+  function _parseWaGroup(v) {
+    const s = String(v == null ? '' : v).trim();
+    if (!s) return null;
+    // "Team 1 (Habiba)" → { name: 'Habiba', group: 'Team 1' }
+    const m = /^(.*?)\s*\(([^)]+)\)\s*$/.exec(s);
+    if (m && m[2].trim()) return { name: m[2].trim(), group: (m[1] || '').trim() };
+    // Parantezsiz yazılmışsa metnin kendisi grup adı sayılır.
+    return { name: '', group: s };
+  }
+
+  async function clinicContact(dealId) {
     const k = String(dealId || '');
     if (!k) return null;
-    if (_ownerCache.has(k)) return _ownerCache.get(k);
+    if (_contactCache.has(k)) return _contactCache.get(k);
     let out = null;
     try {
       const r = await fetch(`${BASE}/rest/v1/deals?id=eq.${encodeURIComponent(k)}&select=raw&limit=1`, { headers: _h() });
@@ -115,18 +135,31 @@ window.NCClinicChat = (function () {
         const rows = await r.json();
         const raw0 = Array.isArray(rows) && rows[0] ? rows[0].raw : null;
         const raw = typeof raw0 === 'string' ? (() => { try { return JSON.parse(raw0); } catch (e) { return {}; } })() : (raw0 || {});
+
         const ao = raw.Aftercare_Owner || raw.aftercare_owner || null;
-        if (ao && typeof ao === 'object' && ao.name) out = { id: ao.id || '', name: ao.name };
-        else if (typeof ao === 'string' && ao.trim()) out = { id: '', name: ao.trim() };
+        if (ao && typeof ao === 'object' && ao.name) out = { id: ao.id || '', name: ao.name, group: '', source: 'aftercare' };
+        else if (typeof ao === 'string' && ao.trim()) out = { id: '', name: ao.trim(), group: '', source: 'aftercare' };
+
+        if (!out) {
+          const wa = _parseWaGroup(raw.WA_Group || raw.wa_group || '');
+          // Yalnızca grup adı çıktıysa (kişi yok) yine muhatap sayılır:
+          // mesaj o WhatsApp grubuna ait ekibe gidiyor.
+          if (wa && (wa.name || wa.group)) {
+            out = { id: '', name: wa.name || wa.group, group: wa.group, source: 'wa' };
+          }
+        }
       }
     } catch (e) { /* sessiz — sohbet yine açılır, muhatap "atanmamış" görünür */ }
-    _ownerCache.set(k, out);
+    _contactCache.set(k, out);
     return out;
   }
 
+  // Geriye dönük ad — dışarıdan aftercareOwner() diye çağıran yerler için.
+  const aftercareOwner = clinicContact;
+
   // ── Mesaj yazma (tek yol) ─────────────────────────────────────────────
   async function _insert(ctx, text, msgId, attachCount) {
-    const owner = await aftercareOwner(ctx.dealId);
+    const c = await clinicContact(ctx.dealId);
     const row = {
       id:               msgId,
       deal_id:          String(ctx.dealId),
@@ -135,9 +168,12 @@ window.NCClinicChat = (function () {
       sent_by_username: (_user && _user.username) || '',
       sent_by_name:     (_user && _user.fullName) || '',
       sent_by_role:     (_user && _user.role) || '',
-      sent_to_id:       owner ? owner.id : '',
-      sent_to_name:     owner ? owner.name : '',
-      sent_to_role:     'Aftercare Owner',
+      sent_to_id:       c ? c.id : '',
+      sent_to_name:     c ? c.name : '',
+      // Muhatabın hangi kaynaktan çözüldüğü kayıtta kalıyor: WhatsApp grubuna
+      // mı yoksa atanmış Aftercare sorumlusuna mı gittiği sonradan ayırt
+      // edilebilir olmalı (Faz 6'da yönlendirme buna bakacak).
+      sent_to_role:     c && c.source === 'wa' ? 'WA Group' : 'Aftercare Owner',
       message:          text,
       attachment_count: attachCount || 0,
       related_alarm_id: ctx.alarmId || null,
@@ -191,34 +227,42 @@ window.NCClinicChat = (function () {
       open:     false,
     };
     mount.innerHTML = `
-      <div class="ncc-dock">
+      <div class="ncc-dock" id="nccDock">
+        <span class="ncc-dock-aurora" aria-hidden="true"></span>
         <div class="ncc-dock-composer" id="nccDockComposer" data-open="false">
-          <div class="ncc-dock-composer-inner">
-            <textarea id="nccDockInput" maxlength="${MAX_LEN}"
-              placeholder="${esc(_t('Aftercare sorumlusuna iletilecek mesaj... (görsel için Ctrl+V ile yapıştırabilirsiniz)'))}"></textarea>
+          <div class="ncc-dock-field">
+            <textarea id="nccDockInput" maxlength="${MAX_LEN}" rows="1"
+              placeholder="${esc(_t('Klinik ekibine iletilecek mesaj... (görsel için Ctrl+V)'))}"></textarea>
             <button type="button" class="ncc-composer-x" onclick="NCClinicChat.closeComposer()"
-              aria-label="${esc(_t('Kapat'))}">&times;</button>
+              title="${esc(_t('Kapat'))}" aria-label="${esc(_t('Kapat'))}">
+              <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+            </button>
           </div>
-          <div class="ncc-composer-foot">
-            <span id="nccDockAttachSlot"></span>
-            <span class="ncc-composer-count" id="nccDockCount">0 / ${MAX_LEN}</span>
+          <div class="ncc-composer-bar">
+            <span class="ncc-attach-slot" id="nccDockAttachSlot"></span>
+            <span class="ncc-kbd-hint"><kbd>⏎</kbd> ${esc(_t('gönder'))} · <kbd>⇧⏎</kbd> ${esc(_t('satır'))}</span>
+            <span class="ncc-composer-count" id="nccDockCount" data-warn="false"></span>
           </div>
         </div>
         <div class="ncc-dock-bar">
-          <div class="ncc-avatar" id="nccDockAvatar" data-empty="true">?</div>
+          <span class="ncc-avatar-wrap">
+            <span class="ncc-avatar" id="nccDockAvatar" data-empty="true">?</span>
+          </span>
           <div class="ncc-dock-id">
             <p class="ncc-dock-name" id="nccDockName">${esc(_t('Yükleniyor...'))}</p>
-            <p class="ncc-dock-status" id="nccDockStatus" data-empty="true">${esc(_t('Aftercare sorumlusu'))}</p>
+            <p class="ncc-dock-status" id="nccDockStatus" data-empty="true">&nbsp;</p>
           </div>
           <div class="ncc-dock-actions">
-            <button type="button" class="ncc-dock-btn" onclick="NCClinicChat.openThreadFromDock()"
-              title="${esc(_t('Sohbet geçmişi'))}">
-              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h8M8 8h8m-8 8h5m7-4c0 4.418-4.03 8-9 8a9.8 9.8 0 01-4.15-.9L3 20l1.05-3.16A7.7 7.7 0 013 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>
-              <span class="ncc-btn-label">${esc(_t('Geçmiş'))}</span>
+            <button type="button" class="ncc-ghost-btn" onclick="NCClinicChat.openThreadFromDock()"
+              title="${esc(_t('Sohbet geçmişi'))}" aria-label="${esc(_t('Sohbet geçmişi'))}">
+              <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m8-2c0 4.418-4.03 8-9 8a9.8 9.8 0 01-4.15-.9L3 20l1.05-3.16A7.7 7.7 0 013 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>
             </button>
-            <button type="button" class="ncc-dock-btn primary" id="nccDockGo" onclick="NCClinicChat.dockAction()">
-              <svg id="nccDockGoIcon" fill="currentColor" viewBox="0 0 24 24"><path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"/></svg>
-              <span class="ncc-btn-label" id="nccDockGoLabel">${esc(_t('Clinic\'e Bildir'))}</span>
+            <button type="button" class="ncc-cta" id="nccDockGo" onclick="NCClinicChat.dockAction()">
+              <span class="ncc-cta-sheen" aria-hidden="true"></span>
+              <span class="ncc-cta-ico" id="nccDockGoIcon">
+                <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m8-2c0 4.418-4.03 8-9 8a9.8 9.8 0 01-4.15-.9L3 20l1.05-3.16A7.7 7.7 0 013 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>
+              </span>
+              <span class="ncc-cta-label" id="nccDockGoLabel">${esc(_t('Clinic\'e Bildir'))}</span>
             </button>
           </div>
         </div>
@@ -226,46 +270,85 @@ window.NCClinicChat = (function () {
 
     const input = document.getElementById('nccDockInput');
     if (input) {
-      input.addEventListener('input', () => {
-        const c = document.getElementById('nccDockCount');
-        if (c) c.textContent = input.value.length + ' / ' + MAX_LEN;
-      });
-      // Enter gönderir, Shift+Enter yeni satır (agent-dock davranışı).
+      input.addEventListener('input', () => { _autoGrow(input); _paintCount(input); });
+      // Enter gönderir, Shift+Enter yeni satır.
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); dockAction(); }
       });
+      // Odak halkası: kartın tamamı vurgulanır (tek bir input değil) —
+      // composer'ın aktif olduğu tek bakışta anlaşılsın.
+      const card = document.getElementById('nccDock');
+      input.addEventListener('focus', () => { if (card) card.dataset.focus = 'true'; });
+      input.addEventListener('blur',  () => { if (card) card.dataset.focus = 'false'; });
     }
     _paintDockIdentity();
   }
 
+  function _autoGrow(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 148) + 'px';
+  }
+
+  // Sayaç yalnızca sınıra YAKLAŞINCA görünür (>%70) — boş bir "0 / 1000"
+  // her zaman ekranda durunca gürültü yapıyor, hiçbir şey söylemiyordu.
+  function _paintCount(input) {
+    const c = document.getElementById('nccDockCount');
+    if (!c) return;
+    const n = input.value.length;
+    const near = n > MAX_LEN * 0.7;
+    c.textContent = near ? `${n} / ${MAX_LEN}` : '';
+    c.dataset.warn = n > MAX_LEN * 0.92 ? 'true' : 'false';
+  }
+
+  // Muhatabın nereden geldiğini kullanıcıya açıkça söyler — "Aftercare
+  // sorumlusu" ile "WhatsApp grubu" farklı şeyler, hangisine yazdığını
+  // bilmesi lazım.
+  function _contactSub(c) {
+    if (!c) return _t('Muhatap atanmamış');
+    if (c.source === 'wa') return c.group ? `${_t('WhatsApp grubu')} · ${c.group}` : _t('WhatsApp grubu');
+    return _t('Aftercare sorumlusu');
+  }
+
   async function _paintDockIdentity() {
     if (!_dock) return;
-    const owner = await aftercareOwner(_dock.dealId);
+    const c = await clinicContact(_dock.dealId);
     if (!_dock) return;
     const av = document.getElementById('nccDockAvatar');
     const nm = document.getElementById('nccDockName');
     const st = document.getElementById('nccDockStatus');
     if (!av || !nm || !st) return;
-    if (owner && owner.name) {
-      av.textContent = initials(owner.name); av.dataset.empty = 'false';
-      nm.textContent = owner.name;
-      st.textContent = _t('Aftercare sorumlusu'); st.dataset.empty = 'false';
+    // Gradient halka wrapper'da; durum ORAYA da yazılıyor (CSS :has()
+    // bağımlılığı olmasın — bkz. clinic-chat.css'teki not).
+    const wrap = av.parentElement;
+    if (c && c.name) {
+      av.textContent = initials(c.name); av.dataset.empty = 'false';
+      if (wrap) { wrap.dataset.empty = 'false'; wrap.dataset.source = c.source || ''; }
+      nm.textContent = c.name;
+      st.textContent = _contactSub(c); st.dataset.empty = 'false';
     } else {
       av.textContent = '?'; av.dataset.empty = 'true';
-      nm.textContent = _t('Aftercare sorumlusu atanmamış');
-      st.textContent = _t('Zoho\'da Aftercare Owner boş'); st.dataset.empty = 'true';
+      if (wrap) { wrap.dataset.empty = 'true'; wrap.dataset.source = ''; }
+      nm.textContent = _t('Muhatap atanmamış');
+      st.textContent = _t('Aftercare Owner ve WhatsApp grubu boş'); st.dataset.empty = 'true';
     }
   }
+
+  // İki ikon: kapalıyken sohbet balonu, açıkken kağıt uçak. Düğme
+  // "bildir" → "gönder"e dönüşürken ikon da dönüşüyor.
+  const _ICO_CHAT = '<svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h8M8 14h5m8-2c0 4.418-4.03 8-9 8a9.8 9.8 0 01-4.15-.9L3 20l1.05-3.16A7.7 7.7 0 013 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>';
+  const _ICO_SEND = '<svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-7.5-15-7.5v6l9 1.5-9 1.5v6z"/></svg>';
 
   function openComposer() {
     if (!_dock) return;
     _dock.open = true;
+    const card = document.getElementById('nccDock');
+    if (card) card.dataset.open = 'true';
     const c = document.getElementById('nccDockComposer');
     if (c) c.dataset.open = 'true';
     const lbl = document.getElementById('nccDockGoLabel');
     if (lbl) lbl.textContent = _t('Gönder');
     const icon = document.getElementById('nccDockGoIcon');
-    if (icon) icon.innerHTML = '<path d="M3.4 20.6l17.45-8.4a.6.6 0 000-1.08L3.4 2.72a.6.6 0 00-.85.66l1.7 6.8L14 12l-9.75 1.82-1.7 6.8a.6.6 0 00.85.66z"/>';
+    if (icon) { icon.innerHTML = _ICO_SEND; icon.dataset.morph = 'send'; }
     // Ek widget'ı ilk açılışta bir kez basılır — mesaj başına ayrı klasör
     // (draftId) kullanıldığı için gönderimden sonra yenilenir.
     _mountDockAttach();
@@ -273,12 +356,10 @@ window.NCClinicChat = (function () {
     if (input) {
       // Hazır metin YALNIZCA kutu boşken basılır — kullanıcı bir şey yazıp
       // composer'ı kapatıp tekrar açtıysa yazdığını ezmeyiz.
-      if (!input.value && _dock.suggest) {
-        input.value = _dock.suggest;
-        const c = document.getElementById('nccDockCount');
-        if (c) c.textContent = input.value.length + ' / ' + MAX_LEN;
-      }
+      if (!input.value && _dock.suggest) input.value = _dock.suggest;
+      _paintCount(input);
       requestAnimationFrame(() => {
+        _autoGrow(input);
         input.focus();
         // İmleç sona: hazır metnin ARKASINA yazmaya devam edilsin.
         try { input.setSelectionRange(input.value.length, input.value.length); } catch (e) {}
@@ -289,12 +370,14 @@ window.NCClinicChat = (function () {
   function closeComposer() {
     if (!_dock) return;
     _dock.open = false;
+    const card = document.getElementById('nccDock');
+    if (card) { card.dataset.open = 'false'; card.dataset.focus = 'false'; }
     const c = document.getElementById('nccDockComposer');
     if (c) c.dataset.open = 'false';
     const lbl = document.getElementById('nccDockGoLabel');
     if (lbl) lbl.textContent = _t('Clinic\'e Bildir');
     const icon = document.getElementById('nccDockGoIcon');
-    if (icon) icon.innerHTML = '<path d="M20 2H4a2 2 0 00-2 2v18l4-4h14a2 2 0 002-2V4a2 2 0 00-2-2z"/>';
+    if (icon) { icon.innerHTML = _ICO_CHAT; icon.dataset.morph = 'chat'; }
   }
 
   function _mountDockAttach() {
@@ -324,9 +407,7 @@ window.NCClinicChat = (function () {
     if (btn) btn.disabled = true;
     try {
       await _insert(_dock, text, msgId, nAttach);
-      if (input) input.value = '';
-      const c = document.getElementById('nccDockCount');
-      if (c) c.textContent = '0 / ' + MAX_LEN;
+      if (input) { input.value = ''; input.style.height = 'auto'; _paintCount(input); }
       // Sonraki mesaj için YENİ klasör — aksi halde eski görseller yeni
       // mesaja da bağlı görünürdü (NCAttach klasör başına en fazla 6 dosya).
       _dock.draftId = uuid();
@@ -427,20 +508,20 @@ window.NCClinicChat = (function () {
 
   async function _paintThreadIdentity() {
     if (!_thread) return;
-    const owner = await aftercareOwner(_thread.dealId);
+    const c = await clinicContact(_thread.dealId);
     if (!_thread) return;
     const av = document.getElementById('nccThreadAvatar');
     const sub = document.getElementById('nccThreadSub');
     const warn = document.getElementById('nccThreadWarnSlot');
-    if (owner && owner.name) {
-      if (av) { av.textContent = initials(owner.name); av.dataset.empty = 'false'; }
-      if (sub) sub.textContent = owner.name + ' · ' + _t('Aftercare sorumlusu');
+    if (c && c.name) {
+      if (av) { av.textContent = initials(c.name); av.dataset.empty = 'false'; av.dataset.source = c.source || ''; }
+      if (sub) sub.textContent = c.name + ' · ' + _contactSub(c);
       if (warn) warn.innerHTML = '';
     } else {
-      if (av) { av.textContent = '?'; av.dataset.empty = 'true'; }
-      if (sub) sub.textContent = _t('Aftercare sorumlusu atanmamış');
+      if (av) { av.textContent = '?'; av.dataset.empty = 'true'; av.dataset.source = ''; }
+      if (sub) sub.textContent = _t('Muhatap atanmamış');
       if (warn) {
-        warn.innerHTML = `<div class="ncc-thread-warn">${esc(_t('Bu deal\'de Zoho\'daki Aftercare Owner alanı boş. Mesajınız kaydedilir ve sorumlu atandığında dizide görünür.'))}</div>`;
+        warn.innerHTML = `<div class="ncc-thread-warn">${esc(_t('Bu deal\'de Zoho\'daki Aftercare Owner ve WhatsApp grubu alanları boş. Mesajınız kaydedilir ve muhatap atandığında dizide görünür.'))}</div>`;
       }
     }
   }
@@ -752,7 +833,7 @@ window.NCClinicChat = (function () {
   }
 
   return {
-    init, aftercareOwner,
+    init, clinicContact, aftercareOwner,
     // dock
     renderDock, dockAction, openComposer, closeComposer, openThreadFromDock,
     // thread

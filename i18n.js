@@ -526,12 +526,19 @@
 
     // ── Faz 3: Clinic sohbeti (clinic-chat.js) ────────────────────────
     'Aftercare sorumlusu': 'Aftercare owner',
-    'Aftercare sorumlusu atanmamış': 'No aftercare owner assigned',
-    'Zoho\'da Aftercare Owner boş': 'Aftercare Owner is empty in Zoho',
-    'Aftercare sorumlusuna iletilecek mesaj... (görsel için Ctrl+V ile yapıştırabilirsiniz)':
-      'Message for the aftercare owner... (paste an image with Ctrl+V)',
-    'Bu deal\'de Zoho\'daki Aftercare Owner alanı boş. Mesajınız kaydedilir ve sorumlu atandığında dizide görünür.':
-      'The Aftercare Owner field is empty in Zoho for this deal. Your message is saved and will appear in the thread once an owner is assigned.',
+    // Muhatap iki kaynaktan cozuluyor: Aftercare_Owner, yoksa WA_Group
+    // ("Team 1 (Habiba)" -> Habiba). Bkz. clinic-chat.js clinicContact().
+    'WhatsApp grubu': 'WhatsApp group',
+    'Muhatap atanmamış': 'No contact assigned',
+    'Aftercare Owner ve WhatsApp grubu boş': 'Aftercare Owner and WhatsApp group are empty',
+    'Klinik ekibine iletilecek mesaj... (görsel için Ctrl+V)':
+      'Message for the clinic team... (Ctrl+V to paste an image)',
+    'Bu deal\'de Zoho\'daki Aftercare Owner ve WhatsApp grubu alanları boş. Mesajınız kaydedilir ve muhatap atandığında dizide görünür.':
+      'Both the Aftercare Owner and WhatsApp group fields are empty in Zoho for this deal. Your message is saved and will appear in the thread once a contact is assigned.',
+    // Composer klavye ipucu — tusun ARDINA eklenen kisa etiketler.
+    'gönder': 'send',
+    'satır': 'line',
+    'Clinic\'e Bildir': 'Notify Clinic',
     'Sohbet geçmişi': 'Conversation history',
     'Geçmiş': 'History',
     'Clinic mesajları': 'Clinic messages',
