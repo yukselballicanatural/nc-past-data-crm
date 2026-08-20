@@ -167,6 +167,58 @@
     textarea.modal-note { background:#111827; border:1px solid #374151; color:#e2e8f0; border-radius:10px; padding:10px 12px; font-size:12px; width:100%; resize:vertical; min-height:120px; }
     textarea.modal-note:focus { outline:none; border-color:#0d9488; }
 
+    /* ── Faz 3: "Clinic'e Bildir" kartı ────────────────────────────────
+       Dark tema: özgün gradient/glow kart (mevcut çizgide düz renk yerine
+       hafif derinlik). Light tema karşılığı liquid-glass.css'te —
+       arkaplan/blur/edge tokenları oradan geliyor (bkz. o dosyadaki
+       html[data-theme="light"] .clinic-card bloğu). */
+    .clinic-card {
+      border-radius:14px; border:1px solid #312e81;
+      background:linear-gradient(160deg,#1e1b4b 0%,#141233 100%);
+      padding:14px; position:relative; overflow:hidden; margin-bottom:18px;
+    }
+    .clinic-card::before {
+      content:''; position:absolute; top:-46%; right:-18%; width:170px; height:170px;
+      background:radial-gradient(circle,rgba(129,140,248,0.25),transparent 70%); pointer-events:none;
+    }
+    .clinic-card-head { display:flex; align-items:center; gap:7px; margin-bottom:11px; position:relative; }
+    .clinic-card-head svg { width:15px; height:15px; color:#a5b4fc; flex-shrink:0; }
+    .clinic-card-head span { font-size:12px; font-weight:800; color:#e0e7ff; letter-spacing:.01em; }
+    .clinic-role-row { display:flex; gap:6px; margin-bottom:9px; flex-wrap:wrap; position:relative; }
+    .clinic-role-chip {
+      padding:6px 12px; border-radius:9999px; border:1px solid #3730a3; background:#211d55dd;
+      color:#a5b4fc; font-size:10.5px; font-weight:700; cursor:pointer; transition:all .15s; white-space:nowrap;
+    }
+    .clinic-role-chip:hover { border-color:#6366f1; }
+    .clinic-role-chip.active {
+      background:#4f46e5; border-color:#818cf8; color:#fff;
+      box-shadow:0 2px 12px -2px rgba(99,102,241,.65);
+    }
+    .clinic-card textarea {
+      background:#0f0d2999; border:1px solid #312e81; color:#e0e7ff; border-radius:10px;
+      padding:10px 12px; font-size:12px; width:100%; min-height:58px; resize:vertical;
+      box-sizing:border-box; position:relative;
+    }
+    .clinic-card textarea:focus { outline:none; border-color:#818cf8; }
+    .clinic-send-btn {
+      width:100%; margin-top:10px; padding:10px; border:none; border-radius:10px; cursor:pointer;
+      background:linear-gradient(135deg,#4f46e5,#4338ca); color:#fff; font-size:12px; font-weight:800;
+      display:flex; align-items:center; justify-content:center; gap:7px;
+      transition:transform .12s, box-shadow .12s; box-shadow:0 4px 14px -4px rgba(79,70,229,.6);
+      position:relative;
+    }
+    .clinic-send-btn:hover { transform:translateY(-1px); box-shadow:0 6px 18px -4px rgba(79,70,229,.75); }
+    .clinic-send-btn:disabled { opacity:.55; cursor:default; transform:none; }
+    .clinic-msg-thread { max-height:150px; overflow-y:auto; margin-bottom:10px; display:none; position:relative; }
+    .clinic-msg-item {
+      padding:8px 10px; border-radius:10px; background:#1e1b4b66; border:1px solid #312e8155; margin-bottom:6px;
+    }
+    .clinic-msg-item:last-child { margin-bottom:0; }
+    .clinic-msg-role { font-size:9.5px; font-weight:800; color:#a5b4fc; text-transform:uppercase; letter-spacing:.03em; }
+    .clinic-msg-time { font-size:9px; color:#6366a3; }
+    .clinic-msg-text { font-size:11px; color:#e0e7ff; margin-top:3px; word-break:break-word; overflow-wrap:anywhere; }
+    .clinic-msg-meta { font-size:9px; color:#7c81b8; margin-top:4px; }
+
     /* Urgency left-border on alarm rows */
     .alarm-row-overdue td:first-child { border-left:3px solid #ef4444; }
     .alarm-row-today td:first-child { border-left:3px solid #22c55e; }
@@ -1366,16 +1418,22 @@
     <!-- Faz 3 (Clinic Planning) — deal bazlı Clinic'e Bildir mesajlaşması.
          clinic_messages tablosu deal_id ile tutuluyor (alarm_id ile değil):
          bir deal'in birden fazla alarmı olabilir, geçmiş tek yerde biriksin. -->
-    <div id="clinicMsgWrap" style="margin-bottom:18px">
-      <label style="font-size:11px;color:#94a3b8;font-weight:700;display:block;margin-bottom:6px">Clinic'e Bildir</label>
-      <div id="clinicMsgList" style="max-height:160px;overflow-y:auto;background:#0d1526;border:1px solid #1e293b;border-radius:10px;padding:8px 12px;margin-bottom:8px;display:none"></div>
-      <select id="clinicMsgRole" class="filter-sel" style="width:100%;box-sizing:border-box;margin-bottom:8px">
-        <option value="Translators Manager">Tercüman Sorumlusu</option>
-        <option value="Profclinic">Profclinic (Danışman)</option>
-        <option value="Planning">Planlama</option>
-      </select>
-      <textarea id="clinicMsgInput" class="modal-note" maxlength="500" style="min-height:60px" placeholder="Clinic tarafına iletilecek mesaj (en fazla 500 karakter)"></textarea>
-      <button onclick="sendClinicMessage()" id="btnClinicMsg" style="width:100%;padding:10px;margin-top:8px;background:#1e1b4b;border:1px solid #4338ca;border-radius:10px;color:#a5b4fc;font-size:12px;font-weight:700;cursor:pointer">Clinic'e Bildir</button>
+    <div class="clinic-card" id="clinicMsgWrap">
+      <div class="clinic-card-head">
+        <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8-1.5 0-2.91-.32-4.15-.9L3 20l1.05-3.16C3.38 15.6 3 14.34 3 13c0-4.418 4.03-8 9-8s9 3.582 9 7z"/></svg>
+        <span>Clinic'e Bildir</span>
+      </div>
+      <div id="clinicMsgList" class="clinic-msg-thread"></div>
+      <div class="clinic-role-row" id="clinicMsgRoleRow">
+        <div class="clinic-role-chip active" data-role="Translators Manager" onclick="selectClinicRole(this)">Tercüman Sorumlusu</div>
+        <div class="clinic-role-chip" data-role="Profclinic" onclick="selectClinicRole(this)">Profclinic (Danışman)</div>
+        <div class="clinic-role-chip" data-role="Planning" onclick="selectClinicRole(this)">Planlama</div>
+      </div>
+      <textarea id="clinicMsgInput" maxlength="500" placeholder="Clinic tarafına iletilecek mesaj (en fazla 500 karakter)"></textarea>
+      <button onclick="sendClinicMessage()" id="btnClinicMsg" class="clinic-send-btn">
+        <svg style="width:14px;height:14px" fill="currentColor" viewBox="0 0 24 24"><path d="M3.4 20.6l17.45-8.4a.6.6 0 0 0 0-1.08L3.4 2.72a.6.6 0 0 0-.85.66l1.7 6.8L14 12l-9.75 1.82-1.7 6.8a.6.6 0 0 0 .85.66z"/></svg>
+        <span>Clinic'e Bildir</span>
+      </button>
     </div>
 
     <button onclick="sendResultCodeWhatsAppClick()" style="width:100%;padding:11px;margin-bottom:10px;background:#052e16;border:1px solid #166534;border-radius:10px;color:#4ade80;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px">
@@ -3180,6 +3238,12 @@
   // yerde birikir, hangi alarmdan gönderildiği related_alarm_id'de durur.
   async function loadClinicMessages(dealId) {
     const list = document.getElementById('clinicMsgList');
+    // Her açılışta rol seçimi ve mesaj kutusu sıfırlanır — önceki alarmda
+    // seçilen rol/yazılan yarım mesaj bu deal'e sızmasın.
+    const chips = document.querySelectorAll('#clinicMsgRoleRow .clinic-role-chip');
+    chips.forEach((c, i) => c.classList.toggle('active', i === 0));
+    const input = document.getElementById('clinicMsgInput');
+    if (input) input.value = '';
     if (!dealId) { list.style.display = 'none'; return; }
     try {
       const H = { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + SUPABASE_KEY };
@@ -3188,21 +3252,29 @@
       const rows = await r.json();
       if (!Array.isArray(rows) || !rows.length) { list.style.display = 'none'; return; }
       list.innerHTML = rows.map(m => `
-        <div style="padding:6px 0;border-bottom:1px solid #0f172a">
+        <div class="clinic-msg-item">
           <div style="display:flex;justify-content:space-between;gap:8px">
-            <span style="font-size:10px;font-weight:700;color:#a5b4fc">${fmt(m.sent_to_role)}</span>
-            <span style="font-size:9px;color:#475569;white-space:nowrap">${formatDateTime(m.created_at)}</span>
+            <span class="clinic-msg-role">${fmt(m.sent_to_role)}</span>
+            <span class="clinic-msg-time">${formatDateTime(m.created_at)}</span>
           </div>
-          <div style="font-size:11px;color:#cbd5e1;word-break:break-word;overflow-wrap:anywhere">${fmt(m.message)}</div>
-          <div style="font-size:9px;color:#64748b">${fmt(m.sent_by_name)}${m.read_at ? ' · ' + I18N.t('Okundu') : ' · ' + I18N.t('Okunmadı')}</div>
+          <div class="clinic-msg-text">${fmt(m.message)}</div>
+          <div class="clinic-msg-meta">${fmt(m.sent_by_name)}${m.read_at ? ' · ' + I18N.t('Okundu') : ' · ' + I18N.t('Okunmadı')}</div>
         </div>`).join('');
       list.style.display = 'block';
     } catch (e) { list.style.display = 'none'; }
   }
 
+  // Rol seçimi artık segmented "chip" — <select> yerine tıklanan chip'i
+  // aktif işaretler, seçili rol data-role attribute'undan okunur.
+  function selectClinicRole(el) {
+    document.querySelectorAll('#clinicMsgRoleRow .clinic-role-chip').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+  }
+
   async function sendClinicMessage() {
     if (!currentAlarm || !currentAlarm.deal_id) { showNotice(I18N.t('Bu alarm bir deal\'e bağlı değil.'), 'error'); return; }
-    const role = document.getElementById('clinicMsgRole').value;
+    const activeChip = document.querySelector('#clinicMsgRoleRow .clinic-role-chip.active');
+    const role = activeChip ? activeChip.dataset.role : 'Translators Manager';
     const text = document.getElementById('clinicMsgInput').value.trim();
     if (!text) { showNotice(I18N.t('Mesaj boş olamaz.'), 'error'); return; }
     const btn = document.getElementById('btnClinicMsg');
