@@ -533,7 +533,6 @@ window.NCClinicChat = (function () {
         </div>
         <div class="ncc-chat-body" id="${id.body}"></div>
         <div class="ncc-chat-foot">
-          <div id="${id.warn}"></div>
           <!-- Ek önizlemeleri yazma kutusunun ÜSTÜNDE (WhatsApp deseni);
                ek yokken :empty ile tamamen gizleniyor, yer kaplamıyor. -->
           <span class="ncc-attach-mount" id="${id.mount}"></span>
@@ -617,11 +616,10 @@ window.NCClinicChat = (function () {
       if (av) { av.textContent = '?'; av.dataset.empty = 'true'; }
       if (wrap) { wrap.dataset.empty = 'true'; wrap.dataset.source = ''; }
       if (sub) sub.textContent = _t('Muhatap atanmamış');
-      if (warn) {
-        // Başlık zaten "Muhatap atanmamış" diyor; uyarı YALNIZCA bunun
-        // sonucunu ekliyor. Uzun metin composer'ın yerini yiyordu.
-        warn.innerHTML = `<div class="ncc-chat-warn">${esc(_t('Mesaj kaydedilir, muhatap atandığında görünür.'))}</div>`;
-      }
+      // Ayrı bir uyarı satırı YOK (kullanıcı talebi): başlıktaki "Muhatap
+      // atanmamış" bilgiyi zaten veriyor, ikinci bir şerit hem tekrar hem
+      // composer'ın yerini yiyordu.
+      if (warn) warn.innerHTML = '';
     }
   }
 

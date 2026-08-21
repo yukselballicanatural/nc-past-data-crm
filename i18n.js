@@ -532,8 +532,6 @@
     'Muhatap atanmamış': 'No contact assigned',
     'Aftercare Owner ve WhatsApp grubu boş': 'Aftercare Owner and WhatsApp group are empty',
     'Klinik ekibine iletilecek mesaj...': 'Message for the clinic team...',
-    'Mesaj kaydedilir, muhatap atandığında görünür.':
-      'The message is saved and will appear once a contact is assigned.',
     'Clinic\'e Bildir': 'Notify Clinic',
     'Sohbet geçmişi': 'Conversation history',
     // Deal penceresi içindeki sohbet paneli (ayrı popup yok — bkz.
