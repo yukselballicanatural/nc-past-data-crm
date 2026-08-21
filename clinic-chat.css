@@ -110,13 +110,23 @@
 .ncc-composer-x svg { width: 13px; height: 13px; }
 .ncc-composer-x:hover { background: #1c2740; color: #e6ebf5; }
 
-/* Composer alt şeridi: yalnızca karakter sayacı (klavye ipucu kaldırıldı —
-   kullanıcı talebi). Sayaç da yalnızca sınıra yaklaşınca dolduğu için bu
-   şerit çoğu zaman boş ve yer kaplamıyor. */
+/* Composer alt şeridi: SOLDA ataç, SAĞDA karakter sayacı (klavye ipucu
+   kaldırıldı — kullanıcı talebi). Ataç burada, kutunun İÇİNDE değil: dock'un
+   kutusu tek satır olduğu için sağ-üstteki kapatma çarpısıyla sağ-alttaki
+   ataç birbirine giriyordu. Sayaç yalnızca sınıra yaklaşınca doluyor. */
 .ncc-composer-bar {
-  display: flex; align-items: center; justify-content: flex-end;
-  padding: 6px 4px 0; min-height: 0;
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 7px 4px 0; min-height: 0;
 }
+.ncc-attach-btn {
+  width: 28px; height: 28px; flex-shrink: 0; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 9px; border: 1px solid #1f2a44;
+  background: #131c30; color: #7b879d;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.ncc-attach-btn svg { width: 14px; height: 14px; }
+.ncc-attach-btn:hover { background: #1c2740; color: #e6ebf5; border-color: #2a3550; }
 /* Ek önizleme şeridi — yazma kutusunun ÜSTÜNDE. Ek yokken :empty ile
    tamamen gizleniyor, yer kaplamıyor. Taşarsa YATAY kayar; dikey büyüyüp
    composer'ı kabın dışına itmesin. */
@@ -867,6 +877,10 @@ html[data-theme="light"] .ncc-empty-ico {
 html[data-theme="light"] .ncc-empty-title { color: var(--ink-2); }
 html[data-theme="light"] .ncc-empty-sub { color: var(--ink-3); }
 html[data-theme="light"] .ncc-attach-inline { color: var(--ink-3); }
+html[data-theme="light"] .ncc-attach-btn {
+  background: var(--g-2); border-color: var(--edge-soft); color: var(--ink-2);
+}
+html[data-theme="light"] .ncc-attach-btn:hover { background: var(--g-3); color: var(--ink); }
 html[data-theme="light"] .ncc-attach-inline:hover { background: var(--g-2); color: var(--ink); }
 /* Yazma kutusu: OPAK beyaz. Saydam bırakılınca altındaki baloncuklar
    sızıp yazılan metni okunmaz yapıyordu. Kenar koyu hairline, iç gölge

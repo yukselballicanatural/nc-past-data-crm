@@ -239,19 +239,22 @@ window.NCClinicChat = (function () {
           <div class="ncc-dock-field">
             <textarea id="nccDockInput" maxlength="${MAX_LEN}" rows="1"
               placeholder="${esc(_t('Klinik ekibine iletilecek mesaj...'))}"></textarea>
-            <!-- Ataç kutunun İÇİNDE, en sağda (kullanıcı talebi). Kapatma
-                 düğmesi onun soluna alındı. -->
-            <label class="ncc-attach-inline" for="nccDockFile"
-              title="${esc(_t('Görsel ekle (JPG/PNG/GIF/WebP, en fazla 3 MB)'))}">
-              <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-            </label>
-            <input type="file" id="nccDockFile" accept="${_ACCEPT}" multiple style="display:none">
+            <!-- Kutunun İÇİNDE yalnızca kapatma düğmesi var. Ataç aşağıdaki
+                 şeride alındı: dock'un kutusu kısa (tek satır) olduğu için
+                 sağ-üstteki çarpı ile sağ-alttaki ataç birbirine giriyordu
+                 (kullanıcı ekran görüntüsü). Sohbette çarpı olmadığı için
+                 orada ataç kutunun içinde kalıyor. -->
             <button type="button" class="ncc-composer-x" onclick="NCClinicChat.closeComposer()"
               title="${esc(_t('Kapat'))}" aria-label="${esc(_t('Kapat'))}">
               <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
           <div class="ncc-composer-bar">
+            <label class="ncc-attach-btn" for="nccDockFile"
+              title="${esc(_t('Görsel ekle (JPG/PNG/GIF/WebP, en fazla 3 MB)'))}">
+              <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            </label>
+            <input type="file" id="nccDockFile" accept="${_ACCEPT}" multiple style="display:none">
             <span class="ncc-composer-count" id="nccDockCount" data-warn="false"></span>
           </div>
         </div>
