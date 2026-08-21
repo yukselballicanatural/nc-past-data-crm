@@ -300,6 +300,16 @@ window.NCClinicChat = (function () {
   function renderDock(mountId, ctx) {
     const mount = document.getElementById(mountId);
     if (!mount) return;
+    // TEK DOCK KURALI: iskelet sabit id'ler kullanıyor (nccDock,
+    // nccDockComposer, nccDockAttachMount...) ve _dock tek bir modül
+    // değişkeni. Dock artık BİRDEN FAZLA pencerede (alarm, Won, İptal)
+    // yaşıyor; önceki pencerenin bıraktığı iskelet DOM'da kalırsa id'ler
+    // ikizlenir ve getElementById yanlış olanı bulur. Yeni dock'u kurmadan
+    // önce bir öncekinin yuvası boşaltılıyor.
+    if (_dock && _dock.mountId && _dock.mountId !== mountId) {
+      const prev = document.getElementById(_dock.mountId);
+      if (prev) prev.innerHTML = '';
+    }
     _dock = {
       mountId,
       dealId:   String(ctx.dealId || ''),

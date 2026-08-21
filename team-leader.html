@@ -1453,7 +1453,7 @@
 <!-- İptal Edilenler — odaklı iptal nedeni / sonuç kodu modalı -->
 <div id="tlCancelReasonModal">
   <div class="modal-bg" onclick="_tlcaCloseModal()"></div>
-  <div class="modal-box">
+  <div class="modal-box" id="tlcaBox">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
       <div>
         <h3 style="font-size:16px;font-weight:700;color:#f1f5f9;margin:0" id="tlcaDealName">—</h3>
@@ -1496,10 +1496,19 @@
       <div id="tlcaAttachWidget"></div>
       <div id="tlcaSaveError" style="display:none;color:#f87171;font-size:11px;font-weight:600;margin-top:6px"></div>
     </div>
+    <!-- Clinic'e Bildir — alarm penceresindekinin aynısı. -->
+    <div id="tlcaClinicDockMount"></div>
     <div style="display:flex;gap:10px">
       <a id="tlcaZohoLink" href="#" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#818cf8;font-size:12px;font-weight:700;text-decoration:none">Zoho'da Aç ↗</a>
       <button id="tlcaSaveBtn" onclick="_tlcaSaveResult()" style="flex:1;padding:11px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kaydet</button>
       <button onclick="_tlcaCloseModal()" style="flex:1;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">Kapat</button>
+    </div>
+    <!-- Sohbet sayfası: dock'taki geçmiş ikonu bunu yükseltiyor. Ayrı
+         pencere AÇILMIYOR (bkz. alarm penceresindeki not ve .nc-chat-sheet).
+         Maske şart: sayfa kapalıyken translateY(100%) ile pencerenin
+         ALTINDA durur, maskesiz bu taşma pencerenin kaydırmasına eklenir. -->
+    <div class="nc-sheet-mask">
+      <div class="nc-chat-sheet" id="tlcaChatSheet"></div>
     </div>
   </div>
 </div>
@@ -1507,7 +1516,7 @@
 <!-- Won Alarm — Zoho_Deals_Alarm_Yonetimi.md Bölüm 5 Sonuç Kodu modalı -->
 <div id="tlWonResultModal">
   <div class="modal-bg" onclick="_wrCloseModal()"></div>
-  <div class="modal-box">
+  <div class="modal-box" id="wrBox">
     <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:16px">
       <div>
         <h3 style="font-size:16px;font-weight:700;color:#f1f5f9;margin:0" id="wrDealName">—</h3>
@@ -1550,10 +1559,19 @@
       <svg style="width:15px;height:15px" fill="currentColor" viewBox="0 0 24 24"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91C21.95 6.45 17.5 2 12.04 2zm5.8 14.14c-.24.68-1.42 1.3-1.96 1.34-.5.04-1.02.06-1.65-.1-.38-.1-.87-.28-1.5-.55-2.63-1.14-4.35-3.8-4.48-3.98-.13-.18-1.07-1.42-1.07-2.7 0-1.29.68-1.92.92-2.18.24-.26.53-.33.71-.33.18 0 .35 0 .5.01.16.01.38-.06.6.45.24.55.8 1.9.87 2.04.07.14.11.3.02.48-.09.18-.13.29-.26.45-.13.16-.27.35-.39.47-.13.13-.26.27-.11.53.15.26.68 1.12 1.46 1.82 1 .89 1.85 1.17 2.11 1.3.26.13.41.11.56-.06.16-.18.65-.76.83-1.02.18-.26.35-.21.6-.13.24.09 1.54.73 1.8.86.26.13.44.2.5.31.06.13.06.7-.18 1.38z"/></svg>
       WhatsApp'tan Agent'a Bildirim Gönder
     </button>
+    <!-- Clinic'e Bildir — alarm penceresindekinin aynısı. -->
+    <div id="wrClinicDockMount"></div>
     <div style="display:flex;gap:10px">
       <a id="wrZohoLink" href="#" target="_blank" rel="noopener" style="flex:1;text-align:center;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#818cf8;font-size:12px;font-weight:700;text-decoration:none">Zoho'da Aç ↗</a>
       <button id="wrSaveBtn" onclick="_wrSaveResult()" style="flex:1;padding:11px;background:#0d9488;border:none;border-radius:10px;color:#fff;font-size:12px;font-weight:700;cursor:pointer">Kaydet</button>
       <button onclick="_wrCloseModal()" style="flex:1;padding:11px;background:#1e293b;border:1px solid #334155;border-radius:10px;color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer">Kapat</button>
+    </div>
+    <!-- Sohbet sayfası: dock'taki geçmiş ikonu bunu yükseltiyor. Ayrı
+         pencere AÇILMIYOR (bkz. alarm penceresindeki not ve .nc-chat-sheet).
+         Maske şart: sayfa kapalıyken translateY(100%) ile pencerenin
+         ALTINDA durur, maskesiz bu taşma pencerenin kaydırmasına eklenir. -->
+    <div class="nc-sheet-mask">
+      <div class="nc-chat-sheet" id="wrChatSheet"></div>
     </div>
   </div>
 </div>
@@ -4308,6 +4326,49 @@
     box.style.height = '';   // pencere kendi içeriğine göre geri açılsın
   }
 
+  // ── Clinic dock'unu bir pencereye takan ORTAK yardımcı ────────────────
+  // Alarm penceresindeki akışın aynısı, artık Won ve İptal pencerelerinde
+  // de: takım lideri deal'i açar → "Clinic'e Bildir" ile klinikteki ilgili
+  // kişiye (Zoho Aftercare_Owner, yoksa WA_Group) pushlar; yanındaki geçmiş
+  // ikonu da o deal'in sohbetini AYNI pencerenin içinde yükseltir.
+  //
+  // Burada alarmId YOK: Won/İptal pencereleri alarms tablosunda bir satıra
+  // değil, doğrudan deal'e bakıyor (Won listesi zaten canlı hesaplanıyor,
+  // bkz. _wrOpenModal). Mesaj yine deal'e bağlanıyor, sohbet aynı dizi.
+  function _mountClinicDock(mountId, d, onHistoryExpr) {
+    if (typeof NCClinicChat === 'undefined' || !d) return;
+    NCClinicChat.renderDock(mountId, {
+      dealId:   String(d.id || ''),
+      dealName: d.deal_name || '',
+      team:     d.team || '',
+      alarmId:  null,
+      suggest:  '',
+      onHistory: onHistoryExpr,
+    });
+  }
+
+  // Won penceresi
+  function wrOpenChat() {
+    if (!_wrCurrentDeal) return;
+    ncSheetOpen('wrBox', 'wrChatSheet', {
+      dealId:   String(_wrCurrentDeal.id || ''),
+      dealName: _wrCurrentDeal.deal_name || '',
+      team:     _wrCurrentDeal.team || '',
+    }, 'wrCloseChat()');
+  }
+  function wrCloseChat() { ncSheetClose('wrBox'); }
+
+  // İptal penceresi
+  function tlcaOpenChat() {
+    if (!_tlcaCurrentDeal) return;
+    ncSheetOpen('tlcaBox', 'tlcaChatSheet', {
+      dealId:   String(_tlcaCurrentDeal.id || ''),
+      dealName: _tlcaCurrentDeal.deal_name || '',
+      team:     _tlcaCurrentDeal.team || '',
+    }, 'tlcaCloseChat()');
+  }
+  function tlcaCloseChat() { ncSheetClose('tlcaBox'); }
+
   // Deal penceresi — başlıktaki mesaj ikonu
   function dmOpenChat() {
     if (!currentDeal) return;
@@ -4548,6 +4609,7 @@
       NCAttach.renderWidget(`'${_jsStrAttr(String(d.id))}'`, 'tlcaAttachInput', 'tlcaAttachMount');
     NCAttach.load(d.id, 'tlcaAttachMount');
     NCAttach.bindPaste('tlcaReasonNote', d.id, 'tlcaAttachMount');
+    _mountClinicDock('tlcaClinicDockMount', d, 'tlcaOpenChat()');
     _tlcaLoadLive(d.id);
   }
 
@@ -4584,6 +4646,7 @@
   }
 
   function _tlcaCloseModal() {
+    ncSheetClose('tlcaBox');
     document.getElementById('tlCancelReasonModal').classList.remove('open');
     document.body.style.overflow = '';
     _tlcaCurrentDeal = null;
@@ -4746,6 +4809,7 @@
       NCAttach.renderWidget(`'${_jsStrAttr(String(d.id))}'`, 'wrAttachInput', 'wrAttachMount');
     NCAttach.load(d.id, 'wrAttachMount');
     NCAttach.bindPaste('wrReasonNote', d.id, 'wrAttachMount');
+    _mountClinicDock('wrClinicDockMount', d, 'wrOpenChat()');
     _wrOnResultCodeChange();
   }
   function _wrRefreshReasonCard(d) {
@@ -4764,6 +4828,9 @@
     // Açıklama zaten zorunlu (bkz. _wrSaveResult), ayrı bir tarih alanı yok.
   }
   function _wrCloseModal() {
+    // Sohbet sayfası açıkken kapatılırsa pencere bir dahaki açılışta
+    // sohbetle açılmasın (alarm penceresiyle aynı kural).
+    ncSheetClose('wrBox');
     document.getElementById('tlWonResultModal').classList.remove('open');
     document.body.style.overflow = '';
     _wrCurrentDeal = null;
