@@ -35,7 +35,12 @@ window.NCClinicChat = (function () {
   let _t = (s) => s;
   let _teamAliases = null;          // string[] | null (null = takım filtresi yok)
 
+  // Sohbet kutusundaki sınır (deal'in kendi dizisi — uzun yazılabilir).
   const MAX_LEN = 1000;
+  // İLK mesaj, yani "Clinic'e Bildir" dock'undan gönderilen bildirim:
+  // 200 karakter (kullanıcı talebi). Burası bir bildirim/özet alanı, sohbet
+  // değil — detay zaten sohbette devam ediyor.
+  const DOCK_MAX_LEN = 200;
 
   function init(opts) {
     opts = opts || {};
@@ -237,7 +242,7 @@ window.NCClinicChat = (function () {
           <!-- Ek önizlemeleri kutunun ÜSTÜNDE; ek yokken :empty ile gizli. -->
           <span class="ncc-attach-mount" id="nccDockAttachMount"></span>
           <div class="ncc-dock-field">
-            <textarea id="nccDockInput" maxlength="${MAX_LEN}" rows="1"
+            <textarea id="nccDockInput" maxlength="${DOCK_MAX_LEN}" rows="1"
               placeholder="${esc(_t('Klinik ekibine iletilecek mesaj...'))}"></textarea>
             <!-- Kutunun İÇİNDE yalnızca kapatma düğmesi var. Ataç aşağıdaki
                  şeride alındı: dock'un kutusu kısa (tek satır) olduğu için
@@ -303,15 +308,17 @@ window.NCClinicChat = (function () {
     el.style.height = Math.min(el.scrollHeight, 148) + 'px';
   }
 
-  // Sayaç yalnızca sınıra YAKLAŞINCA görünür (>%70) — boş bir "0 / 1000"
+  // Sayaç yalnızca sınıra YAKLAŞINCA görünür (>%70) — boş bir "0 / 200"
   // her zaman ekranda durunca gürültü yapıyor, hiçbir şey söylemiyordu.
+  // Sınır DOCK_MAX_LEN (200): bu fonksiyon yalnızca dock composer'ında
+  // kullanılıyor, sohbet kutusunun sayacı yok.
   function _paintCount(input) {
     const c = document.getElementById('nccDockCount');
     if (!c) return;
     const n = input.value.length;
-    const near = n > MAX_LEN * 0.7;
-    c.textContent = near ? `${n} / ${MAX_LEN}` : '';
-    c.dataset.warn = n > MAX_LEN * 0.92 ? 'true' : 'false';
+    const near = n > DOCK_MAX_LEN * 0.7;
+    c.textContent = near ? `${n} / ${DOCK_MAX_LEN}` : '';
+    c.dataset.warn = n > DOCK_MAX_LEN * 0.92 ? 'true' : 'false';
   }
 
   // Muhatabın nereden geldiğini kullanıcıya açıkça söyler — "Aftercare

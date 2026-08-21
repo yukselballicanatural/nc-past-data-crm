@@ -164,7 +164,10 @@
     .info-card { background:#111827; border:1px solid #1e293b; border-radius:10px; padding:10px 12px; }
     .info-label { font-size:9px; color:#475569; font-weight:700; text-transform:uppercase; letter-spacing:0.06em; margin-bottom:3px; }
     .info-val { font-size:12px; color:#e2e8f0; font-weight:500; overflow-wrap:anywhere; }
-    textarea.modal-note { background:#111827; border:1px solid #374151; color:#e2e8f0; border-radius:10px; padding:10px 12px; font-size:12px; width:100%; resize:vertical; min-height:120px; }
+    /* resize:none — sag alttaki yeniden boyutlandirma tutamaci kaldirildi
+       (kullanici talebi: "gerek yok"). Kutu zaten 120px, uzun not icin
+       kendi icinde kayiyor. */
+    textarea.modal-note { background:#111827; border:1px solid #374151; color:#e2e8f0; border-radius:10px; padding:10px 12px; font-size:12px; width:100%; resize:none; min-height:120px; }
     textarea.modal-note:focus { outline:none; border-color:#0d9488; }
 
     /* Urgency left-border on alarm rows */
