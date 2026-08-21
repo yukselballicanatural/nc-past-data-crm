@@ -1207,7 +1207,7 @@ html[data-theme="light"] #alarmHistoryList > * + * {
 html[data-theme="light"] #alarmHistoryWrap > label { color: var(--ink-2) !important; }
 
 /* WhatsApp butonları — kendi yeşili korunur, cam ve parlak olur */
-html[data-theme="light"] button[onclick*="WhatsApp" i],
+html[data-theme="light"] button[onclick*="WhatsApp" i]:not(.tab-pill),
 html[data-theme="light"] #depWaBtn {
   position: relative;
   overflow: hidden;
@@ -1219,7 +1219,7 @@ html[data-theme="light"] #depWaBtn {
               inset 0 1px 0 rgba(255, 255, 255, 0.45) !important;
   transition: transform .3s var(--spring), filter .2s var(--ease), box-shadow .26s var(--ease) !important;
 }
-html[data-theme="light"] button[onclick*="WhatsApp" i]::after,
+html[data-theme="light"] button[onclick*="WhatsApp" i]:not(.tab-pill)::after,
 html[data-theme="light"] #depWaBtn::after {
   content: "";
   position: absolute;
@@ -1228,9 +1228,9 @@ html[data-theme="light"] #depWaBtn::after {
   border-radius: inherit;
   pointer-events: none;
 }
-html[data-theme="light"] button[onclick*="WhatsApp" i]:hover,
+html[data-theme="light"] button[onclick*="WhatsApp" i]:not(.tab-pill):hover,
 html[data-theme="light"] #depWaBtn:hover { transform: translateY(-1.5px); filter: brightness(1.06); }
-html[data-theme="light"] button[onclick*="WhatsApp" i]:active,
+html[data-theme="light"] button[onclick*="WhatsApp" i]:not(.tab-pill):active,
 html[data-theme="light"] #depWaBtn:active { transform: scale(.965); }
 
 /* ═════════════════════════════════════════════════════════════════════

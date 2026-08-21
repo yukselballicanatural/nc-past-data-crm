@@ -328,7 +328,7 @@ html[data-theme="dark"] button[style*="background: rgb(30, 41, 59)" i]:not(aside
 }
 
 /* WhatsApp */
-html[data-theme="dark"] button[onclick*="WhatsApp" i],
+html[data-theme="dark"] button[onclick*="WhatsApp" i]:not(.tab-pill),
 html[data-theme="dark"] #depWaBtn {
   position: relative; overflow: hidden;
   background: linear-gradient(150deg, #2fc36b 0%, #1faa57 55%, #158f46 100%) !important;
@@ -338,7 +338,7 @@ html[data-theme="dark"] #depWaBtn {
   box-shadow: 0 6px 22px -5px rgba(21, 143, 70, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.3) !important;
   transition: transform .3s var(--d-spring), filter .2s var(--d-ease) !important;
 }
-html[data-theme="dark"] button[onclick*="WhatsApp" i]:hover,
+html[data-theme="dark"] button[onclick*="WhatsApp" i]:not(.tab-pill):hover,
 html[data-theme="dark"] #depWaBtn:hover { transform: translateY(-1.5px); filter: brightness(1.08); }
 
 /* Başlık butonları */

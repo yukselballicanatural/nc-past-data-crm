@@ -580,7 +580,13 @@
            kendi pill'i. Renkler alarmTypeMeta'daki rozet renkleriyle BİREBİR
            aynı: kullanıcı tabloda gördüğü rozetin rengini filtrede de görüyor. -->
       <button class="tab-pill" id="atab-hotel" onclick="switchAlarmTab('hotel')">Otel Eksik <span id="cnt-hotel" class="badge-cnt" style="background:rgba(251,146,60,0.2);color:#fb923c">0</span></button>
-      <button class="tab-pill" id="atab-whatsapp" onclick="switchAlarmTab('whatsapp')">WhatsApp Eksik <span id="cnt-whatsapp" class="badge-cnt" style="background:rgba(74,222,128,0.2);color:#4ade80">0</span></button>
+      <!-- Sekme anahtari 'whatsapp' DEGIL 'wagroup': liquid-glass(.-dark).css'te
+           `button[onclick*="WhatsApp" i]` diye buyuk/kucuk harf DUYARSIZ bir kural
+           var (WhatsApp aksiyon butonlarini yesil yapiyor) ve onclick degeri
+           "whatsapp" icerdiginde bu filtre pill'i de o stili aliyor —
+           kuralin ::after parlaklik katmani pill'in arkasinda fazladan bir
+           kutu olarak goruluyordu. -->
+      <button class="tab-pill" id="atab-wagroup" onclick="switchAlarmTab('wagroup')">WhatsApp Eksik <span id="cnt-wagroup" class="badge-cnt" style="background:rgba(74,222,128,0.2);color:#4ade80">0</span></button>
       <button class="tab-pill" id="atab-interpreter" onclick="switchAlarmTab('interpreter')">Tercüman Eksik <span id="cnt-interpreter" class="badge-cnt" style="background:rgba(96,165,250,0.2);color:#60a5fa">0</span></button>
       <button class="tab-pill" id="atab-examdate" onclick="switchAlarmTab('examdate')">Muayene Tarihi Eksik <span id="cnt-examdate" class="badge-cnt" style="background:rgba(167,139,250,0.2);color:#a78bfa">0</span></button>
       <button class="tab-pill" id="atab-consultant" onclick="switchAlarmTab('consultant')">Danışman Eksik <span id="cnt-consultant" class="badge-cnt" style="background:rgba(244,114,182,0.2);color:#f472b6">0</span></button>
@@ -2423,7 +2429,7 @@
   // eklemek/çıkarmak için yalnızca burası ve HTML'deki pill değişir.
   const CLINIC_TAB_TYPE = {
     hotel:      'hotel_missing',
-    whatsapp:   'whatsapp_missing',
+    wagroup:    'whatsapp_missing',   // anahtar adi: bkz. HTML'deki not
     interpreter:'interpreter_missing',
     examdate:   'exam_date_missing',
     consultant: 'consultant_missing_after_arrival',
