@@ -509,9 +509,23 @@
    önce kap ayrıca en üste alınıyor (scrollTop = 0).                        */
 .modal-box[data-sheet="open"] {
   overflow: hidden;
-  /* "Yukarı doğru uzansın" — kısa bir pencerede sohbet sıkışmasın. */
-  min-height: min(64vh, 545px);
-  transition: min-height .46s cubic-bezier(.22, 1, .36, 1);
+  /* ── KESİN YÜKSEKLİK, min-height DEĞİL — taşmanın gerçek nedeni buydu ──
+     min-height kabı SINIRLAMIYOR: altta kalan içerik (alarm penceresinde 9
+     form alanı, ~900px) daha uzunsa kabın gerçek yüksekliği o oluyor.
+     Sohbet sayfası `bottom:0` ile o UZUN kabın dibine oturduğu için
+     composer, `max-height:90vh` + `overflow:hidden` ile kırpılan görünür
+     alanın çok altında kalıyordu — kullanıcının turlarca "taşıyor,
+     sığdırsana" dediği durum tam olarak bu.
+
+     `height` verilince kap içerikten BAĞIMSIZ olarak tam bu boyda olur;
+     alttaki uzun içerik taşar ve kırpılır (zararsız, üstünü opak sayfa
+     kaplıyor), sayfa da kabı birebir doldurur. Tailwind global
+     box-sizing:border-box uyguluyor → bu değer iç boşluğu da kapsıyor. */
+  /* clamp: kısa ekranlarda (dizüstü, bölünmüş pencere) 340px'in altına
+     düşüp sohbeti kullanılamaz hale getirmesin; kabın kendi
+     max-height:90vh'i bu tabanı yine de sınırlar. */
+  height: clamp(340px, 66vh, 560px);
+  transition: height .46s cubic-bezier(.22, 1, .36, 1);
 }
 
 .nc-chat-sheet {
