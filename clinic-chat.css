@@ -525,15 +525,24 @@
      düşüp sohbeti kullanılamaz hale getirmesin; kabın kendi
      max-height:90vh'i bu tabanı yine de sınırlar. */
   height: clamp(340px, 66vh, 560px);
+  /* ── İÇ BOŞLUK SAYFANIN KONTROLÜNDE ────────────────────────────────
+     Kabın kendi iç boşluğu temaya göre DEĞİŞİYOR: liquid-glass.css açık
+     temada `.modal-box`a `padding-right: 18px !important` veriyor, koyu
+     temada 24px. Sayfa `inset:0` ile kabın PADDING KUTUSUNA oturduğu için
+     kenar boşluğu bu değişken değere bağlı kalıyor ve kenarlara dayanmış
+     görünüyordu. Kap açıkken iç boşluk sıfırlanıp (!important — o
+     override'ı yenmek için) sayfa TÜM iç alanı alıyor; boşluğu sayfa
+     kendi padding'iyle veriyor → her temada birebir aynı, öngörülebilir. */
+  padding: 0 !important;
   transition: height .46s cubic-bezier(.22, 1, .36, 1);
 }
 
 .nc-chat-sheet {
   position: absolute; top: 0; right: 0; bottom: 0; left: 0;
-  /* Kabın iç alanını birebir doldurur (bkz. yukarıdaki not). Üstte/altta
-     küçük bir nefes payı: içerik pencerenin kenarına dayanmasın — kullanıcı
-     "az daha boyutlandır, çok kötü duruyor" dedi, sıkışık duran buydu. */
-  padding: 2px 0 4px;
+  /* Kenar boşluğunun TEK kaynağı burası (kabın padding'i sıfırlandı —
+     bkz. yukarıdaki not). Dört yanda eşit; içerik pencerenin kenarına
+     asla dayanmıyor ve tema değişince kaymıyor. */
+  padding: 18px;
   box-sizing: border-box;
   /* Üç satırlı esnek kolon (baş/gövde/alt); min-height:0 olmadan gövde
      küçülemez ve alt composer sayfanın dışına taşar. */
@@ -542,6 +551,9 @@
   /* Zemin kabın kendi yüzeyiyle AYNI: sayfa ayrı bir kart gibi değil,
      pencerenin içeriği gibi okunsun. */
   background: #0d1526;
+  /* Köşeler kabın overflow:hidden + border-radius'u tarafından zaten
+     kesiliyor; inherit ek güvence (radius temaya göre 16px/28px değişiyor). */
+  border-radius: inherit;
   transform: translateY(100%);         /* kapalı: kırpma bölgesinin altında */
   opacity: 0; pointer-events: none;
   transition: transform .46s cubic-bezier(.22, 1, .36, 1), opacity .26s ease;
