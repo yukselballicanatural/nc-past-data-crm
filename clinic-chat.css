@@ -531,6 +531,12 @@
   /* clamp: kısa ekranlarda (dizüstü, bölünmüş pencere) 340px'in altına
      düşüp sohbeti kullanılamaz hale getirmesin; kabın kendi
      max-height:90vh'i bu tabanı yine de sınırlar. */
+  /* YEDEK değer. Gerçek boy JS tarafından ölçülüp inline yazılıyor
+     (bkz. team-leader.html ncSheetOpen): sohbet açılırken pencerenin
+     O ANKİ yüksekliği kilitleniyor, böylece sohbet pencereyle BİREBİR
+     aynı boyda oluyor. Sabit bir değer bunu çözemiyordu — pencere bundan
+     uzun olduğunda sohbet ondan kısa kalıyordu. Burası yalnızca JS
+     çalışmazsa devreye giren makul bir taban. */
   height: clamp(340px, 66vh, 560px);
   /* ── İÇ BOŞLUK SAYFANIN KONTROLÜNDE ────────────────────────────────
      Kabın kendi iç boşluğu temaya göre DEĞİŞİYOR: liquid-glass.css açık

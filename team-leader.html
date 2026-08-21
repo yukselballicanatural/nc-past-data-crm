@@ -4278,17 +4278,34 @@
   // Kabın kendi dikey kaydırması açıkken KAPATILIYOR (CSS) ve açmadan önce
   // en üste alınıyor: mutlak konumlu sayfa, kaydırılmış bir kapta içerikle
   // birlikte kayar ve kaplama bozulurdu.
+  // ── BOY: pencerenin O ANKİ boyu ÖLÇÜLÜP kilitleniyor ────────────────
+  // CSS'te sabit bir clamp vardı; pencere ondan uzun olduğunda sohbet
+  // pencereden kısa kalıyordu (kullanıcı: "popup daha uzun, chat daha
+  // kısa"). Sabit bir değer bunu çözemez — deal ve alarm pencerelerinin
+  // boyu içeriğe göre değişiyor.
+  //
+  // Bu yüzden sohbeti açmadan HEMEN ÖNCE pencerenin görünen yüksekliği
+  // ölçülüp inline yazılıyor. Ölçüm max-height:90vh uygulandıktan SONRAKİ
+  // değerdir, yani pencere gözle görülen boyunu birebir koruyor: açılışta
+  // ne büyüyor ne küçülüyor, sohbet de o alanı tam dolduruyor.
+  //
+  // Taban 380px: içeriği çok kısa bir pencerede (birkaç alanlı deal)
+  // sohbet kullanılamayacak kadar basık kalmasın.
   function ncSheetOpen(boxId, sheetId, ctx, onBackExpr) {
     const box = document.getElementById(boxId);
     if (!box || typeof NCClinicChat === 'undefined') return;
     box.scrollTop = 0;
+    const h = Math.max(380, Math.round(box.getBoundingClientRect().height));
+    box.style.height = h + 'px';
     NCClinicChat.mountInline(sheetId, ctx, onBackExpr);
     box.dataset.sheet = 'open';
   }
 
   function ncSheetClose(boxId) {
     const box = document.getElementById(boxId);
-    if (box) delete box.dataset.sheet;
+    if (!box) return;
+    delete box.dataset.sheet;
+    box.style.height = '';   // pencere kendi içeriğine göre geri açılsın
   }
 
   // Deal penceresi — başlıktaki mesaj ikonu
