@@ -399,7 +399,11 @@
   flex: 1; min-width: 0; box-sizing: border-box; display: block;
   min-height: 38px; max-height: 108px; resize: none; overflow-y: auto;
   padding: 10px 40px 10px 14px;
-  border: none; background: transparent; color: #e6ebf5;
+  /* Yüzeyi SARMALAYICI veriyor — textarea saydam ve kenarsız kalmalı,
+     yoksa yuvarlak kutunun içinde kare bir kutu görünür. */
+  border: none !important; background: transparent !important;
+  box-shadow: none !important;
+  color: #e6ebf5;
   font-family: inherit; font-size: 12.5px; line-height: 1.45;
 }
 .ncc-input-wrap textarea:focus { outline: none; }
@@ -679,12 +683,30 @@ html[data-theme="light"] .ncc-bell-pop {
 }
 html[data-theme="light"] .ncc-thread-box { box-shadow: var(--sh-3), var(--sheen); }
 
-html[data-theme="light"] .ncc-dock-field textarea,
+/* ── Yazma kutusundaki textarea: YÜZEY VERİLMEZ ──────────────────────────
+   Sohbette yüzeyi (yuvarlak pill, kenar, iç gölge) SARMALAYICI veriyor
+   (.ncc-input-wrap); textarea'nın kendisi tamamen saydam ve kenarsız
+   olmalı. Burada ona ayrıca arkaplan + kenarlık veriliyordu — textarea'nın
+   köşesi yuvarlak olmadığı için yuvarlak kutunun içinde KARE bir dikdörtgen
+   olarak görünüyordu (kullanıcı: "yazma kutucuğunun arkasında dikdörtgen").
+   Bu kural, .ncc-chat-field → .ncc-input-wrap yeniden adlandırmasından
+   kalmış bir artıktı: eski yapıda yüzeyi textarea taşıyordu.
+   !important: liquid-glass.css'teki genel form kuralları da bu alana
+   yüzey basmasın. */
 html[data-theme="light"] .ncc-input-wrap textarea {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  color: var(--ink);
+}
+html[data-theme="light"] .ncc-input-wrap textarea::placeholder { color: var(--ink-3); }
+
+/* Dock'ta yüzeyi textarea'nın KENDİSİ taşıyor (sarmalayıcı yok) — orada
+   arkaplan/kenar doğru, yalnızca köşeler yuvarlak kalmalı. */
+html[data-theme="light"] .ncc-dock-field textarea {
   background: var(--g-3); border: 1px solid var(--edge-soft); color: var(--ink);
 }
-html[data-theme="light"] .ncc-dock-field textarea::placeholder,
-html[data-theme="light"] .ncc-input-wrap textarea::placeholder { color: var(--ink-3); }
+html[data-theme="light"] .ncc-dock-field textarea::placeholder { color: var(--ink-3); }
 
 html[data-theme="light"] .ncc-dock-name,
 html[data-theme="light"] .ncc-chat-title,
