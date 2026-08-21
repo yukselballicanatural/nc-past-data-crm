@@ -274,19 +274,22 @@ window.NCClinicChat = (function () {
     }
   }
 
-  // Mesaja bağlı ek sayısı — sunucudan (DOM önizlemesine güvenmiyoruz,
-  // yükleme sessizce başarısız olabilir; bkz. NCAttach.hasFiles notu).
-  async function _attachCount(msgId) {
-    try {
-      if (!window.NCAttach) return 0;
-      const fetchFn = window.NCNet ? NCNet.fetch : fetch;
-      const tok = (_user && _user.token) || '';
-      const r = await fetchFn(`/api/alarm-files?alarm_id=${encodeURIComponent(msgId)}`, {
-        headers: { Authorization: 'Bearer ' + tok },
-      });
-      const d = await r.json().catch(() => ({}));
-      return Array.isArray(d.files) ? d.files.length : 0;
-    } catch (e) { return 0; }
+  // Mesaja bağlı ek sayısı — ÖNİZLEME ŞERİDİNDEN (DOM), sunucudan DEĞİL.
+  //
+  // NEDEN DOM: önceden her gönderimde /api/alarm-files'a sorulup YANIT
+  // BEKLENİYORDU. O uç bu ortamda asılı kalabiliyor (aynı sebeple ek
+  // şeridinde "Ekler yükleniyor..." metni takılı kalıyordu) ve gönderim o
+  // isteğe kilitlendiği için Enter'a basınca HİÇBİR ŞEY OLMUYORDU
+  // (kullanıcı ekran görüntüsü, 2026-08-21).
+  //
+  // DOM saymak güvenilir: şeritteki küçük resimler sunucudan gelen listeyle
+  // çiziliyor (NCAttach.handleFiles yüklemeden SONRA load() ile yeniden
+  // çiziyor), yani ekran zaten sunucu durumunu yansıtıyor. Ek yoksa şerit
+  // boş → hiç ağ isteği yok, gönderim anında.
+  function _attachCount(mountId) {
+    const mount = document.getElementById(mountId);
+    if (!mount) return 0;
+    return mount.querySelectorAll('.nc-attach-thumb').length;
   }
 
   /* ═══════════════════════ 1. DOCK ═══════════════════════ */
@@ -522,7 +525,8 @@ window.NCClinicChat = (function () {
     const btn = document.getElementById('nccDockGo');
     const text = input ? input.value.trim() : '';
     const msgId = _dock.draftId;
-    const nAttach = await _attachCount(msgId);
+    // Artik ag istegi YOK — onizleme seridinden sayiliyor (bkz. _attachCount).
+    const nAttach = _attachCount('nccDockAttachMount');
     if (!text && !nAttach) { _notify(_t('Mesaj boş olamaz.')); return; }
     if (btn) btn.disabled = true;
     try {
@@ -828,7 +832,7 @@ window.NCClinicChat = (function () {
     const btn = document.getElementById(id.send);
     const text = input ? input.value.trim() : '';
     const msgId = _thread.draftId;
-    const nAttach = await _attachCount(msgId);
+    const nAttach = _attachCount(id.mount);
     if (!text && !nAttach) { _notify(_t('Mesaj boş olamaz.')); return; }
     if (btn) btn.disabled = true;
     try {

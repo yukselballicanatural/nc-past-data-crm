@@ -454,13 +454,16 @@
   align-items: center; justify-content: center; padding: 16px;
 }
 .ncc-thread-modal.open { display: flex; }
+/* Perde: KOYU temada gucludur (arka plan zaten koyu). Acik temada aynisi
+   sayfanin tamamini camurlu griye ceviriyordu (kullanici: "tikladigimda her
+   yer grilesiyor, asiri kotu"), o yuzden asagida hafifletiliyor. */
 .ncc-thread-bg {
-  position: absolute; inset: 0; background: rgba(2, 6, 23, .8);
-  -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px);
+  position: absolute; inset: 0; background: rgba(2, 6, 23, .62);
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
 }
 .ncc-thread-box {
   position: relative; z-index: 1; width: 100%; max-width: 560px;
-  height: min(78vh, 660px);
+  height: min(68vh, 545px);
   border-radius: 17px; padding: 16px; box-sizing: border-box;
   background: linear-gradient(180deg, #0e1526 0%, #0a0f1c 100%);
   border: 1px solid #1c2740;
@@ -714,6 +717,18 @@ html[data-theme="light"] .ncc-bell-pop {
   box-shadow: var(--sh-2), var(--sheen);
 }
 html[data-theme="light"] .ncc-thread-box { box-shadow: var(--sh-3), var(--sheen); }
+/* Acik temada perde HAFIF: koyu bir ortu yerine soguk gri bir sis + daha
+   guclu bulaniklik. Arka plan secilir ama one cikmaz; sayfa "grilesmis"
+   gibi durmaz. */
+html[data-theme="light"] .ncc-thread-bg {
+  background: rgba(100, 116, 139, .22);
+  -webkit-backdrop-filter: blur(10px) saturate(120%);
+  backdrop-filter: blur(10px) saturate(120%);
+}
+/* Pencerenin kendisi OPAK: sohbet arkadaki listeyle karismasin. */
+html[data-theme="light"] .ncc-thread-box {
+  background: linear-gradient(180deg, #fbfcff 0%, #f1f5fc 55%, #eaf0f9 100%);
+}
 
 /* ── Yazma kutusundaki textarea: YÜZEY VERİLMEZ ──────────────────────────
    Sohbette yüzeyi (yuvarlak pill, kenar, iç gölge) SARMALAYICI veriyor
