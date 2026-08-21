@@ -1396,8 +1396,13 @@
     </div>
     <!-- Sohbet sayfası: "Clinic'e Bildir"in yanındaki geçmiş ikonu bunu
          yükseltiyor. Ayrı pencere AÇILMIYOR — bu pencerenin içinde
-         aşağıdan çıkıp tamamını kaplıyor (bkz. .nc-chat-sheet). -->
-    <div class="nc-chat-sheet" id="amChatSheet"></div>
+         aşağıdan çıkıp tamamını kaplıyor (bkz. .nc-chat-sheet).
+         MASKE ŞART: sayfa kapalıyken translateY(100%) ile pencerenin
+         ALTINDA duruyor; maske olmadan bu taşma pencerenin kendi dikey
+         kaydırmasına ekleniyor ve altta kocaman boş bir alan oluşuyor. -->
+    <div class="nc-sheet-mask">
+      <div class="nc-chat-sheet" id="amChatSheet"></div>
+    </div>
   </div>
 </div>
 
@@ -1428,8 +1433,11 @@
       <div id="dmAlarms"></div>
     </div>
     <!-- Sohbet sayfası: bu pencerenin İÇİNDE aşağıdan yükselip tamamını
-         kaplar (bkz. clinic-chat.css .nc-chat-sheet). Ayrı pencere yok. -->
-    <div class="nc-chat-sheet" id="dmChatSheet"></div>
+         kaplar (bkz. clinic-chat.css .nc-chat-sheet). Ayrı pencere yok.
+         Maskenin gerekçesi için alarm penceresindeki nota bakınız. -->
+    <div class="nc-sheet-mask">
+      <div class="nc-chat-sheet" id="dmChatSheet"></div>
+    </div>
   </div>
 </div>
 

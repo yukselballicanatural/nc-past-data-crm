@@ -531,6 +531,27 @@
   transition: height .46s cubic-bezier(.22, 1, .36, 1);
 }
 
+/* ── MASKE ─────────────────────────────────────────────────────────────
+   Sayfa kapalıyken translateY(100%) ile kabın ALTINDA duruyor. Kap
+   (`.modal-box`) kapalı durumda `overflow-y:auto` olduğu için bu taşma
+   pencerenin KENDİ dikey kaydırmasına ekleniyor ve altta kocaman boş bir
+   alan oluşuyordu (kullanıcı: "deal popup'ında aşağı kaydırınca baya
+   aşağı kayıyor, aşağısı boş").
+
+   Maske kendisi taşma ÜRETMEZ (dört yanı 0'a sabitlenmiş, boyu kabın iç
+   alanı kadar) ama `overflow:hidden` ile taşan sayfayı keser. Aynı
+   zamanda "aşağıdan yükselme" efektinin de maskesi olur — tek çözüm iki
+   işi birden yapıyor.
+
+   pointer-events: kapalıyken none — altta kalan forma tıklamayı
+   engellemesin; açıkken auto. */
+.nc-sheet-mask {
+  position: absolute; top: 0; right: 0; bottom: 0; left: 0;
+  overflow: hidden; border-radius: inherit;
+  pointer-events: none; z-index: 3;
+}
+.modal-box[data-sheet="open"] .nc-sheet-mask { pointer-events: auto; }
+
 .nc-chat-sheet {
   position: absolute; top: 0; right: 0; bottom: 0; left: 0;
   /* Kenar boşluğunun TEK kaynağı burası (kabın padding'i sıfırlandı —
@@ -541,7 +562,6 @@
   /* Üç satırlı esnek kolon (baş/gövde/alt); min-height:0 olmadan gövde
      küçülemez ve alt composer sayfanın dışına taşar. */
   display: flex; flex-direction: column; min-height: 0;
-  z-index: 3;
   /* Zemin kabın kendi yüzeyiyle AYNI: sayfa ayrı bir kart gibi değil,
      pencerenin içeriği gibi okunsun. */
   background: #0d1526;
@@ -561,8 +581,10 @@
 
 /* Sayfa açıkken altta kalan içerik: hafifçe geriye çekilir. Sayfa opak
    olduğu için bu yalnızca yükselme anında görünür ve "üste bir katman
-   geldi" hissini verir. */
-.modal-box[data-sheet="open"] > *:not(.nc-chat-sheet) {
+   geldi" hissini verir.
+   DIŞLANAN öğe .nc-sheet-mask (sayfanın kendisi DEĞİL): sayfa artık
+   maskenin içinde, maskeyi soluklaştırmak sohbeti de soluklaştırırdı. */
+.modal-box[data-sheet="open"] > *:not(.nc-sheet-mask) {
   transition: transform .46s cubic-bezier(.22, 1, .36, 1), opacity .28s ease;
   transform: scale(.985); opacity: .5;
 }
@@ -570,7 +592,7 @@
 @media (prefers-reduced-motion: reduce) {
   .nc-chat-sheet,
   .modal-box[data-sheet="open"],
-  .modal-box[data-sheet="open"] > *:not(.nc-chat-sheet) { transition: none; }
+  .modal-box[data-sheet="open"] > *:not(.nc-sheet-mask) { transition: none; }
 }
 
 /* ═══════════════ 3. "MESAJLAR" İKON DÜĞMESİ (deal penceresi) ═══════════════ */
@@ -808,7 +830,7 @@ html[data-theme="light"] .nc-chat-sheet {
 }
 /* Sayfa opak olduğu için alttaki içeriği ayrıca soluklaştırmaya gerek yok;
    yalnızca yükselme anında görünüyor. */
-html[data-theme="light"] .modal-box[data-sheet="open"] > *:not(.nc-chat-sheet) {
+html[data-theme="light"] .modal-box[data-sheet="open"] > *:not(.nc-sheet-mask) {
   opacity: .35;
 }
 
