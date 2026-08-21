@@ -119,6 +119,64 @@ window.NCClinicChat = (function () {
   // çıkarıyor (%27 → %60) — bu yüzden yedek şart, süs değil.
   const _contactCache = new Map();   // dealId → { id, name, group, source } | null
 
+  // ── Klinik personeli dizini (zoho_users) ───────────────────────────────
+  // WA_Group yalnızca İLK ADI veriyor ("Team 1 (Habiba)"), Aftercare_Owner
+  // ise tam adı ("Habiba Layachi"). Dizin olmadan aynı kişi sistemde İKİ
+  // AYRI muhatap gibi görünüyor: sohbet başlığı bir deal'de "Habiba", başka
+  // bir deal'de "Habiba Layachi" yazıyor ve ileride yönlendirme de ikiye
+  // bölünürdü.
+  //
+  // Eşleştirme TAHMİN DEĞİL, çift taraflı doğrulanıyor (canlı ölçüm,
+  // 2026-08-21): WA_Group'un grup adı ile kişinin zoho_users'taki rolü
+  // BİREBİR aynı —
+  //     "Team 1 (Habiba)" → Habiba Layachi, rol "Team 1"
+  //     "Team 2 (Nidal)"  → Nidal Türkmen,  rol "Team 2"
+  //     "Team 3 (Khaled)" → Khaled Tabib,   rol "Team 3"
+  //     "Team 4 (Mina)"   → Mina Horo,      rol "Team 4"
+  // Bu yüzden yalnızca ilk ad DEĞİL, ilk ad + grup/rol birlikte aranıyor;
+  // ikisi de tutmazsa birleştirme YAPILMIYOR (ham ad korunur).
+  let _staffPromise = null;
+  function _clinicStaff() {
+    if (_staffPromise) return _staffPromise;
+    _staffPromise = (async () => {
+      try {
+        const r = await fetch(
+          `${BASE}/rest/v1/zoho_users?select=id,full_name,role,phone,mobile&limit=2000`,
+          { headers: _h() });
+        if (!r.ok) return [];
+        const rows = await r.json();
+        return Array.isArray(rows) ? rows : [];
+      } catch (e) { return []; }
+    })();
+    return _staffPromise;
+  }
+
+  const _nk = (s) => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+  // Dizinde kişiyi bul. wa ise {name: ilk ad, group: rol} ile, aftercare ise
+  // tam adla aranır. Bulunamazsa null (çağıran ham adı kullanmaya devam eder).
+  async function _findStaff({ fullName, firstName, group }) {
+    const staff = await _clinicStaff();
+    if (!staff.length) return null;
+    if (fullName) {
+      const hit = staff.find(z => _nk(z.full_name) === _nk(fullName));
+      if (hit) return hit;
+    }
+    if (firstName) {
+      const fk = _nk(firstName);
+      let cands = staff.filter(z => _nk(z.full_name).split(' ')[0] === fk);
+      // Grup adı verilmişse rolle de doğrula — tek başına ilk ad yetmez.
+      if (group) {
+        const gk = _nk(group);
+        const byGroup = cands.filter(z => _nk(z.role) === gk);
+        if (byGroup.length === 1) return byGroup[0];
+      }
+      // Grup eşleşmediyse ancak ilk ad TEKİLSE kabul et.
+      if (cands.length === 1) return cands[0];
+    }
+    return null;
+  }
+
   function _parseWaGroup(v) {
     const s = String(v == null ? '' : v).trim();
     if (!s) return null;
@@ -153,6 +211,21 @@ window.NCClinicChat = (function () {
             out = { id: '', name: wa.name || wa.group, group: wa.group, source: 'wa' };
           }
         }
+
+        // Dizinden TAM KİMLİĞE yükselt — bkz. _clinicStaff notu. Aynı kişinin
+        // "Habiba" ve "Habiba Layachi" diye iki muhatap gibi görünmesini
+        // engeller; telefonu da buradan geliyor (ileride teslimat için).
+        if (out) {
+          const z = await _findStaff(out.source === 'wa'
+            ? { firstName: out.name, group: out.group }
+            : { fullName: out.name });
+          if (z) {
+            out.name  = z.full_name || out.name;
+            out.id    = out.id || String(z.id || '');
+            out.phone = String(z.phone || z.mobile || '');
+            if (!out.group && z.role) out.group = z.role;
+          }
+        }
       }
     } catch (e) { /* sessiz — sohbet yine açılır, muhatap "atanmamış" görünür */ }
     _contactCache.set(k, out);
@@ -175,10 +248,16 @@ window.NCClinicChat = (function () {
       sent_by_role:     (_user && _user.role) || '',
       sent_to_id:       c ? c.id : '',
       sent_to_name:     c ? c.name : '',
-      // Muhatabın hangi kaynaktan çözüldüğü kayıtta kalıyor: WhatsApp grubuna
-      // mı yoksa atanmış Aftercare sorumlusuna mı gittiği sonradan ayırt
-      // edilebilir olmalı (Faz 6'da yönlendirme buna bakacak).
-      sent_to_role:     c && c.source === 'wa' ? 'WA Group' : 'Aftercare Owner',
+      // Muhatabın hangi kaynaktan çözüldüğü kayıtta kalıyor — Faz 6'da
+      // yönlendirme buna bakacak:
+      //   'Aftercare Owner' → Zoho'nun katı alanından çözüldü
+      //   'WA Group'        → WhatsApp grubundan çözüldü
+      //   'Unassigned'      → HİÇBİRİ yok. Bunu da 'Aftercare Owner' yazmak
+      //     veriyi yanıltıcı yapıyordu: canlıda muhatabı boş 2 mesaj
+      //     "Aftercare Owner'a gitti" görünüyordu (2026-08-21 ölçümü), oysa
+      //     öyle bir kişi yok. Ayrı bir değer, bu mesajların sorumlu
+      //     atandığında bulunup yönlendirilmesini de mümkün kılıyor.
+      sent_to_role:     !c ? 'Unassigned' : (c.source === 'wa' ? 'WA Group' : 'Aftercare Owner'),
       message:          text,
       attachment_count: attachCount || 0,
       related_alarm_id: ctx.alarmId || null,
