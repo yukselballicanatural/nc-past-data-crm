@@ -63,6 +63,26 @@ Bunlar Faz 1 kapsamı **dışında** — kullanıcı onayıyla ertelendi, veri g
 
 ---
 
+## 4b. Durum (2026-08-21)
+
+Tümü `clinic-planning` dalında; **`main`'e alınmadı** — canlıda takım
+liderleri hâlâ eski sürümü kullanıyor.
+
+| Faz | Durum | Not |
+|---|---|---|
+| Faz 1 — Yeni alarm kontrolleri | ✅ | 7 tip canlıda üretiyor: hotel 36, whatsapp 137, interpreter 148, exam 27, consultant 20, must_be_won 1, next_visit 2 |
+| Faz 2 — Eskalasyon | ✅ | `escalation_level` kolonu kurulu, eşikler `app_settings`'te (24,48,72). 359 alarm seviye 1'de; henüz 48 saati aşan alarm yok, seviye 2/3'ün boş olması beklenen davranış |
+| Faz 3 — Sohbet | ✅ | `clinic_messages` kurulu, 4 pencereden erişiliyor (alarm, deal, Won, İptal) |
+| Faz 3 — Görev atama | ⏳ | Kod hazır; **`clinic_assignments.sql` çalıştırılmayı bekliyor** |
+| Faz 4 / 5 / 6 | ⛔ | Başlanmadı |
+
+**Bilinen boşluk:** Klinik tarafı henüz mesajları okuyamıyor — `clinic-staff.html`
+(Faz 6) yok. WhatsApp üzerinden iletim ölçüldü ve elendi: 12 klinik
+muhatabının yalnızca 1'inin telefonu kayıtlı (%8). Görevleri "Tamamlandı"ya
+çeken taraf da o panel olacak.
+
+---
+
 ## 5. Faz Planı
 
 ### FAZ 1 — Alarm Motoruna Yeni Kontroller

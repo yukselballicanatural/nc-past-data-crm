@@ -236,6 +236,9 @@ window.NCClinicChat = (function () {
   const aftercareOwner = clinicContact;
 
   // ── Mesaj yazma (tek yol) ─────────────────────────────────────────────
+  // Dönüş: çözülen muhatap (veya null). Görev kaydı AYNI kişiye yazılıyor;
+  // ikinci kez clinicContact() çağırmak hem gereksiz ağ isteği hem de iki
+  // kayıt arasında muhatap farkı riski olurdu.
   async function _insert(ctx, text, msgId, attachCount) {
     const c = await clinicContact(ctx.dealId);
     const row = {
@@ -272,6 +275,7 @@ window.NCClinicChat = (function () {
       }
       throw new Error('HTTP ' + r.status);
     }
+    return c;
   }
 
   // Mesaja bağlı ek sayısı — ÖNİZLEME ŞERİDİNDEN (DOM), sunucudan DEĞİL.
@@ -345,6 +349,32 @@ window.NCClinicChat = (function () {
               title="${esc(_t('Kapat'))}" aria-label="${esc(_t('Kapat'))}">
               <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
+          </div>
+          <!-- Görev satırı: kapalıyken tek bir açma düğmesi, açıkken öncelik
+               ve termin. Görev oluşturma YALNIZCA burada — sohbetin alt
+               kutusunda değil. Gerekçe: akış "alarmı gör → Clinic'e Bildir"
+               ve görev o ilk bildirimin parçası; sohbet ise ondan sonraki
+               yazışma. Sohbete de koymak, her mesajda tekrar tekrar görev
+               açılmasına davetiye olurdu. -->
+          <div class="ncc-task-row" id="nccDockTaskRow" data-on="false">
+            <button type="button" class="ncc-task-toggle" id="nccDockTaskBtn"
+              onclick="NCClinicChat.toggleTask()" aria-pressed="false">
+              <svg fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+              <span>${esc(_t('Görev olarak ata'))}</span>
+            </button>
+            <div class="ncc-task-fields" id="nccDockTaskFields">
+              <select class="ncc-task-sel" id="nccDockTaskPrio" aria-label="${esc(_t('Öncelik'))}">
+                <option value="normal">${esc(_t('Normal'))}</option>
+                <option value="high">${esc(_t('Yüksek'))}</option>
+                <option value="urgent">${esc(_t('Acil'))}</option>
+              </select>
+              <select class="ncc-task-sel" id="nccDockTaskDue" aria-label="${esc(_t('Termin'))}">
+                <option value="1">${esc(_t('Yarın'))}</option>
+                <option value="3" selected>${esc(_t('3 gün'))}</option>
+                <option value="7">${esc(_t('1 hafta'))}</option>
+                <option value="">${esc(_t('Terminsiz'))}</option>
+              </select>
+            </div>
           </div>
           <div class="ncc-composer-bar">
             <label class="ncc-attach-btn" for="nccDockFile"
@@ -480,6 +510,108 @@ window.NCClinicChat = (function () {
     }
   }
 
+  /* ═══════════════════════ GÖREV (clinic_assignments) ═══════════════════════
+     Yol haritası Faz 3'ün ikinci yarısı: mesaj "haber verme", görev ise
+     "hesap sorma". Takım lideri bir eksiği bildirirken bunu bir işe
+     dönüştürebiliyor; klinik tarafı onu tamamlıyor veya "yapamadım"a
+     düşürüyor ve tüm bu iz deal üzerinde kalıyor.
+
+     Görevin AÇIKLAMASI ayrıca saklanmıyor — bağlı olduğu mesajın metni
+     zaten o. Yalnızca metinsiz (salt ek) gönderimlerde `description`
+     dolduruluyor, aksi halde kartta gösterecek hiçbir şey kalmazdı.       */
+
+  // Görev anahtarı composer'a ait; kapanınca sıfırlanıyor ki bir sonraki
+  // mesaj sessizce görev olarak gitmesin.
+  function toggleTask() {
+    const row = document.getElementById('nccDockTaskRow');
+    const btn = document.getElementById('nccDockTaskBtn');
+    if (!row) return;
+    const on = row.dataset.on !== 'true';
+    row.dataset.on = String(on);
+    if (btn) btn.setAttribute('aria-pressed', String(on));
+  }
+
+  function _taskOn() {
+    const row = document.getElementById('nccDockTaskRow');
+    return !!row && row.dataset.on === 'true';
+  }
+
+  function _resetTask() {
+    const row = document.getElementById('nccDockTaskRow');
+    const btn = document.getElementById('nccDockTaskBtn');
+    if (row) row.dataset.on = 'false';
+    if (btn) btn.setAttribute('aria-pressed', 'false');
+    const prio = document.getElementById('nccDockTaskPrio');
+    if (prio) prio.value = 'normal';
+    const due = document.getElementById('nccDockTaskDue');
+    if (due) due.value = '3';
+  }
+
+  // "3 gün sonra" → YEREL takvim günü. toISOString() UTC'ye çevirdiği için
+  // akşam saatlerinde termini bir gün geriye kaydırırdı.
+  function _dueDate(days) {
+    const n = parseInt(days, 10);
+    if (!Number.isFinite(n)) return null;
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    const p = (x) => String(x).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  async function _insertAssignment(ctx, msgId, contact, text) {
+    const row = {
+      deal_id:   String(ctx.dealId),
+      deal_name: ctx.dealName || '',
+      deal_team: ctx.team || '',
+      message_id: msgId,
+      assigned_by_username: (_user && _user.username) || '',
+      assigned_by_name:     (_user && _user.fullName) || '',
+      assigned_to_id:   contact ? contact.id : '',
+      assigned_to_name: contact ? contact.name : '',
+      assigned_to_role: !contact ? 'Unassigned' : (contact.source === 'wa' ? 'WA Group' : 'Aftercare Owner'),
+      // Alarmdan açıldıysa alarm tipi kırılım için kayda geçiyor (Faz 4/5).
+      action_type: ctx.actionType || (ctx.alarmId ? 'alarm' : 'manual'),
+      // Metin mesajda; yalnızca salt-ek gönderimde burada bir şey tutuluyor.
+      description: text ? null : _t('(Yalnızca ek)'),
+      priority: (document.getElementById('nccDockTaskPrio') || {}).value || 'normal',
+      due_date: _dueDate((document.getElementById('nccDockTaskDue') || {}).value),
+      related_alarm_id: ctx.alarmId || null,
+      status: 'open',
+    };
+    const r = await fetch(`${BASE}/rest/v1/clinic_assignments`, {
+      method: 'POST', headers: { ..._hj(), Prefer: 'return=minimal' }, body: JSON.stringify(row),
+    });
+    if (!r.ok) {
+      const body = await r.text().catch(() => '');
+      if (/does not exist|PGRST205|schema cache/i.test(body)) {
+        throw new Error(_t('clinic_assignments tablosu henüz kurulmamış — clinic_assignments.sql dosyasını çalıştırın.'));
+      }
+      throw new Error('HTTP ' + r.status);
+    }
+  }
+
+  // Takım lideri YALNIZCA iptal edebiliyor. "Tamamlandı"yı klinik tarafı
+  // yazacak (Faz 6); başkası adına tamamlandı işaretlemek, bu tablonun tek
+  // varlık sebebi olan denetim izini yalan yapardı.
+  async function cancelTask(id) {
+    if (!id) return;
+    try {
+      const r = await fetch(`${BASE}/rest/v1/clinic_assignments?id=eq.${encodeURIComponent(id)}`, {
+        method: 'PATCH', headers: { ..._hj(), Prefer: 'return=minimal' },
+        body: JSON.stringify({
+          status: 'cancelled',
+          resolved_at: new Date().toISOString(),
+          resolved_by: (_user && _user.fullName) || (_user && _user.username) || '',
+        }),
+      });
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      _notify(_t('Görev iptal edildi.'), 'success');
+      _loadThread();
+    } catch (e) {
+      _notify(_t('Görev iptal edilemedi: ') + e.message);
+    }
+  }
+
   function closeComposer() {
     if (!_dock) return;
     _dock.open = false;
@@ -491,6 +623,9 @@ window.NCClinicChat = (function () {
     if (lbl) lbl.textContent = _t('Clinic\'e Bildir');
     const icon = document.getElementById('nccDockGoIcon');
     if (icon) { icon.innerHTML = _ICO_CHAT; icon.dataset.morph = 'chat'; }
+    // Görev anahtarı açık kalmasın: bir sonraki mesaj sessizce görev
+    // olarak gitmemeli.
+    _resetTask();
   }
 
   // NCAttach.renderWidget yerine KOMPAKT ek düğmesi.
@@ -539,14 +674,19 @@ window.NCClinicChat = (function () {
     const nAttach = _attachCount('nccDockAttachMount');
     if (!text && !nAttach) { _notify(_t('Mesaj boş olamaz.')); return; }
     if (btn) btn.disabled = true;
+    const asTask = _taskOn();
     try {
-      await _insert(_dock, text, msgId, nAttach);
+      const contact = await _insert(_dock, text, msgId, nAttach);
+      // Görev mesajdan SONRA yazılıyor: mesaj denetim kaydı, o gitmediyse
+      // ona bağlı bir görev de olmamalı. Görev yazılamazsa mesaj yerinde
+      // kalıyor ve hata kullanıcıya gösteriliyor (sessiz yutulmuyor).
+      if (asTask) await _insertAssignment(_dock, msgId, contact, text);
       if (input) { input.value = ''; input.style.height = 'auto'; _paintCount(input); }
       // Sonraki mesaj için YENİ klasör — aksi halde eski görseller yeni
       // mesaja da bağlı görünürdü (NCAttach klasör başına en fazla 6 dosya).
       _dock.draftId = uuid();
       closeComposer();
-      _notify(_t('Clinic\'e iletildi.'), 'success');
+      _notify(asTask ? _t('Görev olarak iletildi.') : _t("Clinic'e iletildi."), 'success');
       if (_thread && _thread.dealId === _dock.dealId) _loadThread();
       refreshBell();
     } catch (e) {
@@ -747,15 +887,95 @@ window.NCClinicChat = (function () {
       }
       const rows = await r.json();
       if (!_thread || _thread.dealId !== want) return;
-      _renderThread(Array.isArray(rows) ? rows : []);
+      // Görevler AYRI çekiliyor (PostgREST gömme yerine): clinic_assignments
+      // henüz kurulmamışsa sohbet yine de çizilsin — gömülü sorgu olsaydı
+      // tablo yokluğunda mesajlar da yüklenemezdi.
+      const tasks = await _loadTasks(want);
+      if (!_thread || _thread.dealId !== want) return;
+      _renderThread(Array.isArray(rows) ? rows : [], tasks);
       _markRead(want);
     } catch (e) {
       body.innerHTML = `<div class="ncc-chat-empty">${esc(_t('Mesajlar yüklenemedi.'))}</div>`;
     }
   }
 
-  function _renderThread(rows) {
+  // message_id → görev. Tablo yoksa/hata varsa BOŞ döner: görev katmanı
+  // sohbetin çalışmasına ön koşul değil.
+  async function _loadTasks(dealId) {
+    try {
+      const r = await fetch(
+        `${BASE}/rest/v1/clinic_assignments?deal_id=eq.${encodeURIComponent(dealId)}` +
+        `&select=id,message_id,status,priority,due_date,resolved_at,resolved_by,resolution_note` +
+        `&order=created_at.asc&limit=200`, { headers: _h() });
+      if (!r.ok) return {};
+      const rows = await r.json();
+      const by = {};
+      (Array.isArray(rows) ? rows : []).forEach(t => { if (t.message_id) by[t.message_id] = t; });
+      return by;
+    } catch (e) { return {}; }
+  }
+
+  const _TASK_LABEL = {
+    open:      'Bekliyor',
+    done:      'Tamamlandı',
+    blocked:   'Yapılamadı',
+    cancelled: 'İptal edildi',
+  };
+  const _PRIO_LABEL = { normal: 'Normal', high: 'Yüksek', urgent: 'Acil' };
+
+  // Baloncuğun altına eklenen görev kartı: durum + öncelik + termin, ve
+  // çözülmüşse denetim satırı (kim, ne zaman, ne dedi).
+  function _taskCard(t, mine) {
+    if (!t) return '';
+    const st = _TASK_LABEL[t.status] ? t.status : 'open';
+    const overdue = st === 'open' && t.due_date && t.due_date < _todayISO();
+    const bits = [];
+    if (t.priority && t.priority !== 'normal') {
+      bits.push(`<span class="ncc-task-prio" data-p="${esc(t.priority)}">${esc(_t(_PRIO_LABEL[t.priority] || t.priority))}</span>`);
+    }
+    if (t.due_date) {
+      bits.push(`<span class="ncc-task-due" data-over="${overdue}">${esc(_dueLabel(t.due_date))}</span>`);
+    }
+    // Denetim satırı: bu tablonun asıl varlık sebebi.
+    let audit = '';
+    if (t.resolved_at) {
+      const who = t.resolved_by || _t('bilinmiyor');
+      audit = `<div class="ncc-task-audit">${esc(who)} · ${esc(_dayLabel(String(t.resolved_at).slice(0, 10)))} ${esc(timeHM(t.resolved_at))}` +
+              `${t.resolution_note ? ' · ' + esc(t.resolution_note) : ''}</div>`;
+    }
+    // İptal yalnızca KENDİ açtığım, hâlâ açık görevde.
+    const canCancel = mine && st === 'open';
+    return `
+      <div class="ncc-task-card" data-st="${esc(st)}">
+        <div class="ncc-task-head">
+          <span class="ncc-task-badge" data-st="${esc(st)}">${esc(_t(_TASK_LABEL[st]))}</span>
+          ${bits.join('')}
+          ${canCancel ? `<button type="button" class="ncc-task-cancel"
+            onclick="NCClinicChat.cancelTask('${esc(String(t.id))}')">${esc(_t('İptal'))}</button>` : ''}
+        </div>
+        ${audit}
+      </div>`;
+  }
+
+  function _todayISO() {
+    const d = new Date(); const p = (x) => String(x).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
+
+  function _dueLabel(iso) {
+    const today = _todayISO();
+    if (iso === today) return _t('Bugün');
+    const d = new Date(iso + 'T00:00:00');
+    if (isNaN(d.getTime())) return iso;
+    const diff = Math.round((d.getTime() - new Date(today + 'T00:00:00').getTime()) / 86400000);
+    if (diff === 1) return _t('Yarın');
+    if (diff < 0) return _t('Gecikti') + ' · ' + d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' });
+    return d.toLocaleDateString('tr-TR', { day: '2-digit', month: 'short' });
+  }
+
+  function _renderThread(rows, tasks) {
     if (!_thread) return;
+    tasks = tasks || {};
     const id = _ids(_thread.pfx);
     const body = document.getElementById(id.body);
     if (!body) return;
@@ -804,6 +1024,7 @@ window.NCClinicChat = (function () {
               ${m.message ? `<span class="ncc-b-text">${esc(m.message)}</span>` : ''}
               <span class="ncc-b-meta">${esc(timeHM(m.created_at))}${ticks}</span>
             </div>
+            ${_taskCard(tasks[m.id], mine)}
           </div>
         </div>`);
     }
@@ -1122,6 +1343,8 @@ window.NCClinicChat = (function () {
     init, clinicContact, aftercareOwner,
     // dock
     renderDock, dockAction, openComposer, closeComposer, openThreadFromDock,
+    // görev (Faz 3 — clinic_assignments)
+    toggleTask, cancelTask,
     // sohbet — tek render yolu, iki host (gömülü / kendi penceresi)
     renderChat, mountInline, openThread, openThreadFromEl, closeThread, sendFromThread,
     // deal ikonu
