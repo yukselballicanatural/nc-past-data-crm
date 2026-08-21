@@ -234,17 +234,24 @@ window.NCClinicChat = (function () {
       <div class="ncc-dock" id="nccDock">
         <span class="ncc-dock-aurora" aria-hidden="true"></span>
         <div class="ncc-dock-composer" id="nccDockComposer" data-open="false">
+          <!-- Ek önizlemeleri kutunun ÜSTÜNDE; ek yokken :empty ile gizli. -->
+          <span class="ncc-attach-mount" id="nccDockAttachMount"></span>
           <div class="ncc-dock-field">
             <textarea id="nccDockInput" maxlength="${MAX_LEN}" rows="1"
-              placeholder="${esc(_t('Klinik ekibine iletilecek mesaj... (görsel için Ctrl+V)'))}"></textarea>
+              placeholder="${esc(_t('Klinik ekibine iletilecek mesaj...'))}"></textarea>
+            <!-- Ataç kutunun İÇİNDE, en sağda (kullanıcı talebi). Kapatma
+                 düğmesi onun soluna alındı. -->
+            <label class="ncc-attach-inline" for="nccDockFile"
+              title="${esc(_t('Görsel ekle (JPG/PNG/GIF/WebP, en fazla 3 MB)'))}">
+              <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+            </label>
+            <input type="file" id="nccDockFile" accept="${_ACCEPT}" multiple style="display:none">
             <button type="button" class="ncc-composer-x" onclick="NCClinicChat.closeComposer()"
               title="${esc(_t('Kapat'))}" aria-label="${esc(_t('Kapat'))}">
               <svg fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
             </button>
           </div>
           <div class="ncc-composer-bar">
-            <span class="ncc-attach-slot" id="nccDockAttachSlot"></span>
-            <span class="ncc-kbd-hint"><kbd>⏎</kbd> ${esc(_t('gönder'))} · <kbd>⇧⏎</kbd> ${esc(_t('satır'))}</span>
             <span class="ncc-composer-count" id="nccDockCount" data-warn="false"></span>
           </div>
         </div>
@@ -397,24 +404,18 @@ window.NCClinicChat = (function () {
   // dışa aktarılmadığı için burada tekrarlanıyor.
   const _ACCEPT = 'image/jpeg,image/png,image/gif,image/webp';
 
-  function _attachWidget(draftId, inputId, mountId) {
-    return `
-      <label class="ncc-attach-btn" for="${inputId}"
-        title="${esc(_t('Görsel ekle (JPG/PNG/GIF/WebP, en fazla 3 MB)'))}">
-        <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-      </label>
-      <input type="file" id="${inputId}" accept="${_ACCEPT}" multiple style="display:none"
-        onchange="NCAttach.handleFiles('${attr(draftId)}', '${mountId}', this.files); this.value='';">
-      <span class="ncc-attach-mount" id="${mountId}"></span>`;
-  }
-
   function _mountDockAttach() {
     if (!_dock || !window.NCAttach) return;
-    const slot = document.getElementById('nccDockAttachSlot');
-    if (!slot) return;
-    slot.innerHTML = _attachWidget(_dock.draftId, 'nccDockFile', 'nccDockAttachMount');
-    NCAttach.load(_dock.draftId, 'nccDockAttachMount');
-    NCAttach.bindPaste('nccDockInput', _dock.draftId, 'nccDockAttachMount');
+    const file = document.getElementById('nccDockFile');
+    const draftId = _dock.draftId;
+    if (file) {
+      file.onchange = function () {
+        NCAttach.handleFiles(draftId, 'nccDockAttachMount', file.files);
+        file.value = '';
+      };
+    }
+    NCAttach.load(draftId, 'nccDockAttachMount');
+    NCAttach.bindPaste('nccDockInput', draftId, 'nccDockAttachMount');
   }
 
   // Tek düğme iki iş yapar: kapalıyken composer'ı açar, açıkken gönderir.
@@ -531,19 +532,24 @@ window.NCClinicChat = (function () {
         <div class="ncc-chat-body" id="${id.body}"></div>
         <div class="ncc-chat-foot">
           <div id="${id.warn}"></div>
+          <!-- Ek önizlemeleri yazma kutusunun ÜSTÜNDE (WhatsApp deseni);
+               ek yokken :empty ile tamamen gizleniyor, yer kaplamıyor. -->
+          <span class="ncc-attach-mount" id="${id.mount}"></span>
           <div class="ncc-chat-foot-row">
-            <div class="ncc-chat-field">
+            <div class="ncc-input-wrap">
               <textarea id="${id.input}" maxlength="${MAX_LEN}" rows="1"
-                placeholder="${esc(_t('Mesaj yaz... (görsel için Ctrl+V)'))}"></textarea>
+                placeholder="${esc(_t('Mesaj yaz...'))}"></textarea>
+              <!-- Ataç kutunun İÇİNDE, en sağda (kullanıcı talebi). -->
+              <label class="ncc-attach-inline" for="${id.file}"
+                title="${esc(_t('Görsel ekle (JPG/PNG/GIF/WebP, en fazla 3 MB)'))}">
+                <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+              </label>
+              <input type="file" id="${id.file}" accept="${_ACCEPT}" multiple style="display:none">
             </div>
             <button type="button" class="ncc-send-btn" id="${id.send}" onclick="NCClinicChat.sendFromThread()"
               title="${esc(_t('Gönder'))}" aria-label="${esc(_t('Gönder'))}">
               <svg fill="none" stroke="currentColor" stroke-width="1.9" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 19.5l15-7.5-15-7.5v6l9 1.5-9 1.5v6z"/></svg>
             </button>
-          </div>
-          <div class="ncc-chat-tools">
-            <span class="ncc-attach-slot" id="${id.attach}"></span>
-            <span class="ncc-kbd-hint"><kbd>⏎</kbd> ${esc(_t('gönder'))} · <kbd>⇧⏎</kbd> ${esc(_t('satır'))}</span>
           </div>
         </div>
       </div>`;
@@ -563,14 +569,23 @@ window.NCClinicChat = (function () {
     _loadThread();
   }
 
+  // Ataç etiketi ve dosya girdisi iskelette SABİT duruyor (yazma kutusunun
+  // içinde); burada yalnızca hangi taslağa yükleneceği bağlanıyor. innerHTML
+  // ile yeniden basmıyoruz: draftId her mesajdan sonra değiştiği için tek
+  // değişmesi gereken şey onchange — böylece kaçış/yeniden bağlama derdi yok.
   function _mountThreadAttach() {
     if (!_thread || !window.NCAttach) return;
     const id = _ids(_thread.pfx);
-    const slot = document.getElementById(id.attach);
-    if (!slot) return;
-    slot.innerHTML = _attachWidget(_thread.draftId, id.file, id.mount);
-    NCAttach.load(_thread.draftId, id.mount);
-    NCAttach.bindPaste(id.input, _thread.draftId, id.mount);
+    const file = document.getElementById(id.file);
+    const draftId = _thread.draftId;
+    if (file) {
+      file.onchange = function () {
+        NCAttach.handleFiles(draftId, id.mount, file.files);
+        file.value = '';
+      };
+    }
+    NCAttach.load(draftId, id.mount);
+    NCAttach.bindPaste(id.input, draftId, id.mount);
   }
 
   async function _paintThreadIdentity() {
@@ -645,25 +660,38 @@ window.NCClinicChat = (function () {
       return;
     }
     // Gün ayırıcı: aynı güne ait mesajlar tek başlık altında toplanır.
+    // lastWho: ardışık aynı gönderici gruplaması (aşağıda).
     let lastDay = '';
+    let lastWho = '';
     const parts = [];
     for (const m of rows) {
       const day = String(m.created_at || '').slice(0, 10);
       if (day && day !== lastDay) {
         lastDay = day;
+        lastWho = '';   // yeni gün → gruplama sıfırlanır, ad tekrar yazılır
         parts.push(`<div class="ncc-chat-day"><span>${esc(_dayLabel(day))}</span></div>`);
       }
       const mine = isMine(m);
       const who = mine ? (m.sent_by_name || _t('Ben')) : (m.sent_by_name || m.sent_to_name || _t('Clinic'));
       const mountId = _thread.pfx + 'Msg' + String(m.id).replace(/[^A-Za-z0-9_-]/g, '');
+      // Aynı kişinin ARDIŞIK mesajlarında ad tekrar yazılmıyor ve kuyruk
+      // yalnızca grubun İLK baloncuğunda çiziliyor (WhatsApp deseni).
+      const grouped = lastWho === who;
+      lastWho = who;
+      // Okundu işareti yalnızca BENİM mesajlarımda: karşı taraf okuduysa
+      // çift tik, okumadıysa tek tik.
+      const ticks = mine
+        ? `<span class="ncc-b-tick" data-read="${m.read_at ? 'true' : 'false'}">${m.read_at ? '✓✓' : '✓'}</span>`
+        : '';
       parts.push(`
-        <div class="ncc-msg-row" data-mine="${mine}">
+        <div class="ncc-msg-row" data-mine="${mine}" data-grouped="${grouped}">
           <span class="ncc-avatar sm" data-empty="${mine ? 'true' : 'false'}">${esc(initials(who))}</span>
           <div class="ncc-msg-col">
-            ${m.message ? `<div class="ncc-bubble">${esc(m.message)}</div>` : ''}
-            ${Number(m.attachment_count) > 0 ? `<div class="ncc-msg-attach" id="${esc(mountId)}"></div>` : ''}
-            <div class="ncc-msg-meta">
-              <span>${esc(who)}</span><span class="ncc-msg-dot">·</span><span>${esc(timeHM(m.created_at))}</span>
+            <div class="ncc-bubble">
+              ${grouped || mine ? '' : `<div class="ncc-b-who">${esc(who)}</div>`}
+              ${Number(m.attachment_count) > 0 ? `<div class="ncc-msg-attach" id="${esc(mountId)}"></div>` : ''}
+              ${m.message ? `<span class="ncc-b-text">${esc(m.message)}</span>` : ''}
+              <span class="ncc-b-meta">${esc(timeHM(m.created_at))}${ticks}</span>
             </div>
           </div>
         </div>`);

@@ -531,20 +531,15 @@
     'WhatsApp grubu': 'WhatsApp group',
     'Muhatap atanmamış': 'No contact assigned',
     'Aftercare Owner ve WhatsApp grubu boş': 'Aftercare Owner and WhatsApp group are empty',
-    'Klinik ekibine iletilecek mesaj... (görsel için Ctrl+V)':
-      'Message for the clinic team... (Ctrl+V to paste an image)',
+    'Klinik ekibine iletilecek mesaj...': 'Message for the clinic team...',
     'Bu deal\'de Zoho\'daki Aftercare Owner ve WhatsApp grubu alanları boş. Mesajınız kaydedilir ve muhatap atandığında dizide görünür.':
       'Both the Aftercare Owner and WhatsApp group fields are empty in Zoho for this deal. Your message is saved and will appear in the thread once a contact is assigned.',
-    // Composer klavye ipucu — tusun ARDINA eklenen kisa etiketler.
-    'gönder': 'send',
-    'satır': 'line',
     'Clinic\'e Bildir': 'Notify Clinic',
     'Sohbet geçmişi': 'Conversation history',
     // Deal penceresi içindeki sohbet paneli (ayrı popup yok — bkz.
     // team-leader.html dmSetView).
     'Geri': 'Back',
     'Deal detayına dön': 'Back to deal details',
-    'Mesaj yaz... (görsel için Ctrl+V)': 'Write a message... (Ctrl+V for an image)',
     'Görsel ekle (JPG/PNG/GIF/WebP, en fazla 3 MB)': 'Attach an image (JPG/PNG/GIF/WebP, max 3 MB)',
     'İlk mesajı yazarak sohbeti başlatın.': 'Write the first message to start the conversation.',
     // 'Bugün' / 'Dün' (gün ayırıcı etiketleri) sözlükte AŞAĞIDA zaten var —
