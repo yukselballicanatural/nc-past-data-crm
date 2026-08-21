@@ -919,6 +919,141 @@ html[data-theme="light"] .ncc-chat-day span {
 html[data-theme="light"] .ncc-b-who { color: var(--accent-2); }
 html[data-theme="light"] .ncc-chat-body::-webkit-scrollbar-thumb { background: rgba(23, 43, 99, .2); }
 
+/* ═══════════════════════════════════════════════════════════════════════
+   KOYU TEMA (liquid glass dark) — yalnızca renk/yüzey override'ları.
+   ───────────────────────────────────────────────────────────────────────
+   Yukarıdaki temel tanımlar koyu ama DÜZ ve neredeyse siyah (#0a0f1c,
+   #060a13). Uygulamanın koyu teması ise cam: koyu bir mesh zeminin üstünde
+   beyazın çok az saydamı (--d-1/--d-3) + kenar ışığı. Bu yüzden dock ve
+   sohbet, panelin içinde "sönmüş bir kara delik" gibi duruyordu; ikincil
+   yazılar da (#46536b placeholder, #6b7891 durum, #5b6780) o zeminde
+   okunmuyordu — kullanıcının bildirdiği durum tam buydu.
+
+   Burada iki iş yapılıyor:
+     1) YÜZEYLER camlaşıyor  → --d-1 / --d-3 / --d-edge-soft / --d-sheen
+     2) İKİNCİL YAZILAR bir kademe yükseliyor → --d-ink-2 / --d-ink-3
+   Vurgu renkleri (indigo CTA, yeşil tik, baloncuk gradyanı) korunuyor:
+   koyu camda kontrastları zaten yeterli.
+
+   OPAKLIK İSTİSNASI: sohbet sayfası (.nc-chat-sheet) ve kendi penceresi
+   (.ncc-thread-box) camlaştırılMIYOR. İkisi de altındaki içeriği (deal
+   formu / alarm listesi) KAPATMAK zorunda; saydam yapılırsa arkadaki veri
+   yazının içinden okunur. Onlar yalnızca bir ton AÇILIYOR.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+/* ── Dock ────────────────────────────────────────────────────────────── */
+html[data-theme="dark"] .ncc-dock {
+  background: var(--d-1);
+  border: 1px solid var(--d-edge-soft);
+  -webkit-backdrop-filter: blur(var(--d-blur)) saturate(var(--d-sat));
+  backdrop-filter: blur(var(--d-blur)) saturate(var(--d-sat));
+  box-shadow: var(--d-sheen), var(--d-sh-1);
+}
+html[data-theme="dark"] .ncc-dock[data-open="true"] {
+  box-shadow: var(--d-sheen), var(--d-sh-2);
+}
+html[data-theme="dark"] .ncc-dock[data-focus="true"] {
+  border-color: rgba(129, 140, 248, .55);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, .2), var(--d-sheen), var(--d-sh-2);
+}
+
+/* Yazma kutuları — camın "öne çıkan yüzeyi" (--d-3). Kenar ışığı korunuyor;
+   iç gölge kaldırıldı, camda karartma derinlik değil kir üretiyor. */
+html[data-theme="dark"] .ncc-dock-field textarea,
+html[data-theme="dark"] .ncc-input-wrap {
+  background: var(--d-3);
+  border-color: var(--d-edge);
+  box-shadow: inset 0 1px 0 0 rgba(255, 255, 255, .06);
+  color: var(--d-ink);
+}
+html[data-theme="dark"] .ncc-dock-field textarea:focus,
+html[data-theme="dark"] .ncc-input-wrap:focus-within {
+  background: var(--d-hover);
+  border-color: rgba(129, 140, 248, .6);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, .18);
+}
+html[data-theme="dark"] .ncc-input-wrap textarea { color: var(--d-ink); }
+html[data-theme="dark"] .ncc-dock-field textarea::placeholder,
+html[data-theme="dark"] .ncc-input-wrap textarea::placeholder { color: var(--d-ink-3); }
+
+/* Kimlik satırı + sayaç + ikon düğmeler */
+html[data-theme="dark"] .ncc-dock-name,
+html[data-theme="dark"] .ncc-chat-title { color: var(--d-ink); }
+html[data-theme="dark"] .ncc-dock-status,
+html[data-theme="dark"] .ncc-chat-sub { color: var(--d-ink-2); }
+html[data-theme="dark"] .ncc-composer-count { color: var(--d-ink-3); }
+html[data-theme="dark"] .ncc-composer-x,
+html[data-theme="dark"] .ncc-chat-x,
+html[data-theme="dark"] .ncc-attach-inline { color: var(--d-ink-2); }
+html[data-theme="dark"] .ncc-composer-x:hover,
+html[data-theme="dark"] .ncc-chat-x:hover,
+html[data-theme="dark"] .ncc-attach-inline:hover {
+  background: var(--d-hover); color: var(--d-ink);
+}
+html[data-theme="dark"] .ncc-attach-btn,
+html[data-theme="dark"] .ncc-ghost-btn,
+html[data-theme="dark"] .ncc-chat-back {
+  background: var(--d-2); border-color: var(--d-edge-soft); color: var(--d-ink-2);
+}
+html[data-theme="dark"] .ncc-attach-btn:hover,
+html[data-theme="dark"] .ncc-ghost-btn:hover,
+html[data-theme="dark"] .ncc-chat-back:hover {
+  background: var(--d-hover); border-color: var(--d-edge); color: var(--d-ink);
+}
+
+/* ── Sohbet ──────────────────────────────────────────────────────────── */
+/* Sayfa ve pencere OPAK kalır (yukarıdaki istisna), sadece bir ton açılır. */
+html[data-theme="dark"] .nc-chat-sheet {
+  background: linear-gradient(180deg, #16203a 0%, #111a2e 100%);
+  box-shadow: var(--d-sheen);
+}
+html[data-theme="dark"] .ncc-thread-box {
+  background: linear-gradient(180deg, #17213b 0%, #111a2e 100%);
+  border-color: var(--d-edge-soft);
+  box-shadow: var(--d-sheen), var(--d-sh-3);
+}
+html[data-theme="dark"] .ncc-avatar { border-color: #16203a; }
+
+html[data-theme="dark"] .ncc-chat-head,
+html[data-theme="dark"] .ncc-chat-foot { border-color: var(--d-edge-soft); }
+
+/* Gelen baloncuk: düz lacivert yerine cam. Giden baloncuk gradyanı zaten
+   yeterince parlak, dokunulmuyor. */
+html[data-theme="dark"] .ncc-bubble {
+  background: rgba(255, 255, 255, .1);
+  border: 1px solid var(--d-edge-soft);
+  color: var(--d-ink);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .28);
+}
+html[data-theme="dark"] .ncc-msg-row[data-mine="true"] .ncc-bubble { border-color: transparent; }
+html[data-theme="dark"] .ncc-b-meta { color: var(--d-ink-3); }
+html[data-theme="dark"] .ncc-b-who { color: #a5b4fc; }
+html[data-theme="dark"] .ncc-chat-day span {
+  background: rgba(255, 255, 255, .09);
+  border-color: var(--d-edge-soft);
+  color: var(--d-ink-2);
+}
+html[data-theme="dark"] .ncc-empty-title { color: var(--d-ink-2); }
+html[data-theme="dark"] .ncc-empty-sub { color: var(--d-ink-3); }
+html[data-theme="dark"] .ncc-chat-body::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, .14); }
+html[data-theme="dark"] .ncc-chat-body::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, .22); }
+
+/* ── Bildirim ────────────────────────────────────────────────────────── */
+html[data-theme="dark"] .ncc-bell-pop {
+  background: var(--d-strong);
+  border-color: var(--d-edge-soft);
+  -webkit-backdrop-filter: blur(var(--d-blur)) saturate(var(--d-sat));
+  backdrop-filter: blur(var(--d-blur)) saturate(var(--d-sat));
+  box-shadow: var(--d-sheen), var(--d-sh-3);
+}
+html[data-theme="dark"] .ncc-bell-item { border-bottom-color: var(--d-edge-soft); }
+html[data-theme="dark"] .ncc-bell-item:hover { background: var(--d-sel); }
+html[data-theme="dark"] .ncc-bell-item-name { color: var(--d-ink); }
+html[data-theme="dark"] .ncc-bell-item-msg { color: var(--d-ink-2); }
+html[data-theme="dark"] .ncc-bell-item-time,
+html[data-theme="dark"] .ncc-bell-empty { color: var(--d-ink-3); }
+html[data-theme="dark"] .ncc-bell-item-deal { color: #a5b4fc; }
+
 /* ── Mobil ─────────────────────────────────────────────────────────────── */
 @media (max-width: 560px) {
   .ncc-thread-box { max-width: 100%; height: 88vh; }
