@@ -476,45 +476,52 @@
    açılacak ve TÜM popup'ı kaplayacak, YENİ BİR POPUP AÇILMAYACAK — sanki
    popup içinde bir sayfaymış gibi düşün."
 
-   Bu yüzden sohbet ayrı bir pencere değil, bulunduğu pencerenin İÇİNDE
-   aşağıdan yükselip tamamını kaplayan bir sayfa. AYNI mekanizma iki yerde
-   kullanılıyor (tek CSS, tek JS — bkz. team-leader.html ncSheetOpen):
+   Sohbet ayrı bir pencere değil, bulunduğu pencerenin İÇİNDE aşağıdan
+   yükselip içeriğinin yerini alan bir sayfa. AYNI mekanizma iki yerde
+   (tek CSS, tek JS — bkz. team-leader.html ncSheetOpen):
      • alarm penceresi → dock'taki geçmiş ikonu
      • deal penceresi  → başlıktaki mesaj ikonu
 
-   TAM KAPLAMA: kabın 24px iç boşluğunu da örtmesi gerekiyor, yoksa
-   kenarlarda eski içerik şeridi görünüyor. Dört yanı 0'a sabitlenmiş
-   mutlak konumlu bir öğeye negatif kenar boşluğu verilince kutu o kadar
-   BÜYÜR (yükseklik = kap − 0 − 0 + 24 + 24) ve iç boşluğun üstüne taşar;
-   kabın overflow:hidden + border-radius'u da köşeleri temiz kesiyor.
+   ── NEGATİF KENAR BOŞLUĞU DENENDİ VE TERK EDİLDİ ────────────────────────
+   Önce sayfa `margin:-24px` ile kabın iç boşluğunun da üstüne taşırılıyordu
+   ("tüm pencereyi kaplasın" diye). Ama bu, kabın `overflow:hidden`'ıyla
+   ÇAKIŞIYOR: taşma kırpma bölgesi kabın PADDING KUTUSU'dur, yani sayfa tam
+   da taştığı yerden kırpılıyor. Sonuç: sayfa hem dışarı taşıyor hem
+   kırpılıyor, kendi iç boşluğu da dış kenardan ölçüldüğü için içerik
+   (başlık/composer) pencerenin görünür kenarının DIŞINA düşüyor —
+   kullanıcının "taşıyor, tam sığdır" dediği durum tam buydu.
 
-   Sayfa açıkken kabın kendi dikey kaydırması KAPATILIYOR: açıkken kaydırma
-   kalırsa mutlak konumlu sayfa içerikle birlikte kayar ve kaplama bozulur.
-   Açmadan önce kap ayrıca en üste alınıyor (scrollTop = 0).               */
+   ÇÖZÜM: sayfa artık kabın iç alanını (padding kutusu) BİREBİR dolduruyor
+   (inset:0, negatif kenar boşluğu YOK) ve zemini kabın kendi rengiyle aynı.
+   Böylece kırpma çakışması ortadan kalkıyor, sayfa kabın 24px iç boşluğunun
+   içinde durduğu için hiçbir şey taşmıyor, ve aynı zeminde olduğu için
+   görsel olarak "pencerenin içeriği sohbete dönüştü" gibi okunuyor.
+   translateY(100%) hâlâ kırpma bölgesinin dışında kaldığı için "aşağıdan
+   yükselme" animasyonu da bozulmadan çalışıyor.
+
+   Sayfa açıkken kabın kendi dikey kaydırması KAPATILIYOR: kaydırma kalırsa
+   mutlak konumlu sayfa içerikle birlikte kayar ve kaplama bozulur. Açmadan
+   önce kap ayrıca en üste alınıyor (scrollTop = 0).                        */
 .modal-box[data-sheet="open"] {
   overflow: hidden;
   /* "Yukarı doğru uzansın" — kısa bir pencerede sohbet sıkışmasın. */
-  min-height: min(70vh, 600px);
+  min-height: min(72vh, 620px);
   transition: min-height .46s cubic-bezier(.22, 1, .36, 1);
 }
 
 .nc-chat-sheet {
   position: absolute; top: 0; right: 0; bottom: 0; left: 0;
-  margin: -24px;                       /* kabın iç boşluğunu da kapla */
-  /* İç boşluk, kaplanan 24px'i TELAFİ EDECEK kadar olmalı: sayfa kabın
-     kenarının 24px DIŞINA taştığı için 18px'lik bir iç boşlukta içerik
-     pencerenin görünür kenarının dışına düşüyordu (kullanıcı ekran
-     görüntüsü: başlık üstte, composer altta kırpılmış). */
-  padding: 20px;
+  /* Kabın iç alanını birebir doldurur — bkz. yukarıdaki not. */
+  padding: 0;
   box-sizing: border-box;
-  /* Üç satırlı esnek kolon: baş/gövde/alt. min-height:0 olmadan gövde
-     küçülemez ve alt composer sayfanın dışına taşar — taşmanın kök nedeni. */
+  /* Üç satırlı esnek kolon (baş/gövde/alt); min-height:0 olmadan gövde
+     küçülemez ve alt composer sayfanın dışına taşar. */
   display: flex; flex-direction: column; min-height: 0;
   z-index: 3;
-  border-radius: 16px;
-  background: linear-gradient(180deg, #101829 0%, #0b1120 100%);
-  box-shadow: 0 -10px 40px -14px rgba(0, 0, 0, .85);
-  transform: translateY(100%);         /* kapalı: pencerenin altında */
+  /* Zemin kabın kendi yüzeyiyle AYNI: sayfa ayrı bir kart gibi değil,
+     pencerenin içeriği gibi okunsun. */
+  background: #0d1526;
+  transform: translateY(100%);         /* kapalı: kırpma bölgesinin altında */
   opacity: 0; pointer-events: none;
   transition: transform .46s cubic-bezier(.22, 1, .36, 1), opacity .26s ease;
 }
@@ -522,20 +529,12 @@
   transform: translateY(0); opacity: 1; pointer-events: auto;
 }
 /* .ncc-chat kabı doldurur; height:100% YERİNE flex:1 — yüzde yükseklik,
-   kabın kendi iç boşluğuyla toplanınca taşmaya yol açıyordu. */
+   kabın iç boşluğuyla toplanınca taşmaya yol açıyordu. */
 .nc-chat-sheet .ncc-chat { flex: 1 1 auto; min-height: 0; height: auto; }
 
-/* Sayfanın üst kenarında ince accent ışık — ayrı bir yüzey olduğu okunsun. */
-.nc-chat-sheet::after {
-  content: ''; position: absolute; top: 0; left: 18px; right: 18px; height: 1px;
-  border-radius: 1px; pointer-events: none;
-  background: linear-gradient(90deg, transparent, rgba(99, 102, 241, .55) 28%,
-              rgba(45, 212, 191, .45) 72%, transparent);
-}
-
-/* Sayfa açıkken altta kalan içerik: hafifçe geriye çekilir. Sayfa zaten
-   opak olduğu için bu yalnızca geçiş sırasında (yükselirken) görünür ve
-   "üste bir katman geldi" hissini verir. */
+/* Sayfa açıkken altta kalan içerik: hafifçe geriye çekilir. Sayfa opak
+   olduğu için bu yalnızca yükselme anında görünür ve "üste bir katman
+   geldi" hissini verir. */
 .modal-box[data-sheet="open"] > *:not(.nc-chat-sheet) {
   transition: transform .46s cubic-bezier(.22, 1, .36, 1), opacity .28s ease;
   transform: scale(.985); opacity: .5;
@@ -749,12 +748,14 @@ html[data-theme="light"] .ncc-msg-row[data-mine="true"] .ncc-bubble {
 /* Yükselen sohbet katmanı — açık temada cam yüzey. Detaylar arkada
    bulanıklaştığı için katmanın ARKASI KAPALI olmalı (yarı saydam bırakılırsa
    altındaki metin sızıyor ve sohbet okunmuyor): blur yerine opak cam. */
+/* Sayfa kabın iç alanını dolduruyor; açık temada da kabın kendi cam
+   yüzeyiyle AYNI görünmeli — ayrı bir kart gibi durmasın. OPAK olmak
+   zorunda: saydam bırakılınca altındaki (soluk da olsa) form metni sızıp
+   sohbeti okunmaz yapıyor. */
 html[data-theme="light"] .nc-chat-sheet {
-  background: var(--g-3);
+  background: color-mix(in srgb, var(--g-3) 100%, #fff 55%);
   -webkit-backdrop-filter: blur(var(--blur)) saturate(var(--sat));
   backdrop-filter: blur(var(--blur)) saturate(var(--sat));
-  border-color: var(--edge-soft);
-  box-shadow: 0 -8px 30px -14px rgba(23, 43, 99, .35), var(--sheen);
 }
 html[data-theme="light"] .modal-box[data-sheet="open"] > *:not(.nc-chat-sheet) {
   opacity: .4;
