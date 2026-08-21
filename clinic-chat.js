@@ -414,7 +414,9 @@ window.NCClinicChat = (function () {
         file.value = '';
       };
     }
-    NCAttach.load(draftId, 'nccDockAttachMount');
+    // load() çağrılmıyor — bkz. _mountThreadAttach'teki aynı not.
+    const mount = document.getElementById('nccDockAttachMount');
+    if (mount) mount.innerHTML = '';
     NCAttach.bindPaste('nccDockInput', draftId, 'nccDockAttachMount');
   }
 
@@ -584,7 +586,13 @@ window.NCClinicChat = (function () {
         file.value = '';
       };
     }
-    NCAttach.load(draftId, id.mount);
+    // NCAttach.load() BİLEREK çağrılmıyor: draftId her seferinde yeni bir
+    // uuid, yani tanım gereği hiç eki olamaz. Çağırmak hem boşa bir istek
+    // atıyor hem de yanıt gelene kadar "Ekler yükleniyor..." metnini
+    // composer'ın üstünde bırakıyordu (kullanıcı ekran görüntüsü). Ek
+    // eklendiğinde handleFiles zaten kendisi yeniliyor.
+    const mount = document.getElementById(id.mount);
+    if (mount) mount.innerHTML = '';
     NCAttach.bindPaste(id.input, draftId, id.mount);
   }
 
@@ -610,7 +618,9 @@ window.NCClinicChat = (function () {
       if (wrap) { wrap.dataset.empty = 'true'; wrap.dataset.source = ''; }
       if (sub) sub.textContent = _t('Muhatap atanmamış');
       if (warn) {
-        warn.innerHTML = `<div class="ncc-chat-warn">${esc(_t('Bu deal\'de Zoho\'daki Aftercare Owner ve WhatsApp grubu alanları boş. Mesajınız kaydedilir ve muhatap atandığında dizide görünür.'))}</div>`;
+        // Başlık zaten "Muhatap atanmamış" diyor; uyarı YALNIZCA bunun
+        // sonucunu ekliyor. Uzun metin composer'ın yerini yiyordu.
+        warn.innerHTML = `<div class="ncc-chat-warn">${esc(_t('Mesaj kaydedilir, muhatap atandığında görünür.'))}</div>`;
       }
     }
   }

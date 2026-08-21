@@ -253,7 +253,7 @@
 /* ── Başlık ──────────────────────────────────────────────────────────── */
 .ncc-chat-head {
   display: flex; align-items: center; gap: 10px;
-  padding: 0 0 11px; margin-bottom: 0;
+  padding: 0 0 10px; margin-bottom: 0;
   border-bottom: 1px solid #1c2740;
   flex: 0 0 auto;
 }
@@ -295,7 +295,7 @@
    radyal ışık. Desen değil, yalnızca derinlik; okunurluğu bozmuyor. */
 .ncc-chat-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden;
-  padding: 14px 10px 6px; margin: 0 -4px;
+  padding: 12px 8px 4px; margin: 0 -2px;
   background:
     radial-gradient(680px 320px at 12% 0%, rgba(99, 102, 241, .055), transparent 70%),
     radial-gradient(560px 300px at 88% 100%, rgba(13, 148, 136, .05), transparent 72%);
@@ -370,18 +370,18 @@
   text-align: center; padding: 20px 24px;
 }
 .ncc-empty-ico {
-  width: 54px; height: 54px; border-radius: 17px; margin-bottom: 12px;
+  width: 46px; height: 46px; border-radius: 15px; margin-bottom: 10px;
   display: flex; align-items: center; justify-content: center;
   background: rgba(99, 102, 241, .12);
   border: 1px solid rgba(99, 102, 241, .26);
   color: #818cf8;
 }
-.ncc-empty-ico svg { width: 25px; height: 25px; }
-.ncc-empty-title { font-size: 12.5px; font-weight: 650; color: #94a3b8; }
-.ncc-empty-sub { font-size: 11px; color: #5b6780; }
+.ncc-empty-ico svg { width: 21px; height: 21px; }
+.ncc-empty-title { font-size: 12px; font-weight: 650; color: #94a3b8; }
+.ncc-empty-sub { font-size: 10.5px; color: #5b6780; }
 
 /* ── Alt composer ────────────────────────────────────────────────────── */
-.ncc-chat-foot { flex: 0 0 auto; padding-top: 10px; border-top: 1px solid #1c2740; }
+.ncc-chat-foot { flex: 0 0 auto; padding-top: 9px; border-top: 1px solid #1c2740; }
 .ncc-chat-foot-row { display: flex; gap: 8px; align-items: flex-end; }
 
 /* Yazma kutusu: metin alanı + İÇİNDE en sağda ataç (kullanıcı talebi).
@@ -433,10 +433,15 @@
 .ncc-send-btn:active { transform: translateY(0) scale(.96); }
 .ncc-send-btn:disabled { opacity: .5; cursor: default; transform: none; filter: none; }
 
+/* Uyarı tek satırlık ve hafif: başlık zaten "Muhatap atanmamış" diyor,
+   burada yalnızca sonucu yazılı. Kalın sarı blok composer'ın yerini
+   yiyordu. */
 .ncc-chat-warn {
-  margin: 0 0 8px; padding: 8px 11px; border-radius: 10px;
-  font-size: 10.5px; line-height: 1.5;
-  background: #2c1a06; border: 1px solid #6b3f0a; color: #fbbf24;
+  margin: 0 0 7px; padding: 5px 9px; border-radius: 8px;
+  font-size: 10px; line-height: 1.4;
+  background: rgba(251, 191, 36, .08);
+  border: 1px solid rgba(180, 83, 9, .32);
+  color: #d9a13a;
 }
 
 /* ── b) Kendi başına açılan pencere ──────────────────────────────────── */
@@ -505,14 +510,16 @@
 .modal-box[data-sheet="open"] {
   overflow: hidden;
   /* "Yukarı doğru uzansın" — kısa bir pencerede sohbet sıkışmasın. */
-  min-height: min(72vh, 620px);
+  min-height: min(64vh, 545px);
   transition: min-height .46s cubic-bezier(.22, 1, .36, 1);
 }
 
 .nc-chat-sheet {
   position: absolute; top: 0; right: 0; bottom: 0; left: 0;
-  /* Kabın iç alanını birebir doldurur — bkz. yukarıdaki not. */
-  padding: 0;
+  /* Kabın iç alanını birebir doldurur (bkz. yukarıdaki not). Üstte/altta
+     küçük bir nefes payı: içerik pencerenin kenarına dayanmasın — kullanıcı
+     "az daha boyutlandır, çok kötü duruyor" dedi, sıkışık duran buydu. */
+  padding: 2px 0 4px;
   box-sizing: border-box;
   /* Üç satırlı esnek kolon (baş/gövde/alt); min-height:0 olmadan gövde
      küçülemez ve alt composer sayfanın dışına taşar. */
@@ -704,7 +711,7 @@ html[data-theme="light"] .ncc-bell-dot[data-has="true"] {
   animation: none;   /* camın üzerinde halka gölgesi kirli görünüyor */
 }
 html[data-theme="light"] .ncc-chat-warn {
-  background: rgba(251, 191, 36, .16); border-color: rgba(180, 83, 9, .35); color: #92400e;
+  background: rgba(251, 191, 36, .13); border-color: rgba(180, 83, 9, .28); color: #92400e;
 }
 
 /* Dock — açık temada gerçek cam yüzey; koyu temanın gradient'i yerine

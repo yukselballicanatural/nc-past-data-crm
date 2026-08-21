@@ -532,8 +532,8 @@
     'Muhatap atanmamış': 'No contact assigned',
     'Aftercare Owner ve WhatsApp grubu boş': 'Aftercare Owner and WhatsApp group are empty',
     'Klinik ekibine iletilecek mesaj...': 'Message for the clinic team...',
-    'Bu deal\'de Zoho\'daki Aftercare Owner ve WhatsApp grubu alanları boş. Mesajınız kaydedilir ve muhatap atandığında dizide görünür.':
-      'Both the Aftercare Owner and WhatsApp group fields are empty in Zoho for this deal. Your message is saved and will appear in the thread once a contact is assigned.',
+    'Mesaj kaydedilir, muhatap atandığında görünür.':
+      'The message is saved and will appear once a contact is assigned.',
     'Clinic\'e Bildir': 'Notify Clinic',
     'Sohbet geçmişi': 'Conversation history',
     // Deal penceresi içindeki sohbet paneli (ayrı popup yok — bkz.
