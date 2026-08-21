@@ -514,7 +514,8 @@
    Sayfa açıkken kabın kendi dikey kaydırması KAPATILIYOR: kaydırma kalırsa
    mutlak konumlu sayfa içerikle birlikte kayar ve kaplama bozulur. Açmadan
    önce kap ayrıca en üste alınıyor (scrollTop = 0).                        */
-.modal-box[data-sheet="open"] {
+.modal-box[data-sheet="open"],
+html[data-theme] .modal-box[data-sheet="open"] {
   overflow: hidden;
   /* ── KESİN YÜKSEKLİK, min-height DEĞİL — taşmanın gerçek nedeni buydu ──
      min-height kabı SINIRLAMIYOR: altta kalan içerik (alarm penceresinde 9
@@ -545,8 +546,20 @@
      kenar boşluğu bu değişken değere bağlı kalıyor ve kenarlara dayanmış
      görünüyordu. Kap açıkken iç boşluk sıfırlanıp (!important — o
      override'ı yenmek için) sayfa TÜM iç alanı alıyor; boşluğu sayfa
-     kendi padding'iyle veriyor → her temada birebir aynı, öngörülebilir. */
+     kendi padding'iyle veriyor → her temada birebir aynı, öngörülebilir.
+
+     ÖZGÜLLÜK NOTU: tema kuralı `html[data-theme="dark"] .modal-box`
+     (0,2,1) — tek başına `.modal-box[data-sheet="open"]` (0,2,0) ondan
+     ZAYIF, iki taraf da !important olduğu için padding-right:18px ayakta
+     kalıyordu. Seçiciye `html[data-theme]` eklenerek (0,3,1) yapıldı. */
   padding: 0 !important;
+  /* ── KAYDIRMA ÇUBUĞU OLUĞU DA KAPATILIYOR ──────────────────────────
+     Her iki tema `.modal-box`a `scrollbar-gutter: stable` veriyor.
+     `overflow:hidden` bir kaydırma kabıdır — oluk yine de AYRILIR ve
+     sağda 7px'lik bir şerit olarak durur. Sayfa o oluğun içine giremez,
+     altındaki pencere kenarı görünür (kullanıcı ekran görüntüsündeki
+     sağdaki şerit tam buydu). Sayfa açıkken kaydırma zaten yok. */
+  scrollbar-gutter: auto !important;
   transition: height .46s cubic-bezier(.22, 1, .36, 1);
 }
 
